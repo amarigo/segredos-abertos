@@ -266,7 +266,7 @@ def main() -> None:
     ap.add_argument("--anos", type=int, nargs="+", default=[dt.date.today().year - 1, dt.date.today().year])
     ap.add_argument("--max-empresas", type=int, default=1500)
     a = ap.parse_args()
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     dados = coletar(a.anos, a.cache, a.max_empresas)
     montar(dados, a.saida, a.anos)
 

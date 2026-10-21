@@ -58,7 +58,10 @@ def parse_cota(rows, ids: set[str]) -> list[dict]:
     """Converte linhas do arquivo da cota em despesas no formato comum."""
     out = []
     for r in rows:
-        dep = (r.get("nuDeputadoId") or r.get("ideCadastro") or "").strip()
+        # ideCadastro é o mesmo id da API; nuDeputadoId é um número interno diferente
+        dep = (r.get("ideCadastro") or "").strip()
+        if not dep or pid(dep) not in ids:
+            dep = (r.get("nuDeputadoId") or "").strip()
         if not dep or pid(dep) not in ids:
             continue
         valor = to_float(r.get("vlrLiquido"))

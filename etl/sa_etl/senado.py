@@ -20,6 +20,10 @@ log = logging.getLogger("sa_etl.senado")
 LEGIS = "https://legis.senado.leg.br/dadosabertos"
 CEAPS = "https://adm.senado.gov.br/adm-dadosabertos/api/v1/senadores/despesas_ceaps/{ano}"
 
+# O Senado não publica a orientação do governo em cada votação. Usamos o voto do líder do
+# governo no Senado como referência. Atualize o nome se o líder mudar.
+LIDER_GOVERNO_SENADO = "Jaques Wagner"
+
 
 def pid(cod: str | int) -> str:
     return f"sen-{cod}"
@@ -48,7 +52,7 @@ def parse_senadores(data: dict) -> list[dict]:
             "partido": ident.get("SiglaPartidoParlamentar") or "",
             "uf": ident.get("UfParlamentar") or "",
             "foto": ident.get("UrlFotoParlamentar") or "",
-            "bloco": bloco.get("NomeApelido") or bloco.get("NomeBloco") or "",
+            "bloco": bloco.get("NomeBloco") or bloco.get("NomeApelido") or "",
             "fonte": ident.get("UrlPaginaParlamentar") or f"https://www25.senado.leg.br/web/senadores/senador/-/perfil/{cod}",
         })
     return out
@@ -106,7 +110,12 @@ def parse_votacoes(items: list[dict], ids: set[str]) -> tuple[list[dict], list[d
             continue  # voto secreto: não há como saber quem votou como
         vid = f"sf-{v.get('codigoSessaoVotacao')}"
         vs = []
+        orient = {}
         for x in _as_list(v.get("votos")):
+            if (x.get("nomeParlamentar") or "").strip().lower() == LIDER_GOVERNO_SENADO.lower():
+                o = normaliza_voto_senado(x.get("siglaVotoParlamentar") or "")
+                if o in ("Sim", "Não"):
+                    orient["Governo (voto do líder)"] = o
             p = pid(x.get("codigoParlamentar", ""))
             if p in ids:
                 vs.append({"votacao": vid, "politico": p,
@@ -127,7 +136,7 @@ def parse_votacoes(items: list[dict], ids: set[str]) -> tuple[list[dict], list[d
                 "titulo": v.get("identificacao") or f"{sigla} {numero}/{ano}",
                 "url": f"https://www25.senado.leg.br/web/atividade/materias/-/materia/{v['codigoMateria']}" if v.get("codigoMateria") else "",
             },
-            "orientacoes": {},
+            "orientacoes": orient,
             "fonte": f"{LEGIS}/votacao?codigoSessaoVotacao={v.get('codigoSessaoVotacao')}",
         })
         votos += vs

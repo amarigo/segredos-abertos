@@ -90,3 +90,16 @@ def test_montar_gera_arquivos(tmp_path):
     assert e["socios"][0]["nome"] == "Maria"
     assert any("dias antes" in a for a in e["alertas"])
     assert json.loads((tmp_path / "votacoes.json").read_text())[0]["sim"] == 1
+
+
+def test_senado_usa_voto_do_lider_como_orientacao():
+    items = [{"codigoSessaoVotacao": 3, "votacaoSecreta": "N", "votos": [
+        {"codigoParlamentar": 5, "siglaVotoParlamentar": "Não", "nomeParlamentar": senado.LIDER_GOVERNO_SENADO}]}]
+    v, _ = senado.parse_votacoes(items, {"sen-5"})
+    assert v[0]["orientacoes"] == {"Governo (voto do líder)": "Não"}
+
+
+def test_cota_usa_idecadastro():
+    csv_ = '"ideCadastro";"nuDeputadoId";"txtDescricao";"vlrLiquido";"numAno";"numMes"\n"204379";"3001";"TELEFONIA";"10";"2025";"1"\n'
+    rows = camara.parse_cota(read_csv_text(csv_), {"dep-204379"})
+    assert rows and rows[0]["politico"] == "dep-204379"

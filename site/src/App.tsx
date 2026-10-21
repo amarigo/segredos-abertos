@@ -19,7 +19,7 @@ export default function App() {
     <>
       <header className="top">
         <div className="wrap">
-          <Link to="/" className="brand"><img src="./icon.svg" alt="" />Segredos Abertos</Link>
+          <Link to="/" className="brand"><img src="./icon.svg" alt="" /><span>Segredos Abertos <span style={{ color: "var(--gold)" }}>Brasil</span></span></Link>
           <nav className="nav" aria-label="Principal">
             <NavLink to="/politicos">Políticos</NavLink>
             <NavLink to="/empresas">Empresas</NavLink>
