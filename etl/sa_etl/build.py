@@ -35,9 +35,11 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
             por_cnpj[d["doc"]] += d["valor"]
     alvo = [c for c, _ in por_cnpj.most_common(max_empresas)]
     emps = cnpj.empresas(alvo, cache / "cnpj")
+    socias = cnpj.buscar_socias(emps, cache / "cnpj")  # holdings: sócios que são empresas
     rec = recursos.coletar(politicos, anos, cache / "recursos") if com_recursos else {}
     return {"politicos": politicos, "despesas": despesas, "votacoes": vc + vs,
-            "votos": votos_c + votos_s, "empresas": emps, "recursos": rec}
+            "votos": votos_c + votos_s, "empresas": emps,
+            "empresas_socias": socias, "recursos": rec}
 
 
 SEM_NOTA = "Despesas sem nota nos dados abertos"
@@ -149,7 +151,9 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
             if d["data"] and (d["doc"] not in primeiro_pag or d["data"] < primeiro_pag[d["doc"]]):
                 primeiro_pag[d["doc"]] = d["data"]
 
-    comuns = cnpj.socios_em_comum(emps)
+    socias = dados.get("empresas_socias") or {}
+    todas_emps = {**socias, **emps}
+    comuns = cnpj.socios_em_comum(emps, socias)
     socio_empresas: dict[str, list[str]] = comuns
     vizinhas: dict[str, list[str]] = {}  # cnpj -> outras fornecedoras registradas no mesmo endereço
     for grupo in cnpj.mesmo_endereco(emps).values():
@@ -224,11 +228,14 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
                     "total": total, "n_politicos": len(quem), "tem_socios": bool(e and e["socios"]),
                     "n_mesmo_endereco": len(vizinhas.get(doc, []))}
         lista_emp.append(resumo_e)
-        socios = []
-        for s in (e or {}).get("socios", []):
-            outras = [c for c in socio_empresas.get(cnpj.chave_socio(s), []) if c != doc]
-            socios.append({**s, "outras_empresas": [
-                {"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu[c].values()), 2)} for c in outras]})
+        def outras_de(s: dict) -> list[dict]:
+            return [{"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu[c].values()), 2)}
+                    for c in socio_empresas.get(cnpj.chave_dono(s), []) if c != doc and c in recebeu]
+        socios = [{**s, "tipo": cnpj.tipo_socio(s), "outras_empresas": outras_de(s)} for s in (e or {}).get("socios", [])]
+        finais = cnpj.donos_finais(doc, todas_emps) if e else []
+        tem_holding = any(d["cadeia"] for d in finais)
+        donos = [{**d, "outras_empresas": outras_de(d) if d["fim"] == "pessoa" else []} for d in finais] if tem_holding else []
+        resumo_e["tem_holding"] = tem_holding
         primeiro = primeiro_pag.get(doc, "")
         ns = sorted(notas_emp[doc], key=lambda n: (n["data"], n["valor"]), reverse=True)
         mensal = defaultdict(float)  # (politico, ano, mes) -> valor
@@ -244,12 +251,11 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
             "por_mes": [{"politico": pid, "nome": por_id[pid]["nome"], "ano": a, "mes": m, "valor": round(v, 2)}
                         for (pid, a, m), v in sorted(mensal.items(), key=lambda kv: (kv[0][1], kv[0][2], -kv[1]))],
             **resumo_e, "empresa": {k: v for k, v in (e or {}).items() if k != "socios"} or None,
-            "socios": socios, "pagadores": pagadores,
+            "socios": socios, "donos_finais": donos, "pagadores": pagadores,
             "mesmo_endereco": [{"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu[c].values()), 2),
-                                "mesmos_socios": bool({cnpj.chave_socio(x) for x in emps[c]["socios"]}
-                                                      & {cnpj.chave_socio(x) for x in (e or {}).get("socios", [])})}
+                                "mesmos_socios": bool(cnpj.chaves_de_dono(c, todas_emps) & cnpj.chaves_de_dono(doc, todas_emps))}
                                for c in vizinhas.get(doc, []) if c in recebeu],
-            "alertas": alertas(e, total, primeiro) + ([
+            "alertas": alertas(e, total, primeiro) + alertas_donos(donos) + ([
                 f"Há outras {len(vizinhas[doc])} empresas fornecedoras registradas no mesmo endereço. Isso pode indicar o mesmo dono."
                 if len(vizinhas[doc]) > 1 else
                 "Há outra empresa fornecedora registrada no mesmo endereço. Isso pode indicar o mesmo dono."]
@@ -387,6 +393,17 @@ def custos_extras(casa: str, r: dict) -> dict:
     return {"salario": round(salario, 2) or None, "verba_gabinete": round(verba, 2) or None,
             "outros_gastos": round(outros, 2) or None, "cota_oficial": cota,
             "n_pessoal": (r or {}).get("n_pessoal")}
+
+
+def alertas_donos(donos: list[dict]) -> list[str]:
+    fins = {d["fim"] for d in donos}
+    out = []
+    if "estrangeiro" in fins:
+        out.append("Parte da empresa pertence a alguém no exterior. A Receita não mostra quem está por trás de sócios estrangeiros.")
+    if fins & {"sem_socios", "sem_dados"}:
+        out.append("Parte da empresa pertence a outra empresa cujos sócios a Receita não informa (comum em sociedades anônimas). "
+                   "Não foi possível chegar a todas as pessoas donas.")
+    return out
 
 
 def alertas(e: dict | None, total: float, primeiro_pagamento: str) -> list[str]:

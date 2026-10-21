@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { Barras, Explain, Loading, useAno, useData } from "../components/ui";
-import { MESES, cnpjFmt, dataBR, reais, type Empresa, type NotaEmpresa, type Resumo } from "../data";
+import { MESES, cnpjFmt, dataBR, reais, type DonoFinal, type Empresa, type NotaEmpresa, type Resumo } from "../data";
 import { norm } from "./Home";
 
 export default function EmpresaPage() {
@@ -37,7 +37,7 @@ export default function EmpresaPage() {
                 <tbody>
                   {e.socios.map((s, i) => (
                     <tr key={i}>
-                      <td>{s.nome}<div className="muted small mono">{s.doc}</div></td>
+                      <td>{s.nome}{s.tipo === "empresa" && <> <span className="chip">empresa</span></>}{s.tipo === "estrangeiro" && <> <span className="chip">exterior</span></>}<div className="muted small mono">{s.tipo === "empresa" ? cnpjFmt(s.doc) : s.doc}</div></td>
                       <td className="small">{s.qualificacao}</td>
                       <td className="num">{dataBR(s.entrada)}</td>
                       <td>{s.outras_empresas.length ? s.outras_empresas.map((o) => (
@@ -51,6 +51,8 @@ export default function EmpresaPage() {
           )}
         <p className="muted small">A Receita esconde parte do CPF dos sócios. Por isso ligamos empresas pelo nome do sócio mais os dígitos visíveis do CPF. Homônimos raros podem aparecer.</p>
       </section>
+
+      {e.donos_finais && e.donos_finais.length > 0 && <DonosFinais e={e} />}
 
       {e.mesmo_endereco && e.mesmo_endereco.length > 0 && (
         <section>
@@ -153,6 +155,49 @@ function Notas({ e }: { e: Empresa }) {
         {lista.length > n && <button className="link" onClick={() => setN(n + 200)}>Mostrar mais notas ({(lista.length - n).toLocaleString("pt-BR")} restantes)</button>}
         {semLink > 0 && <p className="muted small">{semLink.toLocaleString("pt-BR")} nota{semLink > 1 ? "s" : ""} sem link: o Senado não publica a imagem das notas, e algumas notas antigas da Câmara também não têm.</p>}
       </>}
+    </section>
+  );
+}
+
+const FIM: Record<DonoFinal["fim"], string> = {
+  pessoa: "",
+  estrangeiro: "Sócio no exterior. A Receita não mostra quem está por trás.",
+  sem_socios: "A Receita não lista os sócios desta empresa (comum em sociedade anônima, que tem acionistas em vez de sócios).",
+  sem_dados: "Não encontramos esta empresa na base da Receita.",
+  limite: "Caminho longo demais. Paramos depois de 5 empresas.",
+  ciclo: "Esta empresa é sócia de uma empresa que já apareceu antes no caminho (participação cruzada).",
+};
+
+/* Sócios que são empresas (holdings): seguimos até chegar às pessoas */
+function DonosFinais({ e }: { e: Empresa }) {
+  const donos = e.donos_finais!;
+  const pessoas = donos.filter((d) => d.fim === "pessoa");
+  return (
+    <section>
+      <h2>Donos finais, por trás das empresas sócias</h2>
+      <Explain>Quando uma empresa sócia (uma holding, por exemplo) aparece na lista de sócios, buscamos os sócios dela na Receita, e assim por diante, até chegar às pessoas. Cada linha mostra o caminho, da empresa até o dono.</Explain>
+      <ul className="donos">
+        {donos.map((d, i) => (
+          <li key={i} className="card">
+            <div className="cadeia">
+              <span>{e.nome}</span>
+              {d.cadeia.map((c) => <span key={c.cnpj}>{c.nome} <span className="muted small mono">{cnpjFmt(c.cnpj)}</span></span>)}
+              {(d.fim === "pessoa" || d.fim === "estrangeiro") && (
+                <span><strong>{d.nome}</strong>{d.fim === "estrangeiro" && <> <span className="chip">exterior</span></>}</span>
+              )}
+            </div>
+            <div className="muted small">
+              {d.fim === "pessoa" ? [d.doc, d.qualificacao].filter(Boolean).join(" · ") : d.fim === "estrangeiro" ? [d.pais, FIM[d.fim]].filter(Boolean).join(" · ") : <>Busca parou: {FIM[d.fim]}</>}
+            </div>
+            {d.fim === "pessoa" && (
+              <div className="small">{d.outras_empresas.length ? <>Outras empresas dele que recebem de parlamentares: {d.outras_empresas.map((o, k) => (
+                <span key={o.cnpj}>{k > 0 && ", "}<Link to={`/e/${o.cnpj}`}>{o.nome}</Link> <span className="muted num">({reais(o.total)})</span></span>
+              ))}</> : <span className="muted">Nenhuma outra empresa dele recebe de parlamentares.</span>}</div>
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">{pessoas.length} pessoa{pessoas.length === 1 ? "" : "s"} encontrada{pessoas.length === 1 ? "" : "s"} por trás desta empresa. Ligamos empresas do mesmo dono também por esse caminho, e não só pelos sócios diretos.</p>
     </section>
   );
 }

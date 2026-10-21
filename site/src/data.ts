@@ -48,12 +48,20 @@ export interface Votacao extends VotacaoResumo {
   por_partido: Record<string, Record<string, number>>; por_lado: Record<string, Record<string, number>>;
   votos: { politico: string; nome: string; partido: string; uf: string; voto: string; posicao: number | null }[];
 }
-export interface Socio { nome: string; doc: string; qualificacao: string; entrada: string; faixa_etaria: string; outras_empresas: { cnpj: string; nome: string; total: number }[] }
-export interface EmpresaResumo { cnpj: string; nome: string; total: number; n_politicos: number; tem_socios: boolean; n_mesmo_endereco?: number }
+export interface Socio { nome: string; doc: string; qualificacao: string; entrada: string; faixa_etaria: string; tipo?: "empresa" | "pessoa" | "estrangeiro" | ""; outras_empresas: { cnpj: string; nome: string; total: number }[] }
+/** Dono final: a pessoa (ou o ponto onde a busca parou) por trás de uma ou mais empresas sócias */
+export interface DonoFinal {
+  nome: string; doc: string; tipo: string; qualificacao: string; pais: string;
+  cadeia: { cnpj: string; nome: string; qualificacao: string }[];
+  fim: "pessoa" | "estrangeiro" | "sem_socios" | "sem_dados" | "limite" | "ciclo";
+  outras_empresas: { cnpj: string; nome: string; total: number }[];
+}
+export interface EmpresaResumo { cnpj: string; nome: string; total: number; n_politicos: number; tem_socios: boolean; n_mesmo_endereco?: number; tem_holding?: boolean }
 export interface Empresa extends EmpresaResumo {
   empresa: null | { razao_social: string; nome_fantasia: string; situacao: string; abertura: string; atividade: string; municipio: string; uf: string; capital_social: number; porte: string; natureza: string;
     endereco?: { logradouro: string; numero: string; complemento: string; bairro: string; cep: string } };
   socios: Socio[];
+  donos_finais?: DonoFinal[];
   n_notas?: number; notas_por_ano?: Record<string, number>;
   por_mes?: { politico: string; nome: string; ano: number; mes: number; valor: number }[];
   mesmo_endereco?: { cnpj: string; nome: string; total: number; mesmos_socios: boolean }[]; pagadores: { politico: string; nome: string; partido: string; uf: string; valor: number }[]; alertas: string[];

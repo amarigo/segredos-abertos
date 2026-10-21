@@ -225,3 +225,36 @@ def test_fora_do_periodo_oficial():
     r = {"cota_meses": [{"mes": 2, "valor": 50.0}]}
     assert fora_do_periodo_oficial(ds, r) == {"fora_do_periodo": 70.0, "meses_fora": [1, 7]}
     assert fora_do_periodo_oficial(ds, {}) == {}
+
+
+def test_donos_finais_segue_holdings():
+    todas = {
+        "11111111000111": {"razao_social": "GRAFICA", "socios": [
+            {"nome": "HOLDING X LTDA", "doc": "22222222000122", "qualificacao": "Sócio"},
+            {"nome": "ANA", "doc": "***111111**", "qualificacao": "Sócio"}]},
+        "22222222000122": {"razao_social": "HOLDING X LTDA", "socios": [
+            {"nome": "HOLDING Y SA", "doc": "33333333000133", "qualificacao": "Sócio"},
+            {"nome": "BETO", "doc": "***222222**", "qualificacao": "Sócio-Administrador"},
+            {"nome": "FOREIGN CORP", "doc": "", "qualificacao": "Sócio Pessoa Jurídica Domiciliado no Exterior", "tipo": "estrangeiro"}]},
+        "33333333000133": {"razao_social": "HOLDING Y SA", "socios": [
+            {"nome": "HOLDING X LTDA", "doc": "22222222000122", "qualificacao": "Sócio"}]},  # ciclo
+        "44444444000144": {"razao_social": "OUTRA", "socios": [{"nome": "BETO", "doc": "***222222**"}]},
+    }
+    d = cnpj.donos_finais("11111111000111", todas)
+    por_nome = {x["nome"]: x for x in d}
+    assert por_nome["ANA"]["cadeia"] == [] and por_nome["ANA"]["fim"] == "pessoa"
+    assert [c["nome"] for c in por_nome["BETO"]["cadeia"]] == ["HOLDING X LTDA"]
+    assert por_nome["FOREIGN CORP"]["fim"] == "estrangeiro"
+    assert any(x["fim"] == "ciclo" for x in d)
+    # a outra empresa do Beto aparece ligada à gráfica, através da holding
+    comuns = cnpj.socios_em_comum({k: todas[k] for k in ("11111111000111", "44444444000144")},
+                                  {k: todas[k] for k in ("22222222000122", "33333333000133")})
+    assert ["11111111000111", "44444444000144"] in comuns.values()
+
+
+def test_buscar_socias_busca_por_niveis(tmp_path, monkeypatch):
+    base = {"22222222000122": {"razao_social": "H1", "socios": [{"nome": "H2", "doc": "33333333000133"}]},
+            "33333333000133": {"razao_social": "H2", "socios": [{"nome": "ZE", "doc": "***1**"}]}}
+    monkeypatch.setattr(cnpj, "_fetch", lambda c, cache: base.get(c))
+    emps = {"1": {"socios": [{"nome": "H1", "doc": "22222222000122"}]}}
+    assert set(cnpj.buscar_socias(emps, tmp_path)) == {"22222222000122", "33333333000133"}
