@@ -180,3 +180,49 @@ footer .wrap { display: grid; gap: 6px; }
 .cadeia > span + span::before { content: "→"; color: var(--muted); margin-right: 6px; }
 .donos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .donos li { display: grid; gap: 4px; padding: 12px 14px; }
+
+/* Organograma dos donos: a empresa no topo, os donos de cada empresa logo abaixo dela */
+.lead-donos p { margin: 0 0 6px; }
+.lead-donos ul { margin: 0 0 8px; padding-left: 20px; }
+.fluxo { --fio: color-mix(in srgb, var(--muted) 55%, var(--line)); overflow-x: auto; padding: 8px 0 12px; }
+.fluxo ul { list-style: none; margin: 0; padding: 0; }
+.fluxo li { position: relative; }
+.no { display: inline-flex; flex-direction: column; gap: 2px; text-align: left; max-width: 240px; padding: 8px 12px; border-radius: 8px;
+  background: var(--surface); border: 2px solid var(--fio); font-size: .86rem; line-height: 1.3; }
+.no strong { overflow-wrap: anywhere; }
+.no-tipo { font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.no-doc { font-size: .75rem; color: var(--muted); }
+.no-motivo { font-size: .75rem; color: var(--ink-2); margin-top: 2px; }
+.no-raiz { border-color: var(--ink); background: color-mix(in srgb, var(--ink) 6%, var(--surface)); }
+.no-empresa { border-color: var(--gold); }
+.no-pessoa { border-color: var(--accent); }
+.no-estrangeiro { border-color: var(--muted); }
+.no-parou { border-style: dashed; border-color: var(--muted); }
+.fluxo-legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); margin-bottom: 12px; }
+.fluxo-legenda i { display: inline-block; width: 14px; height: 10px; border-radius: 3px; border: 2px solid; margin-right: 6px; vertical-align: -1px; }
+.fluxo-legenda .no-empresa { border-color: var(--gold); } .fluxo-legenda .no-pessoa { border-color: var(--accent); }
+.fluxo-legenda .no-estrangeiro { border-color: var(--muted); } .fluxo-legenda .no-parou { border-color: var(--muted); border-style: dashed; }
+
+/* Celular: árvore vertical, cada nível um pouco mais para a direita */
+.fluxo ul ul { padding-left: 22px; }
+.fluxo ul ul > li { padding: 10px 0 0 18px; }
+.fluxo ul ul > li::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; border-left: 2px solid var(--fio); }
+.fluxo ul ul > li:last-child::before { bottom: auto; height: 30px; }
+.fluxo ul ul > li::after { content: ""; position: absolute; left: 0; top: 30px; width: 16px; border-top: 2px solid var(--fio); }
+
+/* Tela larga: organograma de cima para baixo, com setas */
+@media (min-width: 760px) {
+  .fluxo > ul { display: flex; justify-content: center; min-width: max-content; }
+  .fluxo ul ul { display: flex; justify-content: center; padding: 22px 0 0; position: relative; }
+  .fluxo ul ul::before { content: ""; position: absolute; top: 0; left: 50%; height: 22px; border-left: 2px solid var(--fio); }
+  .fluxo li { display: flex; flex-direction: column; align-items: center; }
+  .fluxo ul ul > li { padding: 22px 8px 0; }
+  .fluxo ul ul > li::before, .fluxo ul ul > li::after { content: ""; position: absolute; top: 0; bottom: auto; height: 22px; width: 50%; border-top: 2px solid var(--fio); }
+  .fluxo ul ul > li::before { left: 0; border-left: 0; }
+  .fluxo ul ul > li::after { left: 50%; border-left: 2px solid var(--fio); }
+  .fluxo ul ul > li:last-child::before { height: 22px; }
+  .fluxo ul ul > li:first-child::before, .fluxo ul ul > li:last-child::after { border-top: 0; }
+  .fluxo ul ul > li:only-child::after { border-top: 0; }
+  .fluxo ul ul > li:only-child { padding-top: 22px; }
+  .no { min-width: 150px; }
+}

@@ -30,29 +30,8 @@ export default function EmpresaPage() {
         <h2>Quem são os donos</h2>
         {!emp ? <div className="empty">Ainda não buscamos os dados desta empresa na Receita Federal.</div>
           : e.socios.length === 0 ? <Explain>A Receita não lista sócios para esta empresa. Isso é comum em empresário individual e MEI, em que o dono é a própria pessoa do nome da empresa.</Explain>
-          : (
-            <div className="table-wrap">
-              <table>
-                <thead><tr><th>Sócio</th><th>Função</th><th>Desde</th><th>Outras empresas dele que recebem de parlamentares</th></tr></thead>
-                <tbody>
-                  {e.socios.map((s, i) => (
-                    <tr key={i}>
-                      <td>{s.nome}{s.tipo === "empresa" && <> <span className="chip">empresa</span></>}{s.tipo === "estrangeiro" && <> <span className="chip">exterior</span></>}<div className="muted small mono">{s.tipo === "empresa" ? cnpjFmt(s.doc) : s.doc}</div></td>
-                      <td className="small">{s.qualificacao}</td>
-                      <td className="num">{dataBR(s.entrada)}</td>
-                      <td>{s.outras_empresas.length ? s.outras_empresas.map((o) => (
-                        <div key={o.cnpj}><Link to={`/e/${o.cnpj}`}>{o.nome}</Link> <span className="muted small num">{reais(o.total)}</span></div>
-                      )) : <span className="muted">Nenhuma encontrada</span>}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        <p className="muted small">A Receita esconde parte do CPF dos sócios. Por isso ligamos empresas pelo nome do sócio mais os dígitos visíveis do CPF. Homônimos raros podem aparecer.</p>
+          : <Donos e={e} />}
       </section>
-
-      {e.donos_finais && e.donos_finais.length > 0 && <DonosFinais e={e} />}
 
       {e.mesmo_endereco && e.mesmo_endereco.length > 0 && (
         <section>
@@ -168,36 +147,109 @@ const FIM: Record<DonoFinal["fim"], string> = {
   ciclo: "Esta empresa é sócia de uma empresa que já apareceu antes no caminho (participação cruzada).",
 };
 
-/* Sócios que são empresas (holdings): seguimos até chegar às pessoas */
-function DonosFinais({ e }: { e: Empresa }) {
-  const donos = e.donos_finais!;
-  const pessoas = donos.filter((d) => d.fim === "pessoa");
+/* Árvore de donos: a empresa no topo; abaixo de cada empresa, quem é dono dela */
+interface No { chave: string; nome: string; tipo: "raiz" | "empresa" | "pessoa" | "estrangeiro"; doc: string; papel: string; motivo?: string; filhos: No[] }
+
+function arvore(e: Empresa): { raiz: No; donos: DonoFinal[] } {
+  const donos: DonoFinal[] = e.donos_finais && e.donos_finais.length ? e.donos_finais
+    : e.socios.map((s) => ({ nome: s.nome, doc: s.doc, tipo: s.tipo || "pessoa", qualificacao: s.qualificacao, pais: "",
+      cadeia: s.tipo === "empresa" ? [{ cnpj: s.doc, nome: s.nome, qualificacao: s.qualificacao }] : [],
+      fim: (s.tipo === "empresa" ? "sem_dados" : s.tipo === "estrangeiro" ? "estrangeiro" : "pessoa") as DonoFinal["fim"],
+      outras_empresas: s.outras_empresas }));
+  const raiz: No = { chave: "raiz", nome: e.nome, tipo: "raiz", doc: e.cnpj, papel: "", filhos: [] };
+  for (const d of donos) {
+    let atual = raiz;
+    for (const c of d.cadeia) {
+      let f = atual.filhos.find((x) => x.chave === `PJ${c.cnpj}`);
+      if (!f) { f = { chave: `PJ${c.cnpj}`, nome: c.nome, tipo: "empresa", doc: c.cnpj, papel: c.qualificacao, filhos: [] }; atual.filhos.push(f); }
+      atual = f;
+    }
+    if (d.fim === "pessoa" || d.fim === "estrangeiro") {
+      atual.filhos.push({ chave: `${d.nome}|${d.doc}`, nome: d.nome, tipo: d.fim, doc: d.fim === "estrangeiro" ? d.pais : d.doc, papel: d.qualificacao, filhos: [] });
+    } else {
+      atual.motivo = FIM[d.fim];
+    }
+  }
+  return { raiz, donos };
+}
+
+const juntar = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} e ${xs[xs.length - 1]}`);
+
+const ROTULO: Record<No["tipo"], string> = { raiz: "Esta empresa", empresa: "Empresa sócia", pessoa: "Pessoa", estrangeiro: "No exterior" };
+
+function NoFluxo({ n }: { n: No }) {
   return (
-    <section>
-      <h2>Donos finais, por trás das empresas sócias</h2>
-      <Explain>Quando uma empresa sócia (uma holding, por exemplo) aparece na lista de sócios, buscamos os sócios dela na Receita, e assim por diante, até chegar às pessoas. Cada linha mostra o caminho, da empresa até o dono.</Explain>
-      <ul className="donos">
-        {donos.map((d, i) => (
-          <li key={i} className="card">
-            <div className="cadeia">
-              <span>{e.nome}</span>
-              {d.cadeia.map((c) => <span key={c.cnpj}>{c.nome} <span className="muted small mono">{cnpjFmt(c.cnpj)}</span></span>)}
-              {(d.fim === "pessoa" || d.fim === "estrangeiro") && (
-                <span><strong>{d.nome}</strong>{d.fim === "estrangeiro" && <> <span className="chip">exterior</span></>}</span>
-              )}
-            </div>
-            <div className="muted small">
-              {d.fim === "pessoa" ? [d.doc, d.qualificacao].filter(Boolean).join(" · ") : d.fim === "estrangeiro" ? [d.pais, FIM[d.fim]].filter(Boolean).join(" · ") : <>Busca parou: {FIM[d.fim]}</>}
-            </div>
-            {d.fim === "pessoa" && (
-              <div className="small">{d.outras_empresas.length ? <>Outras empresas dele que recebem de parlamentares: {d.outras_empresas.map((o, k) => (
-                <span key={o.cnpj}>{k > 0 && ", "}<Link to={`/e/${o.cnpj}`}>{o.nome}</Link> <span className="muted num">({reais(o.total)})</span></span>
-              ))}</> : <span className="muted">Nenhuma outra empresa dele recebe de parlamentares.</span>}</div>
-            )}
-          </li>
-        ))}
-      </ul>
-      <p className="muted small">{pessoas.length} pessoa{pessoas.length === 1 ? "" : "s"} encontrada{pessoas.length === 1 ? "" : "s"} por trás desta empresa. Ligamos empresas do mesmo dono também por esse caminho, e não só pelos sócios diretos.</p>
-    </section>
+    <li>
+      <div className={`no no-${n.tipo}${n.motivo ? " no-parou" : ""}`}>
+        <span className="no-tipo">{ROTULO[n.tipo]}{n.papel ? ` · ${n.papel}` : ""}</span>
+        <strong>{n.nome}</strong>
+        {n.doc && <span className="no-doc mono">{n.tipo === "raiz" || n.tipo === "empresa" ? cnpjFmt(n.doc) : n.doc}</span>}
+        {n.motivo && <span className="no-motivo">{n.motivo}</span>}
+      </div>
+      {n.filhos.length > 0 && <ul>{n.filhos.map((f) => <NoFluxo key={f.chave} n={f} />)}</ul>}
+    </li>
+  );
+}
+
+function Donos({ e }: { e: Empresa }) {
+  const { raiz, donos } = arvore(e);
+  const pessoas = donos.filter((d) => d.fim === "pessoa");
+  const viaHolding = pessoas.filter((d) => d.cadeia.length > 0);
+  const exterior = donos.filter((d) => d.fim === "estrangeiro").length;
+  const parou = donos.some((d) => d.fim !== "pessoa" && d.fim !== "estrangeiro");
+  const comOutras = pessoas.filter((d) => d.outras_empresas.length);
+  return (
+    <>
+      <div className="lead-donos">
+        <p><strong>{e.nome}</strong> pertence a {pessoas.length === 0 ? "nenhuma pessoa identificada" : <><strong>{pessoas.length} pessoa{pessoas.length > 1 ? "s" : ""}</strong>: {juntar(pessoas.map((d) => d.nome))}</>}.</p>
+        {viaHolding.length > 0 && (
+          <ul>
+            {viaHolding.map((d) => <li key={`${d.nome}|${d.doc}`}><strong>{d.nome}</strong> é dono(a) por meio de {d.cadeia.length > 1 ? "uma sequência de empresas" : "outra empresa"}: {d.cadeia.slice().reverse().map((c) => c.nome).join(", que é dona de ")}.</li>)}
+          </ul>
+        )}
+        {exterior > 0 && <p>Também há {exterior} sócio{exterior > 1 ? "s" : ""} no exterior. A Receita não mostra quem está por trás.</p>}
+        {parou && <p>Em parte do caminho a Receita não informa os donos (caixas tracejadas).</p>}
+      </div>
+      <p className="muted small">Leia de cima para baixo: abaixo de cada empresa estão os donos dela. Quando o dono é outra empresa, buscamos os donos dessa empresa também, até chegar às pessoas.</p>
+      <div className="fluxo" role="img" aria-label={`Organograma dos donos de ${e.nome}`}>
+        <ul><NoFluxo n={raiz} /></ul>
+      </div>
+      <div className="fluxo-legenda small">
+        <span><i className="no-empresa" />Empresa</span><span><i className="no-pessoa" />Pessoa</span><span><i className="no-estrangeiro" />No exterior</span><span><i className="no-parou" />Busca parou</span>
+      </div>
+      {comOutras.length > 0 && (
+        <>
+          <h3>Outras empresas dos mesmos donos que recebem de parlamentares</h3>
+          <ul className="donos">
+            {comOutras.map((d) => (
+              <li key={`${d.nome}|${d.doc}`} className="card">
+                <strong>{d.nome}</strong>
+                <div className="small">{d.outras_empresas.map((o, k) => (
+                  <span key={o.cnpj}>{k > 0 && ", "}<Link to={`/e/${o.cnpj}`}>{o.nome}</Link> <span className="muted num">({reais(o.total)})</span></span>
+                ))}</div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <details className="small">
+        <summary>Ver a lista de sócios como aparece na Receita</summary>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Sócio</th><th>Função</th><th>Desde</th></tr></thead>
+            <tbody>
+              {e.socios.map((s, i) => (
+                <tr key={i}>
+                  <td>{s.nome}{s.tipo === "empresa" && <> <span className="chip">empresa</span></>}{s.tipo === "estrangeiro" && <> <span className="chip">exterior</span></>}<div className="muted small mono">{s.tipo === "empresa" ? cnpjFmt(s.doc) : s.doc}</div></td>
+                  <td className="small">{s.qualificacao}</td>
+                  <td className="num">{dataBR(s.entrada)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+      <p className="muted small">A Receita esconde parte do CPF dos sócios. Por isso ligamos empresas pelo nome do sócio mais os dígitos visíveis do CPF. Homônimos raros podem aparecer.</p>
+    </>
   );
 }
