@@ -1,6 +1,8 @@
 import { Link, useParams } from "react-router-dom";
-import { Barras, Explain, Loading, useData } from "../components/ui";
-import { cnpjFmt, dataBR, reais, type Empresa } from "../data";
+import { useMemo, useState } from "react";
+import { Barras, Explain, Loading, useAno, useData } from "../components/ui";
+import { MESES, cnpjFmt, dataBR, reais, type DonoFinal, type Empresa, type NotaEmpresa, type Resumo } from "../data";
+import { norm } from "./Home";
 
 export default function EmpresaPage() {
   const { cnpj = "" } = useParams();
@@ -16,7 +18,7 @@ export default function EmpresaPage() {
         {e.alertas.map((a) => <div className="alert" key={a} role="note"><strong>Ponto de atenção:</strong> {a}</div>)}
       </section>
       <section className="grid">
-        <div className="card stat"><span className="label">Recebeu de parlamentares</span><span className="value">{reais(e.total)}</span><span className="hint">de {e.n_politicos} parlamentar{e.n_politicos > 1 ? "es" : ""}</span></div>
+        <div className="card stat"><span className="label">Recebeu de parlamentares (todos os anos)</span><span className="value">{reais(e.total)}</span><span className="hint">de {e.n_politicos} parlamentar{e.n_politicos > 1 ? "es" : ""}</span></div>
         {emp && <>
           <div className="card stat"><span className="label">Situação na Receita</span><span className="value" style={{ fontSize: "1.3rem" }}>{emp.situacao || "—"}</span><span className="hint">Aberta em {dataBR(emp.abertura)}</span></div>
           <div className="card stat"><span className="label">Atividade</span><span style={{ fontWeight: 600 }}>{emp.atividade || "—"}</span><span className="hint">{emp.municipio}{emp.uf ? `-${emp.uf}` : ""} · {emp.porte}</span></div>
@@ -35,7 +37,7 @@ export default function EmpresaPage() {
                 <tbody>
                   {e.socios.map((s, i) => (
                     <tr key={i}>
-                      <td>{s.nome}<div className="muted small mono">{s.doc}</div></td>
+                      <td>{s.nome}{s.tipo === "empresa" && <> <span className="chip">empresa</span></>}{s.tipo === "estrangeiro" && <> <span className="chip">exterior</span></>}<div className="muted small mono">{s.tipo === "empresa" ? cnpjFmt(s.doc) : s.doc}</div></td>
                       <td className="small">{s.qualificacao}</td>
                       <td className="num">{dataBR(s.entrada)}</td>
                       <td>{s.outras_empresas.length ? s.outras_empresas.map((o) => (
@@ -50,10 +52,152 @@ export default function EmpresaPage() {
         <p className="muted small">A Receita esconde parte do CPF dos sócios. Por isso ligamos empresas pelo nome do sócio mais os dígitos visíveis do CPF. Homônimos raros podem aparecer.</p>
       </section>
 
+      {e.donos_finais && e.donos_finais.length > 0 && <DonosFinais e={e} />}
+
+      {e.mesmo_endereco && e.mesmo_endereco.length > 0 && (
+        <section>
+          <h2>Outras fornecedoras no mesmo endereço</h2>
+          <Explain>Estas empresas também recebem de parlamentares e estão registradas na Receita no mesmo endereço{emp?.endereco ? <> ({[emp.endereco.logradouro, emp.endereco.numero, emp.endereco.complemento, emp.endereco.bairro].filter(Boolean).join(", ")}, CEP {emp.endereco.cep})</> : null}. Isso pode indicar o mesmo dono ou o mesmo grupo, mas também pode ser um prédio comercial ou um escritório de contabilidade.</Explain>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Empresa</th><th>Mesmos sócios?</th><th className="r">Recebeu</th></tr></thead>
+              <tbody>
+                {e.mesmo_endereco.map((o) => (
+                  <tr key={o.cnpj}>
+                    <td><Link to={`/e/${o.cnpj}`}>{o.nome}</Link><div className="muted small mono">{cnpjFmt(o.cnpj)}</div></td>
+                    <td>{o.mesmos_socios ? <strong>Sim</strong> : "Não"}</td>
+                    <td className="r num">{reais(o.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <section>
-        <h2>Quem pagou</h2>
+        <h2>Quem pagou (todos os anos)</h2>
         <Barras itens={e.pagadores.slice(0, 30).map((p) => ({ label: <Link to={`/p/${p.politico}`}>{p.nome} <span className="muted small">({p.partido}-{p.uf})</span></Link>, valor: p.valor }))} />
       </section>
+
+      <PorMes e={e} />
+      <Notas e={e} />
     </>
+  );
+}
+
+function PorMes({ e }: { e: Empresa }) {
+  const { ano } = useAno();
+  const linhas = useMemo(() => {
+    const m = new Map<string, { nome: string; meses: number[]; total: number }>();
+    (e.por_mes || []).filter((x) => String(x.ano) === ano).forEach((x) => {
+      const l = m.get(x.politico) || { nome: x.nome, meses: Array(12).fill(0), total: 0 };
+      l.meses[x.mes - 1] += x.valor; l.total += x.valor; m.set(x.politico, l);
+    });
+    return [...m.entries()].sort((a, b) => b[1].total - a[1].total);
+  }, [e, ano]);
+  if (!e.por_mes) return null;
+  return (
+    <section>
+      <h2>Quanto cada parlamentar pagou por mês em {ano}</h2>
+      {!linhas.length ? <div className="empty">Nenhum pagamento a esta empresa em {ano}. Escolha outro ano no topo da página.</div> : (
+        <div className="table-wrap">
+          <table className="small">
+            <thead><tr><th>Parlamentar</th>{MESES.map((m) => <th key={m} className="r">{m}</th>)}<th className="r">Total</th></tr></thead>
+            <tbody>
+              {linhas.map(([pid, l]) => (
+                <tr key={pid}>
+                  <td><Link to={`/p/${pid}`}>{l.nome}</Link></td>
+                  {l.meses.map((v, i) => <td key={i} className="r num">{v ? Math.round(v).toLocaleString("pt-BR") : <span className="muted">–</span>}</td>)}
+                  <td className="r num"><strong>{reais(l.total)}</strong></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="muted small">Valores em reais, arredondados.</p>
+    </section>
+  );
+}
+
+function Notas({ e }: { e: Empresa }) {
+  const { ano } = useAno();
+  const n_ano = e.notas_por_ano?.[ano] || 0;
+  const { data: notas, error } = useData<NotaEmpresa[]>(n_ano ? `e/notas/${e.cnpj}-${ano}.json` : null);
+  const { data: pols } = useData<Resumo[]>("politicos.json");
+  const nomes = useMemo(() => new Map((pols || []).map((p) => [p.id, p.nome])), [pols]);
+  const [q, setQ] = useState("");
+  const [n, setN] = useState(100);
+  const lista = useMemo(() => (notas || []).filter((x) => !q || norm(nomes.get(x[1]) || "").includes(norm(q))), [notas, q, nomes]);
+  const semLink = (notas || []).filter((x) => !x[4]).length;
+  return (
+    <section>
+      <h2>Todas as notas fiscais de {ano}{n_ano ? ` (${n_ano.toLocaleString("pt-BR")})` : ""}</h2>
+      {!n_ano ? <div className="empty">Nenhuma nota desta empresa em {ano}. Escolha outro ano no topo da página.</div>
+        : !notas ? <Loading error={error} /> : <>
+        <div className="search"><input aria-label="Filtrar por parlamentar" value={q} onChange={(ev) => { setQ(ev.target.value); setN(100); }} placeholder="Filtrar por parlamentar" /></div>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Data</th><th>Parlamentar e tipo de gasto</th><th className="r">Valor</th><th>Nota</th></tr></thead>
+            <tbody>
+              {lista.slice(0, n).map((x, i) => (
+                <tr key={i}>
+                  <td className="num">{dataBR(x[0])}</td>
+                  <td><Link to={`/p/${x[1]}`}>{nomes.get(x[1]) || x[1]}</Link><div className="small muted">{x[2]}</div></td>
+                  <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(x[3], true)}</td>
+                  <td className="small">{x[4] ? <a href={x[4]} target="_blank" rel="noreferrer">Abrir nota ↗</a> : <span className="muted">Sem link oficial</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {lista.length > n && <button className="link" onClick={() => setN(n + 200)}>Mostrar mais notas ({(lista.length - n).toLocaleString("pt-BR")} restantes)</button>}
+        {semLink > 0 && <p className="muted small">{semLink.toLocaleString("pt-BR")} nota{semLink > 1 ? "s" : ""} sem link: o Senado não publica a imagem das notas, e algumas notas antigas da Câmara também não têm.</p>}
+      </>}
+    </section>
+  );
+}
+
+const FIM: Record<DonoFinal["fim"], string> = {
+  pessoa: "",
+  estrangeiro: "Sócio no exterior. A Receita não mostra quem está por trás.",
+  sem_socios: "A Receita não lista os sócios desta empresa (comum em sociedade anônima, que tem acionistas em vez de sócios).",
+  sem_dados: "Não encontramos esta empresa na base da Receita.",
+  limite: "Caminho longo demais. Paramos depois de 5 empresas.",
+  ciclo: "Esta empresa é sócia de uma empresa que já apareceu antes no caminho (participação cruzada).",
+};
+
+/* Sócios que são empresas (holdings): seguimos até chegar às pessoas */
+function DonosFinais({ e }: { e: Empresa }) {
+  const donos = e.donos_finais!;
+  const pessoas = donos.filter((d) => d.fim === "pessoa");
+  return (
+    <section>
+      <h2>Donos finais, por trás das empresas sócias</h2>
+      <Explain>Quando uma empresa sócia (uma holding, por exemplo) aparece na lista de sócios, buscamos os sócios dela na Receita, e assim por diante, até chegar às pessoas. Cada linha mostra o caminho, da empresa até o dono.</Explain>
+      <ul className="donos">
+        {donos.map((d, i) => (
+          <li key={i} className="card">
+            <div className="cadeia">
+              <span>{e.nome}</span>
+              {d.cadeia.map((c) => <span key={c.cnpj}>{c.nome} <span className="muted small mono">{cnpjFmt(c.cnpj)}</span></span>)}
+              {(d.fim === "pessoa" || d.fim === "estrangeiro") && (
+                <span><strong>{d.nome}</strong>{d.fim === "estrangeiro" && <> <span className="chip">exterior</span></>}</span>
+              )}
+            </div>
+            <div className="muted small">
+              {d.fim === "pessoa" ? [d.doc, d.qualificacao].filter(Boolean).join(" · ") : d.fim === "estrangeiro" ? [d.pais, FIM[d.fim]].filter(Boolean).join(" · ") : <>Busca parou: {FIM[d.fim]}</>}
+            </div>
+            {d.fim === "pessoa" && (
+              <div className="small">{d.outras_empresas.length ? <>Outras empresas dele que recebem de parlamentares: {d.outras_empresas.map((o, k) => (
+                <span key={o.cnpj}>{k > 0 && ", "}<Link to={`/e/${o.cnpj}`}>{o.nome}</Link> <span className="muted num">({reais(o.total)})</span></span>
+              ))}</> : <span className="muted">Nenhuma outra empresa dele recebe de parlamentares.</span>}</div>
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">{pessoas.length} pessoa{pessoas.length === 1 ? "" : "s"} encontrada{pessoas.length === 1 ? "" : "s"} por trás desta empresa. Ligamos empresas do mesmo dono também por esse caminho, e não só pelos sócios diretos.</p>
+    </section>
   );
 }

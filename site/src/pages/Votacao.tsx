@@ -24,8 +24,8 @@ export default function VotacaoPage() {
         <div className="row">
           <span className={`chip ${v.aprovada ? "ok" : "no"}`}>{v.aprovada ? "Aprovado" : "Rejeitado"}</span>
           <span className="chip">Sim {v.sim} · Não {v.nao}</span>
-          {v.proposicao?.url && <a className="chip" href={v.proposicao.url} target="_blank" rel="noreferrer">Texto da proposta ↗</a>}
-          {v.fonte && <a className="chip" href={v.fonte} target="_blank" rel="noreferrer">Dados oficiais ↗</a>}
+          {v.proposicao?.url && <a className="chip" href={v.proposicao.url} target="_blank" rel="noreferrer">Ver a proposta e as votações no site {v.casa === "camara" ? "da Câmara" : "do Senado"} ↗</a>}
+          {v.temas?.map((t) => <Link key={t} className="chip" to={`/votacoes?tema=${encodeURIComponent(t)}`}>{t}</Link>)}
         </div>
       </section>
 
@@ -83,6 +83,7 @@ export default function VotacaoPage() {
           </table>
         </div>
       </section>
+      {v.fonte && <p className="muted small">Para programadores: <a href={v.fonte} target="_blank" rel="noreferrer">dados brutos desta votação</a> (formato para computador).</p>}
     </>
   );
 }

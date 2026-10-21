@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Loading, useData } from "../components/ui";
+import { useSearchParams } from "react-router-dom";
+import { Loading, useAno, useData } from "../components/ui";
 import { reaisCurto, type Resumo } from "../data";
 import { PessoaLinha, norm } from "./Home";
 
@@ -10,8 +11,11 @@ export default function Politicos() {
   const [q, setQ] = useState("");
   const [casa, setCasa] = useState("");
   const [uf, setUf] = useState("");
-  const [partido, setPartido] = useState("");
+  const [params] = useSearchParams();
+  const [partido, setPartido] = useState(params.get("partido") || "");
   const [ordem, setOrdem] = useState<Ordem>("total");
+  const { ano } = useAno();
+  const t = (p: Resumo) => p.por_ano[ano]?.total || 0;
 
   const ufs = useMemo(() => [...new Set((data || []).map((p) => p.uf))].sort(), [data]);
   const partidos = useMemo(() => [...new Set((data || []).map((p) => p.partido))].sort(), [data]);
@@ -19,9 +23,9 @@ export default function Politicos() {
     let l = (data || []).filter((p) => (!casa || p.casa === casa) && (!uf || p.uf === uf) && (!partido || p.partido === partido)
       && (!q || norm(p.nome).includes(norm(q))));
     l = l.slice().sort((a, b) => ordem === "nome" ? a.nome.localeCompare(b.nome)
-      : ordem === "posicao" ? (a.posicao ?? 9) - (b.posicao ?? 9) : b.total - a.total);
+      : ordem === "posicao" ? (a.posicao ?? 9) - (b.posicao ?? 9) : t(b) - t(a));
     return l;
-  }, [data, q, casa, uf, partido, ordem]);
+  }, [data, q, casa, uf, partido, ordem, ano]);
 
   if (!data) return <Loading error={error} />;
   return (
@@ -39,12 +43,12 @@ export default function Politicos() {
           <option value="">Todos os partidos</option>{partidos.map((u) => <option key={u}>{u}</option>)}
         </select>
         <select id="filtro-ordem" aria-label="Ordenar" value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)}>
-          <option value="total">Maior gasto</option><option value="nome">Nome</option><option value="posicao">Da esquerda para a direita</option>
+          <option value="total">Maior gasto de cota em {ano}</option><option value="nome">Nome</option><option value="posicao">Da esquerda para a direita</option>
         </select>
       </div>
       <p className="muted small">{lista.length} resultado{lista.length === 1 ? "" : "s"}</p>
       <div className="list">
-        {lista.map((p) => <PessoaLinha key={p.id} p={p} extra={ordem === "posicao" ? p.rotulo : reaisCurto(p.total)} />)}
+        {lista.map((p) => <PessoaLinha key={p.id} p={p} extra={ordem === "posicao" ? p.rotulo : reaisCurto(t(p))} />)}
       </div>
     </section>
   );

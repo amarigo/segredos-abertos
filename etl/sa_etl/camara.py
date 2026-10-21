@@ -7,6 +7,7 @@ Fontes:
 """
 from __future__ import annotations
 
+import datetime as dt
 import logging
 from collections import defaultdict
 from pathlib import Path
@@ -54,6 +55,11 @@ def deputados() -> list[dict]:
     return out
 
 
+def _validade(ano: int) -> float | None:
+    """Arquivos do ano atual e do anterior mudam (notas lançadas com atraso): baixa de novo a cada 20 horas."""
+    return 20 if ano >= dt.date.today().year - 1 else None
+
+
 def parse_cota(rows, ids: set[str]) -> list[dict]:
     """Converte linhas do arquivo da cota em despesas no formato comum."""
     out = []
@@ -87,7 +93,7 @@ def despesas(anos: list[int], ids: set[str], cache: Path) -> list[dict]:
     out: list[dict] = []
     for ano in anos:
         try:
-            f = download(COTA_URL.format(ano=ano), cache / f"camara-cota-{ano}.csv.zip")
+            f = download(COTA_URL.format(ano=ano), cache / f"camara-cota-{ano}.csv.zip", max_horas=_validade(ano))
         except Exception as e:  # noqa: BLE001 - um ano faltando não deve parar tudo
             log.warning("Cota da Câmara %s indisponível: %s", ano, e)
             continue
@@ -156,7 +162,8 @@ def votacoes(anos: list[int], ids: set[str], cache: Path) -> tuple[list[dict], l
     all_v, all_votos = [], []
     for ano in anos:
         try:
-            files = {k: download(u.format(ano=ano), cache / f"camara-{k}-{ano}.csv") for k, u in VOT_URLS.items()}
+            files = {k: download(u.format(ano=ano), cache / f"camara-{k}-{ano}.csv", max_horas=_validade(ano))
+                     for k, u in VOT_URLS.items()}
         except Exception as e:  # noqa: BLE001
             log.warning("Votações da Câmara %s indisponíveis: %s", ano, e)
             continue

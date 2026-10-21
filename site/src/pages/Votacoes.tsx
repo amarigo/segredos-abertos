@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Explain, Loading, useData } from "../components/ui";
-import { casaNome, dataBR, proposicaoNome, type VotacaoResumo } from "../data";
+import { TEMAS, casaNome, dataBR, proposicaoNome, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 
 export default function Votacoes() {
@@ -9,9 +9,13 @@ export default function Votacoes() {
   const [q, setQ] = useState("");
   const [casa, setCasa] = useState("");
   const [tipo, setTipo] = useState("");
+  const [params, setParams] = useSearchParams();
+  const tema = params.get("tema") || "";
+  const setTema = (t: string) => setParams(t ? { tema: t } : {}, { replace: true });
+  const contTema = useMemo(() => { const c: Record<string, number> = {}; (data || []).forEach((v) => v.temas?.forEach((t) => (c[t] = (c[t] || 0) + 1))); return c; }, [data]);
   const tipos = useMemo(() => [...new Set((data || []).map((v) => v.proposicao?.sigla).filter(Boolean) as string[])].sort(), [data]);
-  const lista = useMemo(() => (data || []).filter((v) => (!casa || v.casa === casa) && (!tipo || v.proposicao?.sigla === tipo)
-    && (!q || norm(`${proposicaoNome(v.proposicao)} ${v.proposicao?.ementa || ""} ${v.descricao}`).includes(norm(q)))), [data, q, casa, tipo]);
+  const lista = useMemo(() => (data || []).filter((v) => (!casa || v.casa === casa) && (!tipo || v.proposicao?.sigla === tipo) && (!tema || !!v.temas?.includes(tema))
+    && (!q || norm(`${proposicaoNome(v.proposicao)} ${v.proposicao?.ementa || ""} ${v.descricao}`).includes(norm(q)))), [data, q, casa, tipo, tema]);
   if (!data) return <Loading error={error} />;
   return (
     <section>
@@ -26,7 +30,13 @@ export default function Votacoes() {
           <option value="">Todos os tipos</option>{tipos.map((t) => <option key={t}>{t}</option>)}
         </select>
       </div>
-      <p className="muted small">{lista.length} votações</p>
+      <div className="row" style={{ flexWrap: "wrap", gap: 6, margin: "8px 0" }} role="group" aria-label="Temas">
+        <button className={`chip ${!tema ? "ok" : ""}`} onClick={() => setTema("")}>Todos os temas</button>
+        {TEMAS.filter((t) => contTema[t]).map((t) => (
+          <button key={t} className={`chip ${tema === t ? "ok" : ""}`} aria-pressed={tema === t} onClick={() => setTema(tema === t ? "" : t)}>{t} ({contTema[t]})</button>
+        ))}
+      </div>
+      <p className="muted small">{lista.length} votações{tema ? ` sobre ${tema.toLowerCase()}` : ""}. Os temas são definidos por palavras da ementa. <Link to="/sobre">Entenda</Link>.</p>
       <div className="table-wrap">
         <table>
           <thead><tr><th>Data</th><th>Casa</th><th>O que foi votado</th><th className="r">Sim</th><th className="r">Não</th><th>Resultado</th></tr></thead>
@@ -35,7 +45,8 @@ export default function Votacoes() {
               <tr key={v.id}>
                 <td className="num">{dataBR(v.data)}</td>
                 <td>{casaNome(v.casa)}</td>
-                <td><Link to={`/v/${v.id}`}>{proposicaoNome(v.proposicao) || "Votação"}</Link><div className="small muted">{(v.proposicao?.ementa || v.descricao).slice(0, 200)}</div></td>
+                <td><Link to={`/v/${v.id}`}>{proposicaoNome(v.proposicao) || "Votação"}</Link><div className="small muted">{(v.proposicao?.ementa || v.descricao).slice(0, 200)}</div>
+                  {v.temas && v.temas.length > 0 && <div className="small" style={{ marginTop: 2 }}>{v.temas.join(" · ")}</div>}</td>
                 <td className="r num">{v.sim}</td>
                 <td className="r num">{v.nao}</td>
                 <td><span className={`chip ${v.aprovada ? "ok" : "no"}`}>{v.aprovada ? "Aprovado" : "Rejeitado"}</span></td>

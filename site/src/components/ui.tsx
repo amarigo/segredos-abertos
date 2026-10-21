@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { Fragment, createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { load, reais, MESES, type Grupo } from "../data";
 
@@ -12,6 +12,23 @@ export function useData<T>(path: string | null): { data: T | null; error: string
     return () => { vivo = false; };
   }, [path]);
   return state;
+}
+
+/* Ano escolhido no topo do site, compartilhado por todas as páginas */
+export const AnoCtx = createContext<{ ano: string; anos: string[]; setAno: (a: string) => void }>({ ano: "", anos: [], setAno: () => {} });
+export const useAno = () => useContext(AnoCtx);
+
+export function AnoSeletor() {
+  const { ano, anos, setAno } = useAno();
+  if (!anos.length) return null;
+  return (
+    <label className="ano-sel">
+      <span className="muted small">Ano</span>
+      <select id="ano" value={ano} onChange={(e) => setAno(e.target.value)}>
+        {anos.slice().reverse().map((a) => <option key={a} value={a}>{a}</option>)}
+      </select>
+    </label>
+  );
 }
 
 export function Loading({ error }: { error?: string | null }) {
@@ -48,40 +65,47 @@ export function Barras({ itens, cor, max }: { itens: { label: ReactNode; valor: 
   );
 }
 
-/* Colunas de gasto por mês */
-export function GastoMensal({ meses }: { meses: { ano: number; mes: number; valor: number }[] }) {
+/* Colunas de gasto por mês (um ano) */
+export function GastoMensal({ meses, ano, cor = "var(--s1)" }: { meses: { mes: number; valor: number }[]; ano: string; cor?: string }) {
   const tip = useTip();
-  if (!meses.length) return <div className="empty">Sem gastos registrados no período.</div>;
+  if (!meses.length) return <div className="empty">Sem gastos registrados em {ano}.</div>;
+  const valores = Array.from({ length: 12 }, (_, i) => meses.find((m) => m.mes === i + 1)?.valor || 0);
   const W = 640, H = 200, padL = 52, padB = 24, padT = 8;
-  const max = Math.max(...meses.map((m) => m.valor));
+  const max = Math.max(...valores);
   const passo = niceStep(max);
   const topo = Math.ceil(max / passo) * passo || 1;
-  const bw = (W - padL) / meses.length;
+  const bw = (W - padL) / 12;
   const y = (v: number) => padT + (H - padT - padB) * (1 - v / topo);
   const ticks = Array.from({ length: Math.round(topo / passo) + 1 }, (_, i) => i * passo);
   return (
     <div style={{ overflowX: "auto" }}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Gasto por mês">
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Gasto por mês em ${ano}`}>
         {ticks.map((t) => (
           <g key={t}>
             <line x1={padL} x2={W} y1={y(t)} y2={y(t)} stroke="var(--grid)" />
             <text x={padL - 6} y={y(t) + 4} textAnchor="end">{t >= 1000 ? `${Math.round(t / 1000)} mil` : t}</text>
           </g>
         ))}
-        {meses.map((m, i) => {
-          const h = Math.max(0, y(0) - y(m.valor));
-          const x = padL + i * bw + 1;
+        {valores.map((v, i) => {
+          const x = padL + i * bw + 2;
           return (
             <g key={i}>
-              <rect x={x} y={y(m.valor)} width={Math.max(1, bw - 2)} height={h} rx={Math.min(4, bw / 3)} fill="var(--s1)"
-                onMouseMove={(e) => tip.show(e, `${MESES[m.mes - 1]}/${m.ano}: ${reais(m.valor)}`)} onMouseLeave={tip.hide} />
-              {m.mes === 1 || i === 0 ? <text x={x} y={H - 6}>{`${MESES[m.mes - 1]}/${String(m.ano).slice(2)}`}</text> : null}
+              <rect x={x} y={y(v)} width={Math.max(1, bw - 4)} height={Math.max(0, y(0) - y(v))} rx={4} fill={cor}
+                onMouseMove={(e) => tip.show(e, `${MESES[i]}/${ano}: ${reais(v)}`)} onMouseLeave={tip.hide} />
+              <text x={x + (bw - 4) / 2} y={H - 6} textAnchor="middle">{MESES[i]}</text>
             </g>
           );
         })}
         <line x1={padL} x2={W} y1={y(0)} y2={y(0)} stroke="var(--muted)" />
       </svg>
       {tip.el}
+      <details className="small">
+        <summary>Ver os valores de cada mês</summary>
+        <div className="kv" style={{ maxWidth: 360, marginTop: 8 }}>
+          {valores.map((v, i) => <Fragment key={i}><span>{MESES[i]}/{ano}</span><span>{reais(v, true)}</span></Fragment>)}
+          <strong>Total</strong><strong>{reais(valores.reduce((a, b) => a + b, 0), true)}</strong>
+        </div>
+      </details>
     </div>
   );
 }
@@ -95,18 +119,15 @@ function niceStep(max: number): number {
 }
 
 /* Régua esquerda–direita com pontos */
-export function Espectro({ pontos, destaque, rotulos }: { pontos: { id: string; pos: number; label: string; href?: string }[]; destaque?: string; rotulos?: boolean }) {
+export function Espectro({ pontos, destaque }: { pontos: { id: string; pos: number; label: string; href?: string }[]; destaque?: string }) {
   const tip = useTip();
   const cor = (p: number) => (p < -0.15 ? "var(--esq)" : p > 0.15 ? "var(--dir)" : "var(--centro)");
   return (
     <div>
-      <div className={`spectrum ${rotulos ? "labeled" : ""}`} role="img" aria-label="Posição de esquerda a direita">
-        {rotulos && pontos.slice().sort((a, b) => a.pos - b.pos).map((p, i) => (
-          <span key={`t-${p.id}`} className="tag" style={{ left: `clamp(16px, ${((p.pos + 1) / 2) * 100}%, calc(100% - 16px))`, top: i % 2 ? 54 : 4 }}>{p.id}</span>
-        ))}
+      <div className="spectrum" role="img" aria-label="Posição de esquerda a direita">
         {pontos.map((p, i) => {
           const left = `${((p.pos + 1) / 2) * 100}%`;
-          const jitter = destaque === p.id || rotulos ? 0 : ((i * 37) % 30) - 15;
+          const jitter = destaque === p.id ? 0 : ((i * 37) % 30) - 15;
           const style = { left, top: `calc(50% + ${jitter}px)`, background: cor(p.pos) };
           const dot = <span className={`dot ${destaque === p.id ? "me" : ""}`} style={style} onMouseMove={(e) => tip.show(e, p.label)} onMouseLeave={tip.hide} />;
           return p.href ? <Link key={p.id} to={p.href} aria-label={p.label}>{dot}</Link> : <span key={p.id}>{dot}</span>;
@@ -114,6 +135,30 @@ export function Espectro({ pontos, destaque, rotulos }: { pontos: { id: string; 
       </div>
       <div className="spectrum-labels"><span>◀ Esquerda</span><span>Centro</span><span>Direita ▶</span></div>
       {tip.el}
+    </div>
+  );
+}
+
+/* Uma linha por partido, em ordem da esquerda para a direita: nenhum nome fica por cima de outro */
+export function EspectroPartidos({ partidos }: { partidos: { sigla: string; pos: number; n: number; href?: string }[] }) {
+  const cor = (p: number) => (p < -0.15 ? "var(--esq)" : p > 0.15 ? "var(--dir)" : "var(--centro)");
+  const ordem = partidos.slice().sort((a, b) => a.pos - b.pos);
+  return (
+    <div className="esp-partidos">
+      <ol aria-label="Partidos da esquerda para a direita">
+        {ordem.map((p) => (
+          <li key={p.sigla}>
+            <span className="esp-nome">
+              {p.href ? <Link to={p.href}><strong>{p.sigla}</strong></Link> : <strong>{p.sigla}</strong>}
+              <small>{p.n} dep.</small>
+            </span>
+            <span className="esp-trilho" title={`${p.sigla}: posição ${p.pos.toFixed(2)} (de -1 a +1), ${p.n} deputados`}>
+              <i style={{ left: `${((p.pos + 1) / 2) * 100}%`, background: cor(p.pos) }} />
+            </span>
+          </li>
+        ))}
+        <li className="esp-eixo" aria-hidden="true"><span /><span className="spectrum-labels"><span>◀ Esquerda</span><span>Centro</span><span>Direita ▶</span></span></li>
+      </ol>
     </div>
   );
 }
