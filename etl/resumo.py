@@ -39,6 +39,23 @@ for p in sorted(pols, key=lambda p: -p["total"])[:5]:
 print("\n### Empresas que mais receberam")
 for e in emps[:5]:
     print(f"- {e['nome']} ({e['cnpj']}): R$ {e['total']:,.2f} · sócios: {e['tem_socios']}")
+print("\n### Sócios que são empresas (holdings)")
+import re
+from collections import Counter
+tipos, amostra, com_holding = Counter(), [], 0
+for e in emps:
+    f = d / "e" / f"{e['cnpj']}.json"
+    if not f.exists():
+        continue
+    x = json.loads(f.read_text())
+    com_holding += bool(x.get("donos_finais"))
+    for s in x.get("socios", []):
+        tipos[s.get("tipo") or "?"] += 1
+        if re.search(r"LTDA|S\.?/?A\b|PARTICIPA|HOLDING|EIRELI|INVEST", s["nome"]) and len(amostra) < 8:
+            amostra.append(f"{s['nome']} | doc={s['doc']!r} | tipo={s.get('tipo')} | {s.get('qualificacao')}")
+print(f"- Sócios por tipo (1000 maiores empresas): {dict(tipos)} · empresas com donos finais via holding: {com_holding}")
+for a in amostra:
+    print(f"  - {a}")
 print("\n### Partidos na Câmara (posição média)")
 for p in sorted((p for p in part if p["casa"] == "camara" and p["posicao"] is not None), key=lambda p: p["posicao"]):
     print(f"- {p['sigla']}: {p['posicao']:+.2f} · governo {p['alinhamento_governo']} · n={p['n']}")

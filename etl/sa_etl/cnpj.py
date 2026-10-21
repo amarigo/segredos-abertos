@@ -151,6 +151,8 @@ def buscar_socias(emps: dict[str, dict], cache: Path, max_nivel: int = MAX_NIVEL
     conhecidas = dict(emps)
     novas: dict[str, dict] = {}
     fila = {digits(s["doc"]) for e in emps.values() for s in e["socios"] if tipo_socio(s) == "empresa"} - set(conhecidas)
+    log.info("Receita: %d sócios são empresas fora da lista de fornecedoras", len(fila))
+    falhas = 0
     for _ in range(max_nivel):
         fila = sorted(c for c in fila if c not in conhecidas)[: max(0, limite - len(novas))]
         if not fila:
@@ -160,11 +162,12 @@ def buscar_socias(emps: dict[str, dict], cache: Path, max_nivel: int = MAX_NIVEL
         prox = set()
         for c, e in achadas.items():
             conhecidas[c] = e or {}
+            falhas += not e
             if e:
                 novas[c] = e
                 prox |= {digits(s["doc"]) for s in e["socios"] if tipo_socio(s) == "empresa"}
         fila = prox
-    log.info("Receita: %d empresas sócias (holdings) buscadas", len(novas))
+    log.info("Receita: %d empresas sócias (holdings) buscadas, %d sem resposta", len(novas), falhas)
     return novas
 
 
