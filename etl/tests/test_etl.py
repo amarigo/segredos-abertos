@@ -185,3 +185,14 @@ def test_montar_marca_mesmo_endereco(tmp_path):
     assert p["por_ano"]["2025"]["custo_total"] == 10150.0
     part = json.loads((tmp_path / "partidos.json").read_text())[0]
     assert part["por_ano"]["2025"]["cota_por_membro"] == 10000.0
+
+
+def test_completa_com_valor_oficial():
+    from sa_etl.build import completar_com_oficial, SEM_NOTA
+    pols = [{"id": "dep-1", "casa": "camara"}]
+    desp = [{"politico": "dep-1", "ano": 2025, "mes": 8, "valor": 100.0}]
+    rec = {"dep-1": {2025: {"cota_meses": [{"mes": 8, "valor": 150.0}, {"mes": 9, "valor": 20.0}]}}}
+    out = completar_com_oficial(desp, pols, rec)
+    extra = [d for d in out if d.get("sem_nota")]
+    assert [(d["mes"], d["valor"], d["categoria"]) for d in extra] == [(8, 50.0, SEM_NOTA), (9, 20.0, SEM_NOTA)]
+    assert recursos.parse_camara_resumo(RESUMO_CAMARA)["cota_meses"] == [{"mes": 1, "valor": 1000.0}]

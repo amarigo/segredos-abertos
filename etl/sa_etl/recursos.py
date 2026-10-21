@@ -24,6 +24,7 @@ log = logging.getLogger("sa_etl.recursos")
 CAMARA = "https://www.camara.leg.br/deputados/{id}{sub}?ano={ano}"
 SENADO_JSON = "https://adm.senado.gov.br/adm-dadosabertos/api/v1/senadores/{cod}/recursos-utilizados?ano={ano}"
 SENADO_PESSOAL = "https://www6g.senado.leg.br/transparencia/sen/{cod}/pessoal/?local=gabinete&ano={ano}&vinculo=TODOS"
+VERSAO = 2  # aumente quando mudar o que é lido das páginas, para não reaproveitar cache antigo
 MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"]
 NUM = r"(-?[\d.]+,\d+)"
 
@@ -57,9 +58,15 @@ def parse_camara_resumo(h: str) -> dict:
     out: dict = {}
     i_cota, i_verba = t.find("Cota parlamentar"), t.find("Verba de gabinete")
     if i_cota >= 0:
-        m = re.search(r"Gasto " + NUM, t[i_cota:i_verba if i_verba > i_cota else None])
+        bloco = t[i_cota:i_verba if i_verba > i_cota else None]
+        m = re.search(r"Gasto " + NUM, bloco)
         if m:
             out["cota_oficial"] = round(to_float(m.group(1)), 2)
+        mensal = bloco[bloco.find("Gasto mensal"):] if "Gasto mensal" in bloco else ""
+        meses = [{"mes": MESES.index(mes) + 1, "valor": round(to_float(val), 2)}
+                 for mes, val in re.findall(r"\b(" + "|".join(MESES) + r") " + NUM, mensal)]
+        if meses:
+            out["cota_meses"] = meses
     if i_verba >= 0:
         fim = t.find("Pessoal de gabinete", i_verba)
         bloco = t[i_verba:fim if fim > 0 else None]
@@ -181,7 +188,7 @@ def coletar(politicos: list[dict], anos: list[int], cache: Path, workers: int = 
 
     def um(pa):
         p, ano = pa
-        f = cache / f"{p['id']}-{ano}.json"
+        f = cache / f"{p['id']}-{ano}-v{VERSAO}.json"
         if ano < atual and f.exists():
             try:
                 return json.loads(f.read_text(encoding="utf-8"))

@@ -82,8 +82,11 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
       <section>
         <h2>Cota parlamentar</h2>
         <Explain>Além do salário, cada parlamentar tem uma cota mensal para despesas do mandato. Ele paga e pede reembolso apresentando a nota fiscal.</Explain>
+        {d.categorias.some((c) => c.categoria === "Passagens aéreas sem nota publicada") && (
+          <p className="muted small">"Passagens aéreas sem nota publicada": desde agosto de 2025 a Câmara soma as passagens compradas pelo próprio sistema na página do deputado, mas não publica essas notas nos dados abertos. Usamos o valor oficial de cada mês para o total ficar igual ao da Câmara.</p>
+        )}
         {Math.abs(diferenca) > Math.max(50, d.total * 0.005) && d.cota_oficial != null && (
-          <p className="alert" role="note">A página oficial mostra <strong>{reais(d.cota_oficial)}</strong> de cota em {ano}. As notas fiscais publicadas somam {reais(d.total)}. {diferenca > 0 ? "A diferença são despesas que a Câmara ainda não publicou nota por nota, como passagens compradas pela própria Câmara." : "A diferença vem de notas lançadas depois do fechamento da página oficial."} <Link to="/sobre">Entenda</Link>.</p>
+          <p className="alert" role="note">A página oficial mostra <strong>{reais(d.cota_oficial)}</strong> de cota em {ano}, e aqui somamos {reais(d.total)}. {diferenca > 0 ? "A página oficial foi atualizada depois da nossa última coleta, ou há despesas ainda sem nota publicada." : "Há notas publicadas que a página oficial ainda não somou."} <Link to="/sobre">Entenda</Link>.</p>
         )}
         <div className="grid">
           {(Object.keys(d.grupos) as Grupo[]).map((g) => (

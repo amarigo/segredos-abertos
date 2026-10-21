@@ -40,9 +40,38 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
             "votos": votos_c + votos_s, "empresas": emps, "recursos": rec}
 
 
+SEM_NOTA = "Passagens aéreas sem nota publicada"
+
+
+def completar_com_oficial(despesas: list[dict], politicos: list[dict], rec: dict) -> list[dict]:
+    """Acrescenta o que a página oficial da Câmara mostra a mais que as notas publicadas, mês a mês.
+
+    Desde agosto de 2025 os dados abertos da Câmara não trazem as passagens aéreas compradas pelo
+    sistema da própria Câmara (SIGEPA), mas a página de cada deputado soma esses valores. Sem isso,
+    o total ficaria menor que o oficial.
+    """
+    soma = defaultdict(float)
+    for d in despesas:
+        soma[(d["politico"], d["ano"], d["mes"])] += d["valor"]
+    extras = []
+    for p in politicos:
+        if p["casa"] != "camara":
+            continue
+        for ano, r in (rec.get(p["id"]) or {}).items():
+            for m in (r or {}).get("cota_meses") or []:
+                falta = round(m["valor"] - soma[(p["id"], int(ano), m["mes"])], 2)
+                if falta > 1:
+                    extras.append({"politico": p["id"], "ano": int(ano), "mes": m["mes"], "data": f"{int(ano)}-{m['mes']:02d}-01",
+                                   "categoria": SEM_NOTA, "grupo": "pessoal", "fornecedor": "Companhias aéreas (via Câmara)",
+                                   "doc": "", "valor": falta, "url": "", "sem_nota": True})
+    if extras:
+        log.info("Câmara: %d meses completados com o valor oficial (R$ %.2f)", len(extras), sum(e["valor"] for e in extras))
+    return despesas + extras
+
+
 def montar(dados: dict, saida: Path, anos: list[int]) -> None:
     politicos = dados["politicos"]
-    despesas = dados["despesas"]
+    despesas = completar_com_oficial(dados["despesas"], politicos, dados.get("recursos") or {})
     votacoes = dados["votacoes"]
     votos = dados["votos"]
     emps = dados["empresas"]
@@ -266,7 +295,7 @@ def gastos_do_ano(ds: list[dict], emps: dict) -> dict:
             "ficha": kind == "cnpj",
             "socios": [s["nome"] for s in emps.get(key, {}).get("socios", [])][:4],
         })
-    notas = sorted(ds, key=lambda d: -d["valor"])[:30]
+    notas = sorted((d for d in ds if not d.get("sem_nota")), key=lambda d: -d["valor"])[:30]
     return {
         "total": round(sum(d["valor"] for d in ds), 2),
         "grupos": {g: round(v, 2) for g, v in grupos.items()},
