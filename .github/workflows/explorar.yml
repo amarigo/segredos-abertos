@@ -11,12 +11,12 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install requests numpy
-      - run: python tools/explorar2.py
       - uses: actions/cache/restore@v4
         with:
           path: etl/.cache
           key: dados-x
           restore-keys: dados-
+      - run: python tools/explorar3.py
       - name: Dados reais
         working-directory: etl
         run: python -m sa_etl.build --saida ../site/public/data --cache .cache > /dev/null 2>&1
