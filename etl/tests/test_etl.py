@@ -5,7 +5,7 @@ import random
 from sa_etl import camara, senado, ideologia, cnpj
 from sa_etl.build import montar
 from sa_etl.categorias import grupo_de
-from sa_etl.util import read_csv_text, to_float, mask_cpf
+from sa_etl.util import cnpj_valido, read_csv_text, to_float, mask_cpf
 
 
 def test_grupos():
@@ -103,3 +103,9 @@ def test_cota_usa_idecadastro():
     csv_ = '"ideCadastro";"nuDeputadoId";"txtDescricao";"vlrLiquido";"numAno";"numMes"\n"204379";"3001";"TELEFONIA";"10";"2025";"1"\n'
     rows = camara.parse_cota(read_csv_text(csv_), {"dep-204379"})
     assert rows and rows[0]["politico"] == "dep-204379"
+
+
+def test_cnpj_valido():
+    assert cnpj_valido("33.683.111/0001-07")
+    assert not cnpj_valido("00000000000001")
+    assert not cnpj_valido("33683111000108")

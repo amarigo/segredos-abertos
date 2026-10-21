@@ -13,7 +13,7 @@ from pathlib import Path
 
 from . import camara, cnpj, ideologia, senado
 from .categorias import GRUPOS
-from .util import doc_kind, mask_cpf, write_json
+from .util import cnpj_valido, doc_kind, mask_cpf, write_json
 
 log = logging.getLogger("sa_etl")
 
@@ -31,7 +31,7 @@ def coletar(anos: list[int], cache: Path, max_empresas: int) -> dict:
 
     por_cnpj = Counter()
     for d in despesas:
-        if doc_kind(d["doc"]) == "cnpj":
+        if cnpj_valido(d["doc"]):
             por_cnpj[d["doc"]] += d["valor"]
     alvo = [c for c, _ in por_cnpj.most_common(max_empresas)]
     emps = cnpj.empresas(alvo, cache / "cnpj")

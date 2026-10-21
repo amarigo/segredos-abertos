@@ -27,14 +27,12 @@ def get(url: str, *, params: dict | None = None, tries: int = 4, timeout: int = 
     for attempt in range(tries):
         try:
             r = _session.get(url, params=params, timeout=timeout)
-            if r.status_code == 404:
-                r.raise_for_status()
             if r.status_code >= 500 or r.status_code == 429:
                 raise requests.HTTPError(f"{r.status_code} em {url}")
-            r.raise_for_status()
+            r.raise_for_status()  # outros erros 4xx não melhoram com nova tentativa
             return r
         except requests.HTTPError as e:
-            if e.response is not None and e.response.status_code == 404:
+            if e.response is not None and 400 <= e.response.status_code < 500 and e.response.status_code != 429:
                 raise
             last = e
         except requests.RequestException as e:
@@ -114,6 +112,18 @@ def doc_kind(doc: str) -> str:
     if len(d) == 11:
         return "cpf"
     return "outro"
+
+
+def cnpj_valido(doc: str) -> bool:
+    """Confere os dígitos verificadores do CNPJ (descarta códigos fictícios como 00000000000001)."""
+    d = digits(doc)
+    if len(d) != 14 or len(set(d)) == 1:
+        return False
+    def dv(base: str) -> int:
+        pesos = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2][-len(base):]
+        r = sum(int(a) * b for a, b in zip(base, pesos)) % 11
+        return 0 if r < 2 else 11 - r
+    return dv(d[:12]) == int(d[12]) and dv(d[:13]) == int(d[13])
 
 
 def mask_cpf(doc: str) -> str:
