@@ -16,4 +16,4 @@ jobs:
           path: etl/.cache
           key: dados-x
           restore-keys: dados-
-      - run: python tools/explorar6.py
+      - run: python tools/explorar7.py
