@@ -41,7 +41,6 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
 
 
 SEM_NOTA = "Despesas sem nota nos dados abertos"
-MAX_NOTAS_EMPRESA = 500  # notas mais recentes listadas na página da empresa
 
 
 def completar_com_oficial(despesas: list[dict], politicos: list[dict], rec: dict) -> list[dict]:
@@ -224,8 +223,6 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
                     "total": total, "n_politicos": len(quem), "tem_socios": bool(e and e["socios"]),
                     "n_mesmo_endereco": len(vizinhas.get(doc, []))}
         lista_emp.append(resumo_e)
-        if e is None and total < 1000:
-            continue
         socios = []
         for s in (e or {}).get("socios", []):
             outras = [c for c in socio_empresas.get(cnpj.chave_socio(s), []) if c != doc]
@@ -234,12 +231,15 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         primeiro = primeiro_pag.get(doc, "")
         ns = sorted(notas_emp[doc], key=lambda n: (n["data"], n["valor"]), reverse=True)
         mensal = defaultdict(float)  # (politico, ano, mes) -> valor
+        por_ano_notas = defaultdict(list)
         for n in ns:
             mensal[(n["politico"], n["ano"], n["mes"])] += n["valor"]
+            por_ano_notas[n["ano"]].append([n["data"], n["politico"], n["categoria"], n["valor"], n["url"]])
+        for a, lista in por_ano_notas.items():  # todas as notas, num arquivo por ano (carregado só quando aberto)
+            write_json(saida / "e" / "notas" / f"{doc}-{a}.json", lista)
         write_json(saida / "e" / f"{doc}.json", {
-            "notas": [{"data": n["data"], "politico": n["politico"], "nome": por_id[n["politico"]]["nome"],
-                       "categoria": n["categoria"], "valor": n["valor"], "url": n["url"]} for n in ns[:MAX_NOTAS_EMPRESA]],
             "n_notas": len(ns),
+            "notas_por_ano": {str(a): sum(1 for n in ns if n["ano"] == a) for a in sorted({n["ano"] for n in ns})},
             "por_mes": [{"politico": pid, "nome": por_id[pid]["nome"], "ano": a, "mes": m, "valor": round(v, 2)}
                         for (pid, a, m), v in sorted(mensal.items(), key=lambda kv: (kv[0][1], kv[0][2], -kv[1]))],
             **resumo_e, "empresa": {k: v for k, v in (e or {}).items() if k != "socios"} or None,

@@ -1,7 +1,8 @@
 import { Link, useParams } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { Barras, Explain, Loading, useAno, useData } from "../components/ui";
-import { MESES, cnpjFmt, dataBR, reais, type Empresa } from "../data";
+import { MESES, cnpjFmt, dataBR, reais, type Empresa, type NotaEmpresa, type Resumo } from "../data";
+import { norm } from "./Home";
 
 export default function EmpresaPage() {
   const { cnpj = "" } = useParams();
@@ -120,30 +121,37 @@ function PorMes({ e }: { e: Empresa }) {
 
 function Notas({ e }: { e: Empresa }) {
   const { ano } = useAno();
-  const [n, setN] = useState(50);
-  const notas = (e.notas || []).filter((x) => x.data.startsWith(ano));
-  if (!e.notas) return null;
+  const n_ano = e.notas_por_ano?.[ano] || 0;
+  const { data: notas, error } = useData<NotaEmpresa[]>(n_ano ? `e/notas/${e.cnpj}-${ano}.json` : null);
+  const { data: pols } = useData<Resumo[]>("politicos.json");
+  const nomes = useMemo(() => new Map((pols || []).map((p) => [p.id, p.nome])), [pols]);
+  const [q, setQ] = useState("");
+  const [n, setN] = useState(100);
+  const lista = useMemo(() => (notas || []).filter((x) => !q || norm(nomes.get(x[1]) || "").includes(norm(q))), [notas, q, nomes]);
+  const semLink = (notas || []).filter((x) => !x[4]).length;
   return (
     <section>
-      <h2>Notas fiscais de {ano}</h2>
-      {e.n_notas && e.n_notas > e.notas.length ? <p className="muted small">A empresa tem {e.n_notas.toLocaleString("pt-BR")} notas no total. Mostramos as {e.notas.length} mais recentes.</p> : null}
-      {!notas.length ? <div className="empty">Nenhuma nota desta empresa em {ano}.</div> : <>
+      <h2>Todas as notas fiscais de {ano}{n_ano ? ` (${n_ano.toLocaleString("pt-BR")})` : ""}</h2>
+      {!n_ano ? <div className="empty">Nenhuma nota desta empresa em {ano}. Escolha outro ano no topo da página.</div>
+        : !notas ? <Loading error={error} /> : <>
+        <div className="search"><input aria-label="Filtrar por parlamentar" value={q} onChange={(ev) => { setQ(ev.target.value); setN(100); }} placeholder="Filtrar por parlamentar" /></div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Data</th><th>Parlamentar e tipo de gasto</th><th className="r">Valor</th></tr></thead>
+            <thead><tr><th>Data</th><th>Parlamentar e tipo de gasto</th><th className="r">Valor</th><th>Nota</th></tr></thead>
             <tbody>
-              {notas.slice(0, n).map((x, i) => (
+              {lista.slice(0, n).map((x, i) => (
                 <tr key={i}>
-                  <td className="num">{dataBR(x.data)}</td>
-                  <td><Link to={`/p/${x.politico}`}>{x.nome}</Link><div className="small muted">{x.categoria}</div></td>
-                  <td className="r num" style={{ whiteSpace: "nowrap" }}>{x.url ? <a href={x.url} target="_blank" rel="noreferrer">{reais(x.valor, true)}</a> : reais(x.valor, true)}</td>
+                  <td className="num">{dataBR(x[0])}</td>
+                  <td><Link to={`/p/${x[1]}`}>{nomes.get(x[1]) || x[1]}</Link><div className="small muted">{x[2]}</div></td>
+                  <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(x[3], true)}</td>
+                  <td className="small">{x[4] ? <a href={x[4]} target="_blank" rel="noreferrer">Abrir nota ↗</a> : <span className="muted">Sem link oficial</span>}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {notas.length > n && <button className="link" onClick={() => setN(n + 100)}>Mostrar mais notas ({notas.length - n} restantes)</button>}
-        <p className="muted small">Quando o valor é um link, ele abre a nota fiscal original.</p>
+        {lista.length > n && <button className="link" onClick={() => setN(n + 200)}>Mostrar mais notas ({(lista.length - n).toLocaleString("pt-BR")} restantes)</button>}
+        {semLink > 0 && <p className="muted small">{semLink.toLocaleString("pt-BR")} nota{semLink > 1 ? "s" : ""} sem link: o Senado não publica a imagem das notas, e algumas notas antigas da Câmara também não têm.</p>}
       </>}
     </section>
   );
