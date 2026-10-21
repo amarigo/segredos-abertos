@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Explain, Loading, VotoBarra, VotoChip, VotoLegenda, useData } from "../components/ui";
-import { casaNome, dataBR, proposicaoNome, type Votacao } from "../data";
+import { casaNome, dataBR, descricaoCurta, proposicaoNome, tipoVotacao, type Votacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 
 const LADOS = ["Esquerda", "Centro-esquerda", "Centro", "Centro-direita", "Direita"];
@@ -9,18 +9,22 @@ const LADOS = ["Esquerda", "Centro-esquerda", "Centro", "Centro-direita", "Direi
 export default function VotacaoPage() {
   const { id = "" } = useParams();
   const { data: v, error } = useData<Votacao>(`v/${id}.json`);
+  const { data: todas } = useData<VotacaoResumo[]>("votacoes.json");
   const [q, setQ] = useState("");
   const votos = useMemo(() => (v?.votos || []).filter((x) => !q || norm(`${x.nome} ${x.partido} ${x.uf}`).includes(norm(q))), [v, q]);
   if (!v) return <Loading error={error} />;
+  const nome = proposicaoNome(v.proposicao);
+  const irmas = nome ? (todas || []).filter((x) => x.casa === v.casa && proposicaoNome(x.proposicao) === nome)
+    .sort((a, b) => a.data.localeCompare(b.data) || a.id.localeCompare(b.id)) : [];
   const partidos = Object.entries(v.por_partido).sort((a, b) => tot(b[1]) - tot(a[1]));
   const orient = Object.entries(v.orientacoes || {});
   return (
     <>
       <section>
         <span className="eyebrow">{casaNome(v.casa)} · {dataBR(v.data)}</span>
-        <h1>{proposicaoNome(v.proposicao) || "Votação"}</h1>
-        {v.proposicao?.ementa && <p style={{ fontSize: "1.05rem" }}>{v.proposicao.ementa}</p>}
-        <p className="muted">{v.descricao}</p>
+        <h1>{proposicaoNome(v.proposicao) || "Votação"}{tipoVotacao(v.descricao) && <span className="h1-sub">{tipoVotacao(v.descricao)}</span>}</h1>
+        {descricaoCurta(v.descricao) && <p style={{ fontSize: "1.05rem" }}><strong>O que foi votado:</strong> {descricaoCurta(v.descricao)}</p>}
+        {v.proposicao?.ementa && <p className="muted"><strong>Sobre a proposta:</strong> {v.proposicao.ementa}</p>}
         <div className="row">
           <span className={`chip ${v.aprovada ? "ok" : "no"}`}>{v.aprovada ? "Aprovado" : "Rejeitado"}</span>
           <span className="chip">Sim {v.sim} · Não {v.nao}</span>
@@ -28,6 +32,30 @@ export default function VotacaoPage() {
           {v.temas?.map((t) => <Link key={t} className="chip" to={`/votacoes?tema=${encodeURIComponent(t)}`}>{t}</Link>)}
         </div>
       </section>
+
+      {irmas.length > 1 && (
+        <section>
+          <h2>Todas as votações de {nome}</h2>
+          <Explain>Uma proposta costuma ter várias votações: primeiro o texto principal e depois os destaques, que são trechos que um partido pede para votar separadamente. Cada linha abaixo é uma votação diferente.</Explain>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Data</th><th>O que foi votado</th><th className="r">Sim</th><th className="r">Não</th><th>Resultado</th></tr></thead>
+              <tbody>
+                {irmas.map((x) => (
+                  <tr key={x.id} className={x.id === v.id ? "atual" : ""}>
+                    <td className="num">{dataBR(x.data)}</td>
+                    <td>{x.id === v.id ? <strong>{tipoVotacao(x.descricao) || "Votação"} (esta)</strong> : <Link to={`/v/${x.id}`}>{tipoVotacao(x.descricao) || "Votação"}</Link>}
+                      <div className="small muted">{descricaoCurta(x.descricao).slice(0, 200)}</div></td>
+                    <td className="r num">{x.sim}</td>
+                    <td className="r num">{x.nao}</td>
+                    <td><span className={`chip ${x.aprovada ? "ok" : "no"}`}>{x.aprovada ? "Aprovado" : "Rejeitado"}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section>
         <h2>Por tendência (esquerda e direita)</h2>

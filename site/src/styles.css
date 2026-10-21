@@ -226,3 +226,6 @@ footer .wrap { display: grid; gap: 6px; }
   .fluxo ul ul > li:only-child { padding-top: 22px; }
   .no { min-width: 150px; }
 }
+
+h1 .h1-sub { display: block; font-size: 1rem; font-weight: 600; color: var(--muted); margin-top: 4px; font-family: inherit; }
+tr.atual td { background: color-mix(in srgb, var(--gold) 12%, transparent); }

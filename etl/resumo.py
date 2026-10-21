@@ -62,4 +62,11 @@ for p in sorted((p for p in part if p["casa"] == "camara" and p["posicao"] is no
 print("\n### Votações recentes")
 for v in vots[:5]:
     pr = v.get("proposicao") or {}
-    print(f"- {v['casa']} {v['data']} {pr.get('sigla','')} {pr.get('numero','')}/{pr.get('ano','')}: sim {v['sim']} não {v['nao']}")
+    print(f"- {v['casa']} {v['data']} {pr.get('sigla','')} {pr.get('numero','')}/{pr.get('ano','')}: sim {v['sim']} não {v['nao']}"
+          f" · {(v.get('descricao') or '')[:140]}")
+dup = Counter((v["casa"], v["data"], json.dumps(v.get("proposicao"), sort_keys=True), v["sim"], v["nao"], v.get("descricao")) for v in vots)
+print(f"- Votações repetidas (mesma casa, dia, proposta, placar e descrição): {sum(n - 1 for n in dup.values() if n > 1)}")
+mesmo_dia = Counter((v["casa"], v["data"], json.dumps(v.get("proposicao"), sort_keys=True)) for v in vots if v.get("proposicao"))
+print(f"- Propostas com mais de uma votação no mesmo dia: {sum(1 for n in mesmo_dia.values() if n > 1)}")
+for v in [v for v in vots if mesmo_dia.get((v["casa"], v["data"], json.dumps(v.get("proposicao"), sort_keys=True)), 0) > 2][:6]:
+    print(f"  - {v['casa']} {v['data']} {(v.get('proposicao') or {}).get('numero')}: {(v.get('descricao') or '')[:160]}")

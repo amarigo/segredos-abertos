@@ -4,7 +4,7 @@ import { Barras, COR_GRUPO, Espectro, Explain, GastoMensal, Loading, VotoChip, u
 import {
   GRUPO_CURTO, GRUPO_EXPLICA, casaNome, cnpjFmt, dataBR, pct, proposicaoNome, reais,
   type Grupo, type Meta, type Politico, type Recursos, type Resumo, type VotacaoResumo,
-  MESES_LONGOS,
+  MESES_LONGOS, descricaoCurta, tipoVotacao,
 } from "../data";
 
 export default function PoliticoPage() {
@@ -299,8 +299,9 @@ function Votos({ p }: { p: Politico }) {
                 return (
                   <tr key={v.votacao}>
                     <td className="num">{info ? dataBR(info.data) : ""}</td>
-                    <td><Link to={`/v/${v.votacao}`}>{info ? (proposicaoNome(info.proposicao) || "Votação") : v.votacao}</Link>
-                      {info && <div className="small muted">{(info.proposicao?.ementa || info.descricao).slice(0, 180)}</div>}</td>
+                    <td><Link to={`/v/${v.votacao}`}>{info ? (proposicaoNome(info.proposicao) || "Votação") : v.votacao}</Link>{info && tipoVotacao(info.descricao) && <> <span className="chip">{tipoVotacao(info.descricao)}</span></>}
+                      {info && descricaoCurta(info.descricao) && <div className="small">{descricaoCurta(info.descricao).slice(0, 200)}</div>}
+                      {info?.proposicao?.ementa && <div className="small muted">{info.proposicao.ementa.slice(0, 140)}</div>}</td>
                     <td><VotoChip voto={v.voto} /></td>
                     <td>{v.partido ? <VotoChip voto={v.partido} /> : <span className="muted">—</span>}</td>
                   </tr>
