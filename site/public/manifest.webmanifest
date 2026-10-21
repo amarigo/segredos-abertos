@@ -1,0 +1,11 @@
+{
+  "name": "Segredos Abertos Brasil",
+  "short_name": "Segredos Abertos",
+  "description": "Gastos e votos de deputados e senadores, explicados de forma simples.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f6f4ef",
+  "theme_color": "#14213d",
+  "lang": "pt-BR",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
