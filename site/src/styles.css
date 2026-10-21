@@ -137,8 +137,15 @@ svg text { fill: var(--muted); font: 11px var(--body); }
 .spectrum { position: relative; height: 56px; border-radius: 8px; background: linear-gradient(90deg, color-mix(in srgb, var(--esq) 22%, var(--surface)), var(--surface) 50%, color-mix(in srgb, var(--dir) 22%, var(--surface))); border: 1px solid var(--line); }
 .spectrum .dot { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; border: 2px solid var(--surface); }
 .spectrum .me { width: 20px; height: 20px; margin: -10px 0 0 -10px; background: var(--gold); border: 3px solid var(--ink); z-index: 2; }
-.spectrum.labeled { height: 78px; }
-.spectrum .tag { position: absolute; transform: translateX(-50%); font-size: .72rem; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+.esp-partidos ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: max-content 1fr; column-gap: 10px; align-items: center; }
+.esp-partidos li { display: contents; }
+.esp-nome { display: flex; align-items: baseline; gap: 6px; font-size: .85rem; white-space: nowrap; }
+.esp-nome small { color: var(--muted); font-size: .72rem; }
+.esp-trilho { position: relative; height: 26px; background: linear-gradient(90deg, color-mix(in srgb, var(--esq) 14%, var(--surface)), var(--surface) 50%, color-mix(in srgb, var(--dir) 14%, var(--surface))); border-inline: 1px solid var(--line); }
+.esp-trilho::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; border-left: 1px dashed var(--line); }
+.esp-trilho::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--line); }
+.esp-trilho i { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; border: 2px solid var(--surface); z-index: 1; }
+.esp-eixo .spectrum-labels { margin-top: 4px; }
 .spectrum-labels { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); }
 
 .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }

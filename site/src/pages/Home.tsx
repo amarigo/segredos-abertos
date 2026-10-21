@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Barras, COR_GRUPO, Espectro, Explain, Loading, useAno, useData } from "../components/ui";
+import { Barras, COR_GRUPO, EspectroPartidos, Explain, Loading, useAno, useData } from "../components/ui";
 import { GRUPO_CURTO, GRUPO_EXPLICA, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
 import { GastoPartidos } from "./Partidos";
 
@@ -70,8 +70,8 @@ export default function Home() {
       {partidos && partidos.some((p) => p.posicao != null) && (
         <section>
           <h2>Onde cada partido está, pelos votos</h2>
-          <Explain>Cada ponto é um partido na Câmara. A posição é calculada a partir de como seus deputados votaram de fato, não pelo que o partido diz de si. <Link to="/sobre">Entenda o cálculo</Link>.</Explain>
-          <Espectro rotulos pontos={partidos.filter((p) => p.casa === "camara" && p.posicao != null).map((p) => ({ id: p.sigla, pos: p.posicao!, label: `${p.sigla}: ${p.n} deputados` }))} />
+          <Explain>Cada linha é um partido na Câmara, em ordem da esquerda para a direita. A posição é calculada a partir de como seus deputados votaram de fato, não pelo que o partido diz de si. <Link to="/sobre">Entenda o cálculo</Link>.</Explain>
+          <EspectroPartidos partidos={partidos.filter((p) => p.casa === "camara" && p.posicao != null).map((p) => ({ sigla: p.sigla, pos: p.posicao!, n: p.n, href: `/politicos?partido=${encodeURIComponent(p.sigla)}` }))} />
         </section>
       )}
       {partidos && <GastoPartidos partidos={partidos} ano={ano} limite={10} />}

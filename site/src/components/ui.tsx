@@ -119,18 +119,15 @@ function niceStep(max: number): number {
 }
 
 /* Régua esquerda–direita com pontos */
-export function Espectro({ pontos, destaque, rotulos }: { pontos: { id: string; pos: number; label: string; href?: string }[]; destaque?: string; rotulos?: boolean }) {
+export function Espectro({ pontos, destaque }: { pontos: { id: string; pos: number; label: string; href?: string }[]; destaque?: string }) {
   const tip = useTip();
   const cor = (p: number) => (p < -0.15 ? "var(--esq)" : p > 0.15 ? "var(--dir)" : "var(--centro)");
   return (
     <div>
-      <div className={`spectrum ${rotulos ? "labeled" : ""}`} role="img" aria-label="Posição de esquerda a direita">
-        {rotulos && pontos.slice().sort((a, b) => a.pos - b.pos).map((p, i) => (
-          <span key={`t-${p.id}`} className="tag" style={{ left: `clamp(16px, ${((p.pos + 1) / 2) * 100}%, calc(100% - 16px))`, top: i % 2 ? 54 : 4 }}>{p.id}</span>
-        ))}
+      <div className="spectrum" role="img" aria-label="Posição de esquerda a direita">
         {pontos.map((p, i) => {
           const left = `${((p.pos + 1) / 2) * 100}%`;
-          const jitter = destaque === p.id || rotulos ? 0 : ((i * 37) % 30) - 15;
+          const jitter = destaque === p.id ? 0 : ((i * 37) % 30) - 15;
           const style = { left, top: `calc(50% + ${jitter}px)`, background: cor(p.pos) };
           const dot = <span className={`dot ${destaque === p.id ? "me" : ""}`} style={style} onMouseMove={(e) => tip.show(e, p.label)} onMouseLeave={tip.hide} />;
           return p.href ? <Link key={p.id} to={p.href} aria-label={p.label}>{dot}</Link> : <span key={p.id}>{dot}</span>;
@@ -138,6 +135,30 @@ export function Espectro({ pontos, destaque, rotulos }: { pontos: { id: string; 
       </div>
       <div className="spectrum-labels"><span>◀ Esquerda</span><span>Centro</span><span>Direita ▶</span></div>
       {tip.el}
+    </div>
+  );
+}
+
+/* Uma linha por partido, em ordem da esquerda para a direita: nenhum nome fica por cima de outro */
+export function EspectroPartidos({ partidos }: { partidos: { sigla: string; pos: number; n: number; href?: string }[] }) {
+  const cor = (p: number) => (p < -0.15 ? "var(--esq)" : p > 0.15 ? "var(--dir)" : "var(--centro)");
+  const ordem = partidos.slice().sort((a, b) => a.pos - b.pos);
+  return (
+    <div className="esp-partidos">
+      <ol aria-label="Partidos da esquerda para a direita">
+        {ordem.map((p) => (
+          <li key={p.sigla}>
+            <span className="esp-nome">
+              {p.href ? <Link to={p.href}><strong>{p.sigla}</strong></Link> : <strong>{p.sigla}</strong>}
+              <small>{p.n} dep.</small>
+            </span>
+            <span className="esp-trilho" title={`${p.sigla}: posição ${p.pos.toFixed(2)} (de -1 a +1), ${p.n} deputados`}>
+              <i style={{ left: `${((p.pos + 1) / 2) * 100}%`, background: cor(p.pos) }} />
+            </span>
+          </li>
+        ))}
+        <li className="esp-eixo" aria-hidden="true"><span /><span className="spectrum-labels"><span>◀ Esquerda</span><span>Centro</span><span>Direita ▶</span></span></li>
+      </ol>
     </div>
   );
 }
