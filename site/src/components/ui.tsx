@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { Fragment, createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { load, reais, MESES, type Grupo } from "../data";
 
@@ -99,6 +99,13 @@ export function GastoMensal({ meses, ano, cor = "var(--s1)" }: { meses: { mes: n
         <line x1={padL} x2={W} y1={y(0)} y2={y(0)} stroke="var(--muted)" />
       </svg>
       {tip.el}
+      <details className="small">
+        <summary>Ver os valores de cada mês</summary>
+        <div className="kv" style={{ maxWidth: 360, marginTop: 8 }}>
+          {valores.map((v, i) => <Fragment key={i}><span>{MESES[i]}/{ano}</span><span>{reais(v, true)}</span></Fragment>)}
+          <strong>Total</strong><strong>{reais(valores.reduce((a, b) => a + b, 0), true)}</strong>
+        </div>
+      </details>
     </div>
   );
 }

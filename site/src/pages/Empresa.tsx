@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router-dom";
-import { Barras, Explain, Loading, useData } from "../components/ui";
-import { cnpjFmt, dataBR, reais, type Empresa } from "../data";
+import { useMemo, useState } from "react";
+import { Barras, Explain, Loading, useAno, useData } from "../components/ui";
+import { MESES, cnpjFmt, dataBR, reais, type Empresa } from "../data";
 
 export default function EmpresaPage() {
   const { cnpj = "" } = useParams();
@@ -72,9 +73,78 @@ export default function EmpresaPage() {
       )}
 
       <section>
-        <h2>Quem pagou</h2>
+        <h2>Quem pagou (todos os anos)</h2>
         <Barras itens={e.pagadores.slice(0, 30).map((p) => ({ label: <Link to={`/p/${p.politico}`}>{p.nome} <span className="muted small">({p.partido}-{p.uf})</span></Link>, valor: p.valor }))} />
       </section>
+
+      <PorMes e={e} />
+      <Notas e={e} />
     </>
+  );
+}
+
+function PorMes({ e }: { e: Empresa }) {
+  const { ano } = useAno();
+  const linhas = useMemo(() => {
+    const m = new Map<string, { nome: string; meses: number[]; total: number }>();
+    (e.por_mes || []).filter((x) => String(x.ano) === ano).forEach((x) => {
+      const l = m.get(x.politico) || { nome: x.nome, meses: Array(12).fill(0), total: 0 };
+      l.meses[x.mes - 1] += x.valor; l.total += x.valor; m.set(x.politico, l);
+    });
+    return [...m.entries()].sort((a, b) => b[1].total - a[1].total);
+  }, [e, ano]);
+  if (!e.por_mes) return null;
+  return (
+    <section>
+      <h2>Quanto cada parlamentar pagou por mês em {ano}</h2>
+      {!linhas.length ? <div className="empty">Nenhum pagamento a esta empresa em {ano}. Escolha outro ano no topo da página.</div> : (
+        <div className="table-wrap">
+          <table className="small">
+            <thead><tr><th>Parlamentar</th>{MESES.map((m) => <th key={m} className="r">{m}</th>)}<th className="r">Total</th></tr></thead>
+            <tbody>
+              {linhas.map(([pid, l]) => (
+                <tr key={pid}>
+                  <td><Link to={`/p/${pid}`}>{l.nome}</Link></td>
+                  {l.meses.map((v, i) => <td key={i} className="r num">{v ? Math.round(v).toLocaleString("pt-BR") : <span className="muted">–</span>}</td>)}
+                  <td className="r num"><strong>{reais(l.total)}</strong></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="muted small">Valores em reais, arredondados.</p>
+    </section>
+  );
+}
+
+function Notas({ e }: { e: Empresa }) {
+  const { ano } = useAno();
+  const [n, setN] = useState(50);
+  const notas = (e.notas || []).filter((x) => x.data.startsWith(ano));
+  if (!e.notas) return null;
+  return (
+    <section>
+      <h2>Notas fiscais de {ano}</h2>
+      {e.n_notas && e.n_notas > e.notas.length ? <p className="muted small">A empresa tem {e.n_notas.toLocaleString("pt-BR")} notas no total. Mostramos as {e.notas.length} mais recentes.</p> : null}
+      {!notas.length ? <div className="empty">Nenhuma nota desta empresa em {ano}.</div> : <>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Data</th><th>Parlamentar e tipo de gasto</th><th className="r">Valor</th></tr></thead>
+            <tbody>
+              {notas.slice(0, n).map((x, i) => (
+                <tr key={i}>
+                  <td className="num">{dataBR(x.data)}</td>
+                  <td><Link to={`/p/${x.politico}`}>{x.nome}</Link><div className="small muted">{x.categoria}</div></td>
+                  <td className="r num" style={{ whiteSpace: "nowrap" }}>{x.url ? <a href={x.url} target="_blank" rel="noreferrer">{reais(x.valor, true)}</a> : reais(x.valor, true)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {notas.length > n && <button className="link" onClick={() => setN(n + 100)}>Mostrar mais notas ({notas.length - n} restantes)</button>}
+        <p className="muted small">Quando o valor é um link, ele abre a nota fiscal original.</p>
+      </>}
+    </section>
   );
 }

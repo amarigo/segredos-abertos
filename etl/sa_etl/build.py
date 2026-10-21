@@ -41,6 +41,7 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
 
 
 SEM_NOTA = "Passagens aéreas sem nota publicada"
+MAX_NOTAS_EMPRESA = 500  # notas mais recentes listadas na página da empresa
 
 
 def completar_com_oficial(despesas: list[dict], politicos: list[dict], rec: dict) -> list[dict]:
@@ -112,11 +113,13 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         desp_por[d["politico"]].append(d)
 
     recebeu = defaultdict(lambda: defaultdict(float))  # cnpj -> politico -> valor
+    notas_emp = defaultdict(list)  # cnpj -> notas fiscais
     nome_forn: dict[str, str] = {}
     primeiro_pag: dict[str, str] = {}
     for d in despesas:
         if doc_kind(d["doc"]) == "cnpj":
             recebeu[d["doc"]][d["politico"]] += d["valor"]
+            notas_emp[d["doc"]].append(d)
             nome_forn.setdefault(d["doc"], d["fornecedor"])
             if d["data"] and (d["doc"] not in primeiro_pag or d["data"] < primeiro_pag[d["doc"]]):
                 primeiro_pag[d["doc"]] = d["data"]
@@ -193,7 +196,16 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
             socios.append({**s, "outras_empresas": [
                 {"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu[c].values()), 2)} for c in outras]})
         primeiro = primeiro_pag.get(doc, "")
+        ns = sorted(notas_emp[doc], key=lambda n: (n["data"], n["valor"]), reverse=True)
+        mensal = defaultdict(float)  # (politico, ano, mes) -> valor
+        for n in ns:
+            mensal[(n["politico"], n["ano"], n["mes"])] += n["valor"]
         write_json(saida / "e" / f"{doc}.json", {
+            "notas": [{"data": n["data"], "politico": n["politico"], "nome": por_id[n["politico"]]["nome"],
+                       "categoria": n["categoria"], "valor": n["valor"], "url": n["url"]} for n in ns[:MAX_NOTAS_EMPRESA]],
+            "n_notas": len(ns),
+            "por_mes": [{"politico": pid, "nome": por_id[pid]["nome"], "ano": a, "mes": m, "valor": round(v, 2)}
+                        for (pid, a, m), v in sorted(mensal.items(), key=lambda kv: (kv[0][1], kv[0][2], -kv[1]))],
             **resumo_e, "empresa": {k: v for k, v in (e or {}).items() if k != "socios"} or None,
             "socios": socios, "pagadores": pagadores,
             "mesmo_endereco": [{"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu[c].values()), 2),

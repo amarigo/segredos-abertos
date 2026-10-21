@@ -181,6 +181,8 @@ def test_montar_marca_mesmo_endereco(tmp_path):
     e = json.loads((tmp_path / "e" / "11111111000111.json").read_text())
     assert e["mesmo_endereco"] == [{"cnpj": "22222222000122", "nome": "E22222222000122", "total": 5000.0, "mesmos_socios": True}]
     assert any("mesmo endereço" in a for a in e["alertas"])
+    assert e["n_notas"] == 1 and e["notas"][0]["nome"] == "Fulano" and e["notas"][0]["valor"] == 5000.0
+    assert e["por_mes"] == [{"politico": "dep-1", "nome": "Fulano", "ano": 2025, "mes": 1, "valor": 5000.0}]
     p = json.loads((tmp_path / "politicos.json").read_text())[0]
     assert p["por_ano"]["2025"]["custo_total"] == 10150.0
     part = json.loads((tmp_path / "partidos.json").read_text())[0]

@@ -48,7 +48,10 @@ export interface EmpresaResumo { cnpj: string; nome: string; total: number; n_po
 export interface Empresa extends EmpresaResumo {
   empresa: null | { razao_social: string; nome_fantasia: string; situacao: string; abertura: string; atividade: string; municipio: string; uf: string; capital_social: number; porte: string; natureza: string;
     endereco?: { logradouro: string; numero: string; complemento: string; bairro: string; cep: string } };
-  socios: Socio[]; mesmo_endereco?: { cnpj: string; nome: string; total: number; mesmos_socios: boolean }[]; pagadores: { politico: string; nome: string; partido: string; uf: string; valor: number }[]; alertas: string[];
+  socios: Socio[];
+  notas?: { data: string; politico: string; nome: string; categoria: string; valor: number; url: string }[]; n_notas?: number;
+  por_mes?: { politico: string; nome: string; ano: number; mes: number; valor: number }[];
+  mesmo_endereco?: { cnpj: string; nome: string; total: number; mesmos_socios: boolean }[]; pagadores: { politico: string; nome: string; partido: string; uf: string; valor: number }[]; alertas: string[];
 }
 export interface PartidoAno { n: number; cota: number; cota_por_membro: number; custo_total: number; custo_por_membro: number }
 export interface Partido { casa: Casa; sigla: string; n: number; posicao: number | null; alinhamento_governo: number | null; fidelidade: number | null; total: number; por_ano: Record<string, PartidoAno> }
