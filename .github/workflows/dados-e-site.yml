@@ -57,12 +57,7 @@ jobs:
         run: rm -f etl/.cache/*-$(date +%Y).csv* || true
       - name: Coletar dados oficiais
         working-directory: etl
-        run: python -m sa_etl.build --saida ../site/public/data --cache .cache
-      - name: Resumo da coleta
-        run: |
-          cat site/public/data/meta.json
-          echo
-          du -sh site/public/data
+        run: python -m sa_etl.build --saida ../site/public/data --cache .cache 2>&1 | tee coleta.log
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -73,6 +68,10 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist
+      - name: Resumo da coleta
+        run: |
+          grep -E "INFO|WARNING|ERROR" etl/coleta.log | cut -c1-240 | tail -n 60
+          python etl/resumo.py site/public/data | tee -a "$GITHUB_STEP_SUMMARY"
 
   publicar:
     needs: coletar
