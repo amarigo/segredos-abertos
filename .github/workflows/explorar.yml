@@ -17,3 +17,4 @@ jobs:
           "https://dadosabertos.camara.leg.br/api/v2/deputados/209787/despesas?ano=2025&itens=3"
           "https://www6g.senado.leg.br/transparencia/sen/5967/?ano=2025"
           "https://adm.senado.gov.br/adm-dadosabertos/v3/api-docs"
+      - run: npm i playwright-core@1.56.0 && node tools/clicar.mjs
