@@ -2,6 +2,7 @@ name: Dados e site
 
 on:
   push:
+    branches-ignore: [explorar]
   pull_request:
   schedule:
     - cron: "0 9 * * *" # todo dia às 6h de Brasília
