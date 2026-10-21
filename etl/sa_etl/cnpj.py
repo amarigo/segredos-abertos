@@ -133,13 +133,28 @@ def mesmo_endereco(emps: dict[str, dict]) -> dict[str, list[str]]:
 MAX_NIVEL = 5  # empresa -> holding -> holding ... até no máximo 5 empresas no caminho
 
 
+def cnpj_matriz(raiz: str) -> str:
+    """CNPJ completo da matriz (0001) a partir da raiz de 8 dígitos, com os dígitos verificadores."""
+    base = digits(raiz)[:8].zfill(8) + "0001"
+    for pesos in ([5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2], [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]):
+        r = sum(int(n) * p for n, p in zip(base, pesos)) % 11
+        base += "0" if r < 2 else str(11 - r)
+    return base
+
+
+def cnpj_socio(s: dict) -> str:
+    """CNPJ de um sócio que é empresa. A base da Receita às vezes traz só a raiz (8 dígitos): usamos a matriz."""
+    d = digits(s.get("doc"))
+    return d if len(d) == 14 else cnpj_matriz(d) if len(d) == 8 else d
+
+
 def tipo_socio(s: dict) -> str:
     """empresa, pessoa ou estrangeiro. Dados antigos do cache não têm o campo: deduzimos pelo documento."""
+    doc = s.get("doc") or ""
+    if "*" not in doc and len(digits(doc)) in (8, 14):
+        return "empresa"
     if s.get("tipo"):
         return s["tipo"]
-    doc = s.get("doc") or ""
-    if len(digits(doc)) == 14 and "*" not in doc:
-        return "empresa"
     if "*" in doc or len(digits(doc)) == 11:
         return "pessoa"
     return "estrangeiro" if s.get("nome") else "pessoa"
@@ -150,7 +165,7 @@ def buscar_socias(emps: dict[str, dict], cache: Path, max_nivel: int = MAX_NIVEL
     """Busca na Receita as empresas que aparecem como sócias (holdings), nível por nível."""
     conhecidas = dict(emps)
     novas: dict[str, dict] = {}
-    fila = {digits(s["doc"]) for e in emps.values() for s in e["socios"] if tipo_socio(s) == "empresa"} - set(conhecidas)
+    fila = {cnpj_socio(s) for e in emps.values() for s in e["socios"] if tipo_socio(s) == "empresa"} - set(conhecidas)
     log.info("Receita: %d sócios são empresas fora da lista de fornecedoras", len(fila))
     falhas = 0
     for _ in range(max_nivel):
@@ -165,7 +180,7 @@ def buscar_socias(emps: dict[str, dict], cache: Path, max_nivel: int = MAX_NIVEL
             falhas += not e
             if e:
                 novas[c] = e
-                prox |= {digits(s["doc"]) for s in e["socios"] if tipo_socio(s) == "empresa"}
+                prox |= {cnpj_socio(s) for s in e["socios"] if tipo_socio(s) == "empresa"}
         fila = prox
     log.info("Receita: %d empresas sócias (holdings) buscadas, %d sem resposta", len(novas), falhas)
     return novas
@@ -192,11 +207,11 @@ def donos_finais(cnpj: str, todas: dict[str, dict], max_nivel: int = MAX_NIVEL) 
                     out.append({"nome": s["nome"], "doc": s["doc"], "tipo": t, "qualificacao": s.get("qualificacao", ""),
                                 "pais": s.get("pais", ""), "cadeia": cadeia, "fim": t})
                 continue
-            filho = digits(s["doc"])
-            sub = todas.get(filho)
+            filho = cnpj_socio(s)
+            sub = todas.get(filho) or next((v for k, v in todas.items() if k[:8] == filho[:8]), None)
             elo = {"cnpj": filho, "nome": (sub or {}).get("razao_social") or s["nome"], "qualificacao": s.get("qualificacao", "")}
             nova = cadeia + [elo]
-            fim = ("ciclo" if filho == cnpj or any(x["cnpj"] == filho for x in cadeia)
+            fim = ("ciclo" if filho[:8] == cnpj[:8] or any(x["cnpj"][:8] == filho[:8] for x in cadeia)
                    else "limite" if len(nova) > max_nivel
                    else "sem_dados" if not sub
                    else "sem_socios" if not sub.get("socios") else "")
@@ -212,7 +227,7 @@ def donos_finais(cnpj: str, todas: dict[str, dict], max_nivel: int = MAX_NIVEL) 
 
 def chave_dono(s: dict) -> str:
     """Como chave_socio, mas uma empresa sócia é identificada só pelo CNPJ (o nome pode vir escrito diferente)."""
-    return f"PJ|{digits(s['doc'])}" if tipo_socio(s) == "empresa" else chave_socio(s)
+    return f"PJ|{cnpj_socio(s)[:8]}" if tipo_socio(s) == "empresa" else chave_socio(s)  # raiz: matriz e filiais
 
 
 def chaves_de_dono(cnpj: str, todas: dict[str, dict], finais: list[dict] | None = None) -> set[str]:
@@ -220,5 +235,5 @@ def chaves_de_dono(cnpj: str, todas: dict[str, dict], finais: list[dict] | None 
     ks = {chave_dono(s) for s in (todas.get(cnpj) or {}).get("socios", []) if s.get("nome")}
     for d in finais if finais is not None else donos_finais(cnpj, todas):
         ks.add(chave_dono(d))
-        ks |= {f"PJ|{x['cnpj']}" for x in d["cadeia"]}
+        ks |= {f"PJ|{x['cnpj'][:8]}" for x in d["cadeia"]}
     return ks

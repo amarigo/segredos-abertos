@@ -231,7 +231,9 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         def outras_de(s: dict) -> list[dict]:
             return [{"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu[c].values()), 2)}
                     for c in socio_empresas.get(cnpj.chave_dono(s), []) if c != doc and c in recebeu]
-        socios = [{**s, "tipo": cnpj.tipo_socio(s), "outras_empresas": outras_de(s)} for s in (e or {}).get("socios", [])]
+        socios = [{**s, "tipo": cnpj.tipo_socio(s), "outras_empresas": outras_de(s),
+                   "doc": cnpj.cnpj_socio(s) if cnpj.tipo_socio(s) == "empresa" else s["doc"]}
+                  for s in (e or {}).get("socios", [])]
         finais = cnpj.donos_finais(doc, todas_emps) if e else []
         tem_holding = any(d["cadeia"] for d in finais)
         donos = [{**d, "outras_empresas": outras_de(d) if d["fim"] == "pessoa" else []} for d in finais] if tem_holding else []

@@ -40,7 +40,6 @@ print("\n### Empresas que mais receberam")
 for e in emps[:5]:
     print(f"- {e['nome']} ({e['cnpj']}): R$ {e['total']:,.2f} · sócios: {e['tem_socios']}")
 print("\n### Sócios que são empresas (holdings)")
-import re
 from collections import Counter
 tipos, amostra, com_holding = Counter(), [], 0
 for e in emps:
@@ -51,8 +50,9 @@ for e in emps:
     com_holding += bool(x.get("donos_finais"))
     for s in x.get("socios", []):
         tipos[s.get("tipo") or "?"] += 1
-        if re.search(r"LTDA|S\.?/?A\b|PARTICIPA|HOLDING|EIRELI|INVEST", s["nome"]) and len(amostra) < 8:
-            amostra.append(f"{s['nome']} | doc={s['doc']!r} | tipo={s.get('tipo')} | {s.get('qualificacao')}")
+    for dono in (x.get("donos_finais") or [])[:2]:
+        if dono["cadeia"] and len(amostra) < 8:
+            amostra.append(" → ".join([x["nome"]] + [c["nome"] for c in dono["cadeia"]] + [dono["nome"]]) + f" ({dono['fim']})")
 print(f"- Sócios por tipo (1000 maiores empresas): {dict(tipos)} · empresas com donos finais via holding: {com_holding}")
 for a in amostra:
     print(f"  - {a}")

@@ -258,3 +258,13 @@ def test_buscar_socias_busca_por_niveis(tmp_path, monkeypatch):
     monkeypatch.setattr(cnpj, "_fetch", lambda c, cache: base.get(c))
     emps = {"1": {"socios": [{"nome": "H1", "doc": "22222222000122"}]}}
     assert set(cnpj.buscar_socias(emps, tmp_path)) == {"22222222000122", "33333333000133"}
+
+
+def test_socio_empresa_so_com_raiz_do_cnpj():
+    s = {"nome": "AEROTUR HOLDING LTDA", "doc": "07575651", "qualificacao": "Sócio"}
+    assert cnpj.tipo_socio(s) == "empresa"
+    assert cnpj.cnpj_socio(s) == "07575651000159"  # matriz, com dígitos verificadores
+    todas = {"11111111000111": {"razao_social": "A", "socios": [s]},
+             "07575651000159": {"razao_social": "AEROTUR HOLDING LTDA", "socios": [{"nome": "ZE", "doc": "***123456**"}]}}
+    d = cnpj.donos_finais("11111111000111", todas)
+    assert d[0]["nome"] == "ZE" and d[0]["cadeia"][0]["cnpj"] == "07575651000159"
