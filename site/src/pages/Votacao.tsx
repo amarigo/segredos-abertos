@@ -26,6 +26,7 @@ export default function VotacaoPage() {
           <span className="chip">Sim {v.sim} · Não {v.nao}</span>
           {v.proposicao?.url && <a className="chip" href={v.proposicao.url} target="_blank" rel="noreferrer">Texto da proposta ↗</a>}
           {v.fonte && <a className="chip" href={v.fonte} target="_blank" rel="noreferrer">Dados oficiais ↗</a>}
+          {v.temas?.map((t) => <Link key={t} className="chip" to={`/votacoes?tema=${encodeURIComponent(t)}`}>{t}</Link>)}
         </div>
       </section>
 

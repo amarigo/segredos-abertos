@@ -15,12 +15,15 @@ export default function Sobre() {
       <h2>Salário, equipe e benefícios</h2>
       <p>A cota é só uma parte do custo de um mandato. Cada deputado também recebe salário (R$ 46.366,19 brutos por mês desde fevereiro de 2025) e tem uma <strong>verba de gabinete</strong> para pagar até 25 assessores. Os senadores recebem o mesmo salário e têm equipe paga pelo Senado. Também mostramos se o parlamentar usa apartamento funcional, recebe auxílio-moradia ou tem passaporte diplomático. O "custo conhecido" soma salário, equipe, cota e outros gastos que os sites oficiais informam. Não inclui, por exemplo, o salário de servidores concursados que trabalham no gabinete.</p>
       <h2>Por que o total da cota pode ser diferente da página oficial</h2>
-      <p>Comparamos todos os deputados e senadores de Minas Gerais com as páginas oficiais. No Senado, os totais batiam exatamente. Na Câmara, nossos valores estavam menores por dois motivos, já corrigidos:</p>
+      <p>Comparamos todos os deputados e senadores de Minas Gerais com as páginas oficiais, e depois todos os parlamentares do país. No Senado, os totais de Minas batiam exatamente. Na Câmara, nossos valores estavam menores por dois motivos, já corrigidos:</p>
       <ul>
         <li><strong>Somávamos 2025 e 2026 juntos.</strong> As páginas oficiais mostram um ano por vez. Agora o site também mostra um ano por vez, com o seletor de ano no topo.</li>
-        <li><strong>Faltavam passagens aéreas a partir de agosto de 2025.</strong> Desde então, os dados abertos da Câmara não trazem as passagens compradas pelo sistema da própria Câmara (SIGEPA), mas a página do deputado soma esses valores. Todas as outras despesas batiam centavo por centavo. Agora completamos cada mês com o valor oficial, numa categoria chamada "Passagens aéreas sem nota publicada".</li>
+        <li><strong>Faltavam passagens aéreas a partir de agosto de 2025.</strong> Desde então, os dados abertos da Câmara não trazem as passagens compradas pelo sistema da própria Câmara (SIGEPA), mas a página do deputado soma esses valores. Todas as outras despesas batiam centavo por centavo. Agora completamos cada mês com o valor oficial, numa categoria chamada "Despesas sem nota nos dados abertos". Também há meses de 2023 e 2024 com essa diferença, e o mesmo ajuste vale para eles.</li>
       </ul>
-      <p>Se a página oficial for atualizada depois da nossa coleta diária, o deputado mostra os dois valores e a diferença.</p>
+      <p>No Senado, alguns senadores (cerca de 10 por ano) têm reembolsos publicados sem tipo de despesa. A página oficial do Senado não soma esses valores, mas eles foram pagos, então nós somamos e mostramos a diferença na página do senador.</p>
+      <p>Se a página oficial for atualizada depois da nossa coleta diária, a página do parlamentar mostra os dois valores e a diferença.</p>
+      <h2>Temas das votações</h2>
+      <p>Cada votação recebe um ou mais temas (mulheres, micro e pequenas empresas, saúde, educação, segurança, armas, meio ambiente, impostos, trabalho, agropecuária, crianças, indígenas e minorias, energia, eleições) quando a ementa da proposta tem palavras ligadas ao tema. Por exemplo, "MEI" e "Simples Nacional" marcam micro e pequenas empresas; "Maria da Penha" e "feminicídio" marcam mulheres. É uma classificação automática e pode errar. Votar Sim nem sempre significa ser a favor do tema, por isso mostramos cada votação para você conferir.</p>
       <h2>Partidos: total e por parlamentar</h2>
       <p>O total soma os gastos de todos os membros atuais do partido. O valor por parlamentar divide esse total pelo número de membros, o que permite comparar partidos grandes e pequenos.</p>
       <h2>Empresas no mesmo endereço</h2>

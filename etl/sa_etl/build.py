@@ -11,7 +11,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import camara, cnpj, ideologia, recursos, senado
+from . import camara, cnpj, ideologia, recursos, senado, temas
 from .categorias import GRUPOS
 from .util import cnpj_valido, doc_kind, mask_cpf, write_json
 
@@ -40,16 +40,16 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
             "votos": votos_c + votos_s, "empresas": emps, "recursos": rec}
 
 
-SEM_NOTA = "Passagens aéreas sem nota publicada"
+SEM_NOTA = "Despesas sem nota nos dados abertos"
 MAX_NOTAS_EMPRESA = 500  # notas mais recentes listadas na página da empresa
 
 
 def completar_com_oficial(despesas: list[dict], politicos: list[dict], rec: dict) -> list[dict]:
     """Acrescenta o que a página oficial da Câmara mostra a mais que as notas publicadas, mês a mês.
 
-    Desde agosto de 2025 os dados abertos da Câmara não trazem as passagens aéreas compradas pelo
-    sistema da própria Câmara (SIGEPA), mas a página de cada deputado soma esses valores. Sem isso,
-    o total ficaria menor que o oficial.
+    Os dados abertos da Câmara não trazem todas as despesas que a página de cada deputado soma. Na
+    conferência com Minas Gerais, a diferença era toda de passagens aéreas compradas pelo sistema da
+    própria Câmara (SIGEPA), a partir de agosto de 2025. Sem isso, o total ficaria menor que o oficial.
     """
     soma = defaultdict(float)
     for d in despesas:
@@ -63,11 +63,37 @@ def completar_com_oficial(despesas: list[dict], politicos: list[dict], rec: dict
                 falta = round(m["valor"] - soma[(p["id"], int(ano), m["mes"])], 2)
                 if falta > 1:
                     extras.append({"politico": p["id"], "ano": int(ano), "mes": m["mes"], "data": f"{int(ano)}-{m['mes']:02d}-01",
-                                   "categoria": SEM_NOTA, "grupo": "pessoal", "fornecedor": "Companhias aéreas (via Câmara)",
+                                   "categoria": SEM_NOTA, "grupo": "pessoal", "fornecedor": "Sem nota publicada (em geral, passagens aéreas)",
                                    "doc": "", "valor": falta, "url": "", "sem_nota": True})
     if extras:
         log.info("Câmara: %d meses completados com o valor oficial (R$ %.2f)", len(extras), sum(e["valor"] for e in extras))
     return despesas + extras
+
+
+def salario_senadores(politicos: list[dict], rec: dict) -> dict:
+    """O salário de senador é igual ao de deputado federal (mesmo subsídio). O Senado não o publica junto
+    dos outros recursos, então usamos o valor pago aos deputados em cada mês (a mediana, que é o subsídio cheio)."""
+    import statistics
+    por_mes = defaultdict(list)
+    for p in politicos:
+        if p["casa"] == "camara":
+            for ano, r in (rec.get(p["id"]) or {}).items():
+                for m in (r or {}).get("salario_meses") or []:
+                    por_mes[(int(ano), m["mes"])].append(m["valor"])
+    if not por_mes:
+        return rec
+    subsidio = {k: round(statistics.median(v), 2) for k, v in por_mes.items()}
+    out = dict(rec)
+    for p in politicos:
+        if p["casa"] != "senado":
+            continue
+        anos_p = {}
+        for ano, r in (rec.get(p["id"]) or {}).items():
+            meses = [{"mes": m, "valor": v} for (a, m), v in sorted(subsidio.items()) if a == int(ano)]
+            anos_p[ano] = {**(r or {}), "salario_meses": meses, "salario_ano": round(sum(x["valor"] for x in meses), 2),
+                           "salario_bruto": meses[-1]["valor"] if meses else None, "salario_estimado": True}
+        out[p["id"]] = anos_p
+    return out
 
 
 def montar(dados: dict, saida: Path, anos: list[int]) -> None:
@@ -131,8 +157,10 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         for c in grupo:
             vizinhas[c] = [x for x in grupo if x != c]
 
+    for v in votacoes:
+        v["temas"] = temas.temas_da_votacao(v)
     votacao_por_id = {v["id"]: v for v in votacoes}
-    rec_todos = dados.get("recursos") or {}
+    rec_todos = salario_senadores(politicos, dados.get("recursos") or {})
     resumo = []
     for p in politicos:
         ds = desp_por.get(p["id"], [])
@@ -164,7 +192,15 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
             "fidelidade_partido": fid, "n_votos": len(meus_votos),
         }
         resumo.append(base)
-        write_json(saida / "p" / f"{p['id']}.json", {**base, "anos": detalhe, "votos": meus_votos})
+        por_tema = defaultdict(Counter)
+        for v in meus_votos:
+            for t in votacao_por_id[v["votacao"]]["temas"]:
+                c = por_tema[t]
+                c[v["voto"] if v["voto"] in ("Sim", "Não") else "Outros"] += 1
+                if v["partido"] and v["voto"] in ("Sim", "Não") and v["voto"] != v["partido"]:
+                    c["contra_partido"] += 1
+        write_json(saida / "p" / f"{p['id']}.json", {**base, "anos": detalhe, "votos": meus_votos,
+                                                     "temas": {t: dict(c) for t, c in sorted(por_tema.items())}})
 
     # médias por casa e ano, para comparação didática
     medias = {}
@@ -233,6 +269,7 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
             por_lado[ideologia.rotulo(pos.get(x["politico"]))][x["voto"]] += 1
         r = {k: v[k] for k in ("id", "casa", "data", "descricao", "aprovada")}
         r["proposicao"] = v.get("proposicao")
+        r["temas"] = v["temas"]
         r["sim"], r["nao"] = cont.get("Sim", 0), cont.get("Não", 0)
         lista_v.append(r)
         write_json(saida / "v" / f"{v['id']}.json", {

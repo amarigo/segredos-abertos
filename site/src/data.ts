@@ -17,7 +17,7 @@ export interface Resumo {
 export interface Pessoa { nome: string; grupo: string; cargo: string; periodo: string }
 export interface Recursos {
   cota_oficial?: number; verba_gasto?: number; verba_disponivel?: number; verba_meses?: { mes: number; valor: number }[];
-  n_pessoal?: number; salario_bruto?: number; salario_ano?: number | null; salario_meses?: { mes: number; valor: number }[];
+  n_pessoal?: number; salario_bruto?: number; salario_estimado?: boolean; salario_ano?: number | null; salario_meses?: { mes: number; valor: number }[];
   imovel_funcional?: string; auxilio_moradia?: string; viagens_missao?: number; passaporte_diplomatico?: string;
   outros_gastos?: { recurso: string; valor: number }[]; outros_total?: number;
   beneficios?: { beneficio: string; utilizacao: string }[]; vinculos?: { vinculo: string; quantidade: number }[];
@@ -34,10 +34,14 @@ export interface Fornecedor { doc: string; tipo: string; nome: string; valor: nu
 export interface Nota { data: string; categoria: string; fornecedor: string; doc: string; valor: number; url: string }
 export interface Politico extends Resumo {
   anos: Record<string, AnoDetalhe>;
+  temas?: Record<string, { Sim?: number; "Não"?: number; Outros?: number; contra_partido?: number }>;
   votos: { votacao: string; voto: string; partido: string }[];
 }
 export interface Proposicao { sigla: string; numero: string; ano: string; ementa: string; titulo: string; url: string }
-export interface VotacaoResumo { id: string; casa: Casa; data: string; descricao: string; aprovada: boolean; proposicao: Proposicao | null; sim: number; nao: number }
+export interface VotacaoResumo { id: string; casa: Casa; data: string; descricao: string; aprovada: boolean; proposicao: Proposicao | null; sim: number; nao: number; temas?: string[] }
+export const TEMAS = ["Mulheres", "Micro e pequenas empresas", "Saúde", "Educação", "Segurança pública", "Armas", "Meio ambiente",
+  "Impostos e contas públicas", "Trabalho e aposentadoria", "Agropecuária", "Crianças e adolescentes", "Indígenas e minorias",
+  "Energia e combustíveis", "Eleições e política"];
 export interface Votacao extends VotacaoResumo {
   orientacoes: Record<string, string>; fonte: string; contagem: Record<string, number>;
   por_partido: Record<string, Record<string, number>>; por_lado: Record<string, Record<string, number>>;

@@ -198,3 +198,20 @@ def test_completa_com_valor_oficial():
     extra = [d for d in out if d.get("sem_nota")]
     assert [(d["mes"], d["valor"], d["categoria"]) for d in extra] == [(8, 50.0, SEM_NOTA), (9, 20.0, SEM_NOTA)]
     assert recursos.parse_camara_resumo(RESUMO_CAMARA)["cota_meses"] == [{"mes": 1, "valor": 1000.0}]
+
+
+def test_temas():
+    from sa_etl.temas import temas_de
+    assert temas_de("Amplia o limite de faturamento do MEI") == ["Micro e pequenas empresas"]
+    assert temas_de("Dispõe sobre o meio ambiente") == ["Meio ambiente"]
+    assert "Mulheres" in temas_de("Altera a Lei Maria da Penha")
+    assert temas_de("Denomina viaduto") == []
+
+
+def test_salario_de_senador_usa_subsidio():
+    from sa_etl.build import salario_senadores
+    pols = [{"id": "dep-1", "casa": "camara"}, {"id": "dep-2", "casa": "camara"}, {"id": "sen-1", "casa": "senado"}]
+    rec = {"dep-1": {2025: {"salario_meses": [{"mes": 1, "valor": 100.0}]}},
+           "dep-2": {2025: {"salario_meses": [{"mes": 1, "valor": 100.0}]}}, "sen-1": {2025: {"cota_oficial": 5}}}
+    out = salario_senadores(pols, rec)
+    assert out["sen-1"][2025]["salario_ano"] == 100.0 and out["sen-1"][2025]["cota_oficial"] == 5

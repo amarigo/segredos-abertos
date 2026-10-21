@@ -53,6 +53,7 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
     { label: "Outros gastos do mandato", valor: d.outros_gastos || 0, nota: "Fora da cota: correios, diárias e passagens de viagens oficiais.", cor: "var(--gold)" },
   ].filter((x) => x.valor > 0);
   const diferenca = d.cota_oficial ? d.cota_oficial - d.total : 0;
+  const semTipo = p.casa === "senado" ? d.categorias.find((c) => c.categoria === "Não informado")?.valor || 0 : 0;
   return (
     <>
       <section className="grid">
@@ -82,11 +83,13 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
       <section>
         <h2>Cota parlamentar</h2>
         <Explain>Além do salário, cada parlamentar tem uma cota mensal para despesas do mandato. Ele paga e pede reembolso apresentando a nota fiscal.</Explain>
-        {d.categorias.some((c) => c.categoria === "Passagens aéreas sem nota publicada") && (
-          <p className="muted small">"Passagens aéreas sem nota publicada": desde agosto de 2025 a Câmara soma as passagens compradas pelo próprio sistema na página do deputado, mas não publica essas notas nos dados abertos. Usamos o valor oficial de cada mês para o total ficar igual ao da Câmara.</p>
+        {d.categorias.some((c) => c.categoria === "Despesas sem nota nos dados abertos") && (
+          <p className="muted small">"Despesas sem nota nos dados abertos": desde agosto de 2025 a Câmara soma as passagens compradas pelo próprio sistema na página do deputado, mas não publica essas notas nos dados abertos. Usamos o valor oficial de cada mês para o total ficar igual ao da Câmara.</p>
         )}
         {Math.abs(diferenca) > Math.max(50, d.total * 0.005) && d.cota_oficial != null && (
-          <p className="alert" role="note">A página oficial mostra <strong>{reais(d.cota_oficial)}</strong> de cota em {ano}, e aqui somamos {reais(d.total)}. {diferenca > 0 ? "A página oficial foi atualizada depois da nossa última coleta, ou há despesas ainda sem nota publicada." : "Há notas publicadas que a página oficial ainda não somou."} <Link to="/sobre">Entenda</Link>.</p>
+          <p className="alert" role="note">A página oficial mostra <strong>{reais(d.cota_oficial)}</strong> de cota em {ano}, e aqui somamos {reais(d.total)}. {semTipo && Math.abs(semTipo + diferenca) < 1
+            ? `A diferença (${reais(semTipo)}) são reembolsos que o Senado publica sem tipo de despesa ("Não informado"). A página oficial não os soma; nós mostramos, porque foram pagos.`
+            : diferenca > 0 ? "A página oficial foi atualizada depois da nossa última coleta, ou há despesas ainda sem nota publicada." : "Há notas publicadas que a página oficial ainda não somou."} <Link to="/sobre">Entenda</Link>.</p>
         )}
         <div className="grid">
           {(Object.keys(d.grupos) as Grupo[]).map((g) => (
@@ -154,7 +157,7 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
 
 function SalarioBeneficios({ p, r, ano }: { p: Politico; r: Recursos; ano: string }) {
   const linhas: [string, ReactNode][] = [];
-  if (r.salario_bruto) linhas.push(["Salário mensal bruto (atual)", reais(r.salario_bruto, true)]);
+  if (r.salario_bruto) linhas.push([r.salario_estimado ? "Salário mensal bruto (subsídio, igual ao dos deputados)" : "Salário mensal bruto (atual)", reais(r.salario_bruto, true)]);
   if (r.salario_ano) linhas.push([`Salário recebido em ${ano}`, reais(r.salario_ano, true)]);
   if (r.imovel_funcional) linhas.push(["Apartamento funcional (imóvel da Câmara)", r.imovel_funcional]);
   if (r.auxilio_moradia) linhas.push(["Auxílio-moradia", r.auxilio_moradia]);
@@ -165,7 +168,7 @@ function SalarioBeneficios({ p, r, ano }: { p: Politico; r: Recursos; ano: strin
   return (
     <section>
       <h2>Salário e benefícios</h2>
-      {p.casa === "senado" && <Explain>O salário dos senadores é o mesmo dos deputados federais (R$ 46.366,19 por mês desde fevereiro de 2025). O Senado informa quais benefícios cada senador usou, sem os valores.</Explain>}
+      {p.casa === "senado" && <Explain>O salário dos senadores é o mesmo dos deputados federais (R$ 46.366,19 por mês desde fevereiro de 2025). O Senado não publica esse valor junto dos outros gastos, então usamos o subsídio pago aos deputados em cada mês, para o ano inteiro. O Senado informa quais benefícios cada senador usou, sem os valores.</Explain>}
       {linhas.length > 0 && <div className="card kv">{linhas.map(([k, v]) => <Fragment key={k}><span>{k}</span><strong>{v}</strong></Fragment>)}</div>}
       {r.salario_meses && r.salario_meses.length > 0 && <>
         <h3>Salário por mês em {ano}</h3>
@@ -228,10 +231,12 @@ function Votos({ p }: { p: Politico }) {
   const { data: vots } = useData<VotacaoResumo[]>("votacoes.json");
   const { data: pols } = useData<Resumo[]>("politicos.json");
   const [filtro, setFiltro] = useState<"todos" | "contra">("todos");
+  const [tema, setTema] = useState("");
   const porId = useMemo(() => new Map((vots || []).map((v) => [v.id, v])), [vots]);
   if (!p.votos.length) return <div className="empty">Ainda não há votos nominais registrados para {p.nome} no período.</div>;
   const contra = p.votos.filter((v) => v.partido && (v.voto === "Sim" || v.voto === "Não") && v.voto !== v.partido);
-  const lista = filtro === "contra" ? contra : p.votos;
+  const lista = (filtro === "contra" ? contra : p.votos).filter((v) => !tema || !!porId.get(v.votacao)?.temas?.includes(tema));
+  const temas = Object.entries(p.temas || {}).sort((a, b) => tot(b[1]) - tot(a[1]));
   const colegas = (pols || []).filter((x) => x.casa === p.casa && x.posicao != null);
   return (
     <>
@@ -249,9 +254,29 @@ function Votos({ p }: { p: Politico }) {
           <p className="muted small">O ponto amarelo é {p.nome}. Passe o mouse sobre os outros pontos para ver quem são.</p>
         </section>
       )}
+      {temas.length > 0 && (
+        <section>
+          <h2>Como votou por tema</h2>
+          <Explain>Quantas vezes {p.nome} votou Sim ou Não em propostas de cada tema. Votar Sim nem sempre é ser a favor do tema: uma proposta pode, por exemplo, reduzir um direito. Clique no tema para ver cada votação.</Explain>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Tema</th><th className="r">Sim</th><th className="r">Não</th><th className="r">Outros</th><th className="r">Contra o partido</th></tr></thead>
+              <tbody>
+                {temas.map(([t, c]) => (
+                  <tr key={t}>
+                    <td><button className="link" onClick={() => setTema(tema === t ? "" : t)} aria-pressed={tema === t}>{tema === t ? <strong>{t}</strong> : t}</button></td>
+                    <td className="r num">{c.Sim || 0}</td><td className="r num">{c["Não"] || 0}</td><td className="r num">{c.Outros || 0}</td><td className="r num">{c.contra_partido || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
       <section>
         <div className="row" style={{ justifyContent: "space-between" }}>
-          <h2>Como votou</h2>
+          <h2>Como votou{tema ? ` sobre ${tema.toLowerCase()}` : ""}</h2>
+          {tema && <button className="chip" onClick={() => setTema("")}>Tirar filtro de tema ✕</button>}
           <select id="filtro-votos" aria-label="Filtrar votos" value={filtro} onChange={(e) => setFiltro(e.target.value as "todos" | "contra")}>
             <option value="todos">Todas as votações ({p.votos.length})</option>
             <option value="contra">Só quando votou contra o partido ({contra.length})</option>
@@ -281,3 +306,5 @@ function Votos({ p }: { p: Politico }) {
     </>
   );
 }
+
+const tot = (c: Record<string, number | undefined>) => (c.Sim || 0) + (c["Não"] || 0) + (c.Outros || 0);
