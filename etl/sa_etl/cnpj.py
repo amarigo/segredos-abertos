@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -40,6 +41,13 @@ def parse_empresa(d: dict) -> dict:
         "capital_social": d.get("capital_social") or 0,
         "porte": d.get("porte") or "",
         "natureza": d.get("natureza_juridica") or "",
+        "endereco": {
+            "logradouro": " ".join(x for x in (d.get("descricao_tipo_de_logradouro") or "", d.get("logradouro") or "") if x).strip(),
+            "numero": (d.get("numero") or "").strip(),
+            "complemento": (d.get("complemento") or "").strip(),
+            "bairro": (d.get("bairro") or "").strip(),
+            "cep": (d.get("cep") or "").strip(),
+        },
         "socios": socios,
     }
 
@@ -86,3 +94,30 @@ def socios_em_comum(emps: dict[str, dict]) -> dict[str, list[str]]:
                 continue
             idx.setdefault(chave_socio(s), set()).add(cnpj)
     return {k: sorted(v) for k, v in idx.items() if len(v) > 1}
+
+
+def chave_endereco(e: dict) -> str | None:
+    """Endereço normalizado (CEP + número + complemento). Sem número, não dá para comparar com segurança."""
+    end = e.get("endereco") or {}
+    cep = re.sub(r"\D", "", end.get("cep") or "")
+    num = norm_name(end.get("numero") or "")
+    if len(cep) != 8 or not num or num in ("SN", "S/N", "0"):
+        return None
+    comp = norm_name(end.get("complemento") or "")
+    comp = re.sub(r"[^A-Z0-9 ]", "", comp)
+    return f"{cep}|{num}|{comp}"
+
+
+def mesmo_endereco(emps: dict[str, dict]) -> dict[str, list[str]]:
+    """Para cada endereço, as empresas fornecedoras registradas nele (só quando há mais de uma)."""
+    idx: dict[str, set[str]] = {}
+    for cnpj, e in emps.items():
+        k = chave_endereco(e)
+        if k:
+            idx.setdefault(k, set()).add(cnpj[:8])  # raiz do CNPJ: filiais da mesma empresa contam uma vez
+    grupos = {}
+    for cnpj, e in emps.items():
+        k = chave_endereco(e)
+        if k and len(idx[k]) > 1:
+            grupos.setdefault(k, []).append(cnpj)
+    return {k: sorted(v) for k, v in grupos.items() if len({c[:8] for c in v}) > 1}
