@@ -229,3 +229,85 @@ footer .wrap { display: grid; gap: 6px; }
 
 h1 .h1-sub { display: block; font-size: 1rem; font-weight: 600; color: var(--muted); margin-top: 4px; font-family: inherit; }
 tr.atual td { background: color-mix(in srgb, var(--gold) 12%, transparent); }
+
+/* Cores dos partidos (as conhecidas de cada um). No modo escuro, versões mais claras para dar contraste. */
+:root {
+  --p-pt: #d7192a;
+  --p-pcdob: #8e1b1b;
+  --p-pdt: #e4572e;
+  --p-psb: #f6a04d;
+  --p-psol: #f2c200;
+  --p-pv: #2bae66;
+  --p-rede: #00b5a5;
+  --p-avante: #7e57c2;
+  --p-psd: #b8860b;
+  --p-mdb: #00703c;
+  --p-pode: #86c440;
+  --p-pp: #0e8aa7;
+  --p-uniao: #41b6e6;
+  --p-republicanos: #5b5fc7;
+  --p-psdb: #2b7bb9;
+  --p-pl: #13307a;
+  --p-novo: #f47920;
+  --p-solidariedade: #a0522d;
+  --p-cidadania: #e5007e;
+  --p-prd: #607d8b;
+  --p-missao: #3d3d3d;
+  --p-agir: #9e9d24;
+  --p-dc: #795548;
+  --p-pcb: #b71c1c;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --p-pt: #ef4b55;
+  --p-pcdob: #c95050;
+  --p-pdt: #f07a52;
+  --p-psb: #f6b06a;
+  --p-psol: #f5cf33;
+  --p-pv: #45c47f;
+  --p-rede: #2bcfbf;
+  --p-avante: #9c7ddb;
+  --p-psd: #d6a531;
+  --p-mdb: #2fa866;
+  --p-pode: #9bd45a;
+  --p-pp: #36a9c4;
+  --p-uniao: #5cc4ee;
+  --p-republicanos: #8187e0;
+  --p-psdb: #4f98d1;
+  --p-pl: #4f74d9;
+  --p-novo: #f78f45;
+  --p-solidariedade: #c87a52;
+  --p-cidadania: #f0479f;
+  --p-prd: #8ea3ad;
+  --p-missao: #a8a8a8;
+  --p-agir: #c0bf45;
+  --p-dc: #a1887f;
+  --p-pcb: #e05555;
+} }
+:root[data-theme="dark"] {
+  --p-pt: #ef4b55;
+  --p-pcdob: #c95050;
+  --p-pdt: #f07a52;
+  --p-psb: #f6b06a;
+  --p-psol: #f5cf33;
+  --p-pv: #45c47f;
+  --p-rede: #2bcfbf;
+  --p-avante: #9c7ddb;
+  --p-psd: #d6a531;
+  --p-mdb: #2fa866;
+  --p-pode: #9bd45a;
+  --p-pp: #36a9c4;
+  --p-uniao: #5cc4ee;
+  --p-republicanos: #8187e0;
+  --p-psdb: #4f98d1;
+  --p-pl: #4f74d9;
+  --p-novo: #f78f45;
+  --p-solidariedade: #c87a52;
+  --p-cidadania: #f0479f;
+  --p-prd: #8ea3ad;
+  --p-missao: #a8a8a8;
+  --p-agir: #c0bf45;
+  --p-dc: #a1887f;
+  --p-pcb: #e05555;
+}
+.partido-cor { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.esp-eixo .spectrum-labels { font-size: .74rem; gap: 4px; } .esp-eixo .spectrum-labels span { white-space: nowrap; }

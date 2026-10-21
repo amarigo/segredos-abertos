@@ -139,3 +139,10 @@ export function proposicaoNome(p: Proposicao | null): string {
   if (p.sigla && p.numero) return `${p.sigla} ${p.numero}/${p.ano}`;
   return p.titulo || "";
 }
+
+/** Cor conhecida de cada partido (PT vermelho, PL azul...). Partidos sem cor definida ficam cinza. */
+const PARTIDOS_COM_COR = new Set(["pt", "pcdob", "pdt", "psb", "psol", "pv", "rede", "avante", "psd", "mdb", "pode", "pp", "uniao", "republicanos", "psdb", "pl", "novo", "solidariedade", "cidadania", "prd", "missao", "agir", "dc", "pcb"]);
+export function corPartido(sigla: string): string {
+  const k = (sigla || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]/g, "");
+  return PARTIDOS_COM_COR.has(k) ? `var(--p-${k})` : "var(--c-outros)";
+}

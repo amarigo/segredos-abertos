@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Barras, Explain, Loading, useAno, useData, useTip } from "../components/ui";
-import { casaNome, reais, reaisCurto, type Casa, type Partido } from "../data";
+import { casaNome, corPartido, reais, reaisCurto, type Casa, type Partido } from "../data";
 
 type Medida = "total" | "membro";
 type Base = "cota" | "custo";
@@ -21,11 +21,9 @@ export function GastoPartidos({ partidos, ano, limite }: { partidos: Partido[]; 
     .filter((x) => x.total > 0)
     .sort((a, b) => (medida === "total" ? b.total - a.total : b.membro - a.membro)), [partidos, ano, base, casa, medida]);
   const mostrar = limite ? linhas.slice(0, limite) : linhas;
-  // A cor segue o partido (pela ordem do gasto em todos os anos), não a posição no ano escolhido
-  const corDe = useMemo(() => {
-    const ordem = partidos.filter((p) => p.casa === casa).sort((a, b) => b.total - a.total).slice(0, CORES.length).map((p) => p.sigla);
-    return (sigla: string) => { const i = ordem.indexOf(sigla); return i >= 0 ? CORES[i] : "var(--c-outros)"; };
-  }, [partidos, casa]);
+  // Na pizza, os 7 partidos que mais gastaram em todos os anos têm fatia própria; os demais entram em "Outros".
+  // A cor é sempre a do partido (PT vermelho, PL azul...), em todos os gráficos.
+  const principais = useMemo(() => new Set(partidos.filter((p) => p.casa === casa).sort((a, b) => b.total - a.total).slice(0, 7).map((p) => p.sigla)), [partidos, casa]);
   return (
     <section>
       <h2>Gasto por partido em {ano}</h2>
@@ -43,26 +41,25 @@ export function GastoPartidos({ partidos, ano, limite }: { partidos: Partido[]; 
           <button aria-pressed={base === "custo"} onClick={() => setBase("custo")}>Cota, salário e equipe</button>
         </div>
       </div>
-      <Pizza fatias={linhas.map((x) => ({ sigla: x.sigla, valor: x.total, cor: corDe(x.sigla) }))} titulo={`${base === "cota" ? "Cota" : "Custo total"} por partido na ${casaNome(casa)} em ${ano}`} />
+      <Pizza fatias={linhas.map((x) => ({ sigla: x.sigla, valor: x.total, cor: corPartido(x.sigla), outros: !principais.has(x.sigla) }))} titulo={`${base === "cota" ? "Cota" : "Custo total"} por partido na ${casaNome(casa)} em ${ano}`} />
       <h3>{medida === "total" ? "Total por partido" : "Por parlamentar"}</h3>
       <Barras itens={mostrar.map((x) => ({
-        label: <Link to={`/politicos?partido=${encodeURIComponent(x.sigla)}`}><strong>{x.sigla}</strong></Link>,
+        label: <Link to={`/politicos?partido=${encodeURIComponent(x.sigla)}`}><i className="partido-cor" style={{ background: corPartido(x.sigla) }} /><strong>{x.sigla}</strong></Link>,
         nota: medida === "total" ? `${x.n} parlamentar${x.n > 1 ? "es" : ""} · ${reais(x.membro)} por parlamentar` : `${x.n} parlamentar${x.n > 1 ? "es" : ""} · ${reais(x.total)} no total`,
         valor: medida === "total" ? x.total : x.membro,
-        cor: "var(--s1)",
+        cor: corPartido(x.sigla),
       }))} />
       {limite && linhas.length > limite && <Link to="/partidos">Ver todos os {linhas.length} partidos</Link>}
     </section>
   );
 }
 
-const CORES = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--c4)", "var(--c5)", "var(--c6)", "var(--c7)"];
 
-/* Pizza (rosca) com o total de cada partido; partidos sem cor própria entram em "Outros" */
-function Pizza({ fatias, titulo }: { fatias: { sigla: string; valor: number; cor: string }[]; titulo: string }) {
+/* Pizza (rosca) com o total de cada partido; os partidos menores entram juntos em "Outros" */
+function Pizza({ fatias, titulo }: { fatias: { sigla: string; valor: number; cor: string; outros?: boolean }[]; titulo: string }) {
   const tip = useTip();
-  const proprias = fatias.filter((f) => f.cor !== "var(--c-outros)").sort((a, b) => b.valor - a.valor);
-  const resto = fatias.filter((f) => f.cor === "var(--c-outros)");
+  const proprias = fatias.filter((f) => !f.outros).sort((a, b) => b.valor - a.valor);
+  const resto = fatias.filter((f) => f.outros);
   const itens = [...proprias, ...(resto.length ? [{ sigla: `Outros (${resto.length})`, valor: resto.reduce((a, f) => a + f.valor, 0), cor: "var(--c-outros)" }] : [])];
   const total = itens.reduce((a, f) => a + f.valor, 0);
   if (!total) return null;
