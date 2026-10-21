@@ -1,0 +1,7 @@
+node_modules/
+site/dist/
+site/public/data/
+etl/.cache/
+__pycache__/
+.pytest_cache/
+*.pyc
