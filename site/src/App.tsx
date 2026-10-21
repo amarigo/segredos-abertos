@@ -13,7 +13,10 @@ import { dataBR, type Meta } from "./data";
 
 export default function App() {
   const { pathname } = useLocation();
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  // Chaves: scrollTo pode devolver uma Promise em navegadores novos, e o React trataria isso como limpeza
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
   const { data: meta } = useData<Meta>("meta.json");
   return (
     <>
