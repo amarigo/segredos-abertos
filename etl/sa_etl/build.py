@@ -11,14 +11,14 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import camara, cnpj, ideologia, senado
+from . import camara, cnpj, ideologia, recursos, senado
 from .categorias import GRUPOS
 from .util import cnpj_valido, doc_kind, mask_cpf, write_json
 
 log = logging.getLogger("sa_etl")
 
 
-def coletar(anos: list[int], cache: Path, max_empresas: int) -> dict:
+def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool = True) -> dict:
     deps = camara.deputados()
     sens = senado.senadores()
     politicos = deps + sens
@@ -35,8 +35,9 @@ def coletar(anos: list[int], cache: Path, max_empresas: int) -> dict:
             por_cnpj[d["doc"]] += d["valor"]
     alvo = [c for c, _ in por_cnpj.most_common(max_empresas)]
     emps = cnpj.empresas(alvo, cache / "cnpj")
+    rec = recursos.coletar(politicos, anos, cache / "recursos") if com_recursos else {}
     return {"politicos": politicos, "despesas": despesas, "votacoes": vc + vs,
-            "votos": votos_c + votos_s, "empresas": emps}
+            "votos": votos_c + votos_s, "empresas": emps, "recursos": rec}
 
 
 def montar(dados: dict, saida: Path, anos: list[int]) -> None:
@@ -93,36 +94,29 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
 
     comuns = cnpj.socios_em_comum(emps)
     socio_empresas: dict[str, list[str]] = comuns
+    vizinhas: dict[str, list[str]] = {}  # cnpj -> outras fornecedoras registradas no mesmo endereço
+    for grupo in cnpj.mesmo_endereco(emps).values():
+        for c in grupo:
+            vizinhas[c] = [x for x in grupo if x != c]
 
     votacao_por_id = {v["id"]: v for v in votacoes}
+    rec_todos = dados.get("recursos") or {}
     resumo = []
     for p in politicos:
         ds = desp_por.get(p["id"], [])
-        total = round(sum(d["valor"] for d in ds), 2)
-        grupos = {g: 0.0 for g in GRUPOS}
-        cat = defaultdict(lambda: [0.0, ""])
-        mes = defaultdict(float)
-        forn = defaultdict(lambda: {"valor": 0.0, "n": 0, "nome": ""})
-        for d in ds:
-            grupos[d["grupo"]] += d["valor"]
-            cat[d["categoria"]][0] += d["valor"]
-            cat[d["categoria"]][1] = d["grupo"]
-            mes[(d["ano"], d["mes"])] += d["valor"]
-            key = d["doc"] or d["fornecedor"]
-            f = forn[key]
-            f["valor"] += d["valor"]
-            f["n"] += 1
-            f["nome"] = f["nome"] or d["fornecedor"]
-        fornecedores = []
-        for key, f in sorted(forn.items(), key=lambda kv: -kv[1]["valor"])[:60]:
-            kind = doc_kind(key)
-            fornecedores.append({
-                "doc": key if kind == "cnpj" else mask_cpf(key) if kind == "cpf" else "",
-                "tipo": kind, "nome": f["nome"], "valor": round(f["valor"], 2), "n": f["n"],
-                "ficha": kind == "cnpj",
-                "socios": [s["nome"] for s in emps.get(key, {}).get("socios", [])][:4],
-            })
-        notas = sorted(ds, key=lambda d: -d["valor"])[:30]
+        rec = rec_todos.get(p["id"], {})
+        por_ano, detalhe = {}, {}
+        for ano in anos:
+            d_ano = [d for d in ds if d["ano"] == ano]
+            r = rec.get(ano) or rec.get(str(ano)) or {}
+            if not d_ano and not r:
+                continue
+            det = gastos_do_ano(d_ano, emps)
+            extra = custos_extras(p["casa"], r)
+            extra["custo_total"] = round(det["total"] + (extra["salario"] or 0) + (extra["verba_gabinete"] or 0)
+                                         + (extra["outros_gastos"] or 0), 2)
+            por_ano[str(ano)] = {"total": det["total"], "grupos": det["grupos"], **extra}
+            detalhe[str(ano)] = {**det, "recursos": r or None, **extra}
         meus_votos = sorted(
             ({"votacao": v["votacao"], "voto": v["voto"],
               "partido": maioria_partido.get((v["votacao"], v["partido"]), "")}
@@ -132,29 +126,22 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         al = alinh.get(p["id"])
         fid = round(fiel[p["id"]] / tot[p["id"]], 3) if tot[p["id"]] >= ideologia.MIN_VOTOS else None
         base = {
-            **p, "total": total,
-            "grupos": {g: round(v, 2) for g, v in grupos.items()},
+            **p, "total": round(sum(x["total"] for x in por_ano.values()), 2), "por_ano": por_ano,
             "posicao": posicao, "rotulo": ideologia.rotulo(posicao),
             "alinhamento_governo": al, "campo": p.get("bloco") if p["casa"] == "senado" and al is None else ideologia.campo(al),
             "fidelidade_partido": fid, "n_votos": len(meus_votos),
         }
         resumo.append(base)
-        write_json(saida / "p" / f"{p['id']}.json", {
-            **base,
-            "categorias": sorted(({"categoria": k, "grupo": g, "valor": round(v, 2)} for k, (v, g) in cat.items()),
-                                 key=lambda x: -x["valor"]),
-            "meses": [{"ano": a, "mes": m, "valor": round(v, 2)} for (a, m), v in sorted(mes.items())],
-            "fornecedores": fornecedores,
-            "maiores_notas": [{k: (mask_cpf(n["doc"]) if k == "doc" and doc_kind(n["doc"]) == "cpf" else n[k])
-                               for k in ("data", "categoria", "fornecedor", "doc", "valor", "url")} for n in notas],
-            "votos": meus_votos,
-        })
+        write_json(saida / "p" / f"{p['id']}.json", {**base, "anos": detalhe, "votos": meus_votos})
 
-    # médias por casa, para comparação didática
+    # médias por casa e ano, para comparação didática
     medias = {}
-    for casa in ("camara", "senado"):
-        ts = [r["total"] for r in resumo if r["casa"] == casa and r["total"] > 0]
-        medias[casa] = round(sum(ts) / len(ts), 2) if ts else 0
+    for ano in anos:
+        a = str(ano)
+        medias[a] = {}
+        for casa in ("camara", "senado"):
+            ts = [r["por_ano"][a]["total"] for r in resumo if r["casa"] == casa and r["por_ano"].get(a, {}).get("total", 0) > 0]
+            medias[a][casa] = round(sum(ts) / len(ts), 2) if ts else 0
     write_json(saida / "politicos.json", resumo)
 
     # ---------- Empresas ----------
@@ -166,7 +153,8 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
                              "uf": por_id[pid]["uf"], "valor": round(v, 2)} for pid, v in quem.items()),
                            key=lambda x: -x["valor"])
         resumo_e = {"cnpj": doc, "nome": (e or {}).get("razao_social") or nome_forn.get(doc, ""),
-                    "total": total, "n_politicos": len(quem), "tem_socios": bool(e and e["socios"])}
+                    "total": total, "n_politicos": len(quem), "tem_socios": bool(e and e["socios"]),
+                    "n_mesmo_endereco": len(vizinhas.get(doc, []))}
         lista_emp.append(resumo_e)
         if e is None and total < 1000:
             continue
@@ -179,7 +167,15 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         write_json(saida / "e" / f"{doc}.json", {
             **resumo_e, "empresa": {k: v for k, v in (e or {}).items() if k != "socios"} or None,
             "socios": socios, "pagadores": pagadores,
-            "alertas": alertas(e, total, primeiro),
+            "mesmo_endereco": [{"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu[c].values()), 2),
+                                "mesmos_socios": bool({cnpj.chave_socio(x) for x in emps[c]["socios"]}
+                                                      & {cnpj.chave_socio(x) for x in (e or {}).get("socios", [])})}
+                               for c in vizinhas.get(doc, []) if c in recebeu],
+            "alertas": alertas(e, total, primeiro) + ([
+                f"Há outras {len(vizinhas[doc])} empresas fornecedoras registradas no mesmo endereço. Isso pode indicar o mesmo dono."
+                if len(vizinhas[doc]) > 1 else
+                "Há outra empresa fornecedora registrada no mesmo endereço. Isso pode indicar o mesmo dono."]
+                if vizinhas.get(doc) else []),
         })
     lista_emp.sort(key=lambda x: -x["total"])
     write_json(saida / "empresas.json", lista_emp[:1000])
@@ -217,11 +213,21 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         ps = [r["posicao"] for r in rs if r["posicao"] is not None]
         als = [r["alinhamento_governo"] for r in rs if r["alinhamento_governo"] is not None]
         fs = [r["fidelidade_partido"] for r in rs if r["fidelidade_partido"] is not None]
+        anos_p = {}
+        for ano in anos:
+            a = str(ano)
+            com = [r["por_ano"][a] for r in rs if a in r["por_ano"]]
+            if not com:
+                continue
+            cota = round(sum(x["total"] for x in com), 2)
+            todos = round(sum(x["custo_total"] for x in com), 2)
+            anos_p[a] = {"n": len(com), "cota": cota, "cota_por_membro": round(cota / len(com), 2),
+                         "custo_total": todos, "custo_por_membro": round(todos / len(com), 2)}
         partidos.append({"casa": casa, "sigla": sigla, "n": len(rs),
                          "posicao": round(sum(ps) / len(ps), 3) if ps else None,
                          "alinhamento_governo": round(sum(als) / len(als), 3) if als else None,
                          "fidelidade": round(sum(fs) / len(fs), 3) if fs else None,
-                         "total": round(sum(r["total"] for r in rs), 2)})
+                         "total": round(sum(r["total"] for r in rs), 2), "por_ano": anos_p})
     write_json(saida / "partidos.json", partidos)
 
     write_json(saida / "meta.json", {
@@ -229,9 +235,59 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         "contagens": {"politicos": len(politicos), "despesas": len(despesas), "votacoes": len(votacoes),
                       "empresas_com_socios": len(emps)},
         "total_gasto": round(sum(d["valor"] for d in despesas), 2),
+        "total_por_ano": {str(a): round(sum(d["valor"] for d in despesas if d["ano"] == a), 2) for a in anos},
+        "custo_por_ano": {str(a): round(sum(r["por_ano"].get(str(a), {}).get("custo_total", 0) for r in resumo), 2) for a in anos},
     })
     log.info("Pronto: %d políticos, %d despesas, %d votações, %d empresas", len(politicos), len(despesas),
              len(votacoes), len(lista_emp))
+
+
+def gastos_do_ano(ds: list[dict], emps: dict) -> dict:
+    """Resumo da cota de um político num ano: totais, categorias, meses, fornecedores e maiores notas."""
+    grupos = {g: 0.0 for g in GRUPOS}
+    cat = defaultdict(lambda: [0.0, ""])
+    mes = defaultdict(float)
+    forn = defaultdict(lambda: {"valor": 0.0, "n": 0, "nome": ""})
+    for d in ds:
+        grupos[d["grupo"]] += d["valor"]
+        cat[d["categoria"]][0] += d["valor"]
+        cat[d["categoria"]][1] = d["grupo"]
+        mes[d["mes"]] += d["valor"]
+        f = forn[d["doc"] or d["fornecedor"]]
+        f["valor"] += d["valor"]
+        f["n"] += 1
+        f["nome"] = f["nome"] or d["fornecedor"]
+    fornecedores = []
+    for key, f in sorted(forn.items(), key=lambda kv: -kv[1]["valor"])[:60]:
+        kind = doc_kind(key)
+        fornecedores.append({
+            "doc": key if kind == "cnpj" else mask_cpf(key) if kind == "cpf" else "",
+            "tipo": kind, "nome": f["nome"], "valor": round(f["valor"], 2), "n": f["n"],
+            "ficha": kind == "cnpj",
+            "socios": [s["nome"] for s in emps.get(key, {}).get("socios", [])][:4],
+        })
+    notas = sorted(ds, key=lambda d: -d["valor"])[:30]
+    return {
+        "total": round(sum(d["valor"] for d in ds), 2),
+        "grupos": {g: round(v, 2) for g, v in grupos.items()},
+        "categorias": sorted(({"categoria": k, "grupo": g, "valor": round(v, 2)} for k, (v, g) in cat.items()),
+                             key=lambda x: -x["valor"]),
+        "meses": [{"mes": m, "valor": round(v, 2)} for m, v in sorted(mes.items())],
+        "fornecedores": fornecedores,
+        "maiores_notas": [{k: (mask_cpf(n["doc"]) if k == "doc" and doc_kind(n["doc"]) == "cpf" else n[k])
+                           for k in ("data", "categoria", "fornecedor", "doc", "valor", "url")} for n in notas],
+    }
+
+
+def custos_extras(casa: str, r: dict) -> dict:
+    """Salário e verba de gabinete do ano (quando a fonte oficial informa) e o custo total conhecido."""
+    salario = (r or {}).get("salario_ano") or 0
+    verba = (r or {}).get("verba_gasto") or 0
+    outros = (r or {}).get("outros_total") or 0  # Senado: gastos fora da cota (correios, diárias...)
+    cota = (r or {}).get("cota_oficial")
+    return {"salario": round(salario, 2) or None, "verba_gabinete": round(verba, 2) or None,
+            "outros_gastos": round(outros, 2) or None, "cota_oficial": cota,
+            "n_pessoal": (r or {}).get("n_pessoal")}
 
 
 def alertas(e: dict | None, total: float, primeiro_pagamento: str) -> list[str]:
@@ -263,11 +319,12 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--saida", type=Path, required=True)
     ap.add_argument("--cache", type=Path, default=Path(".cache"))
-    ap.add_argument("--anos", type=int, nargs="+", default=[dt.date.today().year - 1, dt.date.today().year])
+    ap.add_argument("--anos", type=int, nargs="+", default=list(range(2023, dt.date.today().year + 1)))
+    ap.add_argument("--sem-recursos", action="store_true", help="não baixa salário, verba de gabinete e equipe")
     ap.add_argument("--max-empresas", type=int, default=1500)
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    dados = coletar(a.anos, a.cache, a.max_empresas)
+    dados = coletar(a.anos, a.cache, a.max_empresas, not a.sem_recursos)
     montar(dados, a.saida, a.anos)
 
 

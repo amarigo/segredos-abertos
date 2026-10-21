@@ -47,10 +47,12 @@ def get_json(url: str, **kw) -> Any:
     return get(url, **kw).json()
 
 
-def download(url: str, dest: Path) -> Path:
-    """Baixa um arquivo para o cache local, se ainda não existir."""
+def download(url: str, dest: Path, max_horas: float | None = None) -> Path:
+    """Baixa um arquivo para o cache local, se ainda não existir (ou se for mais velho que max_horas)."""
     if dest.exists() and dest.stat().st_size > 0:
-        return dest
+        idade = (time.time() - dest.stat().st_mtime) / 3600
+        if max_horas is None or idade < max_horas:
+            return dest
     dest.parent.mkdir(parents=True, exist_ok=True)
     r = get(url, timeout=600)
     tmp = dest.with_suffix(dest.suffix + ".part")

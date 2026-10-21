@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NavLink, Route, Routes, Link, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
 import Politicos from "./pages/Politicos";
@@ -8,15 +8,23 @@ import EmpresaPage from "./pages/Empresa";
 import Votacoes from "./pages/Votacoes";
 import VotacaoPage from "./pages/Votacao";
 import Sobre from "./pages/Sobre";
-import { useData } from "./components/ui";
+import Partidos from "./pages/Partidos";
+import { AnoCtx, AnoSeletor, useData } from "./components/ui";
 import { dataBR, type Meta } from "./data";
 
 export default function App() {
   const { pathname } = useLocation();
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  // Chaves: scrollTo pode devolver uma Promise em navegadores novos, e o React trataria isso como limpeza
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
   const { data: meta } = useData<Meta>("meta.json");
+  const [escolhido, setEscolhido] = useState<string>(() => { try { return localStorage.getItem("ano") || ""; } catch { return ""; } });
+  const anos = useMemo(() => (meta?.anos || []).map(String), [meta]);
+  const ano = anos.includes(escolhido) ? escolhido : anos[anos.length - 1] || "";
+  const setAno = (a: string) => { setEscolhido(a); try { localStorage.setItem("ano", a); } catch { /* sem armazenamento */ } };
   return (
-    <>
+    <AnoCtx.Provider value={{ ano, anos, setAno }}>
       <header className="top">
         <div className="wrap">
           <Link to="/" className="brand"><img src="./icon.svg" alt="" /><span>Segredos Abertos <span style={{ color: "var(--gold)" }}>Brasil</span></span></Link>
@@ -24,8 +32,10 @@ export default function App() {
             <NavLink to="/politicos">Políticos</NavLink>
             <NavLink to="/empresas">Empresas</NavLink>
             <NavLink to="/votacoes">Votações</NavLink>
+            <NavLink to="/partidos">Partidos</NavLink>
             <NavLink to="/sobre">Como funciona</NavLink>
           </nav>
+          <AnoSeletor />
         </div>
       </header>
       <main className="wrap">
@@ -37,6 +47,7 @@ export default function App() {
           <Route path="/e/:cnpj" element={<EmpresaPage />} />
           <Route path="/votacoes" element={<Votacoes />} />
           <Route path="/v/:id" element={<VotacaoPage />} />
+          <Route path="/partidos" element={<Partidos />} />
           <Route path="/sobre" element={<Sobre />} />
           <Route path="*" element={<div className="empty">Página não encontrada. <Link to="/">Voltar ao início</Link></div>} />
         </Routes>
@@ -47,6 +58,6 @@ export default function App() {
           <span>Projeto independente e sem fins lucrativos. Código aberto em <a href="https://github.com/amarigo/segredos-abertos">GitHub</a>.</span>
         </div>
       </footer>
-    </>
+    </AnoCtx.Provider>
   );
 }

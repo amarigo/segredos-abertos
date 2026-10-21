@@ -2,7 +2,7 @@
 import json
 import random
 
-from sa_etl import camara, senado, ideologia, cnpj
+from sa_etl import camara, senado, ideologia, cnpj, recursos
 from sa_etl.build import montar
 from sa_etl.categorias import grupo_de
 from sa_etl.util import cnpj_valido, read_csv_text, to_float, mask_cpf
@@ -85,7 +85,7 @@ def test_montar_gera_arquivos(tmp_path):
                                    {"nome": "Maria", "doc": "***1**", "qualificacao": "Sócio", "entrada": ""}]}}
     montar({"politicos": pols, "despesas": desp, "votacoes": votac, "votos": votos, "empresas": emps}, tmp_path, [2025])
     p = json.loads((tmp_path / "p" / "dep-1.json").read_text())
-    assert p["total"] == 4500.5 and p["grupos"]["servicos"] == 3000
+    assert p["total"] == 4500.5 and p["anos"]["2025"]["grupos"]["servicos"] == 3000 and p["por_ano"]["2025"]["custo_total"] == 4500.5
     e = json.loads((tmp_path / "e" / "22222222000122.json").read_text())
     assert e["socios"][0]["nome"] == "Maria"
     assert any("dias antes" in a for a in e["alertas"])
@@ -109,3 +109,79 @@ def test_cnpj_valido():
     assert cnpj_valido("33.683.111/0001-07")
     assert not cnpj_valido("00000000000001")
     assert not cnpj_valido("33683111000108")
+
+
+RESUMO_CAMARA = """<main><h3>Cota parlamentar <a>?</a></h3><table><tr><td>Gasto</td><td>463.434,64</td><td>87%</td></tr>
+<tr><td>Não utilizado</td><td>10,00</td><td>13%</td></tr></table><p>Gasto mensal</p><table><tr><td>JAN</td><td>1.000,00</td></tr></table>
+<h3>Verba de gabinete <a>?</a></h3><table><tr><td>Gasto</td><td>1.275.362,63</td><td>80.19%</td></tr>
+<tr><td>Não utilizado</td><td>314.992,00</td><td>19.81%</td></tr></table><p>Gasto mensal</p>
+<table><tr><td>JAN</td><td>90.210,79</td><td>71.89%</td></tr><tr><td>FEV</td><td>99.718,07</td><td>74.88%</td></tr></table>
+<h3>Pessoal de gabinete <a>?</a></h3> <a> 18 pessoas </a>
+<h3>Salário mensal bruto <a>? </a></h3> <a>R$ 46.366,19</a>
+<h3>Imóvel funcional <a>?</a></h3> <span> Faz uso desde 09/03/2023 </span>
+<h3>Auxílio-moradia <a>?</a></h3> <span> Não recebe o auxílio </span>
+<h3>Viagens em missão oficial <a>?</a></h3> <a>1</a>
+<h3>Passaporte diplomático <a>?</a></h3> <a> Possui </a></main>"""
+
+
+def test_resumo_camara():
+    r = recursos.parse_camara_resumo(RESUMO_CAMARA)
+    assert r["cota_oficial"] == 463434.64
+    assert r["verba_gasto"] == 1275362.63 and r["verba_disponivel"] == 1590354.63
+    assert r["verba_meses"] == [{"mes": 1, "valor": 90210.79}, {"mes": 2, "valor": 99718.07}]
+    assert r["n_pessoal"] == 18 and r["salario_bruto"] == 46366.19
+    assert r["imovel_funcional"] == "Faz uso desde 09/03/2023"
+    assert r["auxilio_moradia"] == "Não recebe o auxílio"
+    assert r["viagens_missao"] == 1 and r["passaporte_diplomatico"] == "Possui"
+
+
+def test_pessoal_e_salario_camara():
+    h = """<table><thead><tr><th>Nome</th></tr></thead><tbody><tr><td>ALINE MARIA</td><td>SECRETÁRIO PARLAMENTAR</td>
+    <td>SP15</td><td>De 19/02/2025 a 17/02/2026</td><td><a>Consultar</a></td></tr></tbody></table>"""
+    assert recursos.parse_camara_pessoal(h) == [{"nome": "ALINE MARIA", "grupo": "Secretário parlamentar", "cargo": "SP15",
+                                                 "periodo": "De 19/02/2025 a 17/02/2026"}]
+    s = "<table><tbody><tr><td>01</td><td><a> 44.008,52 </a></td></tr><tr><td>02</td><td><a> 46.366,191 </a></td></tr></tbody></table>"
+    assert recursos.parse_camara_remuneracao(s) == [{"mes": 1, "valor": 44008.52}, {"mes": 2, "valor": 46366.19}]
+
+
+def test_senado_recursos():
+    d = {"data": [{"cotas": {"totalValor": 488073.13}, "gastosNaoInclusos": {"despesas": [
+        {"recurso": "Correios", "valor": 41254.35}, {"recurso": "X", "valor": 0}], "totalValor": 41254.35},
+        "beneficios": [{"beneficio": "Auxílio-Moradia", "utilizacao": "Utilizou"}],
+        "pessoal": [{"local": "Gabinete", "quantidade": 41, "vinculos": [{"vinculo": "Comissionado", "quantidade": 38}]}]}]}
+    r = recursos.parse_senado_json(d)
+    assert r["cota_oficial"] == 488073.13 and r["outros_total"] == 41254.35 and len(r["outros_gastos"]) == 1
+    assert r["n_pessoal"] == 41 and r["beneficios"][0]["utilizacao"] == "Utilizou"
+    h = """<table> <caption>Funcionários Comissionados</caption> <thead><tr><th>F</th></tr></thead> <tbody>
+    <tr><td><a><span>ELIA SANTOS</span></a></td><td>SF02</td><td>ASSESSOR PARLAMENTAR</td></tr></tbody></table>"""
+    assert recursos.parse_senado_pessoal(h) == [{"nome": "ELIA SANTOS", "grupo": "Comissionados", "cargo": "Assessor parlamentar (SF02)", "periodo": ""}]
+
+
+def test_mesmo_endereco():
+    end = {"cep": "30.140-010", "numero": "100", "complemento": "Sala 2"}
+    emps = {"11111111000111": {"endereco": end}, "11111111000222": {"endereco": end},  # filial: mesma empresa
+            "22222222000122": {"endereco": dict(end, complemento="SALA 2")},
+            "33333333000133": {"endereco": dict(end, numero="S/N")}}
+    g = cnpj.mesmo_endereco(emps)
+    assert list(g.values()) == [["11111111000111", "11111111000222", "22222222000122"]]
+    assert cnpj.mesmo_endereco({"11111111000111": {"endereco": end}, "11111111000222": {"endereco": end}}) == {}
+
+
+def test_montar_marca_mesmo_endereco(tmp_path):
+    pols = [{"id": "dep-1", "casa": "camara", "cargo": "Deputado(a) Federal", "nome": "Fulano", "partido": "AAA",
+             "uf": "SP", "foto": "", "fonte": ""}]
+    desp = [{"politico": "dep-1", "ano": 2025, "mes": 1, "data": "2025-01-02", "categoria": "x", "grupo": "servicos",
+             "fornecedor": f"E{c}", "doc": c, "valor": 5000.0, "url": ""} for c in ("11111111000111", "22222222000122")]
+    end = {"cep": "30140010", "numero": "100", "complemento": ""}
+    emps = {c: {"cnpj": c, "razao_social": f"E{c}", "situacao": "ATIVA", "abertura": "", "capital_social": 0,
+                "endereco": end, "socios": [{"nome": "Ana", "doc": "***1**", "qualificacao": "", "entrada": ""}]}
+            for c in ("11111111000111", "22222222000122")}
+    montar({"politicos": pols, "despesas": desp, "votacoes": [], "votos": [], "empresas": emps,
+            "recursos": {"dep-1": {2025: {"salario_ano": 100.0, "verba_gasto": 50.0}}}}, tmp_path, [2025])
+    e = json.loads((tmp_path / "e" / "11111111000111.json").read_text())
+    assert e["mesmo_endereco"] == [{"cnpj": "22222222000122", "nome": "E22222222000122", "total": 5000.0, "mesmos_socios": True}]
+    assert any("mesmo endereço" in a for a in e["alertas"])
+    p = json.loads((tmp_path / "politicos.json").read_text())[0]
+    assert p["por_ano"]["2025"]["custo_total"] == 10150.0
+    part = json.loads((tmp_path / "partidos.json").read_text())[0]
+    assert part["por_ano"]["2025"]["cota_por_membro"] == 10000.0

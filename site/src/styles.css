@@ -147,3 +147,14 @@ button.link { background: none; border: 0; color: var(--accent); font: inherit; 
 footer { border-top: 1px solid var(--line); padding-block: 24px 40px; color: var(--muted); font-size: .88rem; }
 footer .wrap { display: grid; gap: 6px; }
 @media (prefers-reduced-motion: no-preference) { .fill { transition: width .4s ease; } }
+
+/* Seletor de ano no topo */
+.ano-sel { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.ano-sel .muted { color: #c4cadb; }
+.ano-sel select { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 4px 8px; font: inherit; }
+.ano-sel select option { color: #000; }
+.toggle { display: inline-flex; border: 1px solid var(--line, #ccd); border-radius: 8px; overflow: hidden; }
+.toggle button { border: 0; background: transparent; padding: 6px 12px; font: inherit; cursor: pointer; color: inherit; }
+.toggle button[aria-pressed="true"] { background: var(--navy); color: #fff; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; }
+.kv > :nth-child(even) { text-align: right; font-variant-numeric: tabular-nums; }

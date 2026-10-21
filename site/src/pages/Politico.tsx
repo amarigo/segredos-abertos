@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Barras, COR_GRUPO, Espectro, Explain, GastoMensal, Loading, VotoChip, useData } from "../components/ui";
+import { Barras, COR_GRUPO, Espectro, Explain, GastoMensal, Loading, VotoChip, useAno, useData } from "../components/ui";
 import {
   GRUPO_CURTO, GRUPO_EXPLICA, casaNome, cnpjFmt, dataBR, pct, proposicaoNome, reais,
-  type Grupo, type Meta, type Politico, type Resumo, type VotacaoResumo,
+  type Grupo, type Meta, type Politico, type Recursos, type Resumo, type VotacaoResumo,
 } from "../data";
 
 export default function PoliticoPage() {
@@ -30,7 +30,7 @@ export default function PoliticoPage() {
         </div>
       </section>
       <div className="tabs" role="tablist">
-        <button role="tab" aria-selected={aba === "gastos"} onClick={() => setAba("gastos")}>Gastos</button>
+        <button role="tab" aria-selected={aba === "gastos"} onClick={() => setAba("gastos")}>Gastos e equipe</button>
         <button role="tab" aria-selected={aba === "votos"} onClick={() => setAba("votos")}>Votos</button>
       </div>
       {aba === "gastos" ? <Gastos p={p} meta={meta} /> : <Votos p={p} />}
@@ -39,50 +39,82 @@ export default function PoliticoPage() {
 }
 
 function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
-  const media = meta?.medias[p.casa] || 0;
-  const vezes = media ? p.total / media : 0;
+  const { ano } = useAno();
   const [todas, setTodas] = useState(false);
+  const d = p.anos[ano];
+  if (!d) return <div className="empty">Não há gastos registrados para {p.nome} em {ano}. Escolha outro ano no topo da página.</div>;
+  const r = d.recursos || {};
+  const media = meta?.medias[ano]?.[p.casa] || 0;
+  const vezes = media ? d.total / media : 0;
+  const partes = [
+    { label: "Salário", valor: d.salario || 0, nota: "Pago ao próprio parlamentar, antes dos descontos.", cor: "var(--s1)" },
+    { label: "Equipe do gabinete (verba de gabinete)", valor: d.verba_gabinete || 0, nota: "Salários dos assessores.", cor: "var(--s3)" },
+    { label: "Cota parlamentar", valor: d.total, nota: "Reembolsos com nota fiscal: viagens, escritório, divulgação.", cor: "var(--s2)" },
+    { label: "Outros gastos do mandato", valor: d.outros_gastos || 0, nota: "Fora da cota: correios, diárias e passagens de viagens oficiais.", cor: "var(--gold)" },
+  ].filter((x) => x.valor > 0);
+  const diferenca = d.cota_oficial ? d.cota_oficial - d.total : 0;
   return (
     <>
       <section className="grid">
         <div className="card stat">
-          <span className="label">Total pedido de reembolso{meta ? ` (${meta.anos.join(" e ")})` : ""}</span>
-          <span className="value">{reais(p.total)}</span>
+          <span className="label">Custo conhecido em {ano}</span>
+          <span className="value">{reais(d.custo_total)}</span>
+          <span className="hint">Soma de salário, equipe, cota e outros gastos informados pelos sites oficiais.</span>
+        </div>
+        <div className="card stat">
+          <span className="label">Cota parlamentar em {ano}</span>
+          <span className="value">{reais(d.total)}</span>
           {media > 0 && <span className="hint">{vezes >= 1.05 ? `${vezes.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}× a média` : vezes <= 0.95 ? `${Math.round((1 - vezes) * 100)}% abaixo da média` : "Na média"} {p.casa === "camara" ? "dos deputados" : "dos senadores"} ({reais(media)})</span>}
         </div>
-        {(Object.keys(p.grupos) as Grupo[]).map((g) => (
-          <div className="card stat" key={g}>
-            <span className="label"><i style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: COR_GRUPO[g], marginRight: 6 }} />{GRUPO_CURTO[g]}</span>
-            <span className="value">{reais(p.grupos[g])}</span>
-            <span className="hint">{GRUPO_EXPLICA[g]}</span>
-          </div>
-        ))}
+        {d.n_pessoal != null && <div className="card stat"><span className="label">Pessoas na equipe em {ano}</span><span className="value">{d.n_pessoal}</span><span className="hint">Inclui quem entrou ou saiu durante o ano.</span></div>}
+      </section>
+
+      {partes.length > 1 && (
+        <section>
+          <h2>Para onde foi o dinheiro em {ano}</h2>
+          <Barras itens={partes.map((x) => ({ label: <strong>{x.label}</strong>, nota: x.nota, valor: x.valor, cor: x.cor }))} />
+        </section>
+      )}
+
+      <SalarioBeneficios p={p} r={r} ano={ano} />
+      <Equipe p={p} r={r} ano={ano} />
+
+      <section>
+        <h2>Cota parlamentar</h2>
+        <Explain>Além do salário, cada parlamentar tem uma cota mensal para despesas do mandato. Ele paga e pede reembolso apresentando a nota fiscal.</Explain>
+        {Math.abs(diferenca) > Math.max(50, d.total * 0.005) && d.cota_oficial != null && (
+          <p className="alert" role="note">A página oficial mostra <strong>{reais(d.cota_oficial)}</strong> de cota em {ano}. As notas fiscais publicadas somam {reais(d.total)}. {diferenca > 0 ? "A diferença são despesas que a Câmara ainda não publicou nota por nota, como passagens compradas pela própria Câmara." : "A diferença vem de notas lançadas depois do fechamento da página oficial."} <Link to="/sobre">Entenda</Link>.</p>
+        )}
+        <div className="grid">
+          {(Object.keys(d.grupos) as Grupo[]).map((g) => (
+            <div className="card stat" key={g}>
+              <span className="label"><i style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: COR_GRUPO[g], marginRight: 6 }} />{GRUPO_CURTO[g]}</span>
+              <span className="value">{reais(d.grupos[g])}</span>
+              <span className="hint">{GRUPO_EXPLICA[g]}</span>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section>
-        <h2>Equipe do gabinete</h2>
-        <Explain>Os salários dos assessores são pagos por uma verba separada da cota (verba de gabinete). Estamos incluindo esses dados na próxima etapa. Enquanto isso, a lista oficial está na <a href={p.fonte} target="_blank" rel="noreferrer">página do parlamentar</a>.</Explain>
+        <h2>Cota por mês em {ano}</h2>
+        <GastoMensal meses={d.meses} ano={ano} cor="var(--s2)" />
       </section>
 
       <section>
-        <h2>Gasto por mês</h2>
-        <GastoMensal meses={p.meses} />
+        <h2>Em que gastou a cota</h2>
+        <Barras itens={d.categorias.slice(0, todas ? 99 : 8).map((c) => ({ label: c.categoria, valor: c.valor, cor: COR_GRUPO[c.grupo] }))} />
+        {d.categorias.length > 8 && <button className="link" onClick={() => setTodas(!todas)}>{todas ? "Mostrar menos" : `Mostrar todas as ${d.categorias.length} categorias`}</button>}
       </section>
 
       <section>
-        <h2>Em que gastou</h2>
-        <Barras itens={p.categorias.slice(0, todas ? 99 : 8).map((c) => ({ label: c.categoria, valor: c.valor, cor: COR_GRUPO[c.grupo] }))} />
-        {p.categorias.length > 8 && <button className="link" onClick={() => setTodas(!todas)}>{todas ? "Mostrar menos" : `Mostrar todas as ${p.categorias.length} categorias`}</button>}
-      </section>
-
-      <section>
-        <h2>Quem recebeu o dinheiro</h2>
+        <h2>Quem recebeu o dinheiro da cota</h2>
         <Explain>Empresas e pessoas que emitiram as notas fiscais. Clique numa empresa para ver quem são os donos e se eles têm outras empresas que também recebem de parlamentares.</Explain>
         <div className="table-wrap">
           <table>
             <thead><tr><th>Fornecedor e donos</th><th className="r">Valor</th></tr></thead>
             <tbody>
-              {p.fornecedores.map((f) => (
+              {d.fornecedores.map((f) => (
                 <tr key={f.doc + f.nome}>
                   <td>{f.ficha ? <Link to={`/e/${f.doc}`}>{f.nome}</Link> : f.nome}
                     <div className="muted small mono">{f.tipo === "cnpj" ? cnpjFmt(f.doc) : f.tipo === "cpf" ? `Pessoa física ${f.doc}` : ""}</div>
@@ -96,12 +128,12 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
       </section>
 
       <section>
-        <h2>Maiores notas fiscais</h2>
+        <h2>Maiores notas fiscais de {ano}</h2>
         <div className="table-wrap">
           <table>
             <thead><tr><th>Data</th><th>Fornecedor e tipo de gasto</th><th className="r">Valor</th></tr></thead>
             <tbody>
-              {p.maiores_notas.map((n, i) => (
+              {d.maiores_notas.map((n, i) => (
                 <tr key={i}>
                   <td className="num">{dataBR(n.data)}</td>
                   <td>{n.doc.length === 14 ? <Link to={`/e/${n.doc}`}>{n.fornecedor}</Link> : n.fornecedor}<div className="small muted">{n.categoria}</div></td>
@@ -114,6 +146,78 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
         <p className="muted small">Quando o valor é um link, ele abre a nota fiscal original.</p>
       </section>
     </>
+  );
+}
+
+function SalarioBeneficios({ p, r, ano }: { p: Politico; r: Recursos; ano: string }) {
+  const linhas: [string, ReactNode][] = [];
+  if (r.salario_bruto) linhas.push(["Salário mensal bruto (atual)", reais(r.salario_bruto, true)]);
+  if (r.salario_ano) linhas.push([`Salário recebido em ${ano}`, reais(r.salario_ano, true)]);
+  if (r.imovel_funcional) linhas.push(["Apartamento funcional (imóvel da Câmara)", r.imovel_funcional]);
+  if (r.auxilio_moradia) linhas.push(["Auxílio-moradia", r.auxilio_moradia]);
+  r.beneficios?.forEach((b) => linhas.push([b.beneficio, b.utilizacao]));
+  if (r.viagens_missao != null) linhas.push(["Viagens em missão oficial", String(r.viagens_missao)]);
+  if (r.passaporte_diplomatico) linhas.push(["Passaporte diplomático", r.passaporte_diplomatico]);
+  if (!linhas.length && !r.outros_gastos?.length) return null;
+  return (
+    <section>
+      <h2>Salário e benefícios</h2>
+      {p.casa === "senado" && <Explain>O salário dos senadores é o mesmo dos deputados federais (R$ 46.366,19 por mês desde fevereiro de 2025). O Senado informa quais benefícios cada senador usou, sem os valores.</Explain>}
+      {linhas.length > 0 && <div className="card kv">{linhas.map(([k, v]) => <Fragment key={k}><span>{k}</span><strong>{v}</strong></Fragment>)}</div>}
+      {r.salario_meses && r.salario_meses.length > 0 && <>
+        <h3>Salário por mês em {ano}</h3>
+        <GastoMensal meses={r.salario_meses} ano={ano} />
+      </>}
+      {r.outros_gastos && r.outros_gastos.length > 0 && <>
+        <h3>Outros gastos do mandato em {ano} (fora da cota)</h3>
+        <Barras itens={r.outros_gastos.map((o) => ({ label: o.recurso, valor: o.valor, cor: "var(--gold)" }))} />
+      </>}
+    </section>
+  );
+}
+
+function Equipe({ p, r, ano }: { p: Politico; r: Recursos; ano: string }) {
+  const [todos, setTodos] = useState(false);
+  const equipe = r.equipe || [];
+  if (!equipe.length && !r.verba_gasto && !r.vinculos?.length) {
+    return (
+      <section>
+        <h2>Equipe do gabinete</h2>
+        <Explain>Ainda não há dados da equipe para {ano}. A lista oficial está na <a href={p.fonte} target="_blank" rel="noreferrer">página do parlamentar</a>.</Explain>
+      </section>
+    );
+  }
+  return (
+    <section>
+      <h2>Equipe do gabinete</h2>
+      {p.casa === "camara"
+        ? <Explain>Cada deputado tem uma verba de gabinete para pagar até 25 secretários parlamentares, em Brasília ou no estado. A Câmara mostra quanto foi gasto por mês, mas não o salário de cada assessor nesta lista.</Explain>
+        : <Explain>O Senado mostra quem trabalha no gabinete e a função de cada pessoa. Servidores efetivos são concursados; comissionados são escolhidos pelo senador.</Explain>}
+      {r.verba_gasto != null && (
+        <div className="grid">
+          <div className="card stat"><span className="label">Verba de gabinete gasta em {ano}</span><span className="value">{reais(r.verba_gasto)}</span>
+            {r.verba_disponivel ? <span className="hint">{Math.round((r.verba_gasto / r.verba_disponivel) * 100)}% do disponível ({reais(r.verba_disponivel)})</span> : null}</div>
+        </div>
+      )}
+      {r.vinculos && r.vinculos.length > 0 && <p>{r.vinculos.map((v) => `${v.quantidade} ${v.vinculo.toLowerCase()}${v.quantidade === 1 ? "" : "s"}`).join(" e ")}.</p>}
+      {r.verba_meses && r.verba_meses.length > 0 && <>
+        <h3>Verba de gabinete por mês</h3>
+        <GastoMensal meses={r.verba_meses} ano={ano} cor="var(--s3)" />
+      </>}
+      {equipe.length > 0 && <>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>Cargo</th><th>Período</th></tr></thead>
+            <tbody>
+              {equipe.slice(0, todos ? 999 : 15).map((x, i) => (
+                <tr key={i}><td>{x.nome}</td><td className="small">{x.grupo}<div className="muted">{x.cargo}</div></td><td className="small num">{x.periodo}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {equipe.length > 15 && <button className="link" onClick={() => setTodos(!todos)}>{todos ? "Mostrar menos" : `Mostrar as ${equipe.length} linhas`}</button>}
+      </>}
+    </section>
   );
 }
 

@@ -53,8 +53,6 @@ jobs:
           path: etl/.cache
           key: dados-${{ github.run_id }}
           restore-keys: dados-
-      - name: Limpar arquivos do ano corrente (para baixar a versão nova)
-        run: rm -f etl/.cache/*-$(date +%Y).csv* || true
       - name: Coletar dados oficiais
         working-directory: etl
         run: python -m sa_etl.build --saida ../site/public/data --cache .cache 2>&1 | tee coleta.log

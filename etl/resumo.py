@@ -12,7 +12,20 @@ part = json.loads((d / "partidos.json").read_text())
 
 print("## Resumo da coleta\n")
 print(f"- Anos: {meta['anos']} · total: R$ {meta['total_gasto']:,.2f}")
-print(f"- Contagens: {meta['contagens']} · médias: {meta['medias']}")
+print(f"- Contagens: {meta['contagens']}")
+for ano, t in meta.get("total_por_ano", {}).items():
+    print(f"- {ano}: cota R$ {t:,.2f} · custo conhecido R$ {meta['custo_por_ano'].get(ano, 0):,.2f} · médias {meta['medias'].get(ano)}")
+
+print("\n### Conferência com as páginas oficiais (cota)\n")
+for ano in meta.get("total_por_ano", {}):
+    for casa in ("camara", "senado"):
+        com = [p for p in pols if p["casa"] == casa and (p["por_ano"].get(ano) or {}).get("cota_oficial") is not None]
+        dif = [p for p in com if abs(p["por_ano"][ano]["cota_oficial"] - p["por_ano"][ano]["total"]) > max(50, 0.005 * p["por_ano"][ano]["total"])]
+        rec = sum(1 for p in pols if p["casa"] == casa and (p["por_ano"].get(ano) or {}).get("salario"))
+        print(f"- {ano} {casa}: {len(com)} com valor oficial, {len(dif)} diferentes, {rec} com salário")
+        for p in sorted(dif, key=lambda p: -abs(p["por_ano"][ano]["cota_oficial"] - p["por_ano"][ano]["total"]))[:3]:
+            a = p["por_ano"][ano]
+            print(f"  - {p['nome']} ({p['uf']}): oficial R$ {a['cota_oficial']:,.2f} · notas R$ {a['total']:,.2f}")
 for casa in ("camara", "senado"):
     ps = [p for p in pols if p["casa"] == casa]
     print(f"- {casa}: {len(ps)} políticos, {sum(1 for p in ps if p['total'] > 0)} com gastos, "

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { load, reais, MESES, type Grupo } from "../data";
 
@@ -12,6 +12,23 @@ export function useData<T>(path: string | null): { data: T | null; error: string
     return () => { vivo = false; };
   }, [path]);
   return state;
+}
+
+/* Ano escolhido no topo do site, compartilhado por todas as páginas */
+export const AnoCtx = createContext<{ ano: string; anos: string[]; setAno: (a: string) => void }>({ ano: "", anos: [], setAno: () => {} });
+export const useAno = () => useContext(AnoCtx);
+
+export function AnoSeletor() {
+  const { ano, anos, setAno } = useAno();
+  if (!anos.length) return null;
+  return (
+    <label className="ano-sel">
+      <span className="muted small">Ano</span>
+      <select id="ano" value={ano} onChange={(e) => setAno(e.target.value)}>
+        {anos.slice().reverse().map((a) => <option key={a} value={a}>{a}</option>)}
+      </select>
+    </label>
+  );
 }
 
 export function Loading({ error }: { error?: string | null }) {
@@ -48,34 +65,34 @@ export function Barras({ itens, cor, max }: { itens: { label: ReactNode; valor: 
   );
 }
 
-/* Colunas de gasto por mês */
-export function GastoMensal({ meses }: { meses: { ano: number; mes: number; valor: number }[] }) {
+/* Colunas de gasto por mês (um ano) */
+export function GastoMensal({ meses, ano, cor = "var(--s1)" }: { meses: { mes: number; valor: number }[]; ano: string; cor?: string }) {
   const tip = useTip();
-  if (!meses.length) return <div className="empty">Sem gastos registrados no período.</div>;
+  if (!meses.length) return <div className="empty">Sem gastos registrados em {ano}.</div>;
+  const valores = Array.from({ length: 12 }, (_, i) => meses.find((m) => m.mes === i + 1)?.valor || 0);
   const W = 640, H = 200, padL = 52, padB = 24, padT = 8;
-  const max = Math.max(...meses.map((m) => m.valor));
+  const max = Math.max(...valores);
   const passo = niceStep(max);
   const topo = Math.ceil(max / passo) * passo || 1;
-  const bw = (W - padL) / meses.length;
+  const bw = (W - padL) / 12;
   const y = (v: number) => padT + (H - padT - padB) * (1 - v / topo);
   const ticks = Array.from({ length: Math.round(topo / passo) + 1 }, (_, i) => i * passo);
   return (
     <div style={{ overflowX: "auto" }}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Gasto por mês">
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Gasto por mês em ${ano}`}>
         {ticks.map((t) => (
           <g key={t}>
             <line x1={padL} x2={W} y1={y(t)} y2={y(t)} stroke="var(--grid)" />
             <text x={padL - 6} y={y(t) + 4} textAnchor="end">{t >= 1000 ? `${Math.round(t / 1000)} mil` : t}</text>
           </g>
         ))}
-        {meses.map((m, i) => {
-          const h = Math.max(0, y(0) - y(m.valor));
-          const x = padL + i * bw + 1;
+        {valores.map((v, i) => {
+          const x = padL + i * bw + 2;
           return (
             <g key={i}>
-              <rect x={x} y={y(m.valor)} width={Math.max(1, bw - 2)} height={h} rx={Math.min(4, bw / 3)} fill="var(--s1)"
-                onMouseMove={(e) => tip.show(e, `${MESES[m.mes - 1]}/${m.ano}: ${reais(m.valor)}`)} onMouseLeave={tip.hide} />
-              {m.mes === 1 || i === 0 ? <text x={x} y={H - 6}>{`${MESES[m.mes - 1]}/${String(m.ano).slice(2)}`}</text> : null}
+              <rect x={x} y={y(v)} width={Math.max(1, bw - 4)} height={Math.max(0, y(0) - y(v))} rx={4} fill={cor}
+                onMouseMove={(e) => tip.show(e, `${MESES[i]}/${ano}: ${reais(v)}`)} onMouseLeave={tip.hide} />
+              <text x={x + (bw - 4) / 2} y={H - 6} textAnchor="middle">{MESES[i]}</text>
             </g>
           );
         })}
