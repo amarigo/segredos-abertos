@@ -7,6 +7,7 @@ export interface AnoResumo {
   total: number; grupos: Record<Grupo, number>;
   salario: number | null; verba_gabinete: number | null; outros_gastos: number | null;
   cota_oficial: number | null; n_pessoal: number | null; custo_total: number;
+  fora_do_periodo?: number; meses_fora?: number[];
 }
 export interface Resumo {
   id: string; casa: Casa; cargo: string; nome: string; partido: string; uf: string; foto: string;
@@ -90,6 +91,7 @@ export function reaisCurto(v: number): string {
 export const pct = (v: number | null | undefined) => (v == null ? "—" : `${Math.round(v * 100)}%`);
 export const dataBR = (s: string) => (s ? s.slice(0, 10).split("-").reverse().join("/") : "");
 export const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+export const MESES_LONGOS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 export function cnpjFmt(c: string): string {
   const d = c.replace(/\D/g, "");
   if (d.length !== 14) return c;

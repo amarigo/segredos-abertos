@@ -172,6 +172,7 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
                 continue
             det = gastos_do_ano(d_ano, emps)
             extra = custos_extras(p["casa"], r)
+            extra.update(fora_do_periodo_oficial(d_ano, r))
             extra["custo_total"] = round(det["total"] + (extra["salario"] or 0) + (extra["verba_gabinete"] or 0)
                                          + (extra["outros_gastos"] or 0), 2)
             por_ano[str(ano)] = {"total": det["total"], "grupos": det["grupos"], **extra}
@@ -355,6 +356,26 @@ def gastos_do_ano(ds: list[dict], emps: dict) -> dict:
         "maiores_notas": [{k: (mask_cpf(n["doc"]) if k == "doc" and doc_kind(n["doc"]) == "cpf" else n[k])
                            for k in ("data", "categoria", "fornecedor", "doc", "valor", "url")} for n in notas],
     }
+
+
+def fora_do_periodo_oficial(ds: list[dict], r: dict) -> dict:
+    """Notas de meses que a página oficial do ano não mostra.
+
+    A página de cada deputado só conta os meses do mandato atual em que ele estava no cargo. Ficam de fora,
+    por exemplo, janeiro de 2023 (ainda era a legislatura anterior) e devoluções de passagens que caem em meses
+    em que o deputado estava licenciado (como ministro). As notas continuam na soma, porque foram pagas;
+    este valor serve para comparar com a página oficial e explicar a diferença.
+    """
+    meses = {m["mes"] for m in (r or {}).get("cota_meses") or []}
+    if not meses:
+        return {}
+    fora = defaultdict(float)
+    for d in ds:
+        if d["mes"] not in meses:
+            fora[d["mes"]] += d["valor"]
+    if not fora or abs(sum(fora.values())) < 0.01:
+        return {}
+    return {"fora_do_periodo": round(sum(fora.values()), 2), "meses_fora": sorted(fora)}
 
 
 def custos_extras(casa: str, r: dict) -> dict:

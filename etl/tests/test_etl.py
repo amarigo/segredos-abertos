@@ -217,3 +217,11 @@ def test_salario_de_senador_usa_subsidio():
            "dep-2": {2025: {"salario_meses": [{"mes": 1, "valor": 100.0}]}}, "sen-1": {2025: {"cota_oficial": 5}}}
     out = salario_senadores(pols, rec)
     assert out["sen-1"][2025]["salario_ano"] == 100.0 and out["sen-1"][2025]["cota_oficial"] == 5
+
+
+def test_fora_do_periodo_oficial():
+    from sa_etl.build import fora_do_periodo_oficial
+    ds = [{"mes": 1, "valor": 100.0}, {"mes": 2, "valor": 50.0}, {"mes": 7, "valor": -30.0}]
+    r = {"cota_meses": [{"mes": 2, "valor": 50.0}]}
+    assert fora_do_periodo_oficial(ds, r) == {"fora_do_periodo": 70.0, "meses_fora": [1, 7]}
+    assert fora_do_periodo_oficial(ds, {}) == {}

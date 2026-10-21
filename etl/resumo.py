@@ -20,12 +20,15 @@ print("\n### Conferência com as páginas oficiais (cota)\n")
 for ano in meta.get("total_por_ano", {}):
     for casa in ("camara", "senado"):
         com = [p for p in pols if p["casa"] == casa and (p["por_ano"].get(ano) or {}).get("cota_oficial") is not None]
-        dif = [p for p in com if abs(p["por_ano"][ano]["cota_oficial"] - p["por_ano"][ano]["total"]) > max(50, 0.005 * p["por_ano"][ano]["total"])]
+        comp = lambda a: a["total"] - (a.get("fora_do_periodo") or 0)  # noqa: E731 - só os meses que a página mostra
+        dif = [p for p in com if abs(p["por_ano"][ano]["cota_oficial"] - comp(p["por_ano"][ano])) > max(50, 0.005 * abs(comp(p["por_ano"][ano])))]
+        fora = sum(1 for p in com if p["por_ano"][ano].get("fora_do_periodo"))
         rec = sum(1 for p in pols if p["casa"] == casa and (p["por_ano"].get(ano) or {}).get("salario"))
-        print(f"- {ano} {casa}: {len(com)} com valor oficial, {len(dif)} diferentes, {rec} com salário")
-        for p in sorted(dif, key=lambda p: -abs(p["por_ano"][ano]["cota_oficial"] - p["por_ano"][ano]["total"]))[:3]:
+        print(f"- {ano} {casa}: {len(com)} com valor oficial, {len(dif)} diferentes, {fora} com notas fora dos meses oficiais, {rec} com salário")
+        for p in sorted(dif, key=lambda p: -abs(p["por_ano"][ano]["cota_oficial"] - comp(p["por_ano"][ano])))[:3]:
             a = p["por_ano"][ano]
-            print(f"  - {p['nome']} ({p['uf']}): oficial R$ {a['cota_oficial']:,.2f} · notas R$ {a['total']:,.2f}")
+            print(f"  - {p['nome']} ({p['uf']}): oficial R$ {a['cota_oficial']:,.2f} · notas R$ {a['total']:,.2f}"
+                  f" · fora dos meses oficiais R$ {a.get('fora_do_periodo') or 0:,.2f}")
 for casa in ("camara", "senado"):
     ps = [p for p in pols if p["casa"] == casa]
     print(f"- {casa}: {len(ps)} políticos, {sum(1 for p in ps if p['total'] > 0)} com gastos, "

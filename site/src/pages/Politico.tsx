@@ -4,6 +4,7 @@ import { Barras, COR_GRUPO, Espectro, Explain, GastoMensal, Loading, VotoChip, u
 import {
   GRUPO_CURTO, GRUPO_EXPLICA, casaNome, cnpjFmt, dataBR, pct, proposicaoNome, reais,
   type Grupo, type Meta, type Politico, type Recursos, type Resumo, type VotacaoResumo,
+  MESES_LONGOS,
 } from "../data";
 
 export default function PoliticoPage() {
@@ -52,7 +53,9 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
     { label: "Cota parlamentar", valor: d.total, nota: "Reembolsos com nota fiscal: viagens, escritório, divulgação.", cor: "var(--s2)" },
     { label: "Outros gastos do mandato", valor: d.outros_gastos || 0, nota: "Fora da cota: correios, diárias e passagens de viagens oficiais.", cor: "var(--gold)" },
   ].filter((x) => x.valor > 0);
-  const diferenca = d.cota_oficial ? d.cota_oficial - d.total : 0;
+  const fora = d.fora_do_periodo || 0;
+  const diferenca = d.cota_oficial ? d.cota_oficial - (d.total - fora) : 0;
+  const nomesMeses = (d.meses_fora || []).map((m) => MESES_LONGOS[m - 1]).join(", ");
   const semTipo = p.casa === "senado" ? d.categorias.find((c) => c.categoria === "Não informado")?.valor || 0 : 0;
   return (
     <>
@@ -86,8 +89,13 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
         {d.categorias.some((c) => c.categoria === "Despesas sem nota nos dados abertos") && (
           <p className="muted small">"Despesas sem nota nos dados abertos": desde agosto de 2025 a Câmara soma as passagens compradas pelo próprio sistema na página do deputado, mas não publica essas notas nos dados abertos. Usamos o valor oficial de cada mês para o total ficar igual ao da Câmara.</p>
         )}
-        {Math.abs(diferenca) > Math.max(50, d.total * 0.005) && d.cota_oficial != null && (
-          <p className="alert" role="note">A página oficial mostra <strong>{reais(d.cota_oficial)}</strong> de cota em {ano}, e aqui somamos {reais(d.total)}. {semTipo && Math.abs(semTipo + diferenca) < 1
+        {fora !== 0 && d.cota_oficial != null && (
+          <p className="muted small" role="note">A página oficial mostra {reais(d.cota_oficial)} em {ano} porque conta só os meses em que {p.casa === "camara" ? "o deputado" : "o senador"} estava no cargo neste mandato. Aqui somamos também {reais(fora)} de {nomesMeses}: {ano === "2023" && d.meses_fora?.includes(1)
+            ? "janeiro de 2023 ainda era o mandato anterior, que a página de 2023 não inclui"
+            : fora < 0 ? "são devoluções de passagens creditadas em meses em que estava fora do cargo (por exemplo, licenciado para ser ministro)" : "são notas de meses em que estava fora do cargo"}. Esses valores foram pagos ou devolvidos de fato, por isso ficam na soma.</p>
+        )}
+        {Math.abs(diferenca) > Math.max(50, Math.abs(d.total - fora) * 0.005) && d.cota_oficial != null && (
+          <p className="alert" role="note">A página oficial mostra <strong>{reais(d.cota_oficial)}</strong> de cota em {ano}, e aqui somamos {reais(d.total - fora)}{fora !== 0 ? " nos mesmos meses" : ""}. {semTipo && Math.abs(semTipo + diferenca) < 1
             ? `A diferença (${reais(semTipo)}) são reembolsos que o Senado publica sem tipo de despesa ("Não informado"). A página oficial não os soma; nós mostramos, porque foram pagos.`
             : diferenca > 0 ? "A página oficial foi atualizada depois da nossa última coleta, ou há despesas ainda sem nota publicada." : "Há notas publicadas que a página oficial ainda não somou."} <Link to="/sobre">Entenda</Link>.</p>
         )}
