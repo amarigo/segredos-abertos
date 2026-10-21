@@ -1,12 +1,14 @@
 """Por que, em 2023, algumas notas da Câmara somam mais que a página oficial? E os totais negativos de 2024?"""
 import sys, zipfile, io, csv, glob
+from pathlib import Path
 from collections import defaultdict
 sys.path.insert(0, "etl")
-from sa_etl.util import to_float, read_csv_file
+from sa_etl.util import to_float, read_csv_file, download
 from sa_etl.recursos import parse_camara_resumo, _get_text, CAMARA
 print(glob.glob("etl/.cache/camara-cota-*"))
 for ano, nomes in ((2023, ["VICENTINHO JÚNIOR", "ZECA DIRCEU", "AMARO NETO"]), (2024, ["CARLOS GOMES", "ANDRÉ FUFUCA"])):
-    rows = list(read_csv_file(f"etl/.cache/camara-cota-{ano}.csv.zip"))
+    f = download(f"https://www.camara.leg.br/cotas/Ano-{ano}.csv.zip", Path(f"etl/.cache/camara-cota-{ano}.csv.zip"))
+    rows = list(read_csv_file(f))
     print("\n=====", ano, "colunas", list(rows[0].keys()))
     sem_ide = [r for r in rows if not (r.get("ideCadastro") or "").strip()]
     print("linhas sem ideCadastro:", len(sem_ide), "exemplos de nome:", sorted({r.get("txNomeParlamentar") for r in sem_ide})[:10])
