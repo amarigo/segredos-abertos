@@ -12,7 +12,12 @@ for dep, nu in (("209787", "3605"),):
     for mes in (7, 8, 9):
         u = (f"https://www.camara.leg.br/cota-parlamentar/sumarizado?nuDeputadoId={nu}&dataInicio={mes}/2025&dataFim={mes}/2025"
              "&despesa=&nomeHospede=&nomePassageiro=&nomeFornecedor=&cnpjFornecedor=&numDocumento=&sguf=&filtroNivel1=1&filtroNivel2=2&filtroNivel3=3")
-        r = requests.get(u, headers=H, timeout=60).text
+        r = ""
+        for _ in range(4):
+            try:
+                r = requests.get(u, headers=H, timeout=60).text; break
+            except Exception as e:
+                print("falha", e)
         t = txt(r); i = t.find("Resultado da pesquisa"); j = t.find("Filtros aplicados")
         print("===== PAGINA mes", mes, t[i:j][:2500])
         links = re.findall(r'href="(/cota-parlamentar/[^"]+)"', r)
