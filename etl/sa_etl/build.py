@@ -11,7 +11,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import camara, cnpj, ideologia, recursos, senado, temas
+from . import camara, cnpj, ideologia, passagens, recursos, senado, temas
 from .categorias import GRUPOS
 from .util import cnpj_valido, doc_kind, mask_cpf, write_json
 
@@ -37,12 +37,45 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
     emps = cnpj.empresas(alvo, cache / "cnpj")
     socias = cnpj.buscar_socias(emps, cache / "cnpj")  # holdings: sócios que são empresas
     rec = recursos.coletar(politicos, anos, cache / "recursos") if com_recursos else {}
+    if rec:
+        despesas += buscar_passagens(despesas, politicos, rec, cache / "passagens")
     return {"politicos": politicos, "despesas": despesas, "votacoes": vc + vs,
             "votos": votos_c + votos_s, "empresas": emps,
             "empresas_socias": socias, "recursos": rec}
 
 
 SEM_NOTA = "Despesas sem nota nos dados abertos"
+SUMARIO_MES = ("https://www.camara.leg.br/cota-parlamentar/sumarizado?nuDeputadoId={nu}&dataInicio={mes}/{ano}&dataFim={mes}/{ano}"
+               "&despesa=&nomeHospede=&nomePassageiro=&nomeFornecedor=&cnpjFornecedor=&numDocumento=&sguf=&filtroNivel1=1&filtroNivel2=2&filtroNivel3=3")
+
+
+def meses_faltando(despesas: list[dict], politicos: list[dict], rec: dict) -> dict[tuple[str, int, int], float]:
+    """(deputado, ano, mês) em que a página oficial da Câmara soma mais do que as notas que temos, e quanto falta."""
+    soma = defaultdict(float)
+    for d in despesas:
+        soma[(d["politico"], d["ano"], d["mes"])] += d["valor"]
+    out = {}
+    for p in politicos:
+        if p["casa"] != "camara":
+            continue
+        for ano, r in (rec.get(p["id"]) or {}).items():
+            for m in (r or {}).get("cota_meses") or []:
+                falta = round(m["valor"] - soma[(p["id"], int(ano), m["mes"])], 2)
+                if falta > 1:
+                    out[(p["id"], int(ano), m["mes"])] = falta
+    return out
+
+
+def buscar_passagens(despesas: list[dict], politicos: list[dict], rec: dict, cache: Path) -> list[dict]:
+    """Nos meses em que falta valor, busca as passagens na lista oficial da Câmara (ver passagens.py)."""
+    nu_de = {}
+    for d in despesas:
+        if d.get("nu"):
+            nu_de.setdefault(d["politico"], d["nu"])
+    falta = meses_faltando(despesas, politicos, rec)
+    meses = [(pid, nu_de[pid], ano, mes) for (pid, ano, mes) in sorted(falta) if pid in nu_de]
+    ja_temos = Counter((d["politico"], d["ano"], d["mes"], d.get("num", ""), d["valor"]) for d in despesas if d.get("num"))
+    return passagens.coletar(meses, ja_temos, cache)
 
 
 def completar_com_oficial(despesas: list[dict], politicos: list[dict], rec: dict) -> list[dict]:
@@ -52,20 +85,18 @@ def completar_com_oficial(despesas: list[dict], politicos: list[dict], rec: dict
     conferência com Minas Gerais, a diferença era toda de passagens aéreas compradas pelo sistema da
     própria Câmara (SIGEPA), a partir de agosto de 2025. Sem isso, o total ficaria menor que o oficial.
     """
-    soma = defaultdict(float)
+    nu_de = {}
     for d in despesas:
-        soma[(d["politico"], d["ano"], d["mes"])] += d["valor"]
+        if d.get("nu"):
+            nu_de.setdefault(d["politico"], d["nu"])
     extras = []
-    for p in politicos:
-        if p["casa"] != "camara":
-            continue
-        for ano, r in (rec.get(p["id"]) or {}).items():
-            for m in (r or {}).get("cota_meses") or []:
-                falta = round(m["valor"] - soma[(p["id"], int(ano), m["mes"])], 2)
-                if falta > 1:
-                    extras.append({"politico": p["id"], "ano": int(ano), "mes": m["mes"], "data": f"{int(ano)}-{m['mes']:02d}-01",
-                                   "categoria": SEM_NOTA, "grupo": "pessoal", "fornecedor": "Sem nota publicada (em geral, passagens aéreas)",
-                                   "doc": "", "valor": falta, "url": "", "sem_nota": True})
+    for (pid, ano, mes), falta in sorted(meses_faltando(despesas, politicos, rec).items()):
+        nu = nu_de.get(pid)
+        extras.append({"politico": pid, "ano": ano, "mes": mes, "data": f"{ano}-{mes:02d}-01",
+                       "categoria": SEM_NOTA, "grupo": "pessoal", "fornecedor": "Diferença sem detalhe publicado",
+                       "doc": "", "valor": falta, "sem_nota": True, "link": "lista" if nu else "",
+                       "url": SUMARIO_MES.format(nu=nu, mes=mes, ano=ano) if nu else "",
+                       "detalhe": "Valor que a página oficial soma neste mês e que não aparece em nenhuma nota nem na lista de despesas"})
     if extras:
         log.info("Câmara: %d meses completados com o valor oficial (R$ %.2f)", len(extras), sum(e["valor"] for e in extras))
     return despesas + extras
@@ -244,7 +275,8 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         por_ano_notas = defaultdict(list)
         for n in ns:
             mensal[(n["politico"], n["ano"], n["mes"])] += n["valor"]
-            por_ano_notas[n["ano"]].append([n["data"], n["politico"], n["categoria"], n["valor"], n["url"]])
+            por_ano_notas[n["ano"]].append([n["data"], n["politico"], n["categoria"], n["valor"], n["url"],
+                                            n.get("link") or ("nota" if n["url"] else ""), n.get("detalhe", "")])
         for a, lista in por_ano_notas.items():  # todas as notas, num arquivo por ano (carregado só quando aberto)
             write_json(saida / "e" / "notas" / f"{doc}-{a}.json", lista)
         write_json(saida / "e" / f"{doc}.json", {
@@ -354,6 +386,8 @@ def gastos_do_ano(ds: list[dict], emps: dict) -> dict:
             "socios": [s["nome"] for s in emps.get(key, {}).get("socios", [])][:4],
         })
     notas = sorted((d for d in ds if not d.get("sem_nota")), key=lambda d: -d["valor"])[:30]
+    sem_nota = [{"mes": d["mes"], "valor": d["valor"], "url": d.get("url", "")} for d in sorted(ds, key=lambda d: d["mes"]) if d.get("sem_nota")]
+    passagens_lista = [d for d in ds if d.get("fonte_lista")]
     return {
         "total": round(sum(d["valor"] for d in ds), 2),
         "grupos": {g: round(v, 2) for g, v in grupos.items()},
@@ -361,8 +395,11 @@ def gastos_do_ano(ds: list[dict], emps: dict) -> dict:
                              key=lambda x: -x["valor"]),
         "meses": [{"mes": m, "valor": round(v, 2)} for m, v in sorted(mes.items())],
         "fornecedores": fornecedores,
+        "sem_nota_meses": sem_nota,
+        "passagens_da_lista": {"n": len(passagens_lista), "valor": round(sum(d["valor"] for d in passagens_lista), 2)},
         "maiores_notas": [{k: (mask_cpf(n["doc"]) if k == "doc" and doc_kind(n["doc"]) == "cpf" else n[k])
-                           for k in ("data", "categoria", "fornecedor", "doc", "valor", "url")} for n in notas],
+                           for k in ("data", "categoria", "fornecedor", "doc", "valor", "url")}
+                          | {"link": n.get("link") or ("nota" if n["url"] else ""), "detalhe": n.get("detalhe", "")} for n in notas],
     }
 
 

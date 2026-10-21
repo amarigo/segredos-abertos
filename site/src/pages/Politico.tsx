@@ -1,10 +1,10 @@
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Barras, COR_GRUPO, Espectro, Explain, GastoMensal, Loading, VotoChip, useAno, useData } from "../components/ui";
+import { Barras, COR_GRUPO, Espectro, Explain, GastoMensal, LinkNota, Loading, VotoChip, useAno, useData } from "../components/ui";
 import {
   GRUPO_CURTO, GRUPO_EXPLICA, casaNome, cnpjFmt, dataBR, pct, proposicaoNome, reais,
   type Grupo, type Meta, type Politico, type Recursos, type Resumo, type VotacaoResumo,
-  MESES_LONGOS, descricaoCurta, tipoVotacao,
+  MESES_LONGOS, descricaoCurta, tipoVotacao, type AnoDetalhe,
 } from "../data";
 
 export default function PoliticoPage() {
@@ -86,9 +86,7 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
       <section>
         <h2>Cota parlamentar</h2>
         <Explain>Além do salário, cada parlamentar tem uma cota mensal para despesas do mandato. Ele paga e pede reembolso apresentando a nota fiscal.</Explain>
-        {d.categorias.some((c) => c.categoria === "Despesas sem nota nos dados abertos") && (
-          <p className="muted small">"Despesas sem nota nos dados abertos": desde agosto de 2025 a Câmara soma as passagens compradas pelo próprio sistema na página do deputado, mas não publica essas notas nos dados abertos. Usamos o valor oficial de cada mês para o total ficar igual ao da Câmara.</p>
-        )}
+        <SemNota d={d} ano={ano} />
         {fora !== 0 && d.cota_oficial != null && (
           <p className="muted small" role="note">A página oficial mostra {reais(d.cota_oficial)} em {ano} porque conta só os meses em que {p.casa === "camara" ? "o deputado" : "o senador"} estava no cargo neste mandato. Aqui somamos também {reais(fora)} de {nomesMeses}: {ano === "2023" && d.meses_fora?.includes(1)
             ? "janeiro de 2023 ainda era o mandato anterior, que a página de 2023 não inclui"
@@ -145,19 +143,19 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
         <h2>Maiores notas fiscais de {ano}</h2>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Data</th><th>Fornecedor e tipo de gasto</th><th className="r">Valor</th></tr></thead>
+            <thead><tr><th>Data</th><th>Fornecedor e tipo de gasto</th><th className="r">Valor</th><th>Documento</th></tr></thead>
             <tbody>
               {d.maiores_notas.map((n, i) => (
                 <tr key={i}>
                   <td className="num">{dataBR(n.data)}</td>
-                  <td>{n.doc.length === 14 ? <Link to={`/e/${n.doc}`}>{n.fornecedor}</Link> : n.fornecedor}<div className="small muted">{n.categoria}</div></td>
-                  <td className="r num" style={{ whiteSpace: "nowrap" }}>{n.url ? <a href={n.url} target="_blank" rel="noreferrer">{reais(n.valor, true)}</a> : reais(n.valor, true)}</td>
+                  <td>{n.doc.length === 14 ? <Link to={`/e/${n.doc}`}>{n.fornecedor}</Link> : n.fornecedor}<div className="small muted">{n.categoria}</div>{n.detalhe && <div className="small">{n.detalhe}</div>}</td>
+                  <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(n.valor, true)}</td>
+                  <td className="small"><LinkNota url={n.url} link={n.link || (n.url ? "nota" : "")} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p className="muted small">Quando o valor é um link, ele abre a nota fiscal original.</p>
       </section>
     </>
   );
@@ -317,3 +315,34 @@ function Votos({ p }: { p: Politico }) {
 }
 
 const tot = (c: Record<string, number | undefined>) => (c.Sim || 0) + (c["Não"] || 0) + (c.Outros || 0);
+
+/* Passagens que faltam nos dados abertos e a diferença que sobra, explicadas */
+function SemNota({ d, ano }: { d: AnoDetalhe; ano: string }) {
+  const lista = d.passagens_da_lista;
+  const resto = d.sem_nota_meses || [];
+  if (!(lista && lista.n) && !resto.length) return null;
+  const totalResto = resto.reduce((a, x) => a + x.valor, 0);
+  return (
+    <div className="card" style={{ padding: "12px 16px", margin: "8px 0 16px" }}>
+      <strong>Passagens aéreas que não estão nos dados abertos</strong>
+      <p className="small" style={{ margin: "6px 0" }}>
+        Desde agosto de 2025, o arquivo de dados abertos da Câmara deixou de trazer as passagens compradas pelo sistema da própria Câmara (SIGEPA). Essas passagens não têm nota fiscal: a Câmara compra direto da companhia aérea e registra o bilhete. A página oficial do deputado continua somando esse valor, e a lista oficial de despesas mostra cada bilhete.
+      </p>
+      {lista && lista.n > 0 && (
+        <p className="small" style={{ margin: "6px 0" }}>
+          Em {ano}, buscamos na lista oficial <strong>{lista.n.toLocaleString("pt-BR")} bilhete{lista.n > 1 ? "s" : ""}</strong> ({reais(lista.valor)}). Eles aparecem como "Passagem aérea - sigepa", com a companhia, a data, o número do bilhete e o link "Ver detalhe na Câmara". Valores negativos são bilhetes devolvidos ou remarcados.
+        </p>
+      )}
+      {resto.length > 0 && (
+        <>
+          <p className="small" style={{ margin: "6px 0" }}>
+            Ainda sobra <strong>{reais(totalResto)}</strong> que a página oficial soma e que não aparece em nenhuma nota nem na lista de despesas. Mostramos esse valor como "Despesas sem nota nos dados abertos" para o total ficar igual ao oficial. Mês a mês:
+          </p>
+          <div className="small" style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px" }}>
+            {resto.map((x) => <span key={x.mes}>{MESES_LONGOS[x.mes - 1]}: <span className="num">{reais(x.valor)}</span>{x.url && <> · <a href={x.url} target="_blank" rel="noreferrer">ver o mês na Câmara ↗</a></>}</span>)}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,112 @@
+"""Passagens aéreas compradas pelo sistema da Câmara (SIGEPA) que faltam nos dados abertos.
+
+Desde agosto de 2025 o arquivo de dados abertos da Câmara não traz essas passagens, mas a página oficial
+de cada deputado soma o valor delas. A lista oficial de despesas da Câmara ("analitico", tipo 998) mostra
+cada bilhete: companhia, CNPJ, data, número do bilhete, valor (devoluções aparecem negativas) e um link
+para o detalhe. Buscamos essa lista só nos meses em que falta dinheiro em relação ao total oficial.
+"""
+from __future__ import annotations
+
+import datetime as dt
+import html
+import json
+import logging
+import re
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+from .camara import LISTA_MES
+from .categorias import categoria_curta, grupo_de
+from .recursos import _get_text
+from .util import digits, to_float
+
+log = logging.getLogger("sa_etl.passagens")
+
+SIGEPA = "998"
+CATEGORIA = categoria_curta("PASSAGEM AÉREA - SIGEPA")
+VERSAO = 1
+
+
+def _celulas(tr: str) -> list[str]:
+    return [re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", c))).strip()
+            for c in re.findall(r"(?s)<td[^>]*>(.*?)</td>", tr)]
+
+
+def _valor(t: str) -> float | None:
+    m = re.search(r"(\()?\s*R\$\s*([\d.]+,\d{2})", t)
+    if not m:
+        return None
+    v = to_float(m.group(2))
+    return -v if m.group(1) else v
+
+
+def parse_lista(h: str) -> list[dict]:
+    """Lê a tabela da lista oficial. Cada linha: fornecedor, CNPJ, data, número do documento, valores e link de detalhe."""
+    out = []
+    corpo = h[h.find("<tbody"):] if "<tbody" in h else h
+    for tr in re.findall(r"(?s)<tr[^>]*>(.*?)</tr>", corpo):
+        href = re.search(r'href="([^"]*cota-parlamentar/documento\?[^"]*)"', tr)
+        cel = _celulas(tr)
+        if not href or len(cel) < 4:
+            continue
+        data = next((c for c in cel if re.fullmatch(r"\d{2}/\d{2}/\d{4}", c)), "")
+        valores = [v for v in (_valor(c) for c in cel) if v is not None]
+        if not valores:
+            continue
+        cnpj = next((c for c in cel if re.fullmatch(r"[\d./-]{14,18}", c)), "")
+        i = cel.index(data) if data else -1
+        numero = cel[i + 1] if 0 <= i < len(cel) - 1 else ""
+        link = re.sub(r"\s+", "", html.unescape(href.group(1)))
+        out.append({
+            "fornecedor": cel[0], "doc": digits(cnpj), "numero": numero,
+            "data": f"{data[6:]}-{data[3:5]}-{data[:2]}" if data else "",
+            "valor": round(valores[-1], 2),  # última coluna: valor reembolsado
+            "url": link if link.startswith("http") else "https://www.camara.leg.br" + link,
+        })
+    return out
+
+
+def coletar(meses: list[tuple[str, str, int, int]], ja_temos: Counter, cache: Path, workers: int = 6) -> list[dict]:
+    """meses: (politico, nuDeputadoId, ano, mes) em que falta valor. Devolve as despesas novas, sem repetir as que já temos."""
+    cache.mkdir(parents=True, exist_ok=True)
+    hoje = dt.date.today()
+
+    def um(item):
+        pid, nu, ano, mes = item
+        f = cache / f"{pid}-{ano}-{mes:02d}-v{VERSAO}.json"
+        antigo = (hoje.year - ano) * 12 + hoje.month - mes > 2  # meses recentes ainda podem mudar
+        if f.exists() and antigo:
+            try:
+                return item, json.loads(f.read_text(encoding="utf-8"))
+            except ValueError:
+                pass
+        h = _get_text(LISTA_MES.format(nu=nu, mes=mes, ano=ano, sub=SIGEPA))
+        if h is None:
+            return item, json.loads(f.read_text(encoding="utf-8")) if f.exists() else None
+        linhas = parse_lista(h)
+        f.write_text(json.dumps(linhas, ensure_ascii=False), encoding="utf-8")
+        return item, linhas
+
+    novas, falhas = [], 0
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        for (pid, nu, ano, mes), linhas in ex.map(um, meses):
+            if linhas is None:
+                falhas += 1
+                continue
+            vistos = Counter()
+            for x in linhas:
+                chave = (pid, ano, mes, x["numero"], x["valor"])
+                vistos[chave] += 1
+                if vistos[chave] <= ja_temos.get(chave, 0):
+                    continue  # este bilhete já está nos dados abertos
+                novas.append({
+                    "politico": pid, "ano": ano, "mes": mes, "data": x["data"] or f"{ano}-{mes:02d}-01",
+                    "categoria": CATEGORIA, "grupo": grupo_de("PASSAGEM AÉREA - SIGEPA"),
+                    "fornecedor": x["fornecedor"], "doc": x["doc"], "valor": x["valor"], "url": x["url"],
+                    "link": "detalhe", "detalhe": f"Bilhete nº {x['numero']}" if x["numero"] else "",
+                    "nu": nu, "num": x["numero"], "fonte_lista": True,
+                })
+    log.info("Câmara: %d passagens buscadas na lista oficial em %d meses (%d meses sem resposta), R$ %.2f",
+             len(novas), len(meses), falhas, sum(n["valor"] for n in novas))
+    return novas

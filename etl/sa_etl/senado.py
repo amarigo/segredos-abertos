@@ -13,7 +13,7 @@ import logging
 
 from .camara import normaliza_voto
 from .categorias import categoria_curta, grupo_de
-from .util import digits, get_json, to_float
+from .util import digits, get_json, norm_name, to_float
 
 log = logging.getLogger("sa_etl.senado")
 
@@ -64,6 +64,20 @@ def senadores() -> list[dict]:
     return out
 
 
+LISTA_CEAPS = "https://www6g.senado.leg.br/transparencia/sen/{cod}/ceaps/{n}/?ano={ano}#conteudo_transparencia"
+SENADOR_ANO = "https://www6g.senado.leg.br/transparencia/sen/{cod}/?ano={ano}"
+# Número de cada tipo de despesa nas páginas de transparência do Senado (sen/{cod}/ceaps/{n}/)
+TIPOS_CEAPS = [("aluguel", 1), ("material de consumo", 2), ("locomoc", 3), ("consultoria", 4), ("servicos de apoio", 4),
+               ("divulgac", 5), ("passage", 8), ("seguranca", 9)]
+
+
+def link_lista(cod, tipo: str, ano) -> str:
+    """O Senado não publica a imagem das notas. O link leva à lista oficial do senador, por tipo de despesa e ano."""
+    t = norm_name(tipo).lower()
+    n = next((n for chave, n in TIPOS_CEAPS if chave in t), None)
+    return LISTA_CEAPS.format(cod=cod, n=n, ano=ano) if n else SENADOR_ANO.format(cod=cod, ano=ano)
+
+
 def parse_ceaps(rows: list[dict], ids: set[str]) -> list[dict]:
     out = []
     for r in rows:
@@ -84,7 +98,12 @@ def parse_ceaps(rows: list[dict], ids: set[str]) -> list[dict]:
             "fornecedor": (r.get("fornecedor") or "").strip(),
             "doc": digits(r.get("cpfCnpj")),
             "valor": round(valor, 2),
-            "url": "",
+            "url": link_lista(r.get("codSenador"), cat, int(to_float(r.get("ano")))),
+            "link": "lista",
+            "detalhe": " · ".join(x for x in (
+                f"{r['tipoDocumento']} nº {r['documento']}" if r.get("documento") and r.get("tipoDocumento") else
+                f"Documento nº {r['documento']}" if r.get("documento") else "",
+                (r.get("detalhamento") or "").strip()) if x),
         })
     return out
 

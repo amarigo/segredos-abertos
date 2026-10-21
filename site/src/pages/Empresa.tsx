@@ -1,6 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { useMemo, useState } from "react";
-import { Barras, Explain, Loading, useAno, useData } from "../components/ui";
+import { Barras, Explain, LinkNota, Loading, useAno, useData } from "../components/ui";
 import { MESES, cnpjFmt, dataBR, reais, type DonoFinal, type Empresa, type NotaEmpresa, type Resumo } from "../data";
 import { norm } from "./Home";
 
@@ -123,16 +123,16 @@ function Notas({ e }: { e: Empresa }) {
               {lista.slice(0, n).map((x, i) => (
                 <tr key={i}>
                   <td className="num">{dataBR(x[0])}</td>
-                  <td><Link to={`/p/${x[1]}`}>{nomes.get(x[1]) || x[1]}</Link><div className="small muted">{x[2]}</div></td>
+                  <td><Link to={`/p/${x[1]}`}>{nomes.get(x[1]) || x[1]}</Link><div className="small muted">{x[2]}</div>{x[6] && <div className="small">{x[6]}</div>}</td>
                   <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(x[3], true)}</td>
-                  <td className="small">{x[4] ? <a href={x[4]} target="_blank" rel="noreferrer">Abrir nota ↗</a> : <span className="muted">Sem link oficial</span>}</td>
+                  <td className="small"><LinkNota url={x[4]} link={x[5] || (x[4] ? "nota" : "")} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         {lista.length > n && <button className="link" onClick={() => setN(n + 200)}>Mostrar mais notas ({(lista.length - n).toLocaleString("pt-BR")} restantes)</button>}
-        {semLink > 0 && <p className="muted small">{semLink.toLocaleString("pt-BR")} nota{semLink > 1 ? "s" : ""} sem link: o Senado não publica a imagem das notas, e algumas notas antigas da Câmara também não têm.</p>}
+        <p className="muted small">Cada despesa tem um link oficial. "Abrir nota" mostra a imagem da nota fiscal. Passagens compradas pelo sistema da Câmara e contas de telefone não têm imagem: "Ver detalhe na Câmara" abre a página oficial da despesa. O Senado não publica as notas: "Ver na lista do Senado" abre a lista oficial de despesas do senador.{semLink > 0 && ` ${semLink.toLocaleString("pt-BR")} despesa${semLink > 1 ? "s" : ""} sem nenhum link oficial.`}</p>
       </>}
     </section>
   );

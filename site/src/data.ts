@@ -29,10 +29,12 @@ export interface AnoDetalhe extends AnoResumo {
   meses: { mes: number; valor: number }[];
   fornecedores: Fornecedor[];
   maiores_notas: Nota[];
+  sem_nota_meses?: { mes: number; valor: number; url: string }[];
+  passagens_da_lista?: { n: number; valor: number };
   recursos: Recursos | null;
 }
 export interface Fornecedor { doc: string; tipo: string; nome: string; valor: number; n: number; ficha: boolean; socios: string[] }
-export interface Nota { data: string; categoria: string; fornecedor: string; doc: string; valor: number; url: string }
+export interface Nota { data: string; categoria: string; fornecedor: string; doc: string; valor: number; url: string; link?: string; detalhe?: string }
 export interface Politico extends Resumo {
   anos: Record<string, AnoDetalhe>;
   temas?: Record<string, { Sim?: number; "Não"?: number; Outros?: number; contra_partido?: number }>;
@@ -67,7 +69,9 @@ export interface Empresa extends EmpresaResumo {
   mesmo_endereco?: { cnpj: string; nome: string; total: number; mesmos_socios: boolean }[]; pagadores: { politico: string; nome: string; partido: string; uf: string; valor: number }[]; alertas: string[];
 }
 /* Nota fiscal na página da empresa: [data, id do político, tipo de gasto, valor, link] */
-export type NotaEmpresa = [string, string, string, number, string];
+/** [data, parlamentar, tipo de gasto, valor, link, tipo de link, detalhe]. Tipo de link: "nota" (imagem da nota),
+ *  "detalhe" (página oficial da despesa na Câmara), "lista" (lista oficial do Senado ou resumo do mês na Câmara). */
+export type NotaEmpresa = [string, string, string, number, string, string?, string?];
 export interface PartidoAno { n: number; cota: number; cota_por_membro: number; custo_total: number; custo_por_membro: number }
 export interface Partido { casa: Casa; sigla: string; n: number; posicao: number | null; alinhamento_governo: number | null; fidelidade: number | null; total: number; por_ano: Record<string, PartidoAno> }
 export interface Meta {

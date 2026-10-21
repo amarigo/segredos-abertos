@@ -191,3 +191,15 @@ export function VotoChip({ voto }: { voto: string }) {
   const cls = voto === "Sim" ? "chip ok" : voto === "Não" ? "chip no" : "chip";
   return <span className={cls}>{voto}</span>;
 }
+
+/* Link oficial de uma despesa. Nem toda despesa tem a imagem da nota: passagens compradas pelo sistema da Câmara
+   e telefonia têm uma página de detalhe; o Senado só publica a lista de despesas de cada senador. */
+export function LinkNota({ url, link }: { url?: string; link?: string }) {
+  if (!url) return <span className="muted">Sem link oficial</span>;
+  const senado = url.includes("senado.leg.br");
+  const texto = link === "detalhe" ? "Ver detalhe na Câmara" : link === "lista" ? (senado ? "Ver na lista do Senado" : "Ver o mês na Câmara") : "Abrir nota";
+  const dica = link === "detalhe" ? "Página oficial da despesa no site da Câmara (para passagens e telefonia não há imagem de nota)"
+    : link === "lista" ? (senado ? "O Senado não publica a imagem das notas: o link abre a lista oficial de despesas do senador, por tipo e ano" : "Resumo oficial das despesas do mês no site da Câmara")
+    : "Imagem da nota fiscal no site oficial";
+  return <a href={url} target="_blank" rel="noreferrer" title={dica}>{texto} ↗</a>;
+}

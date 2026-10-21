@@ -183,7 +183,7 @@ def test_montar_marca_mesmo_endereco(tmp_path):
     assert any("mesmo endereço" in a for a in e["alertas"])
     assert e["n_notas"] == 1 and e["notas_por_ano"] == {"2025": 1}
     notas = json.loads((tmp_path / "e" / "notas" / "11111111000111-2025.json").read_text())
-    assert notas == [["2025-01-02", "dep-1", "x", 5000.0, ""]]
+    assert notas == [["2025-01-02", "dep-1", "x", 5000.0, "", "", ""]]
     assert e["por_mes"] == [{"politico": "dep-1", "nome": "Fulano", "ano": 2025, "mes": 1, "valor": 5000.0}]
     p = json.loads((tmp_path / "politicos.json").read_text())[0]
     assert p["por_ano"]["2025"]["custo_total"] == 10150.0
@@ -268,3 +268,45 @@ def test_socio_empresa_so_com_raiz_do_cnpj():
              "07575651000159": {"razao_social": "AEROTUR HOLDING LTDA", "socios": [{"nome": "ZE", "doc": "***123456**"}]}}
     d = cnpj.donos_finais("11111111000111", todas)
     assert d[0]["nome"] == "ZE" and d[0]["cadeia"][0]["cnpj"] == "07575651000159"
+
+
+LISTA_HTML = """<table><thead><tr><th>Fornecedor</th></tr></thead><tbody>
+<tr><td>LATAM Airlines Brasil</td><td>02.012.862/0001-60</td><td>15/10/2025</td><td>9572255027892</td>
+<td>R$3.019,06</td><td></td><td>R$3.019,06</td>
+<td><a href="/cota-parlamentar/documento?nuDeputadoId=2227&amp;
+		numMes=10&amp;numAno=2025&amp;despesa=998&amp;cnpjFornecedor=02012862000160&amp;idDocumento=9572255027892&amp;idDocumentoFiscal=D4A9">detalhe</a></td></tr>
+<tr><td>Gol Linhas Aéreas</td><td>07.575.651/0001-59</td><td>11/11/2025</td><td>1272148920939</td>
+<td>(R$2.186,27)</td><td></td><td>(R$2.186,27)</td><td><a href="/cota-parlamentar/documento?nuDeputadoId=2227&amp;numMes=11">detalhe</a></td></tr>
+<tr><td>Total</td><td>R$5.047,83</td></tr></tbody></table>"""
+
+
+def test_lista_oficial_de_passagens():
+    from sa_etl import passagens
+    r = passagens.parse_lista(LISTA_HTML)
+    assert len(r) == 2
+    assert r[0]["fornecedor"] == "LATAM Airlines Brasil" and r[0]["doc"] == "02012862000160"
+    assert r[0]["data"] == "2025-10-15" and r[0]["numero"] == "9572255027892" and r[0]["valor"] == 3019.06
+    assert r[0]["url"].startswith("https://www.camara.leg.br/cota-parlamentar/documento?nuDeputadoId=2227&numMes=10")
+    assert "\t" not in r[0]["url"] and " " not in r[0]["url"]
+    assert r[1]["valor"] == -2186.27  # devolução
+
+
+def test_busca_passagens_sem_repetir_e_completa_o_resto(tmp_path, monkeypatch):
+    from sa_etl import build, passagens
+    monkeypatch.setattr(passagens, "_get_text", lambda url: LISTA_HTML)
+    pols = [{"id": "dep-1", "casa": "camara"}]
+    desp = [{"politico": "dep-1", "ano": 2025, "mes": 10, "valor": 3019.06, "nu": "2227", "num": "9572255027892"}]
+    rec = {"dep-1": {2025: {"cota_meses": [{"mes": 10, "valor": 3019.06 + 500}]}}}
+    novas = build.buscar_passagens(desp, pols, rec, tmp_path)
+    assert [(n["num"], n["valor"], n["link"]) for n in novas] == [("1272148920939", -2186.27, "detalhe")]  # a LATAM já estava
+    resto = build.completar_com_oficial(desp + novas, pols, rec)[-1]
+    assert resto["sem_nota"] and resto["valor"] == 2686.27 and "sumarizado?nuDeputadoId=2227" in resto["url"]
+
+
+def test_links_oficiais_das_notas():
+    from sa_etl.camara import link_detalhe
+    from sa_etl.senado import link_lista
+    u = link_detalhe("2227", 2025, 1, "10", "66.970.229/0018-05", "0013648685", "7867324")
+    assert u == ("https://www.camara.leg.br/cota-parlamentar/documento?nuDeputadoId=2227&numMes=1&numAno=2025"
+                 "&despesa=10&cnpjFornecedor=66970229001805&idDocumento=0013648685&idDocumentoFiscal=7867324")
+    assert "/sen/6008/ceaps/8/?ano=2025" in link_lista(6008, "Passagens aéreas, aquáticas e terrestres nacionais", 2025)
