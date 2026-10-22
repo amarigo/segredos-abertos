@@ -11,7 +11,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import camara, cnpj, ideologia, passagens, recursos, senado, temas
+from . import camara, cnpj, emendas, ideologia, passagens, recursos, senado, temas
 from .categorias import GRUPOS
 from .util import cnpj_valido, doc_kind, mask_cpf, write_json
 
@@ -477,10 +477,13 @@ def main() -> None:
     ap.add_argument("--anos", type=int, nargs="+", default=list(range(2023, dt.date.today().year + 1)))
     ap.add_argument("--sem-recursos", action="store_true", help="não baixa salário, verba de gabinete e equipe")
     ap.add_argument("--max-empresas", type=int, default=1500)
+    ap.add_argument("--sem-emendas", action="store_true", help="não baixa as emendas parlamentares (Portal da Transparência)")
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     dados = coletar(a.anos, a.cache, a.max_empresas, not a.sem_recursos)
     montar(dados, a.saida, a.anos)
+    if not a.sem_emendas:
+        emendas.coletar(dados["politicos"], a.anos, a.cache / "emendas", a.saida)
 
 
 if __name__ == "__main__":

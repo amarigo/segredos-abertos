@@ -1,0 +1,48 @@
+name: Sondar emendas (temporário)
+on:
+  push:
+    branches: [claude/project-thread-960m2s]
+jobs:
+  sondar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r etl/requirements.txt
+      - working-directory: etl
+        run: |
+          python - <<'PY'
+          import json, logging, zipfile, itertools
+          from pathlib import Path
+          from sa_etl import emendas, camara, senado
+          logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
+          z = emendas.baixar(Path(".cache/emendas"))
+          print("ZIP", z, z and z.stat().st_size)
+          with zipfile.ZipFile(z) as f:
+              for i in f.infolist(): print("ARQ", i.filename, i.file_size)
+          for parte in ("", "favorecido", "convenio"):
+              for r in itertools.islice(emendas.linhas(z, parte), 3): print("LINHA", parte, json.dumps(r, ensure_ascii=False))
+          from collections import Counter
+          tipos, funcs, locs = Counter(), Counter(), Counter()
+          for r in emendas.linhas(z, ""):
+              col = emendas.achar_colunas(list(r), emendas.REGRAS); break
+          for r in emendas.linhas(z, ""):
+              if r.get(col["ano"]) in ("2025",):
+                  tipos[r.get(col["tipo"])] += 1; funcs[r.get(col["funcao"])] += 1; locs[r.get(col["local"])] += 1
+          print("TIPOS", tipos.most_common()); print("FUNCOES", funcs.most_common(40)); print("LOCAIS", locs.most_common(40))
+          pols = camara.deputados() + senado.senadores()
+          ind = emendas.coletar(pols, [2023, 2024, 2025, 2026], Path(".cache/emendas"), Path("/tmp/out"))
+          print("INDICE", ind)
+          d = json.loads(Path("/tmp/out/emendas/2025.json").read_text())
+          print("TIPO", d["por_tipo"]); print("AREA", d["por_area"][:15]); print("NIVEL", d["por_nivel"])
+          print("UF", d["por_uf"][:8]); print("MUN", d["municipios"][:8]); print("SEMPART", d["sem_partido"])
+          print("AUT", json.dumps(d["autores"][:5], ensure_ascii=False)); print("COL", json.dumps(d["coletivos"][:5], ensure_ascii=False))
+          print("SEMP", [a["nome"] for a in d["autores"] if not a["partido"]][:60])
+          print("PART", json.dumps(d["partidos"][:6], ensure_ascii=False))
+          print("FAV", json.dumps({k: v for k, v in (d["favorecidos"] or {}).items() if k != "lista"}, ensure_ascii=False))
+          print("FAVL", json.dumps((d["favorecidos"] or {}).get("lista", [])[:8], ensure_ascii=False))
+          import os; print("TAMANHO", {p.name: p.stat().st_size for p in Path("/tmp/out/emendas").iterdir()})
+          PY
