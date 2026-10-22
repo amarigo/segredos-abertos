@@ -28,3 +28,4 @@
 @media (max-width: 599px) { .so-largo-emd { display: none; } }
 @media (min-width: 600px) { .emd-areas-cel { display: none; } }
 .emd-areas-cel { margin-top: 4px; }
+.emd-det li .num { white-space: nowrap; flex-shrink: 0; }

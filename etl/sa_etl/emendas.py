@@ -232,11 +232,15 @@ def deputados_legislatura(leg: int = 57) -> list[dict]:
 
 def senadores_legislatura(leg: int = 57) -> list[dict]:
     """Senadores da legislatura, inclusive licenciados e suplentes que já saíram."""
-    try:
-        d = get_json(SENADO_LEG.format(leg=leg))
-        ps = d.get("ListaParlamentarLegislatura", {}).get("Parlamentares", {}).get("Parlamentar", [])
-    except Exception as e:  # noqa: BLE001
-        log.warning("Emendas: não foi possível listar os senadores da legislatura %d (%s)", leg, e)
+    ps = None
+    for tentativa in range(3):
+        try:
+            d = get_json(SENADO_LEG.format(leg=leg))
+            ps = d.get("ListaParlamentarLegislatura", {}).get("Parlamentares", {}).get("Parlamentar", [])
+            break
+        except Exception as e:  # noqa: BLE001
+            log.warning("Emendas: não foi possível listar os senadores da legislatura %d (%s)", leg, e)
+    if not ps:
         return []
     out = []
     for p in ps if isinstance(ps, list) else [ps]:
@@ -257,7 +261,9 @@ def indice_nomes(politicos: list[dict], extras: list[dict]) -> dict[str, dict]:
             k = _chave(p["nome"])
             if not k:
                 continue
-            if k in vistos and (vistos[k].get("id"), vistos[k].get("casa")) != (p.get("id"), p.get("casa")):
+            # mesmo nome com partidos diferentes: pode ser outra pessoa, então não arriscamos
+            if k in vistos and vistos[k].get("id") != p.get("id") and \
+                    (vistos[k].get("id") or (vistos[k].get("partido") and p.get("partido") and vistos[k]["partido"] != p["partido"])):
                 ambiguos.add(k)
             if k not in vistos or (not vistos[k].get("partido") and p.get("partido")):
                 vistos[k] = p
@@ -493,6 +499,7 @@ def coletar(politicos: list[dict], anos: list[int], cache: Path, saida: Path) ->
             return None
         extras = (deputados_legislatura(57) + senadores_legislatura(57)
                   + deputados_legislatura(56) + senadores_legislatura(56))
+        log.info("Emendas: %d ex-parlamentares e licenciados para achar o partido dos autores", len(extras))
         res = resumir(linhas(z, ""), anos, politicos, extras)
         fav = favorecidos(linhas(z, "favorecido"), anos)
     except Exception:  # noqa: BLE001

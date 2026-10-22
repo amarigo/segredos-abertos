@@ -42,7 +42,7 @@ const EXPLICA_TIPO: Record<string, string> = {
   outro: "",
 };
 const NOME_COLETIVO: Record<string, string> = { bancada: "Bancada", comissao: "Comissão", relator: "Relator" };
-const semAcento = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const semAcento = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const pctDe = (v: number, t: number) => (t ? `${((v / t) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%` : "—");
 
 export default function Emendas() {
@@ -123,7 +123,7 @@ export default function Emendas() {
         </p>
         <ul className="small muted emd-notas">
           <li>O ano é o ano do Orçamento em que a emenda foi feita. "Pago" soma o que foi pago no próprio ano e o que ficou para depois (restos a pagar) e já foi pago.</li>
-          <li>O partido é o partido atual do parlamentar. Quem não está mais no cargo aparece com o último partido na Câmara, quando encontramos. {data.sem_partido.n > 0 && <>Não achamos o partido de {data.sem_partido.n} autores ({reaisCurto(v(data.sem_partido))}).</>}</li>
+          <li>O partido é o partido atual do parlamentar. Quem não está mais no cargo aparece com o último partido que teve na Câmara ou no Senado, quando encontramos. {data.sem_partido.n > 0 && <>Não achamos o partido de {data.sem_partido.n} autores ({reaisCurto(v(data.sem_partido))}).</>}</li>
           <li>Emendas de bancada, de comissão e do relator não são de uma pessoa só. Elas aparecem separadas e não entram na conta dos partidos.</li>
         </ul>
       </section>
@@ -133,7 +133,8 @@ export default function Emendas() {
 
 function Destinos({ f, ano }: { f: Recebedores; ano: string }) {
   const [q, setQ] = useState("");
-  const [n, setN] = useState(20);
+  const [n, setN] = useState(12);
+  const [todosUf, setTodosUf] = useState(false);
   const muns = useMemo(() => f.municipios.filter((m) => !q.trim() || semAcento(`${m.nome} ${m.uf}`).includes(semAcento(q.trim()))), [f, q]);
   return (
     <section>
@@ -143,13 +144,14 @@ function Destinos({ f, ano }: { f: Recebedores; ano: string }) {
         <div>
           <h3>Por estado</h3>
           <p className="small muted" style={{ margin: "4px 0 12px" }}>Soma o que foi para as prefeituras, para o governo do estado e para as entidades de cada estado.</p>
-          <Barras itens={f.por_uf.map(([uf, x]) => ({ label: <strong>{uf}</strong>, valor: x, cor: "var(--s3)" }))} />
+          <Barras itens={f.por_uf.slice(0, todosUf ? 27 : 10).map(([uf, x]) => ({ label: <strong>{uf}</strong>, nota: pctDe(x, f.por_uf.reduce((a, [, y]) => a + y, 0)), valor: x, cor: "var(--s3)" }))} />
+          {!todosUf && f.por_uf.length > 10 && <button className="link" style={{ marginTop: 8 }} onClick={() => setTodosUf(true)}>Ver todos os estados</button>}
         </div>
         <div>
           <h3>Cidades que mais receberam</h3>
           <p className="small muted" style={{ margin: "4px 0 0" }}>Prefeituras, fundos municipais e entidades da cidade. Não inclui o que foi para o governo do estado.</p>
           <div className="search" style={{ margin: "8px 0 12px" }}>
-            <input aria-label="Procurar cidade" value={q} onChange={(e) => { setQ(e.target.value); setN(20); }} placeholder="Procure sua cidade" />
+            <input aria-label="Procurar cidade" value={q} onChange={(e) => { setQ(e.target.value); setN(12); }} placeholder="Procure sua cidade" />
           </div>
           <div className="table-wrap">
             <table>
@@ -206,11 +208,11 @@ function Autores({ data, medida }: { data: EmendasAno; medida: Medida }) {
             <div className="emd-det">
               <div>
                 <h4>Para quê</h4>
-                <ul>{a.areas.map(([k, x]) => <li key={k}><span>{k}</span><span className="num">{reaisCurto(x)}</span></li>)}</ul>
+                <ul>{a.areas.map(([k, x], j) => <li key={j}><span>{k}</span><span className="num">{reaisCurto(x)}</span></li>)}</ul>
               </div>
               <div>
                 <h4>Quem recebeu (pagamentos de {data.ano})</h4>
-                {a.recebedores.length ? <ul>{a.recebedores.map(([k, x]) => <li key={k}><span>{k}</span><span className="num">{reaisCurto(x)}</span></li>)}</ul>
+                {a.recebedores.length ? <ul>{a.recebedores.map(([k, x], j) => <li key={j}><span>{k}</span><span className="num">{reaisCurto(x)}</span></li>)}</ul>
                   : <p className="small muted">Nenhum pagamento em {data.ano}.</p>}
               </div>
               <p className="small muted" style={{ gridColumn: "1 / -1" }}>
