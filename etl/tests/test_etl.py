@@ -293,7 +293,7 @@ def test_lista_oficial_de_passagens():
 
 def test_busca_passagens_sem_repetir_e_completa_o_resto(tmp_path, monkeypatch):
     from sa_etl import build, passagens
-    monkeypatch.setattr(passagens, "_get_text", lambda url: LISTA_HTML)
+    monkeypatch.setattr(passagens, "_get_text", lambda url, **kw: LISTA_HTML)
     pols = [{"id": "dep-1", "casa": "camara"}]
     desp = [{"politico": "dep-1", "ano": 2025, "mes": 10, "valor": 3019.06, "nu": "2227", "num": "9572255027892"}]
     rec = {"dep-1": {2025: {"cota_meses": [{"mes": 10, "valor": 3019.06 + 500}]}}}
@@ -314,7 +314,7 @@ def test_links_oficiais_das_notas():
 
 def test_passagens_nunca_passam_do_total_oficial(tmp_path, monkeypatch):
     from sa_etl import build, passagens
-    monkeypatch.setattr(passagens, "_get_text", lambda url: LISTA_HTML)
+    monkeypatch.setattr(passagens, "_get_text", lambda url, **kw: LISTA_HTML)
     pols = [{"id": "dep-1", "casa": "camara"}]
     # O bilhete da LATAM já está nos dados abertos, mas em outro mês e com zeros à esquerda: não entra de novo.
     desp = [{"politico": "dep-1", "ano": 2025, "mes": 9, "valor": 3019.06, "nu": "2227", "num": "0009572255027892"}]
@@ -326,6 +326,21 @@ def test_passagens_nunca_passam_do_total_oficial(tmp_path, monkeypatch):
     desp = [{"politico": "dep-1", "ano": 2025, "mes": 9, "valor": 10, "nu": "2227", "num": "1"}]
     assert build.buscar_passagens(desp, pols, rec, tmp_path / "b") == []
 
+
+
+def test_lista_de_passagens_lenta_nao_trava_a_coleta(tmp_path, monkeypatch):
+    from sa_etl import passagens
+    chamadas = []
+    monkeypatch.setattr(passagens, "_get_text", lambda url, **kw: chamadas.append(url))  # nunca responde
+    meses = [("dep-1", "2227", 2024, 5)]
+    assert passagens.coletar(meses, [], {("dep-1", 2024, 5): 100}, tmp_path) == []
+    assert len(chamadas) == 1
+    # Mês antigo que não respondeu: só tenta de novo daqui a uma semana
+    passagens.coletar(meses, [], {("dep-1", 2024, 5): 100}, tmp_path)
+    assert len(chamadas) == 1
+    # Sem tempo: não consulta e usa o cache
+    passagens.coletar([("dep-1", "2227", 2024, 6)], [], {}, tmp_path, minutos=0)
+    assert len(chamadas) == 1
 
 ATUACAO = ("Atividades na Câmara Selecione um ano abaixo 2023 2024 2025 Atuação no Plenário e Comissões 2025 Propostas legislativas de sua autoria 8 "
            "relatadas 0 Votações nominais ? em Plenário 399 Discursos em Plenário 2 Vídeo Áudio Presença Presenças Ausências justificadas "

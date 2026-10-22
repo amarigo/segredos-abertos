@@ -39,10 +39,10 @@ def _texto(h: str) -> str:
     return re.sub(r"\s+", " ", html.unescape(h)).strip()
 
 
-def _get_text(url: str) -> str | None:
-    for tentativa in range(3):
+def _get_text(url: str, timeout: int = 60, tentativas: int = 3) -> str | None:
+    for tentativa in range(tentativas):
         try:
-            r = _session.get(url, timeout=60, headers={"Accept": "text/html,application/json"})
+            r = _session.get(url, timeout=timeout, headers={"Accept": "text/html,application/json"})
             if r.status_code == 404:
                 return None
             if r.status_code < 500:
