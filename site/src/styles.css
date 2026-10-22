@@ -318,3 +318,19 @@ tr.atual td { background: color-mix(in srgb, var(--gold) 12%, transparent); }
 @media (max-width: 599px) { .so-largo { display: none; } }
 @media (min-width: 600px) { .so-celular { display: none; } }
 .so-celular { margin-top: 4px; }
+/* Atuação: presença e trabalho legislativo comparados com os colegas */
+.atu-grade { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.atu-grade-4 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
+.atu-card { display: grid; gap: 8px; align-content: start; }
+.atu-card h3 { margin: 0; font-size: 1rem; }
+.atu-card p { margin: 0; }
+.atu-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.atu-valor { font: 700 1.6rem/1 var(--display, inherit); }
+.atu-legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--ink-2); margin-bottom: 12px; }
+.atu-legenda i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.atu-pres { display: grid; gap: 3px; }
+.atu-pres-barra { display: flex; gap: 2px; height: 14px; border-radius: 4px; overflow: hidden; background: var(--line); }
+.atu-pres-barra span { min-width: 3px; }
+.atu-trilha { position: relative; height: 14px; border-radius: 4px; background: color-mix(in srgb, var(--line) 70%, transparent); margin: 6px 0 2px; }
+.atu-barra { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--s1); min-width: 2px; }
+.atu-mediana { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--ink); }
