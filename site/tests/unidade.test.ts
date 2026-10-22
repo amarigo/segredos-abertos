@@ -6,6 +6,7 @@ import {
   atuacaoAtiva, cnpjFmt, partidoComHoje, corPartido, dataBR, descricaoCurta, linkSeguro, pct, proposicaoNome, reais, reaisCurto,
   taxaPresenca, tipoVotacao,
 } from "../src/data.ts";
+import { ladoPelosVotos } from "../src/partidos.ts";
 
 test("linkSeguro só aceita http(s)", () => {
   for (const ruim of ["javascript:alert(1)", " JAVASCRIPT:alert(1)", "data:text/html,<script>", "vbscript:x", "//evil.com",
@@ -68,4 +69,14 @@ test("partido antigo com o nome de hoje", () => {
   assert.equal(partidoComHoje("PC do B", "PCdoB"), "PC do B");
   assert.equal(partidoComHoje("UNIÃO", "UNIAO"), "UNIÃO");
   assert.equal(partidoComHoje("PSD", null), "PSD");
+});
+
+test("lado pelos votos usa os mesmos cortes do coletor", () => {
+  assert.equal(ladoPelosVotos(-0.9), "Esquerda");
+  assert.equal(ladoPelosVotos(-0.5), "Esquerda");
+  assert.equal(ladoPelosVotos(-0.3), "Centro-esquerda");
+  assert.equal(ladoPelosVotos(-0.15), "Centro-esquerda");
+  assert.equal(ladoPelosVotos(0), "Centro");
+  assert.equal(ladoPelosVotos(0.15), "Centro-direita");
+  assert.equal(ladoPelosVotos(0.5), "Direita");
 });
