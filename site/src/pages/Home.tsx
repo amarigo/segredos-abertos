@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Barras, COR_GRUPO, EspectroPartidos, Explain, Loading, useAno, useData } from "../components/ui";
-import { GRUPO_CURTO, GRUPO_EXPLICA, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
+import { GRUPO_CURTO, GRUPO_EXPLICA, linkSeguro, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
 import { GastoPartidos } from "./Partidos";
 
 export default function Home() {
@@ -28,6 +28,12 @@ export default function Home() {
 
   return (
     <>
+      {meta.avisos && meta.avisos.length > 0 && (
+        <div className="alert" role="note">
+          <strong>Dados incompletos nesta atualização.</strong> Alguns sites oficiais não responderam na última coleta:
+          <ul>{meta.avisos.map((a) => <li key={a}>{a}</li>)}</ul>
+        </div>
+      )}
       <section className="hero">
         <span className="eyebrow">Cota parlamentar · {ano}</span>
         <div className="big">{reaisCurto(meta.total_por_ano?.[ano] || 0)}</div>
@@ -83,7 +89,7 @@ export default function Home() {
 export function PessoaLinha({ p, extra }: { p: Resumo; extra?: React.ReactNode }) {
   return (
     <Link to={`/p/${p.id}`} className="person">
-      {p.foto ? <img src={p.foto} alt="" loading="lazy" /> : <span className="avatar" />}
+      {linkSeguro(p.foto) ? <img src={linkSeguro(p.foto)} alt="" loading="lazy" /> : <span className="avatar" />}
       <div style={{ minWidth: 0 }}>
         <div className="pname">{p.nome}</div>
         <div className="meta">{p.cargo} · {p.partido}-{p.uf}</div>

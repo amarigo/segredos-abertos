@@ -6,19 +6,27 @@ on:
   schedule:
     - cron: "0 9 * * *" # todo dia às 6h de Brasília
   workflow_dispatch:
+    inputs:
+      ignorar_queda:
+        description: "Publicar mesmo com queda grande em relação à versão no ar (use só se a queda for real)"
+        type: boolean
+        default: false
 
+# Só leitura por padrão. A permissão de publicar fica só no job "publicar".
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: dados-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  testes:
+  # Base e meio da pirâmide: unitários, propriedades, integração com o governo simulado e caos no coletor
+  testes-coletor:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CAOS_RODADAS: ${{ github.event_name == 'schedule' && '60' || '12' }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -26,6 +34,19 @@ jobs:
           python-version: "3.12"
       - run: pip install -r etl/requirements.txt -r etl/requirements-dev.txt
       - run: python -m pytest -q etl/tests
+
+  # Topo da pirâmide: o site no navegador (jornada, segurança e caos), com dados fictícios
+  testes-site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r etl/requirements.txt
+      - name: Dados fictícios para o navegador
+        run: python etl/tests/gerar_dados_teste.py site/public/data
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -33,11 +54,44 @@ jobs:
           cache-dependency-path: site/package-lock.json
       - run: npm ci
         working-directory: site
+      - run: npm test
+        working-directory: site
       - run: npm run build
         working-directory: site
+      - run: npx playwright install --with-deps chromium
+        working-directory: site
+      - run: npm run test:e2e
+        working-directory: site
+        env:
+          CI: "1"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: relatorio-playwright
+          path: site/playwright-report
+          retention-days: 7
+
+  # Dependências com falhas de segurança conhecidas. Não trava a coleta diária: aparece como falha para corrigir.
+  seguranca:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install pip-audit==2.10.1
+      - name: Python (coletor)
+        run: pip-audit -r etl/requirements.txt -r etl/requirements-dev.txt
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: JavaScript (o que vai para o site publicado)
+        working-directory: site
+        run: npm audit --omit=dev --audit-level=high
 
   coletar:
-    needs: testes
+    needs: [testes-coletor, testes-site]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -56,6 +110,18 @@ jobs:
       - name: Coletar dados oficiais
         working-directory: etl
         run: python -m sa_etl.build --saida ../site/public/data --cache .cache 2>&1 | tee coleta.log
+      - name: Resumo da coleta
+        run: |
+          grep -E "INFO|WARNING|ERROR" etl/coleta.log | cut -c1-240 | tail -n 60
+          python etl/resumo.py site/public/data | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Conferir os dados (se algo não bater, não publica e o site continua com a versão anterior)
+        working-directory: etl
+        env:
+          IGNORAR_QUEDA: ${{ inputs.ignorar_queda && '--ignorar-queda' || '' }}
+        run: |
+          set -o pipefail
+          python -m sa_etl.validar ../site/public/data --anterior https://amarigo.github.io/segredos-abertos/data/meta.json $IGNORAR_QUEDA \
+            | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -66,10 +132,6 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist
-      - name: Resumo da coleta
-        run: |
-          grep -E "INFO|WARNING|ERROR" etl/coleta.log | cut -c1-240 | tail -n 60
-          python etl/resumo.py site/public/data | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Conferir links das notas
         continue-on-error: true
         run: python etl/conferir_links.py site/public/data etl/.cache | tee -a "$GITHUB_STEP_SUMMARY"
@@ -78,6 +140,10 @@ jobs:
     needs: coletar
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}

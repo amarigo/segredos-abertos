@@ -19,7 +19,7 @@ import zipfile
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from .util import _session, digits, get_json, norm_name, to_float, write_json
+from .util import _session, avisar, digits, get_json, norm_name, to_float, write_json
 
 log = logging.getLogger("sa_etl.emendas")
 
@@ -77,8 +77,10 @@ def baixar(cache: Path, max_horas: float = 20) -> Path | None:
                     time.sleep(2 ** (tentativa + 1))
     if dest.exists():
         log.warning("Emendas: usando a cópia antiga do cache")
+        avisar("Emendas: o Portal da Transparência não respondeu; usamos a última cópia baixada")
         return dest
     log.error("Emendas: não foi possível baixar o arquivo do Portal da Transparência")
+    avisar("Emendas: o Portal da Transparência não respondeu; a página de emendas não foi atualizada")
     return None
 
 
@@ -504,6 +506,10 @@ def coletar(politicos: list[dict], anos: list[int], cache: Path, saida: Path) ->
         fav = favorecidos(linhas(z, "favorecido"), anos)
     except Exception:  # noqa: BLE001
         log.exception("Emendas: erro ao montar os dados; a página de emendas fica sem atualização")
+        avisar("Emendas: o arquivo do Portal da Transparência veio com problema; a página de emendas não foi atualizada")
+        return None
+    if not res:
+        avisar("Emendas: o arquivo do Portal da Transparência veio sem as colunas esperadas; a página de emendas não foi atualizada")
         return None
     for ano, d in res.items():
         f = fav.get(ano)

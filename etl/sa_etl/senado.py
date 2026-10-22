@@ -9,11 +9,13 @@ from __future__ import annotations
 
 import calendar
 import datetime as dt
+import json
 import logging
+from pathlib import Path
 
 from .camara import normaliza_voto
 from .categorias import categoria_curta, grupo_de
-from .util import digits, get_json, norm_name, to_float
+from .util import avisar, digits, get_json, norm_name, to_float, url_segura
 
 log = logging.getLogger("sa_etl.senado")
 
@@ -40,8 +42,8 @@ def parse_senadores(data: dict) -> list[dict]:
     out = []
     for p in _as_list(lista):
         ident = p.get("IdentificacaoParlamentar", {})
-        cod = ident.get("CodigoParlamentar")
-        if not cod:
+        cod = str(ident.get("CodigoParlamentar") or "").strip()
+        if not cod.isdigit():
             continue
         bloco = ident.get("Bloco") or {}
         out.append({
@@ -51,9 +53,9 @@ def parse_senadores(data: dict) -> list[dict]:
             "nome": (ident.get("NomeParlamentar") or "").strip(),
             "partido": ident.get("SiglaPartidoParlamentar") or "",
             "uf": ident.get("UfParlamentar") or "",
-            "foto": ident.get("UrlFotoParlamentar") or "",
+            "foto": url_segura(ident.get("UrlFotoParlamentar")),
             "bloco": bloco.get("NomeBloco") or bloco.get("NomeApelido") or "",
-            "fonte": ident.get("UrlPaginaParlamentar") or f"https://www25.senado.leg.br/web/senadores/senador/-/perfil/{cod}",
+            "fonte": url_segura(ident.get("UrlPaginaParlamentar")) or f"https://www25.senado.leg.br/web/senadores/senador/-/perfil/{cod}",
         })
     return out
 
@@ -108,14 +110,47 @@ def parse_ceaps(rows: list[dict], ids: set[str]) -> list[dict]:
     return out
 
 
-def despesas(anos: list[int], ids: set[str]) -> list[dict]:
+def _ler_cache(f: Path | None):
+    try:
+        return json.loads(f.read_text(encoding="utf-8")) if f and f.exists() else None
+    except ValueError:
+        return None
+
+
+def _recente(f: Path | None, dias: float) -> bool:
+    import time
+    return bool(f and f.exists() and time.time() - f.stat().st_mtime < dias * 86400)
+
+
+def _gravar_cache(f: Path | None, dados) -> None:
+    if f is None:
+        return
+    f.parent.mkdir(parents=True, exist_ok=True)
+    tmp = f.with_suffix(".part")
+    tmp.write_text(json.dumps(dados, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(f)
+
+
+def despesas(anos: list[int], ids: set[str], cache: Path | None = None) -> list[dict]:
+    """Cota dos senadores. A API do Senado cai com frequência: se falhar, usa a última resposta boa guardada."""
     out = []
     for ano in anos:
+        f = cache / f"senado-ceaps-{ano}.json" if cache else None
         try:
             rows = get_json(CEAPS.format(ano=ano), timeout=300)
+            if not isinstance(rows, list):
+                raise ValueError(f"resposta inesperada ({type(rows).__name__})")
+            if not rows and _ler_cache(f):
+                raise ValueError("resposta vazia para um ano que tinha despesas")
+            _gravar_cache(f, rows)
         except Exception as e:  # noqa: BLE001
-            log.warning("CEAPS %s indisponível: %s", ano, e)
-            continue
+            rows = _ler_cache(f)
+            if rows is None:
+                log.warning("CEAPS %s indisponível: %s", ano, e)
+                avisar(f"Cota do Senado {ano}: a API oficial não respondeu; as despesas de senadores neste ano estão faltando")
+                continue
+            log.warning("CEAPS %s indisponível (%s); usando a última cópia", ano, e)
+            avisar(f"Cota do Senado {ano}: a API oficial não respondeu; usamos a última cópia baixada")
         got = parse_ceaps(rows, ids)
         log.info("Senado: %d despesas em %s", len(got), ano)
         out += got
@@ -124,11 +159,16 @@ def despesas(anos: list[int], ids: set[str]) -> list[dict]:
 
 def parse_votacoes(items: list[dict], ids: set[str]) -> tuple[list[dict], list[dict]]:
     votacoes, votos = [], []
+    vistas = set()
     for v in items:
-        if (v.get("votacaoSecreta") or "N") == "S":
+        if not isinstance(v, dict) or (v.get("votacaoSecreta") or "N") == "S":
             continue  # voto secreto: não há como saber quem votou como
-        vid = f"sf-{v.get('codigoSessaoVotacao')}"
-        vs = []
+        cod = str(v.get("codigoSessaoVotacao") or "").strip()
+        if not cod.isdigit() or cod in vistas:
+            continue  # sem código, ou a mesma votação repetida na resposta
+        vistas.add(cod)
+        vid = f"sf-{cod}"
+        vs, ja = [], set()
         orient = {}
         for x in _as_list(v.get("votos")):
             if (x.get("nomeParlamentar") or "").strip().lower() == LIDER_GOVERNO_SENADO.lower():
@@ -136,7 +176,8 @@ def parse_votacoes(items: list[dict], ids: set[str]) -> tuple[list[dict], list[d
                 if o in ("Sim", "Não"):
                     orient["Governo (voto do líder)"] = o
             p = pid(x.get("codigoParlamentar", ""))
-            if p in ids:
+            if p in ids and p not in ja:
+                ja.add(p)
                 vs.append({"votacao": vid, "politico": p,
                            "voto": normaliza_voto_senado(x.get("siglaVotoParlamentar") or ""),
                            "partido": x.get("siglaPartidoParlamentar") or ""})
@@ -162,8 +203,10 @@ def parse_votacoes(items: list[dict], ids: set[str]) -> tuple[list[dict], list[d
     return votacoes, votos
 
 
-def votacoes(anos: list[int], ids: set[str]) -> tuple[list[dict], list[dict]]:
-    all_v, all_votos = [], []
+def votacoes(anos: list[int], ids: set[str], cache: Path | None = None) -> tuple[list[dict], list[dict]]:
+    """Votações do Senado, mês a mês. A API às vezes falha num mês: cada mês bom fica guardado no cache;
+    meses com mais de 60 dias não mudam mais e são lidos do cache. Um mês que falhou e não tem cópia vira aviso."""
+    all_v, all_votos, faltando = [], [], []
     hoje = dt.date.today()
     for ano in anos:
         for mes in range(1, 13):
@@ -171,15 +214,29 @@ def votacoes(anos: list[int], ids: set[str]) -> tuple[list[dict], list[dict]]:
             if ini > hoje:
                 break
             fim = dt.date(ano, mes, calendar.monthrange(ano, mes)[1])
-            try:
-                items = get_json(f"{LEGIS}/votacao", params={"dataInicio": ini.isoformat(), "dataFim": fim.isoformat()})
-            except Exception as e:  # noqa: BLE001
-                log.warning("Votações do Senado %s-%02d indisponíveis: %s", ano, mes, e)
-                continue
+            f = cache / f"senado-votacao-{ano}-{mes:02d}.json" if cache else None
+            items = _ler_cache(f) if (hoje - fim).days > 60 and _recente(f, dias=30) else None
+            if not items:  # resposta vazia guardada pode ter sido a API instável: pergunta de novo
+                try:
+                    items = get_json(f"{LEGIS}/votacao", params={"dataInicio": ini.isoformat(), "dataFim": fim.isoformat()})
+                    if not isinstance(items, (list, dict)):
+                        raise ValueError(f"resposta inesperada ({type(items).__name__})")
+                    if not _as_list(items) and _ler_cache(f):
+                        raise ValueError("resposta vazia para um mês que tinha votações")
+                    _gravar_cache(f, items)
+                except Exception as e:  # noqa: BLE001
+                    items = _ler_cache(f)
+                    if items is None:
+                        log.warning("Votações do Senado %s-%02d indisponíveis: %s", ano, mes, e)
+                        faltando.append(f"{mes:02d}/{ano}")
+                        continue
+                    log.warning("Votações do Senado %s-%02d indisponíveis (%s); usando a última cópia", ano, mes, e)
             v, vs = parse_votacoes(_as_list(items), ids)
             all_v += v
             all_votos += vs
         log.info("Senado: %d votações nominais até %s", len(all_v), ano)
+    if faltando:
+        avisar(f"Votações do Senado: a API oficial não respondeu para {', '.join(faltando)}; as votações desses meses estão faltando")
     return all_v, all_votos
 
 

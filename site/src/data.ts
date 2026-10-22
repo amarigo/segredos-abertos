@@ -110,9 +110,17 @@ export type NotaEmpresa = [string, string, string, number, string, string?, stri
 export interface PartidoAno { n: number; cota: number; cota_por_membro: number; custo_total: number; custo_por_membro: number }
 export interface Partido { casa: Casa; sigla: string; n: number; posicao: number | null; alinhamento_governo: number | null; fidelidade: number | null; total: number; por_ano: Record<string, PartidoAno> }
 export interface Meta {
+  /** Problemas da última coleta (fonte oficial fora do ar, cópia antiga em uso...), para avisar quem lê */
+  avisos?: string[];
   atualizado_em: string; anos: number[]; grupos: Record<Grupo, string>; medias: Record<string, Record<Casa, number>>;
   contagens: { politicos: number; despesas: number; votacoes: number; empresas_com_socios: number }; total_gasto: number;
   total_por_ano: Record<string, number>; custo_por_ano: Record<string, number>;
+}
+
+/** Só links http(s). Um link "javascript:" ou "data:" vindo de dados adulterados vira undefined, e o React não põe o href. */
+export function linkSeguro(url?: string | null): string | undefined {
+  const u = (url || "").trim();
+  return /^https?:\/\/[^\s<>"']+$/i.test(u) ? u : undefined;
 }
 
 const cache = new Map<string, Promise<unknown>>();
@@ -120,7 +128,7 @@ export function load<T>(path: string): Promise<T> {
   if (!cache.has(path)) {
     cache.set(path, fetch(`./data/${path}`).then((r) => {
       if (!r.ok) throw new Error(`Não encontrado: ${path}`);
-      return r.json();
+      return r.json().catch(() => { throw new Error(`Arquivo com defeito: ${path}`); });
     }).catch((e) => { cache.delete(path); throw e; }));
   }
   return cache.get(path) as Promise<T>;

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Explain, Loading, VotoBarra, VotoChip, VotoLegenda, useData } from "../components/ui";
-import { casaNome, dataBR, descricaoCurta, proposicaoNome, tipoVotacao, type Votacao, type VotacaoResumo } from "../data";
+import { casaNome, dataBR, descricaoCurta, linkSeguro, proposicaoNome, tipoVotacao, type Votacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 
 const LADOS = ["Esquerda", "Centro-esquerda", "Centro", "Centro-direita", "Direita"];
@@ -29,7 +29,7 @@ export default function VotacaoPage() {
         <div className="row">
           <span className={`chip ${v.aprovada ? "ok" : "no"}`}>{v.aprovada ? "Aprovado" : "Rejeitado"}</span>
           <span className="chip">Sim {v.sim} · Não {v.nao}</span>
-          {v.proposicao?.url && <a className="chip" href={v.proposicao.url} target="_blank" rel="noreferrer">Ver a proposta e as votações no site {v.casa === "camara" ? "da Câmara" : "do Senado"} ↗</a>}
+          {linkSeguro(v.proposicao?.url) && <a className="chip" href={linkSeguro(v.proposicao?.url)} target="_blank" rel="noreferrer">Ver a proposta e as votações no site {v.casa === "camara" ? "da Câmara" : "do Senado"} ↗</a>}
           {v.temas?.map((t) => <Link key={t} className="chip" to={`/votacoes?tema=${encodeURIComponent(t)}`}>{t}</Link>)}
         </div>
       </section>
@@ -116,7 +116,7 @@ export default function VotacaoPage() {
           </table>
         </div>
       </section>
-      {v.fonte && <p className="muted small">Para programadores: <a href={v.fonte} target="_blank" rel="noreferrer">dados brutos desta votação</a> (formato para computador).</p>}
+      {linkSeguro(v.fonte) && <p className="muted small">Para programadores: <a href={linkSeguro(v.fonte)} target="_blank" rel="noreferrer">dados brutos desta votação</a> (formato para computador).</p>}
     </>
   );
 }

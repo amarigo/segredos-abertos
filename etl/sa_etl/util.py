@@ -43,22 +43,85 @@ def get(url: str, *, params: dict | None = None, tries: int = 4, timeout: int = 
     raise RuntimeError(f"Não foi possível baixar {url}: {last}")
 
 
-def get_json(url: str, **kw) -> Any:
-    return get(url, **kw).json()
+def get_json(url: str, *, tries: int = 4, **kw) -> Any:
+    """GET de um JSON. Resposta cortada ou página de erro no lugar do JSON também ganha nova tentativa."""
+    last: Exception | None = None
+    for attempt in range(tries):
+        r = get(url, tries=tries, **kw)
+        try:
+            return r.json()
+        except ValueError as e:  # JSON cortado no meio, HTML de erro, corpo vazio
+            last = e
+            log.warning("JSON inválido em %s (%s); nova tentativa", url, str(e)[:80])
+            time.sleep(2 ** (attempt + 1))
+    raise RuntimeError(f"JSON inválido em {url}: {last}")
 
 
-def download(url: str, dest: Path, max_horas: float | None = None) -> Path:
-    """Baixa um arquivo para o cache local, se ainda não existir (ou se for mais velho que max_horas)."""
-    if dest.exists() and dest.stat().st_size > 0:
+def download(url: str, dest: Path, max_horas: float | None = None, validar=None) -> Path:
+    """Baixa um arquivo para o cache local, se ainda não existir (ou se for mais velho que max_horas).
+
+    Se o site do governo falhar e já houver uma cópia antiga no cache, usa a cópia antiga (e avisa), em vez de
+    deixar o ano inteiro de fora do site. `validar(bytes) -> bool` descarta respostas que não são o arquivo
+    esperado (por exemplo uma página de erro em HTML no lugar do .zip).
+    """
+    tem_copia = dest.exists() and dest.stat().st_size > 0
+    if tem_copia:
         idade = (time.time() - dest.stat().st_mtime) / 3600
         if max_horas is None or idade < max_horas:
             return dest
     dest.parent.mkdir(parents=True, exist_ok=True)
-    r = get(url, timeout=600)
+    try:
+        r = get(url, timeout=600)
+        if not r.content or (validar and not validar(r.content)):
+            raise ValueError(f"resposta inválida de {url} ({len(r.content)} bytes)")
+    except Exception as e:  # noqa: BLE001
+        if tem_copia:
+            log.warning("Usando cópia antiga de %s (%s)", dest.name, e)
+            avisar(f"{dest.name}: o site oficial não respondeu; usamos a última cópia baixada")
+            return dest
+        raise
     tmp = dest.with_suffix(dest.suffix + ".part")
     tmp.write_bytes(r.content)
-    tmp.rename(dest)
+    tmp.replace(dest)
     return dest
+
+
+def eh_zip(raw: bytes) -> bool:
+    return zipfile.is_zipfile(io.BytesIO(raw))
+
+
+def eh_csv(raw: bytes) -> bool:
+    """Um CSV de verdade, não uma página de erro em HTML."""
+    inicio = raw[:512].lstrip(b"\xef\xbb\xbf").lstrip().lower()
+    return bool(inicio) and not inicio.startswith((b"<!doctype", b"<html", b"{"))
+
+
+# ---------------------------------------------------------------- avisos da coleta
+
+AVISOS: list[str] = []
+
+
+def avisar(msg: str) -> None:
+    """Registra um problema da coleta que o site deve mostrar (dados faltando, cópia antiga em uso...)."""
+    if msg not in AVISOS:
+        AVISOS.append(msg)
+
+
+# ---------------------------------------------------------------- segurança dos dados publicados
+
+_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def id_seguro(x: Any) -> str | None:
+    """Ids viram nomes de arquivo (p/{id}.json, v/{id}.json): só letras, números, _ e -, para nunca sair da pasta."""
+    s = str(x if x is not None else "").strip()
+    return s if _ID.match(s) else None
+
+
+def url_segura(u: Any) -> str:
+    """Só links http(s). Um link "javascript:" ou "data:" vindo de uma fonte adulterada vira texto vazio."""
+    s = str(u or "").strip()
+    return s if re.match(r"^https?://[^\s<>\"']+$", s, re.I) else ""
 
 
 def read_csv_text(text: str, delimiter: str = ";") -> Iterator[dict[str, str]]:

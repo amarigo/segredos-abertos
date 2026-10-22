@@ -5,3 +5,7 @@ etl/.cache/
 __pycache__/
 .pytest_cache/
 *.pyc
+site/test-results/
+site/playwright-report/
+.hypothesis/
+etl/.hypothesis/
