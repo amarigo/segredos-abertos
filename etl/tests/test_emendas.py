@@ -40,11 +40,17 @@ def test_colunas_sem_confundir_pago_com_restos():
     assert col["funcao"] == "Nome Função" and col["uf"] == "UF"
 
 
-def test_local():
-    col = emendas.achar_colunas(["Localidade de aplicação do recurso", "Município", "UF"], emendas.REGRAS)
-    assert emendas.local_de({"Localidade de aplicação do recurso": "SÃO PAULO - SP"}, col) == ("municipio", "SÃO PAULO", "SP")
-    assert emendas.local_de({"Localidade de aplicação do recurso": "PARÁ (UF)"}, col) == ("estado", "", "PA")
-    assert emendas.local_de({"Localidade de aplicação do recurso": "Nacional"}, col)[0] == "nacional"
+def test_autor_substituto():
+    assert emendas.nome_autor("JOAO CURY NETO (ex-parlamentar ALBERTO MOURAO, Nos Termos Art. 78 LDO 2025)") == \
+        ("JOAO CURY NETO", "Joao Cury Neto (no lugar de Alberto Mourao)")
+
+
+def test_categoria_de_quem_recebeu():
+    assert emendas.categoria("Fundo Público da Administração Direta Municipal", "Pessoa Jurídica") == "prefeitura"
+    assert emendas.categoria("Fundo Público da Administração Direta Estadual ou do Distrito Federal", "Pessoa Jurídica") == "estado"
+    assert emendas.categoria("Empresa Pública", "Pessoa Jurídica") == "federal"
+    assert emendas.categoria("Associação Privada", "Pessoa Jurídica") == "entidade"
+    assert emendas.categoria("Sociedade Empresária Limitada", "Pessoa Jurídica") == "empresa"
 
 
 def test_resumo(tmp_path):
@@ -53,18 +59,20 @@ def test_resumo(tmp_path):
     assert r["total"] == {"empenhado": 12500.0, "pago": 4200.0, "n": 4}
     fulano = next(a for a in r["autores"] if a["politico"] == "dep-1")
     assert fulano["pago"] == 1200.0 and fulano["pix"] == 500.0 and fulano["partido"] == "AAA" and fulano["n"] == 2
-    assert dict(fulano["areas"])[emendas.SEM_AREA_PIX] == 500.0
+    assert dict(fulano["areas"])[emendas.SEM_AREA_PIX] == 500.0 and fulano["nome"] == "Fulano de Tal"
     beltrana = next(a for a in r["autores"] if a["nome"] == "Beltrana Silva")
     assert beltrana["partido"] == "BBB" and beltrana["politico"] is None  # não é parlamentar atual: sem página, mas com partido
     assert [c["tipo"] for c in r["coletivos"]] == ["bancada"]
     assert {p["sigla"] for p in r["partidos"]} == {"AAA", "BBB"}
-    assert r["municipios"][0] == {"nome": "Belo Horizonte", "uf": "MG", "empenhado": 1000.0, "pago": 700.0, "n": 1}
-    assert {u["uf"]: u["empenhado"] for u in r["por_uf"]}["MG"] == 3500.0
 
 
 def test_favorecidos(tmp_path):
     f = emendas.favorecidos(emendas.linhas(_zip(tmp_path), "favorecido"), [2024, 2025])
-    assert f[2025]["total"] == 1100.0 and f[2025]["lista"][0]["doc"] == "18715383000140"
+    a = f[2025]
+    assert a["total"] == 1100.0 and a["lista"][0]["doc"] == "18715383000140" and a["lista"][0]["cat"] == "prefeitura"
+    assert a["municipios"][0] == {"nome": "Belo Horizonte", "uf": "MG", "valor": 600.0, "n": 1}
+    assert a["por_uf"] == [["MG", 1100.0]] and [e["nome"] for e in a["entidades"]] == ["Hospital X"]
+    assert a["_por_autor"]["fulano de tal"][0] == ["Municipio de Belo Horizonte (Belo Horizonte-MG)", 600.0]
     assert f[2024]["lista"][0]["nome"] == "Hospital X"
 
 
@@ -72,8 +80,11 @@ def test_coletar_grava_arquivos(tmp_path, monkeypatch):
     z = _zip(tmp_path)
     monkeypatch.setattr(emendas, "baixar", lambda cache: z)
     monkeypatch.setattr(emendas, "deputados_legislatura", lambda leg: EXTRAS)
+    monkeypatch.setattr(emendas, "senadores_legislatura", lambda leg: [])
     emendas.coletar(POLITICOS, [2024, 2025], tmp_path / "c", tmp_path / "out")
     ind = json.loads((tmp_path / "out" / "emendas" / "anos.json").read_text())
     assert ind["anos"] == [2025]
     d = json.loads((tmp_path / "out" / "emendas" / "2025.json").read_text())
-    assert d["favorecidos"]["lista"][0]["valor"] == 600.0
+    assert d["favorecidos"]["lista"][0]["valor"] == 600.0 and "_por_autor" not in d["favorecidos"]
+    fulano = next(a for a in d["autores"] if a["politico"] == "dep-1")
+    assert fulano["recebedores"][1] == ["Hospital X (Contagem-MG)", 500.0] and "chave" not in fulano

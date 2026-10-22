@@ -56,7 +56,7 @@ export function GastoPartidos({ partidos, ano, limite }: { partidos: Partido[]; 
 
 
 /* Pizza (rosca) com o total de cada partido; os partidos menores entram juntos em "Outros" */
-function Pizza({ fatias, titulo }: { fatias: { sigla: string; valor: number; cor: string; outros?: boolean }[]; titulo: string }) {
+export function Pizza({ fatias, titulo }: { fatias: { sigla: string; valor: number; cor: string; outros?: boolean }[]; titulo: string }) {
   const tip = useTip();
   const proprias = fatias.filter((f) => !f.outros).sort((a, b) => b.valor - a.valor);
   const resto = fatias.filter((f) => f.outros);

@@ -201,32 +201,6 @@ def autor_coletivo(autor: str, tipo: str) -> str | None:
     return None
 
 
-def local_de(r: dict, col: dict) -> tuple[str, str, str]:
-    """(nível, município, UF) a partir da localidade da emenda. Nível: municipio, estado, regiao, nacional, outro."""
-    loc = (r.get(col["local"]) or "").strip() if col["local"] else ""
-    mun = (r.get(col["municipio"]) or "").strip() if col["municipio"] else ""
-    uf = (r.get(col["uf"]) or "").strip() if col["uf"] else ""
-    uf = uf if uf.upper() in SIGLAS else UFS.get(norm_name(uf), "")
-    m = re.match(r"^(.+?)\s*[-/]\s*([A-Z]{2})$", loc)
-    if m and m.group(2) in SIGLAS:
-        return "municipio", m.group(1).strip(), m.group(2)
-    m = re.match(r"^(.+?)\s*\(UF\)$", loc, flags=re.I)
-    if m:
-        return "estado", "", UFS.get(norm_name(m.group(1)), uf)
-    n = norm_name(loc)
-    if n in UFS:
-        return "estado", "", UFS[n]
-    if "NACIONAL" in n or n in ("BRASIL", "EXTERIOR"):
-        return "nacional", "", ""
-    if "REGIAO" in n:
-        return "regiao", loc, ""
-    if mun and uf and norm_name(mun) not in ("", "SEM INFORMACAO", "MULTIPLO"):
-        return "municipio", mun, uf
-    if uf:
-        return "estado", "", uf
-    return "outro", loc, ""
-
-
 def bonito(nome: str) -> str:
     """CAIXA ALTA → Nome Próprio, mantendo de/da/do minúsculos."""
     if not nome or not nome.isupper():
@@ -236,6 +210,9 @@ def bonito(nome: str) -> str:
 
 
 # ---------------------------------------------------------------- autores → parlamentares
+
+SENADO_LEG = "https://legis.senado.leg.br/dadosabertos/senador/lista/legislatura/{leg}.json"
+
 
 def deputados_legislatura(leg: int = 57) -> list[dict]:
     """Todos que foram deputados na legislatura (inclui quem saiu), com o último partido. Só para achar o partido do autor."""
@@ -253,6 +230,23 @@ def deputados_legislatura(leg: int = 57) -> list[dict]:
     return out
 
 
+def senadores_legislatura(leg: int = 57) -> list[dict]:
+    """Senadores da legislatura, inclusive licenciados e suplentes que já saíram."""
+    try:
+        d = get_json(SENADO_LEG.format(leg=leg))
+        ps = d.get("ListaParlamentarLegislatura", {}).get("Parlamentares", {}).get("Parlamentar", [])
+    except Exception as e:  # noqa: BLE001
+        log.warning("Emendas: não foi possível listar os senadores da legislatura %d (%s)", leg, e)
+        return []
+    out = []
+    for p in ps if isinstance(ps, list) else [ps]:
+        i = p.get("IdentificacaoParlamentar") or {}
+        if i.get("NomeParlamentar"):
+            out.append({"nome": i["NomeParlamentar"], "partido": i.get("SiglaPartidoParlamentar") or "",
+                        "uf": i.get("UfParlamentar") or "", "casa": "senado"})
+    return out
+
+
 def indice_nomes(politicos: list[dict], extras: list[dict]) -> dict[str, dict]:
     """Nome normalizado → parlamentar. Os atuais têm prioridade; nomes repetidos (ambíguos) ficam de fora."""
     idx: dict[str, dict] = {}
@@ -263,14 +257,28 @@ def indice_nomes(politicos: list[dict], extras: list[dict]) -> dict[str, dict]:
             k = _chave(p["nome"])
             if not k:
                 continue
-            if k in vistos and vistos[k].get("id") != p.get("id"):
+            if k in vistos and (vistos[k].get("id"), vistos[k].get("casa")) != (p.get("id"), p.get("casa")):
                 ambiguos.add(k)
-            vistos[k] = p
+            if k not in vistos or (not vistos[k].get("partido") and p.get("partido")):
+                vistos[k] = p
         for k, p in vistos.items():
+            if k in idx:
+                ambiguos.discard(k)  # o parlamentar atual resolve a dúvida
             idx.setdefault(k, p)
     for k in ambiguos:
         idx.pop(k, None)
     return idx
+
+
+SUBSTITUTO = re.compile(r"^(.+?)\s*\(\s*ex-parlamentar\s+(.+?)\s*(,.*)?\)\s*$", re.I)
+
+
+def nome_autor(autor: str) -> tuple[str, str]:
+    """(nome para procurar o partido, nome para mostrar). Emendas herdadas trazem 'NOVO (ex-parlamentar ANTIGO, nos termos...)'."""
+    m = SUBSTITUTO.match(autor or "")
+    if m:
+        return m.group(1), f"{bonito(m.group(1))} (no lugar de {bonito(m.group(2))})"
+    return autor, bonito(autor)
 
 
 # ---------------------------------------------------------------- resumo
@@ -280,13 +288,12 @@ def _top(d: dict, n: int) -> list:
 
 
 def resumir(rows, anos: list[int], politicos: list[dict], extras: list[dict] | None = None) -> dict[int, dict]:
-    """Soma as emendas por ano: tipo, área, estado, município, autor e partido."""
+    """Soma as emendas pelo ano do Orçamento: tipo, área, autor e partido."""
     idx = indice_nomes(politicos, extras or [])
     anos_set = set(anos)
     col = None
     soma = {a: {"tipo": defaultdict(lambda: [0.0, 0.0, 0]), "area": defaultdict(lambda: [0.0, 0.0]),
-                "uf": defaultdict(lambda: [0.0, 0.0]), "nivel": defaultdict(lambda: [0.0, 0.0]),
-                "mun": defaultdict(lambda: [0.0, 0.0, 0]), "autor": {}, "total": [0.0, 0.0, 0]} for a in anos}
+                "autor": {}, "total": [0.0, 0.0, 0]} for a in anos}
     for r in rows:
         if col is None:
             col = achar_colunas(list(r.keys()), REGRAS)
@@ -310,24 +317,15 @@ def resumir(rows, anos: list[int], politicos: list[dict], extras: list[dict] | N
         area = (r.get(col["funcao"]) or "").strip() if col["funcao"] else ""
         # Na emenda Pix o dinheiro vai direto para o caixa da prefeitura ou do estado, sem área definida
         area = SEM_AREA_PIX if tipo == "pix" else (bonito(area) or "Não informada")
-        nivel, mun, uf = local_de(r, col)
         cod = (r.get(col["codigo"]) or "").strip() if col["codigo"] else ""
 
         s["total"][0] += emp; s["total"][1] += pago; s["total"][2] += 1
         t = s["tipo"][tipo]; t[0] += emp; t[1] += pago; t[2] += 1
         a = s["area"][area]; a[0] += emp; a[1] += pago
-        nv = s["nivel"][nivel]; nv[0] += emp; nv[1] += pago
-        if uf:
-            u = s["uf"][uf]; u[0] += emp; u[1] += pago
-        destino = f"{bonito(mun)} ({uf})" if nivel == "municipio" else (f"Estado: {uf}" if nivel == "estado" and uf else
-                                                                         "Nacional" if nivel == "nacional" else bonito(mun) or "Outro")
-        if nivel == "municipio":
-            m = s["mun"][(bonito(mun), uf)]; m[0] += emp; m[1] += pago; m[2] += 1
-        au = s["autor"].setdefault(autor, {"emp": 0.0, "pago": 0.0, "n": set(), "tipos": Counter(),
-                                           "area": defaultdict(float), "destino": defaultdict(float)})
-        au["emp"] += emp; au["pago"] += pago; au["n"].add(cod or id(r)); au["tipos"][tipo] += pago or emp
+        au = s["autor"].setdefault(autor, {"emp": 0.0, "pago": 0.0, "n": set(), "tipos": Counter(), "area": defaultdict(float)})
+        au["emp"] += emp; au["pago"] += pago; au["tipos"][tipo] += pago or emp
+        au["n"].add(cod if cod and cod.isdigit() else len(au["n"]))
         au["area"][area] += pago or emp
-        au["destino"][destino] += pago or emp
 
     out = {}
     for ano, s in soma.items():
@@ -336,15 +334,16 @@ def resumir(rows, anos: list[int], politicos: list[dict], extras: list[dict] | N
         autores, coletivos = [], []
         for nome, au in s["autor"].items():
             coletivo = autor_coletivo(nome, au["tipos"].most_common(1)[0][0] if au["tipos"] else "outro")
-            p = None if coletivo else idx.get(_chave(nome))
-            item = {"nome": bonito(nome), "empenhado": round(au["emp"], 2), "pago": round(au["pago"], 2), "n": len(au["n"]),
-                    "areas": _top(au["area"], 4), "destinos": _top(au["destino"], 5),
-                    "pix": round(au["tipos"].get("pix", 0), 2)}
+            busca, mostra = nome_autor(nome)
+            p = None if coletivo else idx.get(_chave(busca))
+            item = {"nome": mostra if (not p or busca != nome) else p["nome"], "chave": _chave(nome),
+                    "empenhado": round(au["emp"], 2), "pago": round(au["pago"], 2), "n": len(au["n"]),
+                    "areas": _top(au["area"], 4), "pix": round(au["tipos"].get("pix", 0), 2)}
             if coletivo:
                 coletivos.append({**item, "tipo": coletivo})
             else:
                 item.update({"politico": (p or {}).get("id"), "partido": (p or {}).get("partido", ""), "uf": (p or {}).get("uf", ""),
-                             "casa": (p or {}).get("casa", ""), "foto": (p or {}).get("foto", "")})
+                             "casa": (p or {}).get("casa", "")})
                 autores.append(item)
         autores.sort(key=lambda x: -(x["pago"] or x["empenhado"]))
         coletivos.sort(key=lambda x: -(x["pago"] or x["empenhado"]))
@@ -366,32 +365,61 @@ def resumir(rows, anos: list[int], politicos: list[dict], extras: list[dict] | N
                                 for k, v in s["tipo"].items()), key=lambda x: -x["empenhado"]),
             "por_area": sorted(({"area": k, "empenhado": round(v[0], 2), "pago": round(v[1], 2)} for k, v in s["area"].items()),
                                key=lambda x: -x["empenhado"]),
-            "por_uf": sorted(({"uf": k, "empenhado": round(v[0], 2), "pago": round(v[1], 2)} for k, v in s["uf"].items()),
-                             key=lambda x: -x["empenhado"]),
-            "por_nivel": {k: {"empenhado": round(v[0], 2), "pago": round(v[1], 2)} for k, v in s["nivel"].items()},
-            "municipios": sorted(({"nome": k[0], "uf": k[1], "empenhado": round(v[0], 2), "pago": round(v[1], 2), "n": v[2]}
-                                  for k, v in s["mun"].items()), key=lambda x: -x["empenhado"])[:300],
-            "n_municipios": len(s["mun"]),
             "autores": autores,
             "coletivos": coletivos[:200],
             "partidos": sorted(({"sigla": k, "n": v["n"], "camara": v["camara"], "senado": v["senado"],
                                  "empenhado": round(v["empenhado"], 2), "pago": round(v["pago"], 2), "pix": round(v["pix"], 2),
                                  "areas": _top(v["area"], 5)} for k, v in partidos.items()), key=lambda x: -x["empenhado"]),
             "sem_partido": {"n": len(sem_partido), "empenhado": round(sum(a["empenhado"] for a in sem_partido), 2),
-                            "pago": round(sum(a["pago"] for a in sem_partido), 2)},
+                            "pago": round(sum(a["pago"] for a in sem_partido), 2), "nomes": [a["nome"] for a in sem_partido][:40]},
         }
         log.info("Emendas %d: %d linhas, R$ %.0f empenhados, R$ %.0f pagos, %d autores (%d sem partido identificado)",
                  ano, s["total"][2], s["total"][0], s["total"][1], len(autores), len(sem_partido))
     return out
 
 
+# ---------------------------------------------------------------- quem recebeu
+
+CATEGORIAS = {
+    "prefeitura": "Prefeituras e fundos municipais",
+    "estado": "Governos estaduais e fundos estaduais",
+    "entidade": "Entidades sem fins lucrativos",
+    "empresa": "Empresas",
+    "federal": "Órgãos federais e bancos públicos",
+    "pessoa": "Pessoas físicas",
+    "outro": "Outros",
+}
+
+
+def categoria(natureza: str, tipo: str) -> str:
+    """Classifica quem recebeu pela natureza jurídica informada pela Receita."""
+    n, t = _chave(natureza), _chave(tipo)
+    if "fisica" in t:
+        return "pessoa"
+    if "municipal" in n or "municipio" in n:
+        return "prefeitura"
+    if "estadual" in n or "distrito federal" in n or n.startswith("estado"):
+        return "estado"
+    if "federal" in n or "empresa publica" in n or "economia mista" in n or "unidade gestora" in t:
+        return "federal"
+    if any(x in n for x in ("associacao", "fundacao privada", "organizacao religiosa", "organizacao social",
+                            "servico social", "entidade sindical", "partido")):
+        return "entidade"
+    if any(x in n for x in ("sociedade", "empresari", "limitada", "eireli", "cooperativa", "empresa individual", "consorcio")):
+        return "empresa"
+    return "outro"
+
+
 def favorecidos(rows, anos: list[int], n: int = 150) -> dict[int, dict]:
-    """Quem recebeu o dinheiro das emendas, pelo ano do pagamento."""
+    """Quem recebeu o dinheiro das emendas e onde fica, pelo ano do pagamento."""
     col = None
     anos_set = set(anos)
-    por = {a: defaultdict(lambda: {"valor": 0.0, "nome": "", "tipo": "", "uf": "", "municipio": "", "autores": defaultdict(float)})
-           for a in anos}
-    tipos = {a: defaultdict(float) for a in anos}
+    nova = lambda: {"valor": 0.0, "nome": "", "cat": "", "natureza": "", "uf": "", "municipio": "", "autores": defaultdict(float)}  # noqa: E731
+    por = {a: defaultdict(nova) for a in anos}
+    cats = {a: defaultdict(lambda: [0.0, set()]) for a in anos}
+    ufs = {a: defaultdict(float) for a in anos}
+    muns = {a: defaultdict(lambda: [0.0, set()]) for a in anos}
+    autor_rec = {a: defaultdict(lambda: defaultdict(float)) for a in anos}  # autor -> recebedor -> valor
     for r in rows:
         if col is None:
             col = achar_colunas(list(r.keys()), REGRAS_FAV)
@@ -400,7 +428,7 @@ def favorecidos(rows, anos: list[int], n: int = 150) -> dict[int, dict]:
                 log.error("Emendas (favorecidos): colunas essenciais não encontradas")
                 return {}
         am = digits(r.get(col["anomes"]))
-        if len(am) < 4:
+        if len(am) < 6:
             continue
         ano = int(am[:4]) if am[:2] in ("19", "20") else int(am[-4:])
         if ano not in anos_set:
@@ -408,30 +436,52 @@ def favorecidos(rows, anos: list[int], n: int = 150) -> dict[int, dict]:
         v = to_float(r.get(col["valor"]))
         if not v:
             continue
-        doc = digits(r.get(col["doc"])) if col["doc"] else ""
-        nome = (r.get(col["nome"]) or "").strip()
-        f = por[ano][doc or nome]
+        g = lambda k: ((r.get(col[k]) or "").strip() if col.get(k) else "")  # noqa: E731
+        doc, nome = digits(g("doc")), g("nome")
+        chave = doc if len(doc) == 14 else nome
+        cat = categoria(g("natureza"), g("tipo"))
+        uf = g("uf").upper() if g("uf").upper() in SIGLAS else UFS.get(norm_name(g("uf")), "")
+        mun = bonito(g("municipio"))
+        f = por[ano][chave]
         f["valor"] += v
-        f["nome"] = f["nome"] or nome
-        f["tipo"] = f["tipo"] or ((r.get(col["tipo"]) or "").strip() if col["tipo"] else "")
-        f["natureza"] = f.get("natureza") or ((r.get(col["natureza"]) or "").strip() if col["natureza"] else "")
-        f["uf"] = f["uf"] or ((r.get(col["uf"]) or "").strip() if col["uf"] else "")
-        f["municipio"] = f["municipio"] or ((r.get(col["municipio"]) or "").strip() if col["municipio"] else "")
-        if col["autor"]:
-            f["autores"][bonito((r.get(col["autor"]) or "").strip())] += v
-        tipos[ano][(r.get(col["tipo"]) or "Não informado").strip() if col["tipo"] else "Não informado"] += v
+        f["nome"] = f["nome"] or bonito(nome)
+        f["cat"], f["natureza"] = f["cat"] or cat, f["natureza"] or g("natureza")
+        f["uf"], f["municipio"] = f["uf"] or uf, f["municipio"] or mun
+        autor = g("autor")
+        f["autores"][nome_autor(autor)[1]] += v
+        c = cats[ano][cat]; c[0] += v; c[1].add(chave)
+        # Mapa: o dinheiro de bancos e órgãos federais (como a Caixa, que repassa a obras) não tem a cidade final
+        if cat != "federal" and uf:
+            ufs[ano][uf] += v
+            if cat != "estado" and mun:
+                m = muns[ano][(mun, uf)]; m[0] += v; m[1].add(chave)
+        autor_rec[ano][_chave(autor)][chave] += v
     out = {}
     for ano, fs in por.items():
         if not fs:
             continue
-        lista = []
-        for doc, f in sorted(fs.items(), key=lambda kv: -kv[1]["valor"])[:n]:
-            d = doc if doc.isdigit() else ""
-            lista.append({"doc": d if len(d) == 14 else "", "nome": bonito(f["nome"]), "tipo": f["tipo"], "natureza": f.get("natureza", ""),
-                          "uf": f["uf"], "municipio": bonito(f["municipio"]), "valor": round(f["valor"], 2),
-                          "autores": _top(f["autores"], 5)})
-        out[ano] = {"lista": lista, "n": len(fs), "total": round(sum(f["valor"] for f in fs.values()), 2),
-                    "por_tipo": _top(tipos[ano], 12)}
+        def item(k, f):
+            return {"doc": k if len(k) == 14 and k.isdigit() else "", "nome": f["nome"], "cat": f["cat"], "natureza": f["natureza"],
+                    "uf": f["uf"], "municipio": f["municipio"], "valor": round(f["valor"], 2), "autores": _top(f["autores"], 5)}
+        ordem = sorted(fs.items(), key=lambda kv: -kv[1]["valor"])
+        por_autor = {}
+        for a, recs in autor_rec[ano].items():
+            top = sorted(recs.items(), key=lambda kv: -kv[1])[:5]
+            por_autor[a] = [[fs[k]["nome"] + (f" ({fs[k]['municipio']}-{fs[k]['uf']})" if fs[k]["municipio"] and fs[k]["cat"] not in ("estado", "federal") else
+                                              f" ({fs[k]['uf']})" if fs[k]["uf"] else ""), round(x, 2)] for k, x in top]
+        out[ano] = {
+            "n": len(fs), "total": round(sum(f["valor"] for f in fs.values()), 2),
+            "por_categoria": [{"cat": k, "rotulo": CATEGORIAS[k], "valor": round(v[0], 2), "n": len(v[1])}
+                              for k, v in sorted(cats[ano].items(), key=lambda kv: -kv[1][0])],
+            "lista": [item(k, f) for k, f in ordem[:n]],
+            "empresas": [item(k, f) for k, f in ordem if f["cat"] == "empresa"][:100],
+            "entidades": [item(k, f) for k, f in ordem if f["cat"] == "entidade"][:100],
+            "por_uf": _top(ufs[ano], 30),
+            "municipios": [{"nome": k[0], "uf": k[1], "valor": round(v[0], 2), "n": len(v[1])}
+                           for k, v in sorted(muns[ano].items(), key=lambda kv: -kv[1][0])[:400]],
+            "n_municipios": len(muns[ano]),
+            "_por_autor": por_autor,
+        }
     return out
 
 
@@ -441,14 +491,19 @@ def coletar(politicos: list[dict], anos: list[int], cache: Path, saida: Path) ->
         z = baixar(cache)
         if not z:
             return None
-        extras = deputados_legislatura(57) + deputados_legislatura(56)
+        extras = (deputados_legislatura(57) + senadores_legislatura(57)
+                  + deputados_legislatura(56) + senadores_legislatura(56))
         res = resumir(linhas(z, ""), anos, politicos, extras)
         fav = favorecidos(linhas(z, "favorecido"), anos)
     except Exception:  # noqa: BLE001
         log.exception("Emendas: erro ao montar os dados; a página de emendas fica sem atualização")
         return None
     for ano, d in res.items():
-        d["favorecidos"] = fav.get(ano)
+        f = fav.get(ano)
+        por_autor = (f or {}).pop("_por_autor", {})
+        for a in d["autores"] + d["coletivos"]:
+            a["recebedores"] = por_autor.get(a.pop("chave"), [])
+        d["favorecidos"] = f
         write_json(saida / "emendas" / f"{ano}.json", d)
     indice = {"anos": sorted(res), "totais": {str(a): d["total"] for a, d in res.items()}}
     write_json(saida / "emendas" / "anos.json", indice)
