@@ -38,3 +38,5 @@
 .emd-doc-topo strong { white-space: nowrap; }
 .emd-doc-desc { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .emd-doc-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.emd-rec-links { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 2px; }
+.emd-nf { margin-top: 8px; max-width: 72ch; }

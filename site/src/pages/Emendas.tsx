@@ -9,12 +9,14 @@ import "./emendas.css";
 /* Formato de data/emendas/{ano}.json (gerado por etl/sa_etl/emendas.py) */
 interface Valores { empenhado: number; pago: number }
 type Par = [string, number];
+/** [quem recebeu, valor, CNPJ, códigos das emendas] */
+type Recebedor = [string, number, string?, string[]?];
 interface Autor extends Valores {
-  nome: string; n: number; areas: Par[]; recebedores: Par[]; pix: number;
+  nome: string; n: number; areas: Par[]; recebedores: Recebedor[]; pix: number;
   politico: string | null; partido: string; uf: string; casa: Casa | "";
   pagamentos?: { valor: number; arquivo: string };
 }
-interface Coletivo extends Valores { nome: string; n: number; tipo: string; areas: Par[]; recebedores: Par[]; pagamentos?: { valor: number; arquivo: string } }
+interface Coletivo extends Valores { nome: string; n: number; tipo: string; areas: Par[]; recebedores: Recebedor[]; pagamentos?: { valor: number; arquivo: string } }
 /* Pagamentos ligados às emendas, pelo ano em que foram feitos (etl/sa_etl/pagamentos.py) */
 interface Pagamentos {
   ate: string; total: number; n: number;
@@ -226,13 +228,16 @@ function Autores({ data, medida }: { data: EmendasAno; medida: Medida }) {
               </div>
               <div>
                 <h4>Quem recebeu (pagamentos de {data.ano})</h4>
-                {a.recebedores.length ? <ul>{a.recebedores.map(([k, x], j) => <li key={j}><span>{k}</span><span className="num">{reaisCurto(x)}</span></li>)}</ul>
+                {a.recebedores.length ? <ul>{a.recebedores.map((r, j) => <ItemRecebedor key={j} r={r} />)}</ul>
                   : <p className="small muted">Nenhum pagamento em {data.ano}.</p>}
               </div>
-              {a.pagamentos && <div style={{ gridColumn: "1 / -1" }}>
+              <div style={{ gridColumn: "1 / -1" }}>
                 <h4>Notas e documentos de pagamento de {data.ano}</h4>
-                <AbrirDocs ano={data.ano} arquivo={a.pagamentos.arquivo} />
-              </div>}
+                {a.pagamentos ? <AbrirDocs ano={data.ano} arquivo={a.pagamentos.arquivo} />
+                  : <p className="small muted">{!data.pagamentos ? `Os documentos de pagamento de ${data.ano} ainda estão sendo carregados do Portal da Transparência. Enquanto isso, use os links de cada recebedor acima.`
+                    : `Nenhum documento de pagamento ligado às emendas deste parlamentar em ${data.ano} (dados lidos até ${dataBR(data.pagamentos.ate)}).`}</p>}
+                <p className="small muted emd-nf">{NOTA_FISCAL}</p>
+              </div>
               <p className="small muted" style={{ gridColumn: "1 / -1" }}>
                 Reservado {reais(a.empenhado)} · pago {reais(a.pago)}{a.pix > 0 && <> · {reaisCurto(a.pix)} em emendas Pix</>}.
                 {a.politico && <> <Link to={`/p/${a.politico}`}>Ver gastos e votos de {a.nome}</Link></>}
@@ -410,5 +415,26 @@ function EmpresasPagas({ p, ano }: { p: Pagamentos; ano: string }) {
       </div>
       {lista.length > n && <button className="link" onClick={() => setN(n + 30)}>Mostrar mais ({lista.length - n} restantes)</button>}
     </section>
+  );
+}
+
+const PORTAL = "https://portaldatransparencia.gov.br";
+const NOTA_FISCAL = "E as notas fiscais? Quando a emenda vai para uma prefeitura, um fundo de saúde ou um estado, quem compra é a prefeitura ou o estado, e as notas fiscais ficam no portal da transparência dela e no Tribunal de Contas do estado. O governo federal não publica essas notas. Por isso, os links levam ao que é oficial no Portal da Transparência: a emenda, tudo o que o recebedor ganhou do governo federal e cada pagamento com sua nota de empenho.";
+
+/** Um recebedor na ficha do parlamentar, com os links oficiais (emenda e o que o recebedor ganhou do governo federal). */
+function ItemRecebedor({ r }: { r: Recebedor }) {
+  const [nome, valor, doc, codigos] = r;
+  return (
+    <li className="emd-rec">
+      <span>{nome}
+        <span className="emd-rec-links small">
+          {doc && <a href={`${PORTAL}/pessoa-juridica/${doc}`} target="_blank" rel="noreferrer">Pagamentos recebidos ↗</a>}
+          {(codigos || []).map((c) => (
+            <a key={c} href={`${PORTAL}/emendas/detalhe?codigoEmenda=${encodeURIComponent(c)}${/^\d{4}/.test(c) ? `&ano=${c.slice(0, 4)}` : ""}`} target="_blank" rel="noreferrer">Emenda {c} ↗</a>
+          ))}
+        </span>
+      </span>
+      <span className="num">{reaisCurto(valor)}</span>
+    </li>
   );
 }

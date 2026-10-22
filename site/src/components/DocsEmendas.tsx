@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { cnpjFmt, dataBR, linkSeguro, reais } from "../data";
 import { Loading, useData } from "./ui";
 import "../pages/emendas.css";
@@ -25,7 +24,7 @@ export function ListaDocumentos({ docs, comFavorecido = true, inicial = 8 }: { d
               <strong className="num">{reais(d.valor, true)}</strong>
             </div>
             {comFavorecido && <div>
-              Para {d.cnpj ? <Link to={`/e/${d.cnpj}`}>{d.favorecido}</Link> : <strong>{d.favorecido}</strong>}
+              Para {d.cnpj ? <a href={`https://portaldatransparencia.gov.br/pessoa-juridica/${d.cnpj}`} target="_blank" rel="noreferrer">{d.favorecido} ↗</a> : <strong>{d.favorecido}</strong>}
               {d.cnpj && <span className="small muted mono"> {cnpjFmt(d.cnpj)}</span>}
             </div>}
             <div className="small">Pago por {d.ug || d.orgao}{d.ug && d.orgao && d.ug !== d.orgao ? <span className="muted"> ({d.orgao})</span> : null}{d.emenda && <span className="muted"> · emenda nº {d.emenda}</span>}</div>
