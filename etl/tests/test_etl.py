@@ -325,3 +325,52 @@ def test_passagens_nunca_passam_do_total_oficial(tmp_path, monkeypatch):
     rec = {"dep-1": {2025: {"cota_meses": [{"mes": 10, "valor": 50}]}}}
     desp = [{"politico": "dep-1", "ano": 2025, "mes": 9, "valor": 10, "nu": "2227", "num": "1"}]
     assert build.buscar_passagens(desp, pols, rec, tmp_path / "b") == []
+
+
+def test_notas_sem_pdf_vao_para_a_pagina_de_detalhe(tmp_path, monkeypatch):
+    from sa_etl import links_notas
+
+    publ = "https://www.camara.leg.br/cota-parlamentar/documentos/publ/"
+    no_ar = {"1649/2026/1": 200, "1649/2026/2": 404}
+    chamadas = []
+
+    class Resposta:
+        def __init__(self, st):
+            self.status_code = st
+
+    def head(self, url, **kw):
+        k = links_notas.chave(url)
+        chamadas.append(k)
+        return Resposta(no_ar[k])
+
+    monkeypatch.setattr(links_notas.requests.Session, "head", head)
+
+    def despesas():
+        base = {"politico": "dep-1", "ano": 2026, "mes": 10, "data": "2026-10-08", "doc": "02558157000162",
+                "nu": "1649", "num": "6529325", "sub": "1", "link": "nota"}
+        return [{**base, "url": publ + "1649/2026/1.pdf"}, {**base, "url": publ + "1649/2026/2.pdf"},
+                {**base, "url": "https://www.camara.leg.br/cota-parlamentar/nota-fiscal-eletronica?ideDocumentoFiscal=3"},
+                {**base, "url": "https://www25.senado.leg.br/x", "link": "lista"}]
+
+    ds = despesas()
+    r = links_notas.conferir(ds, tmp_path)
+    assert sorted(chamadas) == ["1649/2026/1", "1649/2026/2"]  # só os PDFs da Câmara
+    assert r["abrem"] == 1 and r["sem_pdf"] == 1 and r["despesas_trocadas"] == 1
+    assert ds[0]["link"] == "nota" and ds[0]["url"].endswith("1.pdf")
+    assert ds[1]["link"] == "sem_pdf"
+    assert ds[1]["url"] == camara.link_detalhe("1649", 2026, 10, "1", "02558157000162", "6529325", "2")
+    assert ds[2]["link"] == "nota" and ds[3]["link"] == "lista"
+
+    # Sem tempo para conferir de novo, o que já se sabe continua valendo
+    chamadas.clear()
+    ds = despesas()
+    links_notas.conferir(ds, tmp_path, minutos=0)
+    assert chamadas == [] and ds[0]["link"] == "nota" and ds[1]["link"] == "sem_pdf"
+
+    # Na coleta seguinte, só a que deu 404 é conferida de novo; se o PDF apareceu, volta a ser "Abrir nota"
+    no_ar["1649/2026/2"] = 200
+    ds = despesas()
+    r = links_notas.conferir(ds, tmp_path)
+    assert chamadas == ["1649/2026/2"]
+    assert r["sem_pdf"] == 0 and ds[1]["link"] == "nota" and ds[1]["url"].endswith("2.pdf")
+

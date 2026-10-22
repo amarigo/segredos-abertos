@@ -11,7 +11,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import camara, cnpj, emendas, ideologia, passagens, recursos, senado, temas
+from . import camara, cnpj, emendas, ideologia, links_notas, passagens, recursos, senado, temas
 from .categorias import GRUPOS
 from .util import cnpj_valido, doc_kind, mask_cpf, write_json
 
@@ -39,6 +39,10 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
     rec = recursos.coletar(politicos, anos, cache / "recursos") if com_recursos else {}
     if rec:
         despesas += buscar_passagens(despesas, politicos, rec, cache / "passagens")
+    try:
+        links_notas.conferir(despesas, cache)
+    except Exception as e:  # noqa: BLE001 - sem a conferência, os links ficam como a Câmara publicou
+        log.warning("Não foi possível conferir os links das notas: %s", e)
     return {"politicos": politicos, "despesas": despesas, "votacoes": vc + vs,
             "votos": votos_c + votos_s, "empresas": emps,
             "empresas_socias": socias, "recursos": rec}

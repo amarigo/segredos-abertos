@@ -54,6 +54,19 @@ for (casa, link), us in sorted(exemplos.items()):
         if st.startswith("erro"):
             break  # site fora do ar ou lento: não insiste
 
+# PDFs das notas da Câmara conferidos pela coleta (ver sa_etl/links_notas.py)
+arq = cache / "links-notas.json"
+if arq.exists():
+    g = json.loads(arq.read_text())
+    falt = g.get("faltando", {})
+    print(f"\n- PDFs das notas da Câmara: {len(g.get('ok', [])):,} conferidos e abrindo, {len(falt)} com erro 404 "
+          f"(trocados pela página de detalhe da despesa)")
+    for k, desde in sorted(falt.items(), key=lambda kv: kv[1], reverse=True)[:5]:
+        print(f"  - https://www.camara.leg.br/cota-parlamentar/documentos/publ/{k}.pdf · 404 desde {desde}")
+    sem = [u for (casa, link), us in exemplos.items() if link == "sem_pdf" for u in us]
+    for u in random.sample(sem, min(3, len(sem))):
+        print(f"  - página de detalhe usada no lugar: {status(u)} · {u}")
+
 # Passagens lidas da lista oficial da Câmara (guardadas em cache pela coleta)
 arqs = list((cache / "passagens").glob("*.json"))
 bilhetes = [x for f in arqs for x in json.loads(f.read_text() or "[]")]
