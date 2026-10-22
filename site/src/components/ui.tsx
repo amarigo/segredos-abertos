@@ -132,20 +132,31 @@ function niceStep(max: number): number {
   return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
 }
 
-/* Régua esquerda–direita com pontos */
-export function Espectro({ pontos, destaque }: { pontos: { id: string; pos: number; label: string; href?: string }[]; destaque?: string }) {
+/* Régua esquerda–direita com pontos. O ponto em destaque fica dourado, maior, por cima dos outros e com o nome acima. */
+export function Espectro({ pontos, destaque, nomeDestaque }: { pontos: { id: string; pos: number; label: string; href?: string }[]; destaque?: string; nomeDestaque?: string }) {
   const tip = useTip();
   const cor = (p: number) => (p < -0.15 ? "var(--esq)" : p > 0.15 ? "var(--dir)" : "var(--centro)");
+  // Recuo de 11px nas pontas: os pontos dos extremos ficam inteiros dentro da régua
+  const x = (pos: number) => { const t = (pos + 1) / 2; return `calc(${t * 100}% + ${(0.5 - t) * 22}px)`; };
+  const eu = pontos.find((p) => p.id === destaque);
+  // Perto das pontas, o nome fica alinhado pela borda para não sair da tela; a seta continua em cima do ponto
+  const ancora = !eu ? "meio" : eu.pos < -0.6 ? "esq" : eu.pos > 0.6 ? "dir" : "meio";
   return (
     <div>
-      <div className="spectrum" role="img" aria-label="Posição de esquerda a direita">
+      {eu && (
+        <div className="spectrum-eu" aria-hidden="true">
+          <span className={`spectrum-eu-nome ${ancora}`} style={{ left: x(eu.pos) }}>{nomeDestaque || eu.label}</span>
+        </div>
+      )}
+      <div className="spectrum" role="img" aria-label={eu ? `Posição de esquerda a direita. ${nomeDestaque || eu.label} está no ponto dourado.` : "Posição de esquerda a direita"}>
         {pontos.map((p, i) => {
-          const left = `${((p.pos + 1) / 2) * 100}%`;
-          const jitter = destaque === p.id ? 0 : ((i * 37) % 30) - 15;
-          const style = { left, top: `calc(50% + ${jitter}px)`, background: cor(p.pos) };
-          const dot = <span className={`dot ${destaque === p.id ? "me" : ""}`} style={style} onMouseMove={(e) => tip.show(e, p.label)} onMouseLeave={tip.hide} />;
+          if (p.id === destaque) return null;
+          const jitter = ((i * 37) % 30) - 15;
+          const style = { left: x(p.pos), top: `calc(50% + ${jitter}px)`, background: cor(p.pos) };
+          const dot = <span className="dot" style={style} onMouseMove={(e) => tip.show(e, p.label)} onMouseLeave={tip.hide} />;
           return p.href ? <Link key={p.id} to={p.href} aria-label={p.label}>{dot}</Link> : <span key={p.id}>{dot}</span>;
         })}
+        {eu && <span className="dot me" style={{ left: x(eu.pos) }} onMouseMove={(e) => tip.show(e, eu.label)} onMouseLeave={tip.hide} />}
       </div>
       <div className="spectrum-labels"><span>◀ Esquerda</span><span>Centro</span><span>Direita ▶</span></div>
       {tip.el}

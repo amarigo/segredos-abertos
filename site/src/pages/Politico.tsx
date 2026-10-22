@@ -3,7 +3,7 @@ import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Barras, COR_GRUPO, Espectro, Explain, GastoMensal, LinkNota, Loading, ResultadoChip, VotoChip, useAno, useData } from "../components/ui";
 import {
-  GRUPO_CURTO, GRUPO_EXPLICA, casaNome, cnpjFmt, dataBR, linkSeguro, pct, proposicaoNome, reais,
+  GRUPO_CURTO, GRUPO_EXPLICA, cnpjFmt, dataBR, linkSeguro, pct, proposicaoNome, reais,
   type Grupo, type Meta, type Politico, type Recursos, type Resumo, type VotacaoResumo,
   MESES_LONGOS, descricaoCurta, tipoVotacao, type AnoDetalhe,
 } from "../data";
@@ -258,9 +258,9 @@ function Votos({ p }: { p: Politico }) {
       </section>
       {p.posicao != null && colegas.length > 0 && (
         <section>
-          <h2>Onde fica entre os colegas da {casaNome(p.casa)}</h2>
-          <Espectro destaque={p.id} pontos={colegas.map((c) => ({ id: c.id, pos: c.posicao!, label: `${c.nome} (${c.partido}-${c.uf})`, href: `/p/${c.id}` }))} />
-          <p className="muted small">O ponto amarelo é {p.nome}. Passe o mouse sobre os outros pontos para ver quem são.</p>
+          <h2>Onde fica entre os colegas {p.casa === "camara" ? "da Câmara" : "do Senado"}</h2>
+          <Espectro destaque={p.id} nomeDestaque={p.nome} pontos={colegas.map((c) => ({ id: c.id, pos: c.posicao!, label: `${c.nome} (${c.partido}-${c.uf})`, href: `/p/${c.id}` }))} />
+          <p className="muted small">O ponto dourado, marcado com o nome, é {p.nome}. Passe o mouse sobre os outros pontos para ver quem são.</p>
         </section>
       )}
       {temas.length > 0 && (

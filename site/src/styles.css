@@ -138,7 +138,14 @@ svg text { fill: var(--muted); font: 11px var(--body); }
 
 .spectrum { position: relative; height: 56px; border-radius: 8px; background: linear-gradient(90deg, color-mix(in srgb, var(--esq) 22%, var(--surface)), var(--surface) 50%, color-mix(in srgb, var(--dir) 22%, var(--surface))); border: 1px solid var(--line); }
 .spectrum .dot { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; border: 2px solid var(--surface); }
-.spectrum .me { width: 20px; height: 20px; margin: -10px 0 0 -10px; background: var(--gold); border: 3px solid var(--ink); z-index: 2; }
+.spectrum .me { width: 22px; height: 22px; margin: -11px 0 0 -11px; background: var(--gold); border: 3px solid var(--ink); box-shadow: 0 0 0 2px var(--surface); z-index: 2; }
+.spectrum-eu { position: relative; height: 30px; }
+.spectrum-eu-nome { position: absolute; bottom: 8px; max-width: 70%; padding: 2px 8px; border-radius: 6px; background: var(--ink); color: var(--surface); font-size: .78rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spectrum-eu-nome.meio { transform: translateX(-50%); }
+.spectrum-eu-nome.esq { transform: translateX(-11px); }
+.spectrum-eu-nome.dir { transform: translateX(calc(-100% + 11px)); }
+.spectrum-eu-nome::after { content: ""; position: absolute; top: 100%; border: 6px solid transparent; border-top-color: var(--ink); margin-left: -6px; }
+.spectrum-eu-nome.meio::after { left: 50%; } .spectrum-eu-nome.esq::after { left: 11px; } .spectrum-eu-nome.dir::after { left: calc(100% - 11px); }
 .esp-partidos ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: max-content 1fr; column-gap: 10px; align-items: center; }
 .esp-partidos li { display: contents; }
 .esp-nome { display: flex; align-items: baseline; gap: 6px; font-size: .85rem; white-space: nowrap; }
