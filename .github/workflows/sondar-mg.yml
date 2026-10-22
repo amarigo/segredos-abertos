@@ -7,6 +7,12 @@ on:
       - "mg/sondagem/**"
       - ".github/workflows/sondar-mg.yml"
   workflow_dispatch:
+    inputs:
+      rodada:
+        description: "Qual sondagem rodar (sondar = 1ª rodada, sondar2 = 2ª rodada)"
+        type: choice
+        options: [sondar2, sondar]
+        default: sondar2
 
 permissions:
   contents: read
@@ -14,14 +20,16 @@ permissions:
 jobs:
   sondar:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install -r etl/requirements.txt
-      - run: python mg/sondagem/sondar.py sondagem
+      - run: python "mg/sondagem/${RODADA}.py" sondagem
+        env:
+          RODADA: ${{ inputs.rodada || 'sondar2' }}
       - run: cat sondagem/relatorio.md >> "$GITHUB_STEP_SUMMARY"
         if: always()
       - uses: actions/upload-artifact@v4
