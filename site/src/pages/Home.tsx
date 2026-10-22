@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Barras, COR_GRUPO, Explain, Loading, useAno, useData } from "../components/ui";
 import { corPartido, GRUPO_CURTO, GRUPO_EXPLICA, linkSeguro, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
 import { GastoPartidos } from "./Partidos";
-import { autodefinicao, LADOS, ladoPelosVotos, type Lado } from "../partidos";
+import { LADOS, ladoPelosVotos } from "../partidos";
 import { MG, SITE } from "../recorte";
 import type { CidadeResumo } from "../data";
 
@@ -94,9 +94,9 @@ export default function Home() {
 
       {partidos && partidos.some((p) => p.casa === "camara") && (
         <section>
-          <h2>Onde cada partido diz que está</h2>
-          <Explain>Cada partido da Câmara aparece no lado em que ele mesmo se coloca, com as próprias palavras e a fonte. A maioria respondeu a um levantamento do Estadão com todos os partidos, em 2019. Para partidos novos ou que mudaram de discurso, usamos declarações mais recentes da direção. Para comparar, "pelos votos" mostra onde o partido fica pelo voto dos seus deputados. <Link to="/sobre">Entenda o cálculo</Link>.</Explain>
-          <PartidosAutodefinicao partidos={partidos.filter((p) => p.casa === "camara")} />
+          <h2>Onde cada partido está, pelos votos</h2>
+          <Explain>Cada partido da Câmara aparece no lado em que fica pelo voto dos seus deputados nas votações nominais. É o mesmo critério para todos. Não usamos o que o partido diz de si, porque nem todos se colocam num lado em documento oficial, como estatuto ou programa. Em cada grupo, os partidos vão do mais à esquerda para o mais à direita. <Link to="/sobre">Entenda o cálculo</Link>.</Explain>
+          <PartidosPelosVotos partidos={partidos.filter((p) => p.casa === "camara")} />
         </section>
       )}
       {partidos && <GastoPartidos partidos={partidos} ano={ano} limite={10} />}
@@ -105,44 +105,31 @@ export default function Home() {
   );
 }
 
-/* Partidos agrupados pelo lado em que eles mesmos se colocam */
-function PartidosAutodefinicao({ partidos }: { partidos: Partido[] }) {
-  const grupos: { titulo: string; lado: Lado | null | undefined; itens: Partido[] }[] = [
-    ...LADOS.map((l) => ({ titulo: l, lado: l as Lado | null | undefined, itens: [] as Partido[] })),
-    { titulo: "Não se coloca entre esquerda e direita", lado: null, itens: [] },
-    { titulo: "Sem declaração encontrada", lado: undefined, itens: [] },
+/* Partidos agrupados pelo lado em que ficam pelos votos dos seus deputados */
+function PartidosPelosVotos({ partidos }: { partidos: Partido[] }) {
+  const grupos = [
+    ...LADOS.map((l) => ({ titulo: l as string, itens: partidos.filter((p) => p.posicao != null && ladoPelosVotos(p.posicao) === l) })),
+    { titulo: "Sem votos suficientes", itens: partidos.filter((p) => p.posicao == null) },
   ];
-  partidos.slice().sort((a, b) => b.n - a.n).forEach((p) => {
-    const a = autodefinicao(p.sigla);
-    grupos.find((g) => g.lado === (a ? a.lado : undefined))!.itens.push(p);
-  });
   return (
-    <div className="autodef">
-      {grupos.filter((g) => g.itens.length > 0).map((g) => (
-        <div key={g.titulo} className="autodef-grupo">
-          <h3>{g.titulo}</h3>
-          <ul>
-            {g.itens.map((p) => {
-              const a = autodefinicao(p.sigla);
-              return (
+    <div className="lados">
+      {grupos.filter((g) => g.itens.length > 0).map((g) => {
+        const itens = g.itens.slice().sort((a, b) => (a.posicao ?? 0) - (b.posicao ?? 0) || b.n - a.n);
+        const deps = itens.reduce((s, p) => s + p.n, 0);
+        return (
+          <div key={g.titulo} className="lados-grupo">
+            <h3>{g.titulo} <small>{deps} deputado{deps === 1 ? "" : "s"}</small></h3>
+            <ul>
+              {itens.map((p) => (
                 <li key={p.sigla}>
-                  <div className="autodef-topo">
-                    <span><i className="partido-cor" style={{ background: corPartido(p.sigla) }} /><Link to={`/politicos?partido=${encodeURIComponent(p.sigla)}`}><strong>{p.sigla}</strong></Link> <small>{p.n} dep.</small></span>
-                    {p.posicao != null && <small className="autodef-votos">Pelos votos: {ladoPelosVotos(p.posicao)}</small>}
-                  </div>
-                  {a && (
-                    <p>
-                      {a.literal ? <q>{a.diz}</q> : a.diz}
-                      {a.nota && <span className="autodef-nota"> {a.nota}</span>}
-                      <small className="autodef-fonte">Fonte: <a href={a.fonte.url} target="_blank" rel="noreferrer">{a.fonte.nome}</a>, {a.fonte.quando}</small>
-                    </p>
-                  )}
+                  <span><i className="partido-cor" style={{ background: corPartido(p.sigla) }} /><Link to={`/politicos?partido=${encodeURIComponent(p.sigla)}`}><strong>{p.sigla}</strong></Link></span>
+                  <small>{p.n} dep.</small>
                 </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
+              ))}
+            </ul>
+          </div>
+        );
+      })}
     </div>
   );
 }
