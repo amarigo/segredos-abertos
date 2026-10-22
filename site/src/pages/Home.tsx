@@ -4,12 +4,15 @@ import { Barras, COR_GRUPO, Explain, Loading, useAno, useData } from "../compone
 import { corPartido, GRUPO_CURTO, GRUPO_EXPLICA, linkSeguro, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
 import { GastoPartidos } from "./Partidos";
 import { autodefinicao, LADOS, ladoPelosVotos, type Lado } from "../partidos";
+import { MG, SITE } from "../recorte";
+import type { CidadeResumo } from "../data";
 
 export default function Home() {
   const { data: meta, error } = useData<Meta>("meta.json");
   const { data: pols } = useData<Resumo[]>("politicos.json");
   const { data: emps } = useData<EmpresaResumo[]>("empresas.json");
   const { data: partidos } = useData<Partido[]>("partidos.json");
+  const { data: cidades } = useData<CidadeResumo[]>(MG ? "cidades.json" : null);
   const [q, setQ] = useState("");
   const nav = useNavigate();
   const { ano } = useAno();
@@ -38,15 +41,30 @@ export default function Home() {
       <section className="hero">
         <span className="eyebrow">Cota parlamentar · {ano}</span>
         <div className="big">{reaisCurto(meta.total_por_ano?.[ano] || 0)}</div>
-        <p>foi o que os {meta.contagens.politicos} deputados federais e senadores em exercício pediram de reembolso com dinheiro público em {ano}.{meta.custo_por_ano?.[ano] ? <> Somando salários e equipe dos gabinetes, o custo conhecido chega a <strong>{reaisCurto(meta.custo_por_ano[ano])}</strong>.</> : null} Veja quanto cada um gastou, com quais empresas, quem são os donos dessas empresas e como cada um vota.</p>
+        <p>foi o que os {meta.contagens.politicos} {SITE.quem} pediram de reembolso com dinheiro público em {ano}.{meta.custo_por_ano?.[ano] ? <> Somando salários e equipe dos gabinetes, o custo conhecido chega a <strong>{reaisCurto(meta.custo_por_ano[ano])}</strong>.</> : null} Veja quanto cada um gastou, com quais empresas, quem são os donos dessas empresas e como cada um vota.</p>
         <form className="search" role="search" onSubmit={(e) => { e.preventDefault(); if (resultados[0]) nav(`/p/${resultados[0].id}`); }}>
-          <label htmlFor="busca" className="muted small" style={{ flexBasis: "100%" }}>Procure seu deputado ou senador</label>
-          <input id="busca" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nome, partido ou estado (ex.: SP)" autoComplete="off" />
+          <label htmlFor="busca" className="muted small" style={{ flexBasis: "100%" }}>{SITE.busca}</label>
+          <input id="busca" value={q} onChange={(e) => setQ(e.target.value)} placeholder={SITE.buscaExemplo} autoComplete="off" />
         </form>
         {resultados.length > 0 && (
           <div className="list">{resultados.map((p) => <PessoaLinha key={p.id} p={p} />)}</div>
         )}
       </section>
+
+      {MG && cidades && cidades.length > 0 && (
+        <section>
+          <h2>Sua cidade</h2>
+          <Explain>Quem foi prefeito e quais partidos tiveram vereadores desde 1997, para saber de quem cobrar.</Explain>
+          <div className="grid">
+            {cidades.map((c) => (
+              <Link key={c.id} to={`/cidade/${c.id}`} className="card cidade-card">
+                <strong className="cidade-nome">{c.nome}</strong>
+                {c.prefeito && <span className="small"><i className="partido-cor" style={{ background: corPartido(c.prefeito.partido_hoje) }} />Prefeito: {c.prefeito.nome} ({c.prefeito.partido})</span>}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section>
         <h2>Para onde vai o dinheiro</h2>

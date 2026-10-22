@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { Explain, Loading, ResultadoChip, VotoBarra, VotoChip, VotoLegenda, useData } from "../components/ui";
 import { casaNome, dataBR, descricaoCurta, linkSeguro, proposicaoNome, tipoVotacao, type Votacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
+import { MG } from "../recorte";
 
 const LADOS = ["Esquerda", "Centro-esquerda", "Centro", "Centro-direita", "Direita"];
 
@@ -28,7 +29,9 @@ export default function VotacaoPage() {
         {v.proposicao?.ementa && <p className="muted"><strong>Sobre a proposta:</strong> {v.proposicao.ementa}</p>}
         <div className="row">
           <ResultadoChip aprovada={v.aprovada} />
-          <span className="chip">Sim {v.sim} · Não {v.nao}</span>
+          {v.placar_casa
+            ? <><span className="chip">{casaNome(v.casa)}: Sim {v.placar_casa.sim} · Não {v.placar_casa.nao}</span><span className="chip">Bancada de MG: Sim {v.sim} · Não {v.nao}</span></>
+            : <span className="chip">Sim {v.sim} · Não {v.nao}</span>}
           {linkSeguro(v.proposicao?.url) && <a className="chip" href={linkSeguro(v.proposicao?.url)} target="_blank" rel="noreferrer">Ver a proposta e as votações no site {v.casa === "camara" ? "da Câmara" : "do Senado"} ↗</a>}
           {v.temas?.map((t) => <Link key={t} className="chip" to={`/votacoes?tema=${encodeURIComponent(t)}`}>{t}</Link>)}
         </div>
@@ -52,8 +55,8 @@ export default function VotacaoPage() {
                       </div>
                       <div className="small muted">{variosDias && <>{dataBR(x.data)} · </>}{descricaoCurta(x.descricao).slice(0, 200)}</div>
                     </td>
-                    <td className="r num">{x.sim}</td>
-                    <td className="r num">{x.nao}</td>
+                    <td className="r num">{(x.placar_casa || x).sim}</td>
+                    <td className="r num">{(x.placar_casa || x).nao}</td>
                   </tr>
                 ))}
               </tbody>
@@ -62,8 +65,22 @@ export default function VotacaoPage() {
         </section>
       )}
 
+      {v.por_partido_mg && Object.keys(v.por_partido_mg).length > 0 && (
+        <section>
+          <h2>Como votou a bancada de Minas Gerais</h2>
+          <VotoLegenda />
+          <div className="bars">
+            {Object.entries(v.por_partido_mg).sort((a, b) => tot(b[1]) - tot(a[1])).map(([sigla, c]) => (
+              <div key={sigla} className="bar-row" style={{ gridTemplateColumns: "150px 1fr" }}>
+                <span><strong>{sigla}</strong> <span className="muted small">{c["Sim"] || 0} Sim · {c["Não"] || 0} Não</span></span><VotoBarra c={c} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section>
-        <h2>Por tendência (esquerda e direita)</h2>
+        <h2>Por tendência (esquerda e direita){MG && ", na Casa inteira"}</h2>
         <Explain>Agrupamos os parlamentares pela posição calculada a partir de todos os seus votos.</Explain>
         <VotoLegenda />
         <div className="bars">
@@ -76,7 +93,7 @@ export default function VotacaoPage() {
       </section>
 
       <section>
-        <h2>Por partido</h2>
+        <h2>Por partido{MG && ", na Casa inteira"}</h2>
         <div className="table-wrap">
           <table>
             <thead><tr><th>Partido</th><th style={{ width: "45%" }}>Votos</th><th className="r">Sim</th><th className="r">Não</th><th>Orientação do partido</th></tr></thead>
@@ -99,7 +116,7 @@ export default function VotacaoPage() {
       </section>
 
       <section>
-        <h2>Voto de cada um</h2>
+        <h2>{MG ? "Voto de cada um de Minas" : "Voto de cada um"}</h2>
         <div className="search"><input id="busca-voto" aria-label="Buscar parlamentar" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nome, partido ou estado" /></div>
         <div className="table-wrap">
           <table>

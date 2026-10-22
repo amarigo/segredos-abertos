@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 // Testes de navegador (topo da pirâmide). Antes: dados de teste em public/data (etl/tests/gerar_dados_teste.py) e npm run build.
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: "mg.spec.ts",
   timeout: 30_000,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",

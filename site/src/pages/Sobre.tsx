@@ -1,7 +1,32 @@
+import { MG, SITE } from "../recorte";
+
+/* O que muda no Minas Nossa: o recorte de MG e as páginas das cidades */
+function SobreMG() {
+  return (
+    <>
+      <h2>O que é o Minas Nossa</h2>
+      <p>É a parte de Minas Gerais do <a href={SITE.nacional}>Segredos Abertos Brasil</a>. Mostra os deputados federais e os senadores eleitos por Minas, com os mesmos dados e as mesmas contas do site nacional, e páginas para cada cidade acompanhada. Os deputados estaduais, o governador e as Câmaras Municipais entram nas próximas etapas.</p>
+      <p>Nas votações, o resultado (aprovado ou rejeitado) e o placar são os da Casa inteira. Ao lado mostramos como votou a bancada de Minas. A posição de esquerda e direita de cada parlamentar continua calculada com todos os colegas da Casa, que é a régua certa para comparar.</p>
+      <h2>Páginas das cidades</h2>
+      <p>Usamos os resultados de todas as eleições desde 1996, publicados pelo <a href="https://dadosabertos.tse.jus.br" target="_blank" rel="noreferrer">Tribunal Superior Eleitoral (TSE)</a>: quem foi eleito prefeito, vice e vereador, por qual partido e coligação, com quantos votos, e como a cidade votou para presidente, governador, senador e deputados.</p>
+      <p>Muitos partidos mudaram de nome ou se juntaram a outros: o PMDB virou MDB, o PFL virou DEM e depois União Brasil, o PR voltou a ser PL. Para saber de quem cobrar, mostramos a sigla do dia da eleição e, ao lado, o nome de hoje. As contas de "anos no comando" e "vereadores eleitos" juntam as siglas antigas com a de hoje.</p>
+      <p>Os arquivos do TSE trazem CPF, e-mail e outros dados pessoais dos candidatos. Não lemos essas colunas: nada disso é guardado nem aparece no site.</p>
+      <h2>Limites das páginas das cidades</h2>
+      <ul>
+        <li>O partido é o do dia da eleição. Trocas de partido no meio do mandato, cassações, renúncias e suplentes que assumiram não aparecem.</li>
+        <li>Ter maioria na eleição não garante maioria o mandato todo: vereadores mudam de lado.</li>
+        <li>Eleições suplementares (refeitas no meio do mandato) ficam de fora.</li>
+        <li>Se o TSE estiver fora do ar, usamos a última cópia baixada. Se não houver cópia, a página avisa qual eleição ficou de fora.</li>
+      </ul>
+    </>
+  );
+}
+
 export default function Sobre() {
   return (
     <section style={{ maxWidth: 720 }}>
       <h1>Como funciona</h1>
+      {MG && <SobreMG />}
       <h2>De onde vêm os dados</h2>
       <p>Tudo vem de fontes oficiais e públicas, baixadas automaticamente todos os dias:</p>
       <ul>
@@ -47,7 +72,7 @@ export default function Sobre() {
       <h2>Limites</h2>
       <ul>
         <li>A Câmara não publica o salário de cada assessor na lista da equipe, só o total gasto com a verba de gabinete. O Senado não publica o custo total da equipe de cada senador.</li>
-        <li>Deputados estaduais e governadores ainda não estão incluídos. Estão nas próximas etapas.</li>
+        <li>Deputados estaduais e governadores ainda não estão incluídos{MG ? "" : " (o Minas Nossa começa por Minas Gerais)"}. Estão nas próximas etapas.</li>
         <li>Votações simbólicas e secretas não têm voto individual, então não aparecem.</li>
         <li>A Receita esconde parte do CPF dos sócios, então a ligação entre empresas do mesmo dono pode ter homônimos.</li>
       </ul>

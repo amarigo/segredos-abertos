@@ -9,3 +9,8 @@ site/test-results/
 site/playwright-report/
 .hypothesis/
 etl/.hypothesis/
+site/public-mg/data/
+site/public-mg/icon.svg
+site/public-mg/sw.js
+mg/etl/.cache/
+site/playwright-report-mg/

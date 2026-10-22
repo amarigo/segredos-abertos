@@ -52,9 +52,11 @@ export default function Politicos() {
         <select id="filtro-casa" aria-label="Casa" value={casa} onChange={(e) => setCasa(e.target.value)}>
           <option value="">Câmara e Senado</option><option value="camara">Deputados federais</option><option value="senado">Senadores</option>
         </select>
-        <select id="filtro-uf" aria-label="Estado" value={uf} onChange={(e) => setUf(e.target.value)}>
-          <option value="">Todos os estados</option>{ufs.map((u) => <option key={u}>{u}</option>)}
-        </select>
+        {ufs.length > 1 && (
+          <select id="filtro-uf" aria-label="Estado" value={uf} onChange={(e) => setUf(e.target.value)}>
+            <option value="">Todos os estados</option>{ufs.map((u) => <option key={u}>{u}</option>)}
+          </select>
+        )}
         <select id="filtro-partido" aria-label="Partido" value={partido} onChange={(e) => setPartido(e.target.value)}>
           <option value="">Todos os partidos</option>{partidos.map((u) => <option key={u}>{u}</option>)}
         </select>
