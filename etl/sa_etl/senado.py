@@ -186,6 +186,7 @@ def votacoes(anos: list[int], ids: set[str]) -> tuple[list[dict], list[dict]]:
 def normaliza_voto_senado(s: str) -> str:
     s = (s or "").strip()
     mapa = {"SIM": "Sim", "NÃO": "Não", "NAO": "Não", "ABST": "Abstenção", "ABSTENÇÃO": "Abstenção",
-            "P-NRV": "Presente sem votar", "PRESIDENTE": "Presidente (art. 51)", "AP": "Ausente", "MIS": "Em missão",
-            "LP": "Licença", "LS": "Licença", "NCOM": "Ausente", "REP": "Em missão"}
+            "P-NRV": "Presente sem votar", "PRESIDENTE": "Presidente (art. 51)", "AP": "Em atividade parlamentar",
+            "MIS": "Em missão", "LP": "Licença", "LS": "Licença", "LAP": "Licença", "LG": "Licença", "LC": "Licença",
+            "NCOM": "Ausente", "REP": "Em missão"}
     return mapa.get(s.upper(), normaliza_voto(s))

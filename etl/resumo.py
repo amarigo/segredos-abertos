@@ -70,3 +70,29 @@ mesmo_dia = Counter((v["casa"], v["data"], json.dumps(v.get("proposicao"), sort_
 print(f"- Propostas com mais de uma votação no mesmo dia: {sum(1 for n in mesmo_dia.values() if n > 1)}")
 for v in [v for v in vots if mesmo_dia.get((v["casa"], v["data"], json.dumps(v.get("proposicao"), sort_keys=True)), 0) > 2][:6]:
     print(f"  - {v['casa']} {v['data']} {(v.get('proposicao') or {}).get('numero')}: {(v.get('descricao') or '')[:160]}")
+
+print("\n### Atuação (propostas, relatorias, votações, discursos, presença)")
+import statistics  # noqa: E402
+for ano in meta["anos"]:
+    for casa in ("camara", "senado"):
+        at = [p["por_ano"].get(str(ano), {}).get("atuacao") for p in pols if p["casa"] == casa]
+        com = [a for a in at if a]
+        if not com:
+            print(f"- {ano} {casa}: sem dados de atuação")
+            continue
+        partes = []
+        for k in ("autoria", "relatadas", "votacoes", "discursos"):
+            vs = [a[k] for a in com if a.get(k) is not None]
+            if vs:
+                partes.append(f"{k}: {len(vs)} com dado, mediana {statistics.median(vs):g}, máx {max(vs)}")
+        for k in ("plenario", "comissoes"):
+            vs = [a[k] for a in com if a.get(k) and sum(a[k])]
+            if vs:
+                pct = [v[0] / sum(v) for v in vs]
+                partes.append(f"{k}: {len(vs)} com dado, presença mediana {statistics.median(pct):.0%}")
+        print(f"- {ano} {casa}: {len(com)} de {len(at)} com atuação · " + " · ".join(partes))
+for casa in ("camara", "senado"):
+    for k in ("autoria", "relatadas", "discursos"):
+        top = sorted(((a[k], p["nome"], ano) for p in pols if p["casa"] == casa for ano in meta["anos"]
+                      if (a := p["por_ano"].get(str(ano), {}).get("atuacao") or {}).get(k) is not None), reverse=True)[:4]
+        print(f"- {casa}, mais {k}: " + ", ".join(f"{n} ({ano}) {v}" for v, n, ano in top))

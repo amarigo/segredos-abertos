@@ -8,6 +8,40 @@ export interface AnoResumo {
   salario: number | null; verba_gabinete: number | null; outros_gastos: number | null;
   cota_oficial: number | null; n_pessoal: number | null; custo_total: number;
   fora_do_periodo?: number; meses_fora?: number[];
+  atuacao?: Atuacao;
+}
+/** Atuação no ano. Presença: [presente, ausência justificada, ausência não justificada].
+ *  Câmara: tudo da página oficial do deputado (Plenário em dias, comissões em reuniões).
+ *  Senado: propostas, relatorias e discursos dos dados abertos; Plenário contado pelas votações nominais. */
+export interface Atuacao {
+  autoria?: number; relatadas?: number; votacoes?: number; discursos?: number;
+  plenario?: [number, number, number]; comissoes?: [number, number, number];
+}
+export type MetricaAtuacao = "autoria" | "relatadas" | "votacoes" | "discursos";
+export const METRICAS_ATUACAO: { chave: MetricaAtuacao; nome: string; explica: Record<Casa, string> }[] = [
+  { chave: "autoria", nome: "Propostas apresentadas", explica: {
+    camara: "Projetos, requerimentos e outras propostas de que foi autor ou coautor no ano. Alguns deputados apresentam centenas de requerimentos por ano.",
+    senado: "Projetos, requerimentos e outras propostas de que foi autor ou coautor no ano." } },
+  { chave: "relatadas", nome: "Relatorias", explica: {
+    camara: "Propostas em que foi relator: quem estuda o texto e dá o parecer para os colegas votarem. Membros da Mesa Diretora, como o 1º vice-presidente, aparecem com milhares de propostas e relatorias, porque a página oficial conta os pareceres que eles dão em nome da Mesa.",
+    senado: "Propostas em que foi relator no ano: quem estuda o texto e dá o parecer para os colegas votarem." } },
+  { chave: "votacoes", nome: "Votações no Plenário", explica: {
+    camara: "Votações nominais (em que cada voto fica registrado com o nome) de que participou.",
+    senado: "Votações nominais (em que cada voto fica registrado com o nome) de que participou." } },
+  { chave: "discursos", nome: "Discursos", explica: {
+    camara: "Discursos no Plenário da Câmara.",
+    senado: "Falas registradas no Senado: discursos, falas como relator, pela ordem e pela liderança." } },
+];
+/** Teve mandato no ano: há presença registrada ou alguma atividade. */
+export function atuacaoAtiva(a?: Atuacao): a is Atuacao {
+  if (!a) return false;
+  const soma = (x?: number[]) => (x ? x[0] + x[1] + x[2] : 0);
+  return soma(a.plenario) + soma(a.comissoes) + (a.votacoes || 0) + (a.autoria || 0) + (a.discursos || 0) > 0;
+}
+/** Parte das sessões em que esteve presente (0 a 1), ou null se não houve sessões. */
+export function taxaPresenca(x?: [number, number, number]): number | null {
+  const t = x ? x[0] + x[1] + x[2] : 0;
+  return t ? x![0] / t : null;
 }
 export interface Resumo {
   id: string; casa: Casa; cargo: string; nome: string; partido: string; uf: string; foto: string;
