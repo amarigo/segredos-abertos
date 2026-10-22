@@ -1,0 +1,31 @@
+/* Página de emendas parlamentares */
+.emd-medida { gap: 8px 12px; }
+.emd-medida > .small:last-child { flex: 1 1 260px; }
+.emd-nivel { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.emd-nivel .card { gap: 2px; }
+.emd-nivel strong { font-size: 1.25rem; }
+.emd-notas { margin: 0; padding-left: 20px; display: grid; gap: 4px; max-width: 72ch; }
+
+.emd-autores { display: grid; border-top: 1px solid var(--line); }
+.emd-autor { border-bottom: 1px solid var(--line); }
+.emd-autor summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 2.2em minmax(0, 1fr) auto; gap: 4px 10px; align-items: baseline; padding: 10px 4px; }
+.emd-autor summary::-webkit-details-marker { display: none; }
+.emd-autor summary:hover strong { text-decoration: underline; }
+.emd-autor[open] summary { background: color-mix(in srgb, var(--gold) 10%, transparent); }
+.emd-quem { display: grid; min-width: 0; }
+.emd-quem strong { overflow-wrap: anywhere; }
+.emd-valor { font-weight: 600; white-space: nowrap; }
+.emd-autor .track { grid-column: 2 / -1; height: 8px; background: var(--grid); border-radius: 4px; overflow: hidden; display: block; }
+.emd-autor .fill { display: block; height: 100%; border-radius: 0 4px 4px 0; }
+.emd-det { display: grid; gap: 12px 24px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); padding: 4px 4px 16px calc(2.2em + 14px); }
+@media (max-width: 520px) { .emd-det { padding-left: 4px; } }
+.emd-det h4 { margin: 0 0 6px; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.emd-det ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .9rem; }
+.emd-det li { display: flex; justify-content: space-between; gap: 12px; }
+.emd-det li span:first-child { min-width: 0; overflow-wrap: anywhere; }
+
+/* Tabela de partidos: no celular as áreas vão para baixo do nome */
+@media (max-width: 599px) { .so-largo-emd { display: none; } }
+@media (min-width: 600px) { .emd-areas-cel { display: none; } }
+.emd-areas-cel { margin-top: 4px; }
+.emd-det li .num { white-space: nowrap; flex-shrink: 0; }

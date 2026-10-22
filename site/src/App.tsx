@@ -9,6 +9,7 @@ import Votacoes from "./pages/Votacoes";
 import VotacaoPage from "./pages/Votacao";
 import Sobre from "./pages/Sobre";
 import Partidos from "./pages/Partidos";
+import Emendas from "./pages/Emendas";
 import { AnoCtx, AnoSeletor, useData } from "./components/ui";
 import { dataBR, type Meta } from "./data";
 
@@ -33,6 +34,7 @@ export default function App() {
             <NavLink to="/empresas">Empresas</NavLink>
             <NavLink to="/votacoes">Votações</NavLink>
             <NavLink to="/partidos">Partidos</NavLink>
+            <NavLink to="/emendas">Emendas</NavLink>
             <NavLink to="/sobre">Como funciona</NavLink>
           </nav>
           <AnoSeletor />
@@ -48,13 +50,14 @@ export default function App() {
           <Route path="/votacoes" element={<Votacoes />} />
           <Route path="/v/:id" element={<VotacaoPage />} />
           <Route path="/partidos" element={<Partidos />} />
+          <Route path="/emendas" element={<Emendas />} />
           <Route path="/sobre" element={<Sobre />} />
           <Route path="*" element={<div className="empty">Página não encontrada. <Link to="/">Voltar ao início</Link></div>} />
         </Routes>
       </main>
       <footer>
         <div className="wrap">
-          <span>Dados oficiais da Câmara dos Deputados, do Senado Federal e da Receita Federal{meta ? `, atualizados em ${dataBR(meta.atualizado_em)}` : ""}.</span>
+          <span>Dados oficiais da Câmara dos Deputados, do Senado Federal, da Receita Federal e do Portal da Transparência{meta ? `, atualizados em ${dataBR(meta.atualizado_em)}` : ""}.</span>
           <span>Projeto independente e sem fins lucrativos. Código aberto em <a href="https://github.com/amarigo/segredos-abertos">GitHub</a>.</span>
         </div>
       </footer>
