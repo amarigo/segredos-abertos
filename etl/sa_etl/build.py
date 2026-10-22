@@ -11,7 +11,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import camara, cnpj, emendas, ideologia, links_notas, pagamentos, passagens, recursos, senado, temas
+from . import autorias, camara, cnpj, emendas, ideologia, links_notas, pagamentos, passagens, recursos, senado, temas
 from .categorias import GRUPOS
 from . import util
 from .util import cnpj_valido, doc_kind, mask_cpf, write_json
@@ -45,6 +45,7 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
     emps = cnpj.empresas(alvo, cache / "cnpj")
     socias = cnpj.buscar_socias(emps, cache / "cnpj")  # holdings: sócios que são empresas
     rec = recursos.coletar(politicos, anos, cache / "recursos") if com_recursos else {}
+    aut = autorias.coletar(politicos, anos, cache / "autorias") if com_recursos else {}
     if rec:
         despesas += buscar_passagens(despesas, politicos, rec, cache / "passagens")
     try:
@@ -53,7 +54,7 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
         log.warning("Não foi possível conferir os links das notas: %s", e)
     return {"politicos": politicos, "despesas": despesas, "votacoes": vc + vs,
             "votos": votos_c + votos_s, "empresas": emps,
-            "empresas_socias": socias, "recursos": rec}
+            "empresas_socias": socias, "recursos": rec, "autorias": aut}
 
 
 SEM_NOTA = "Despesas sem nota nos dados abertos"
@@ -228,6 +229,7 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         v["temas"] = temas.temas_da_votacao(v)
     votacao_por_id = {v["id"]: v for v in votacoes}
     rec_todos = salario_senadores(politicos, dados.get("recursos") or {})
+    autorias_todas = dados.get("autorias") or {}
     resumo = []
     for p in politicos:
         ds = desp_por.get(p["id"], [])
@@ -245,6 +247,8 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
             extra["custo_total"] = round(det["total"] + (extra["salario"] or 0) + (extra["verba_gabinete"] or 0)
                                          + (extra["outros_gastos"] or 0), 2)
             atuacao = dict(r.get("atuacao") or {})
+            aut = autorias_todas.get(p["id"], {})
+            atuacao.update(aut.get(ano) or aut.get(str(ano)) or {})
             if p["casa"] == "senado" and sum(pres_senado.get(ano, [])):
                 atuacao["plenario"] = pres_senado[ano]
                 atuacao["votacoes"] = pres_senado[ano][0]

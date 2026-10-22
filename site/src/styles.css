@@ -334,6 +334,13 @@ tr.atual td { background: color-mix(in srgb, var(--gold) 12%, transparent); }
 .atu-pres { display: grid; gap: 3px; }
 .atu-pres-barra { display: flex; gap: 2px; height: 14px; border-radius: 4px; overflow: hidden; background: var(--line); }
 .atu-pres-barra span { min-width: 3px; }
-.atu-trilha { position: relative; height: 14px; border-radius: 4px; background: color-mix(in srgb, var(--line) 70%, transparent); margin: 6px 0 2px; }
-.atu-barra { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--s1); min-width: 2px; }
-.atu-mediana { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--ink); }
+/* Acima ou abaixo da maioria: a seta leva a cor, o texto fica na cor do texto */
+.atu-veredito { display: grid; gap: 2px; }
+.atu-lado { font-weight: 700; }
+.atu-lado span { display: inline-block; width: 1.1em; }
+.atu-acima span { color: var(--sim); } .atu-abaixo span { color: var(--nao); } .atu-meio span { color: var(--muted); }
+/* O político e o típico em duas barras na mesma escala */
+.atu-comp { display: grid; grid-template-columns: max-content 1fr max-content; align-items: center; gap: 4px 8px; margin: 2px 0; }
+.atu-comp-trilha { height: 12px; border-radius: 4px; background: color-mix(in srgb, var(--line) 70%, transparent); overflow: hidden; }
+.atu-comp-eu, .atu-comp-tipico { display: block; height: 100%; border-radius: 4px; min-width: 2px; }
+.atu-comp-eu { background: var(--s1); } .atu-comp-tipico { background: var(--muted); }
