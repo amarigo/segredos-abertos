@@ -1,3 +1,4 @@
+import { AtuacaoPolitico } from "./Atuacao";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Barras, COR_GRUPO, Espectro, Explain, GastoMensal, LinkNota, Loading, VotoChip, useAno, useData } from "../components/ui";
@@ -12,8 +13,8 @@ export default function PoliticoPage() {
   const { data: p, error } = useData<Politico>(`p/${id}.json`);
   const { data: meta } = useData<Meta>("meta.json");
   const [params, setParams] = useSearchParams();
-  const aba = params.get("aba") === "votos" ? "votos" : "gastos";
-  const setAba = (a: "gastos" | "votos") => setParams(a === "votos" ? { aba: a } : {}, { replace: true });
+  const aba = params.get("aba") === "votos" ? "votos" : params.get("aba") === "atuacao" ? "atuacao" : "gastos";
+  const setAba = (a: "gastos" | "atuacao" | "votos") => setParams(a !== "gastos" ? { aba: a } : {}, { replace: true });
   if (!p) return <Loading error={error} />;
   return (
     <>
@@ -32,9 +33,10 @@ export default function PoliticoPage() {
       </section>
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={aba === "gastos"} onClick={() => setAba("gastos")}>Gastos e equipe</button>
+        <button role="tab" aria-selected={aba === "atuacao"} onClick={() => setAba("atuacao")}>Atuação</button>
         <button role="tab" aria-selected={aba === "votos"} onClick={() => setAba("votos")}>Votos</button>
       </div>
-      {aba === "gastos" ? <Gastos p={p} meta={meta} /> : <Votos p={p} />}
+      {aba === "gastos" ? <Gastos p={p} meta={meta} /> : aba === "atuacao" ? <AtuacaoPolitico p={p} /> : <Votos p={p} />}
     </>
   );
 }

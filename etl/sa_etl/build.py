@@ -204,6 +204,7 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         ds = desp_por.get(p["id"], [])
         rec = rec_todos.get(p["id"], {})
         por_ano, detalhe = {}, {}
+        pres_senado = presenca_por_votos(votos_por_politico.get(p["id"], []), votacao_por_id) if p["casa"] == "senado" else {}
         for ano in anos:
             d_ano = [d for d in ds if d["ano"] == ano]
             r = rec.get(ano) or rec.get(str(ano)) or {}
@@ -214,6 +215,12 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
             extra.update(fora_do_periodo_oficial(d_ano, r))
             extra["custo_total"] = round(det["total"] + (extra["salario"] or 0) + (extra["verba_gabinete"] or 0)
                                          + (extra["outros_gastos"] or 0), 2)
+            atuacao = dict(r.get("atuacao") or {})
+            if p["casa"] == "senado" and sum(pres_senado.get(ano, [])):
+                atuacao["plenario"] = pres_senado[ano]
+                atuacao["votacoes"] = pres_senado[ano][0]
+            if atuacao:
+                extra["atuacao"] = atuacao
             por_ano[str(ano)] = {"total": det["total"], "grupos": det["grupos"], **extra}
             detalhe[str(ano)] = {**det, "recursos": r or None, **extra}
         meus_votos = sorted(
@@ -425,6 +432,22 @@ def fora_do_periodo_oficial(ds: list[dict], r: dict) -> dict:
     if not fora or abs(sum(fora.values())) < 0.01:
         return {}
     return {"fora_do_periodo": round(sum(fora.values()), 2), "meses_fora": sorted(fora)}
+
+
+PRESENTE = {"Sim", "Não", "Abstenção", "Presente sem votar", "Obstrução"}
+AUSENCIA_JUSTIFICADA = {"Em missão", "Licença", "Em atividade parlamentar"}
+
+
+def presenca_por_votos(votos: list[dict], votacao_por_id: dict) -> dict[int, list[int]]:
+    """Senado: presença no Plenário contada pelas votações nominais. [presente, ausência justificada, não justificada]."""
+    out: dict[int, list[int]] = defaultdict(lambda: [0, 0, 0])
+    for v in votos:
+        voto = v["voto"]
+        i = (0 if voto in PRESENTE or voto.startswith("Presidente") else 1 if voto in AUSENCIA_JUSTIFICADA
+             else 2 if voto == "Ausente" else None)
+        if i is not None:
+            out[int(votacao_por_id[v["votacao"]]["data"][:4])][i] += 1
+    return out
 
 
 def custos_extras(casa: str, r: dict) -> dict:

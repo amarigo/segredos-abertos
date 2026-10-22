@@ -293,7 +293,7 @@ def test_lista_oficial_de_passagens():
 
 def test_busca_passagens_sem_repetir_e_completa_o_resto(tmp_path, monkeypatch):
     from sa_etl import build, passagens
-    monkeypatch.setattr(passagens, "_get_text", lambda url: LISTA_HTML)
+    monkeypatch.setattr(passagens, "_get_text", lambda url, **kw: LISTA_HTML)
     pols = [{"id": "dep-1", "casa": "camara"}]
     desp = [{"politico": "dep-1", "ano": 2025, "mes": 10, "valor": 3019.06, "nu": "2227", "num": "9572255027892"}]
     rec = {"dep-1": {2025: {"cota_meses": [{"mes": 10, "valor": 3019.06 + 500}]}}}
@@ -314,7 +314,7 @@ def test_links_oficiais_das_notas():
 
 def test_passagens_nunca_passam_do_total_oficial(tmp_path, monkeypatch):
     from sa_etl import build, passagens
-    monkeypatch.setattr(passagens, "_get_text", lambda url: LISTA_HTML)
+    monkeypatch.setattr(passagens, "_get_text", lambda url, **kw: LISTA_HTML)
     pols = [{"id": "dep-1", "casa": "camara"}]
     # O bilhete da LATAM já está nos dados abertos, mas em outro mês e com zeros à esquerda: não entra de novo.
     desp = [{"politico": "dep-1", "ano": 2025, "mes": 9, "valor": 3019.06, "nu": "2227", "num": "0009572255027892"}]
@@ -374,3 +374,55 @@ def test_notas_sem_pdf_vao_para_a_pagina_de_detalhe(tmp_path, monkeypatch):
     assert chamadas == ["1649/2026/2"]
     assert r["sem_pdf"] == 0 and ds[1]["link"] == "nota" and ds[1]["url"].endswith("2.pdf")
 
+
+def test_lista_de_passagens_lenta_nao_trava_a_coleta(tmp_path, monkeypatch):
+    from sa_etl import passagens
+    chamadas = []
+    monkeypatch.setattr(passagens, "_get_text", lambda url, **kw: chamadas.append(url))  # nunca responde
+    meses = [("dep-1", "2227", 2024, 5)]
+    assert passagens.coletar(meses, [], {("dep-1", 2024, 5): 100}, tmp_path) == []
+    assert len(chamadas) == 1
+    # Mês antigo que não respondeu: só tenta de novo daqui a uma semana
+    passagens.coletar(meses, [], {("dep-1", 2024, 5): 100}, tmp_path)
+    assert len(chamadas) == 1
+    # Sem tempo: não consulta e usa o cache
+    passagens.coletar([("dep-1", "2227", 2024, 6)], [], {}, tmp_path, minutos=0)
+    assert len(chamadas) == 1
+
+ATUACAO = ("Atividades na Câmara Selecione um ano abaixo 2023 2024 2025 Atuação no Plenário e Comissões 2025 Propostas legislativas de sua autoria 8 "
+           "relatadas 0 Votações nominais ? em Plenário 399 Discursos em Plenário 2 Vídeo Áudio Presença Presenças Ausências justificadas "
+           "Ausências não justificadas Presença em Plenário Sobre Presença em Plenário ? Presenças na Câmara 108 dias Ausências justificadas "
+           "13 dias Ausências não justificadas 0 dias Presença em Comissões Sobre Presença em comissões ? Presenças na Câmara 8 reuniões "
+           "Ausências justificadas 19 reuniões Ausências não justificadas 1 reunião Foi integrante das seguintes comissões: Titular")
+
+
+def test_atuacao_camara():
+    a = recursos.parse_camara_atuacao(ATUACAO, 2025)
+    assert a == {"autoria": 8, "relatadas": 0, "votacoes": 399, "discursos": 2, "plenario": [108, 13, 0], "comissoes": [8, 19, 1]}
+    assert recursos.parse_camara_atuacao(ATUACAO, 2024) is None  # a página mostrou outro ano: não serve
+
+
+def test_atuacao_senado():
+    d = {"DiscursosParlamentar": {"Parlamentar": {"Pronunciamentos": {"Pronunciamento": [
+        {"SiglaCasaPronunciamento": "SF"}, {"SiglaCasaPronunciamento": "CN"}, {"SiglaCasaPronunciamento": "SF"}]}}}}
+    assert recursos.parse_senado_discursos(json.dumps(d)) == 2
+    assert senado.normaliza_voto_senado("AP") == "Em atividade parlamentar" and senado.normaliza_voto_senado("NCom") == "Ausente"
+    from sa_etl.build import presenca_por_votos
+    vts = {"a": {"data": "2025-03-01"}, "b": {"data": "2025-04-01"}, "c": {"data": "2025-05-01"}, "d": {"data": "2026-01-01"}}
+    votos = [{"votacao": "a", "voto": "Sim"}, {"votacao": "b", "voto": "Em missão"}, {"votacao": "c", "voto": "Ausente"},
+             {"votacao": "d", "voto": "Presidente (art. 51 risf)"}]
+    assert dict(presenca_por_votos(votos, vts)) == {2025: [1, 1, 1], 2026: [1, 0, 0]}
+
+
+def test_montar_leva_atuacao_para_o_resumo(tmp_path):
+    pols = [{"id": "dep-1", "casa": "camara", "cargo": "Deputado(a) Federal", "nome": "Fulano", "partido": "AAA", "uf": "SP", "foto": "", "fonte": ""},
+            {"id": "sen-5", "casa": "senado", "cargo": "Senador(a)", "nome": "Beltrano", "partido": "BBB", "uf": "RJ", "foto": "", "fonte": ""}]
+    desp = camara.parse_cota(read_csv_text(COTA), {"dep-1"})
+    votac = [{"id": "sf-1", "casa": "senado", "data": "2025-05-01", "descricao": "Teste", "aprovada": True, "proposicao": None, "orientacoes": {}, "fonte": ""},
+             {"id": "sf-2", "casa": "senado", "data": "2025-06-01", "descricao": "Teste", "aprovada": True, "proposicao": None, "orientacoes": {}, "fonte": ""}]
+    votos = [{"votacao": "sf-1", "politico": "sen-5", "voto": "Sim", "partido": "BBB"}, {"votacao": "sf-2", "politico": "sen-5", "voto": "Ausente", "partido": "BBB"}]
+    rec = {"dep-1": {2025: {"atuacao": {"autoria": 8, "plenario": [108, 13, 0]}}}, "sen-5": {2025: {"atuacao": {"autoria": 3}}}}
+    montar({"politicos": pols, "despesas": desp, "votacoes": votac, "votos": votos, "empresas": {}, "recursos": rec}, tmp_path, [2025])
+    res = {r["id"]: r for r in json.loads((tmp_path / "politicos.json").read_text())}
+    assert res["dep-1"]["por_ano"]["2025"]["atuacao"] == {"autoria": 8, "plenario": [108, 13, 0]}
+    assert res["sen-5"]["por_ano"]["2025"]["atuacao"] == {"autoria": 3, "plenario": [1, 0, 1], "votacoes": 1}
