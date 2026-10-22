@@ -12,14 +12,26 @@ export interface AnoResumo {
   atuacao?: Atuacao;
 }
 /** Atuação no ano. Presença: [presente, ausência justificada, ausência não justificada].
- *  Câmara: tudo da página oficial do deputado (Plenário em dias, comissões em reuniões).
- *  Senado: propostas, relatorias e discursos dos dados abertos; Plenário contado pelas votações nominais. */
+ *  Câmara: página oficial do deputado (Plenário em dias, comissões em reuniões); projetos e requerimentos dos arquivos
+ *  de proposições dos dados abertos. Senado: dados abertos; Plenário contado pelas votações nominais.
+ *  projetos: como primeiro autor; projetos_apoio: assinou o projeto de outro autor; requerimentos: como primeiro autor.
+ *  autoria: o total da página da Câmara (tudo junto), usado só quando não há a contagem separada. */
 export interface Atuacao {
-  autoria?: number; relatadas?: number; votacoes?: number; discursos?: number;
+  autoria?: number; projetos?: number; projetos_apoio?: number; requerimentos?: number;
+  relatadas?: number; votacoes?: number; discursos?: number;
   plenario?: [number, number, number]; comissoes?: [number, number, number];
 }
-export type MetricaAtuacao = "autoria" | "relatadas" | "votacoes" | "discursos";
+export type MetricaAtuacao = "projetos" | "projetos_apoio" | "requerimentos" | "autoria" | "relatadas" | "votacoes" | "discursos";
 export const METRICAS_ATUACAO: { chave: MetricaAtuacao; nome: string; explica: Record<Casa, string> }[] = [
+  { chave: "projetos", nome: "Projetos de autoria própria", explica: {
+    camara: "Projetos de lei, de emenda à Constituição e outros projetos que apresentou no ano como primeiro autor.",
+    senado: "Projetos de lei, de emenda à Constituição e outros projetos que apresentou no ano como primeiro autor." } },
+  { chave: "projetos_apoio", nome: "Projetos de colegas que assinou", explica: {
+    camara: "Projetos de outro autor que assinou junto, como coautor ou apoiador. Uma emenda à Constituição, por exemplo, só pode ser apresentada com a assinatura de 171 deputados.",
+    senado: "Projetos de outro autor que assinou junto, como coautor ou apoiador. Uma emenda à Constituição, por exemplo, só pode ser apresentada com a assinatura de 27 senadores." } },
+  { chave: "requerimentos", nome: "Requerimentos e indicações", explica: {
+    camara: "Pedidos de informação a ministérios, de audiência pública, de urgência, homenagens e sugestões ao governo, como primeiro autor. Não contamos os pedidos de procedimento, como adiar uma votação, que alguns deputados apresentam aos milhares.",
+    senado: "Pedidos de informação a ministérios, de audiência pública, de urgência, homenagens e sugestões ao governo, como primeiro autor." } },
   { chave: "autoria", nome: "Propostas apresentadas", explica: {
     camara: "Projetos, requerimentos e outras propostas de que foi autor ou coautor no ano. Alguns deputados apresentam centenas de requerimentos por ano.",
     senado: "Projetos, requerimentos e outras propostas de que foi autor ou coautor no ano." } },
@@ -37,7 +49,8 @@ export const METRICAS_ATUACAO: { chave: MetricaAtuacao; nome: string; explica: R
 export function atuacaoAtiva(a?: Atuacao): a is Atuacao {
   if (!a) return false;
   const soma = (x?: number[]) => (x ? x[0] + x[1] + x[2] : 0);
-  return soma(a.plenario) + soma(a.comissoes) + (a.votacoes || 0) + (a.autoria || 0) + (a.discursos || 0) > 0;
+  return soma(a.plenario) + soma(a.comissoes) + (a.votacoes || 0) + (a.autoria || 0) + (a.discursos || 0)
+    + (a.projetos || 0) + (a.projetos_apoio || 0) + (a.requerimentos || 0) > 0;
 }
 /** Parte das sessões em que esteve presente (0 a 1), ou null se não houve sessões. */
 export function taxaPresenca(x?: [number, number, number]): number | null {

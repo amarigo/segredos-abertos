@@ -10,12 +10,48 @@ function mediana(v: number[]): number {
   const m = s.length >> 1;
   return !s.length ? 0 : s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
-function quantil(v: number[], q: number): number {
-  const s = [...v].sort((a, b) => a - b);
-  return s.length ? s[Math.min(s.length - 1, Math.floor(q * s.length))] : 0;
-}
 /** Posição entre os colegas (1 = maior valor). Empates ficam com a melhor posição. */
 const posicao = (v: number, todos: number[]) => 1 + todos.filter((x) => x > v).length;
+/** Porcentagem arredondada para baixo: "mais que 99%" só quando é mesmo mais que 99%. */
+const pctBaixo = (x: number) => `${Math.floor(x * 100)}%`;
+
+type Lado = "acima" | "abaixo" | "meio";
+/** Compara o valor do político com o dos colegas. `todos` inclui o próprio político: ele é tirado uma vez. */
+function comparar(v: number, todos: number[], quem: string, verbos = { mais: "Fez mais", menos: "Fez menos" }, fmt = num) {
+  const outros = [...todos];
+  const i = outros.indexOf(v);
+  if (i >= 0) outros.splice(i, 1);
+  const n = outros.length;
+  const menos = n ? outros.filter((x) => x < v).length / n : 0;
+  const mais = n ? outros.filter((x) => x > v).length / n : 0;
+  const iguais = 1 - menos - mais;
+  const lugar = `${posicao(v, todos)}º de ${todos.length}`;
+  let lado: Lado, titulo: string, frase: string;
+  if (menos > 0.5) {
+    lado = "acima"; titulo = "Acima da maioria";
+    frase = menos === 1 ? `${verbos.mais} que todos os outros ${quem}` : `${verbos.mais} que ${pctBaixo(menos)} dos outros ${quem}`;
+  } else if (mais > 0.5) {
+    lado = "abaixo"; titulo = "Abaixo da maioria";
+    frase = mais === 1 ? `${verbos.menos} que todos os outros ${quem}` : `${verbos.menos} que ${pctBaixo(mais)} dos outros ${quem}`;
+  } else if (iguais >= 0.5) {
+    lado = "meio"; titulo = "Igual à maioria";
+    frase = `${pctBaixo(iguais)} dos outros ${quem} também ficaram com ${fmt(v)}`;
+  } else {
+    lado = "meio"; titulo = "No meio";
+    frase = `${pctBaixo(mais)} dos outros ${quem} ficaram acima e ${pctBaixo(menos)} abaixo`;
+  }
+  return { lado, titulo, frase: `${frase} (${lugar}).`, n };
+}
+
+const SETA: Record<Lado, string> = { acima: "▲", abaixo: "▼", meio: "●" };
+function Veredito({ c }: { c: ReturnType<typeof comparar> }) {
+  return (
+    <div className="atu-veredito">
+      <p className={`atu-lado atu-${c.lado}`}><span aria-hidden="true">{SETA[c.lado]}</span> {c.titulo}</p>
+      <p className="small">{c.frase}</p>
+    </div>
+  );
+}
 
 const COR = { presente: "var(--sim)", justificada: "var(--gold)", injustificada: "var(--nao)" };
 
@@ -35,7 +71,7 @@ export function AtuacaoPolitico({ p }: { p: Politico }) {
     <>
       <section>
         <h2>Atuação em {ano}</h2>
-        <Explain>Números oficiais {p.casa === "camara" ? "da Câmara" : "do Senado"}, comparados com os {colegas.length} {quem} que estavam no cargo em {ano}. Quantidade não mede qualidade: um projeto importante pode valer mais que dezenas de requerimentos. Mas mostra quem aparece para trabalhar e quem participa.</Explain>
+        <Explain>Números oficiais {p.casa === "camara" ? "da Câmara" : "do Senado"}, comparados com os outros {Math.max(colegas.length - 1, 0)} {quem} em exercício hoje que também tinham mandato em {ano}. Quantidade não mede qualidade: um projeto importante pode valer mais que dezenas de requerimentos. Mas mostra quem aparece para trabalhar e quem participa.</Explain>
       </section>
 
       <section>
@@ -57,10 +93,10 @@ export function AtuacaoPolitico({ p }: { p: Politico }) {
 
       <section>
         <h2>Trabalho legislativo</h2>
-        <p className="muted small" style={{ marginTop: -4 }}>A barra mostra {primeiro}. A linha marca a mediana: metade dos {quem} fez mais que isso, metade fez menos.</p>
+        <p className="muted small" style={{ marginTop: -4 }}>Cada cartão compara {primeiro} com o {quem === "deputados" ? "deputado" : "senador"} típico: o do meio da lista, em que metade dos {quem} fez mais e metade fez menos.</p>
         <div className="atu-grade atu-grade-4">
-          {METRICAS_ATUACAO.filter((m) => eu[m.chave] != null).map((m) => (
-            <Metrica key={m.chave} nome={m.nome} explica={m.explica[p.casa]} quem={quem} v={eu[m.chave]!}
+          {METRICAS_ATUACAO.filter((m) => eu[m.chave] != null && !(m.chave === "autoria" && eu.projetos != null)).map((m) => (
+            <Metrica key={m.chave} nome={m.nome} explica={m.explica[p.casa]} quem={quem} eu={primeiro} v={eu[m.chave]!}
               todos={colegas.map((c) => c[m.chave]).filter((x): x is number => x != null)} />
           ))}
         </div>
@@ -85,7 +121,7 @@ function Presenca({ titulo, nome, quem, eu, colegas, unidade, explica }: {
   return (
     <div className="card atu-card">
       <div className="atu-topo"><h3>{titulo}</h3><span className="atu-valor">{pct(minha)}</span></div>
-      <p className="small muted atu-pos">{posicao(minha, taxas)}º de {taxas.length} {quem} · mediana {pct(mediana(taxas))}</p>
+      <Veredito c={comparar(minha, taxas, quem, { mais: "Presença maior", menos: "Presença menor" }, pct)} />
       <BarraPresenca rotulo={nome} partes={eu} texto={(i) => [`${u(eu[0])} presente`, `${u(eu[1])} com ausência justificada`, `${u(eu[2])} sem justificativa`][i]} />
       <BarraPresenca rotulo={`Média dos ${quem}`} partes={media} texto={(i) => `${pct(media[i])} ${["presente", "com ausência justificada", "sem justificativa"][i]}`} />
       <p className="small">{u(eu[0])} presente · {num(eu[1])} {eu[1] === 1 ? "ausência justificada" : "ausências justificadas"} · <strong>{num(eu[2])} sem justificativa</strong></p>
@@ -107,22 +143,25 @@ function BarraPresenca({ rotulo, partes, texto }: { rotulo: string; partes: numb
   );
 }
 
-function Metrica({ nome, explica, quem, v, todos }: { nome: string; explica: string; quem: string; v: number; todos: number[] }) {
-  const med = mediana(todos);
-  const escala = Math.max(v, quantil(todos, 0.9), med, 1) * 1.1;
-  const pos = posicao(v, todos);
-  const menos = todos.filter((x) => x < v).length;
-  const frase = !todos.length ? "" : v === 0 && menos === 0 ? `Nenhum registro, como ${todos.filter((x) => x === 0).length - 1} outros ${quem}`
-    : `Mais que ${pct(menos / todos.length)} dos ${quem}`;
+function Metrica({ nome, explica, quem, eu, v, todos }: { nome: string; explica: string; quem: string; eu: string; v: number; todos: number[] }) {
+  const med = Math.round(mediana(todos)); // contagens: o típico é um número inteiro
+  const escala = Math.max(v, med, 1);
+  const c = comparar(v, todos, quem);
+  const tipico = quem === "deputados" ? "Deputado típico" : "Senador típico";
   return (
     <div className="card atu-card">
       <div className="atu-topo"><h3>{nome}</h3><span className="atu-valor num">{num(v)}</span></div>
-      <p className="small muted atu-pos">{pos}º de {todos.length} · mediana {num(med)}</p>
-      <div className="atu-trilha" role="img" aria-label={`${nome}: ${num(v)}. Mediana dos ${quem}: ${num(med)}.`}>
-        <span className="atu-barra" style={{ width: `${Math.min(1, v / escala) * 100}%` }} title={`${num(v)}`} />
-        <span className="atu-mediana" style={{ left: `${(med / escala) * 100}%` }} title={`Mediana dos ${quem}: ${num(med)}`} />
-      </div>
-      {frase && <p className="small">{frase}.</p>}
+      {todos.length > 1 && <>
+        <Veredito c={c} />
+        <div className="atu-comp" role="img" aria-label={`${nome}: ${eu} ${num(v)}; ${tipico.toLowerCase()} ${num(med)}.`}>
+          <span className="small">{eu}</span>
+          <span className="atu-comp-trilha"><span className="atu-comp-eu" style={{ width: `${(v / escala) * 100}%` }} /></span>
+          <span className="small num">{num(v)}</span>
+          <span className="small muted">{tipico}</span>
+          <span className="atu-comp-trilha"><span className="atu-comp-tipico" style={{ width: `${(med / escala) * 100}%` }} /></span>
+          <span className="small num muted">{num(med)}</span>
+        </div>
+      </>}
       <p className="muted small">{explica}</p>
     </div>
   );
@@ -131,6 +170,6 @@ function Metrica({ nome, explica, quem, v, todos }: { nome: string; explica: str
 function Fonte({ casa, id, ano }: { casa: Casa; id: string; ano: string }): ReactNode {
   const n = id.split("-")[1];
   return casa === "camara"
-    ? <p className="muted small">Fonte: <a href={`https://www.camara.leg.br/deputados/${n}?ano=${ano}`} target="_blank" rel="noreferrer">página oficial do deputado na Câmara, ano {ano} ↗</a>, bloco "Atuação no Plenário e Comissões".</p>
+    ? <p className="muted small">Fontes: <a href={`https://www.camara.leg.br/deputados/${n}?ano=${ano}`} target="_blank" rel="noreferrer">página oficial do deputado na Câmara, ano {ano} ↗</a>, bloco "Atuação no Plenário e Comissões" (presença, relatorias, votações e discursos), e <a href="https://dadosabertos.camara.leg.br/swagger/api.html?tab=staticfile" target="_blank" rel="noreferrer">arquivos de proposições dos dados abertos da Câmara ↗</a> (projetos e requerimentos, com a ordem de assinatura de cada autor).</p>
     : <p className="muted small">Fonte: <a href="https://legis.senado.leg.br/dadosabertos/" target="_blank" rel="noreferrer">dados abertos do Senado ↗</a> (propostas, relatorias, pronunciamentos e votações nominais do ano).</p>;
 }

@@ -2,7 +2,7 @@
 import json
 import random
 
-from sa_etl import camara, senado, ideologia, cnpj, recursos
+from sa_etl import autorias, camara, senado, ideologia, cnpj, recursos
 from sa_etl.build import montar
 from sa_etl.categorias import grupo_de
 from sa_etl.util import cnpj_valido, read_csv_text, to_float, mask_cpf
@@ -422,7 +422,62 @@ def test_montar_leva_atuacao_para_o_resumo(tmp_path):
              {"id": "sf-2", "casa": "senado", "data": "2025-06-01", "descricao": "Teste", "aprovada": True, "proposicao": None, "orientacoes": {}, "fonte": ""}]
     votos = [{"votacao": "sf-1", "politico": "sen-5", "voto": "Sim", "partido": "BBB"}, {"votacao": "sf-2", "politico": "sen-5", "voto": "Ausente", "partido": "BBB"}]
     rec = {"dep-1": {2025: {"atuacao": {"autoria": 8, "plenario": [108, 13, 0]}}}, "sen-5": {2025: {"atuacao": {"autoria": 3}}}}
-    montar({"politicos": pols, "despesas": desp, "votacoes": votac, "votos": votos, "empresas": {}, "recursos": rec}, tmp_path, [2025])
+    aut = {"dep-1": {"2025": {"projetos": 2, "projetos_apoio": 5, "requerimentos": 1}}}  # chave em texto, como depois de um JSON
+    montar({"politicos": pols, "despesas": desp, "votacoes": votac, "votos": votos, "empresas": {}, "recursos": rec, "autorias": aut},
+           tmp_path, [2025])
     res = {r["id"]: r for r in json.loads((tmp_path / "politicos.json").read_text())}
-    assert res["dep-1"]["por_ano"]["2025"]["atuacao"] == {"autoria": 8, "plenario": [108, 13, 0]}
+    assert res["dep-1"]["por_ano"]["2025"]["atuacao"] == {"autoria": 8, "plenario": [108, 13, 0],
+                                                          "projetos": 2, "projetos_apoio": 5, "requerimentos": 1}
     assert res["sen-5"]["por_ano"]["2025"]["atuacao"] == {"autoria": 3, "plenario": [1, 0, 1], "votacoes": 1}
+
+
+def test_autorias_camara_separa_autor_principal_de_quem_so_assinou():
+    tipos = {"1": "PL", "2": "PEC", "3": "REQ", "4": "RIC", "5": "RPD", "6": "PRL", "7": "PL"}
+    autores = [
+        {"idProposicao": "1", "idDeputadoAutor": "10", "ordemAssinatura": "1", "proponente": "1"},
+        {"idProposicao": "1", "idDeputadoAutor": "20", "ordemAssinatura": "2", "proponente": "1"},  # coautor
+        {"idProposicao": "2", "idDeputadoAutor": "20", "ordemAssinatura": "1", "proponente": "1"},
+        {"idProposicao": "2", "idDeputadoAutor": "10", "ordemAssinatura": "35", "proponente": "0"},  # apoiador da PEC
+        {"idProposicao": "3", "idDeputadoAutor": "10", "ordemAssinatura": "1", "proponente": "1"},
+        {"idProposicao": "4", "idDeputadoAutor": "10", "ordemAssinatura": "1", "proponente": "1"},
+        {"idProposicao": "4", "idDeputadoAutor": "20", "ordemAssinatura": "2", "proponente": "1"},  # coautor de requerimento: não conta
+        {"idProposicao": "5", "idDeputadoAutor": "30", "ordemAssinatura": "1", "proponente": "1"},  # pedido de procedimento: não conta
+        {"idProposicao": "6", "idDeputadoAutor": "30", "ordemAssinatura": "1", "proponente": "1"},  # parecer de relator: não conta
+        {"idProposicao": "7", "idDeputadoAutor": "", "ordemAssinatura": "1", "proponente": "1"},    # autor é um órgão
+        {"idProposicao": "1", "idDeputadoAutor": "10", "ordemAssinatura": "1", "proponente": "1"},  # linha repetida
+    ]
+    c = autorias.contar_camara(autores, tipos)
+    assert c["10"] == {"projetos": 1, "projetos_apoio": 1, "requerimentos": 2}
+    assert c["20"] == {"projetos": 1, "projetos_apoio": 1, "requerimentos": 0}
+    assert c["30"] == {"projetos": 0, "projetos_apoio": 0, "requerimentos": 0}  # assinou só o que não contamos: aparece com zero
+    assert set(c) == {"10", "20", "30"}
+
+
+def test_autorias_senado_o_primeiro_nome_da_autoria_e_o_autor_principal():
+    procs = [
+        {"codigoMateria": 1, "identificacao": "PL 10/2025", "autoria": "Senador Flávio Arns (PSB/PR)"},
+        {"codigoMateria": 2, "identificacao": "PEC 3/2025", "autoria": "Senador Fulano (PL/RJ), Senador Flavio Arns (PSB/PR)"},
+        {"codigoMateria": 3, "identificacao": "RQS 99/2025", "autoria": "Líder do Governo Flávio Arns (PSB/PR), Senador Fulano (PL/RJ)"},
+        {"codigoMateria": 4, "identificacao": "REQ 8/2025 - CDIR", "autoria": "Senador Flávio Arns (PSB/PR)"},
+        {"codigoMateria": 5, "identificacao": "RQS 100/2025", "autoria": "Senador Fulano (PL/RJ), Senador Flávio Arns (PSB/PR)"},
+        {"codigoMateria": 6, "identificacao": "OFS 1/2025", "autoria": "Senador Flávio Arns (PSB/PR)"},
+        {"codigoMateria": 1, "identificacao": "PL 10/2025", "autoria": "Senador Flávio Arns (PSB/PR)"},  # repetido
+    ]
+    assert autorias.contar_senado(procs, "Flávio Arns") == {"projetos": 1, "projetos_apoio": 1, "requerimentos": 2}
+    assert autorias.primeiro_autor("Senador A (PT/BA), Senadora B (PL/SP)") == "Senador A (PT/BA"
+
+
+def test_autorias_sem_resposta_usa_o_resumo_anterior(tmp_path, monkeypatch):
+    f = tmp_path / f"camara-2023-v{autorias.VERSAO}.json"
+    f.write_text(json.dumps({"10": {"projetos": 4, "projetos_apoio": 1, "requerimentos": 0}}))
+    import os
+    os.utime(f, (0, 0))  # resumo velho: tenta baixar de novo
+
+    def falha(*a, **k):
+        raise RuntimeError("fora do ar")
+
+    monkeypatch.setattr(autorias.util, "download", falha)
+    monkeypatch.setattr(autorias.util, "get_json", falha)
+    assert autorias.camara([2023, 2024], tmp_path) == {("dep-10", 2023): {"projetos": 4, "projetos_apoio": 1, "requerimentos": 0}}
+    pols = [{"id": "dep-10", "casa": "camara"}, {"id": "sen-1", "casa": "senado", "nome": "Fulano"}]
+    assert autorias.coletar(pols, [2023], tmp_path) == {"dep-10": {2023: {"projetos": 4, "projetos_apoio": 1, "requerimentos": 0}}}
