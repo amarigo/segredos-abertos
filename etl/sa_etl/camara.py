@@ -115,6 +115,7 @@ def parse_cota(rows, ids: set[str]) -> list[dict]:
             "detalhe": detalhe,
             "nu": nu,
             "num": (r.get("txtNumero") or "").strip(),
+            "sub": (r.get("numSubCota") or "").strip(),
         })
     return out
 

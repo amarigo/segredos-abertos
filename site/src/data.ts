@@ -104,7 +104,8 @@ export interface Empresa extends EmpresaResumo {
 }
 /* Nota fiscal na página da empresa: [data, id do político, tipo de gasto, valor, link] */
 /** [data, parlamentar, tipo de gasto, valor, link, tipo de link, detalhe]. Tipo de link: "nota" (imagem da nota),
- *  "detalhe" (página oficial da despesa na Câmara), "lista" (lista oficial do Senado ou resumo do mês na Câmara). */
+ *  "detalhe" (página oficial da despesa na Câmara), "sem_pdf" (nota cujo PDF dá erro 404 na Câmara: link para o detalhe),
+ *  "lista" (lista oficial do Senado ou resumo do mês na Câmara). */
 export type NotaEmpresa = [string, string, string, number, string, string?, string?];
 export interface PartidoAno { n: number; cota: number; cota_por_membro: number; custo_total: number; custo_por_membro: number }
 export interface Partido { casa: Casa; sigla: string; n: number; posicao: number | null; alinhamento_governo: number | null; fidelidade: number | null; total: number; por_ano: Record<string, PartidoAno> }

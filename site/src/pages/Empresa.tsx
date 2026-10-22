@@ -133,7 +133,7 @@ function Notas({ e }: { e: Empresa }) {
           </table>
         </div>
         {lista.length > n && <button className="link" onClick={() => setN(n + 200)}>Mostrar mais notas ({(lista.length - n).toLocaleString("pt-BR")} restantes)</button>}
-        <p className="muted small">Cada despesa tem um link oficial. "Abrir nota" mostra a imagem da nota fiscal. Passagens compradas pelo sistema da Câmara e contas de telefone não têm imagem: "Ver detalhe na Câmara" abre a página oficial da despesa. O Senado não publica as notas: "Ver na lista do Senado" abre a lista oficial de despesas do senador.{semLink > 0 && ` ${semLink.toLocaleString("pt-BR")} despesa${semLink > 1 ? "s" : ""} sem nenhum link oficial.`}</p>
+        <p className="muted small">Cada despesa tem um link oficial. "Abrir nota" mostra a imagem da nota fiscal. Passagens compradas pelo sistema da Câmara e contas de telefone não têm imagem: "Ver detalhe na Câmara" abre a página oficial da despesa. Cerca de 1 nota em 1.000 está nos dados da Câmara sem o PDF no site dela (o link oficial dá erro 404): nesses casos o link também abre a página oficial da despesa. O Senado não publica as notas: "Ver na lista do Senado" abre a lista oficial de despesas do senador.{semLink > 0 && ` ${semLink.toLocaleString("pt-BR")} despesa${semLink > 1 ? "s" : ""} sem nenhum link oficial.`}</p>
       </>}
     </section>
   );
