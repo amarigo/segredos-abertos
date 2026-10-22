@@ -20,10 +20,10 @@ export interface Atuacao {
 export type MetricaAtuacao = "autoria" | "relatadas" | "votacoes" | "discursos";
 export const METRICAS_ATUACAO: { chave: MetricaAtuacao; nome: string; explica: Record<Casa, string> }[] = [
   { chave: "autoria", nome: "Propostas apresentadas", explica: {
-    camara: "Projetos, requerimentos e outras propostas de que foi autor ou coautor no ano.",
+    camara: "Projetos, requerimentos e outras propostas de que foi autor ou coautor no ano. Alguns deputados apresentam centenas de requerimentos por ano.",
     senado: "Projetos, requerimentos e outras propostas de que foi autor ou coautor no ano." } },
   { chave: "relatadas", nome: "Relatorias", explica: {
-    camara: "Propostas em que foi relator: quem estuda o texto e dá o parecer para os colegas votarem.",
+    camara: "Propostas em que foi relator: quem estuda o texto e dá o parecer para os colegas votarem. Membros da Mesa Diretora, como o 1º vice-presidente, aparecem com milhares de propostas e relatorias, porque a página oficial conta os pareceres que eles dão em nome da Mesa.",
     senado: "Propostas em que foi relator no ano: quem estuda o texto e dá o parecer para os colegas votarem." } },
   { chave: "votacoes", nome: "Votações no Plenário", explica: {
     camara: "Votações nominais (em que cada voto fica registrado com o nome) de que participou.",
