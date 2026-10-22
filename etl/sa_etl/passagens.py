@@ -12,6 +12,7 @@ import html
 import json
 import logging
 import re
+import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -73,32 +74,50 @@ def _num(n: str) -> str:
 
 
 def coletar(meses: list[tuple[str, str, int, int]], existentes: list[dict], falta: dict, cache: Path,
-            workers: int = 6) -> list[dict]:
+            workers: int = 6, minutos: float = 15) -> list[dict]:
     """meses: (politico, nuDeputadoId, ano, mes) em que falta valor; falta: quanto falta em cada um.
 
     Devolve só os bilhetes que ainda não estão nos dados abertos. Um bilhete é considerado repetido se o
     mesmo número e valor já aparecem em qualquer mês do deputado. Se mesmo assim a soma do mês passar do
     que falta, tiramos os que coincidem só pelo número ou por companhia e valor; se ainda passar, não usamos
     a lista nesse mês (a diferença fica como "sem nota"), para nunca somar acima do total oficial.
+
+    A lista da Câmara às vezes demora ou não responde. Para a coleta não passar do limite de tempo, as consultas
+    param depois de `minutos` (os meses que faltam usam o que já está no cache), e um mês antigo que não
+    respondeu só é tentado de novo depois de uma semana.
     """
     cache.mkdir(parents=True, exist_ok=True)
     hoje = dt.date.today()
+    prazo = time.monotonic() + minutos * 60
+    sem_tempo = 0
     ja_exato = Counter((d["politico"], _num(d.get("num", "")), round(d["valor"], 2)) for d in existentes if _num(d.get("num", "")))
     ja_num = Counter((d["politico"], _num(d.get("num", ""))) for d in existentes if _num(d.get("num", "")))
     ja_valor = Counter((d["politico"], d.get("doc", ""), round(d["valor"], 2)) for d in existentes if d.get("doc"))
 
+    def do_cache(f: Path):
+        try:
+            return json.loads(f.read_text(encoding="utf-8")) if f.exists() else None
+        except ValueError:
+            return None
+
     def um(item):
+        nonlocal sem_tempo
         pid, nu, ano, mes = item
         f = cache / f"{pid}-{ano}-{mes:02d}-v{VERSAO}.json"
+        falhou = f.with_suffix(".falhou")
         antigo = (hoje.year - ano) * 12 + hoje.month - mes > 2  # meses recentes ainda podem mudar
-        if f.exists() and antigo:
-            try:
-                return item, json.loads(f.read_text(encoding="utf-8"))
-            except ValueError:
-                pass
-        h = _get_text(LISTA_MES.format(nu=nu, mes=mes, ano=ano, sub=SIGEPA))
+        if antigo and (linhas := do_cache(f)) is not None:
+            return item, linhas
+        if antigo and falhou.exists() and time.time() - falhou.stat().st_mtime < 7 * 86400:
+            return item, None
+        if time.monotonic() >= prazo:
+            sem_tempo += 1
+            return item, do_cache(f)
+        h = _get_text(LISTA_MES.format(nu=nu, mes=mes, ano=ano, sub=SIGEPA), timeout=30, tentativas=2)
         if h is None:
-            return item, json.loads(f.read_text(encoding="utf-8")) if f.exists() else None
+            if antigo:
+                falhou.touch()
+            return item, do_cache(f)
         linhas = parse_lista(h)
         f.write_text(json.dumps(linhas, ensure_ascii=False), encoding="utf-8")
         return item, linhas
@@ -139,9 +158,10 @@ def coletar(meses: list[tuple[str, str, int, int]], existentes: list[dict], falt
                     "link": "detalhe", "detalhe": f"Bilhete nº {x['numero']}" if x["numero"] else "",
                     "nu": nu, "num": x["numero"], "fonte_lista": True,
                 })
-    log.info("Câmara: %d passagens buscadas na lista oficial em %d meses (%d meses sem resposta, %d bilhetes já nos dados "
-             "abertos, %d meses em que a lista passaria do total oficial e não foi usada), R$ %.2f",
-             len(novas), len(meses), falhas, repetidas, cortados, sum(n["valor"] for n in novas))
+    log.info("Câmara: %d passagens buscadas na lista oficial em %d meses (%d meses sem resposta, %d deixados para a próxima "
+             "coleta por falta de tempo, %d bilhetes já nos dados abertos, %d meses em que a lista passaria do total oficial e "
+             "não foi usada), R$ %.2f",
+             len(novas), len(meses), falhas, sem_tempo, repetidas, cortados, sum(n["valor"] for n in novas))
     for e in exemplos:
         log.info("  lista acima do que falta: %s", e)
     return novas

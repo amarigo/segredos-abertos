@@ -11,37 +11,50 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import camara, cnpj, ideologia, passagens, recursos, senado, temas
+from . import autorias, camara, cnpj, emendas, ideologia, links_notas, pagamentos, passagens, recursos, senado, temas
 from .categorias import GRUPOS
+from . import util
 from .util import cnpj_valido, doc_kind, mask_cpf, write_json
 
 log = logging.getLogger("sa_etl")
 
 
-def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool = True) -> dict:
-    deps = camara.deputados()
-    sens = senado.senadores()
+def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool = True,
+            cnpjs_emendas: list[str] | None = None) -> dict:
+    """cnpjs_emendas: empresas pagas com emendas, para buscar os donos junto com as fornecedoras da cota."""
+    util.AVISOS.clear()
+    deps = sem_repetidos(camara.deputados(), "id")
+    sens = sem_repetidos(senado.senadores(), "id")
+    if not deps or not sens:
+        # Sem a lista de parlamentares não há site: melhor falhar e manter no ar a versão anterior
+        raise RuntimeError(f"Lista de parlamentares vazia (Câmara: {len(deps)}, Senado: {len(sens)})")
     politicos = deps + sens
     ids_c = {p["id"] for p in deps}
     ids_s = {p["id"] for p in sens}
 
-    despesas = camara.despesas(anos, ids_c, cache) + senado.despesas(anos, ids_s)
+    despesas = camara.despesas(anos, ids_c, cache) + senado.despesas(anos, ids_s, cache)
     vc, votos_c = camara.votacoes(anos, ids_c, cache)
-    vs, votos_s = senado.votacoes(anos, ids_s)
+    vs, votos_s = senado.votacoes(anos, ids_s, cache / "senado-votacoes")
 
     por_cnpj = Counter()
     for d in despesas:
         if cnpj_valido(d["doc"]):
             por_cnpj[d["doc"]] += d["valor"]
     alvo = [c for c, _ in por_cnpj.most_common(max_empresas)]
+    alvo += [c for c in cnpjs_emendas or [] if c not in set(alvo) and cnpj_valido(c)]
     emps = cnpj.empresas(alvo, cache / "cnpj")
     socias = cnpj.buscar_socias(emps, cache / "cnpj")  # holdings: sócios que são empresas
     rec = recursos.coletar(politicos, anos, cache / "recursos") if com_recursos else {}
+    aut = autorias.coletar(politicos, anos, cache / "autorias") if com_recursos else {}
     if rec:
         despesas += buscar_passagens(despesas, politicos, rec, cache / "passagens")
+    try:
+        links_notas.conferir(despesas, cache)
+    except Exception as e:  # noqa: BLE001 - sem a conferência, os links ficam como a Câmara publicou
+        log.warning("Não foi possível conferir os links das notas: %s", e)
     return {"politicos": politicos, "despesas": despesas, "votacoes": vc + vs,
             "votos": votos_c + votos_s, "empresas": emps,
-            "empresas_socias": socias, "recursos": rec}
+            "empresas_socias": socias, "recursos": rec, "autorias": aut}
 
 
 SEM_NOTA = "Despesas sem nota nos dados abertos"
@@ -128,13 +141,33 @@ def salario_senadores(politicos: list[dict], rec: dict) -> dict:
     return out
 
 
+def sem_repetidos(itens: list[dict], *chaves: str) -> list[dict]:
+    """Remove itens repetidos (mesma chave), mantendo o primeiro. As APIs às vezes repetem linhas ao paginar."""
+    vistos, out = set(), []
+    for x in itens:
+        k = tuple(x.get(c) for c in chaves)
+        if k not in vistos:
+            vistos.add(k)
+            out.append(x)
+    return out
+
+
 def montar(dados: dict, saida: Path, anos: list[int]) -> None:
-    politicos = dados["politicos"]
-    despesas = completar_com_oficial(dados["despesas"], politicos, dados.get("recursos") or {})
-    votacoes = dados["votacoes"]
-    votos = dados["votos"]
-    emps = dados["empresas"]
+    politicos = sem_repetidos(dados["politicos"], "id")
     por_id = {p["id"]: p for p in politicos}
+    despesas = [d for d in dados["despesas"] if d["ano"] in anos and d["politico"] in por_id]
+    if len(despesas) != len(dados["despesas"]):  # uma linha de outro ano no arquivo deixaria os totais do site sem bater
+        log.warning("Despesas: %d fora dos anos pedidos ou de parlamentar desconhecido foram descartadas",
+                    len(dados["despesas"]) - len(despesas))
+    despesas = completar_com_oficial(despesas, politicos, dados.get("recursos") or {})
+    votacoes = sem_repetidos(dados["votacoes"], "id")
+    ids_v = {v["id"] for v in votacoes}
+    # um voto por parlamentar em cada votação, e só de votações e parlamentares conhecidos
+    votos = [v for v in sem_repetidos(dados["votos"], "votacao", "politico")
+             if v["votacao"] in ids_v and v["politico"] in por_id]
+    if len(votos) != len(dados["votos"]):
+        log.warning("Votos: %d repetidos ou sem votação/parlamentar conhecido foram descartados", len(dados["votos"]) - len(votos))
+    emps = dados["empresas"]
     partido_de = {p["id"]: p["partido"] for p in politicos}
     hoje = dt.date.today().isoformat()
 
@@ -182,6 +215,7 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
             if d["data"] and (d["doc"] not in primeiro_pag or d["data"] < primeiro_pag[d["doc"]]):
                 primeiro_pag[d["doc"]] = d["data"]
 
+    emd = dados.get("emendas_empresas") or {}  # cnpj -> o que recebeu de emendas (pagamentos.por_empresa)
     socias = dados.get("empresas_socias") or {}
     todas_emps = {**socias, **emps}
     comuns = cnpj.socios_em_comum(emps, socias)
@@ -195,6 +229,7 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         v["temas"] = temas.temas_da_votacao(v)
     votacao_por_id = {v["id"]: v for v in votacoes}
     rec_todos = salario_senadores(politicos, dados.get("recursos") or {})
+    autorias_todas = dados.get("autorias") or {}
     resumo = []
     for p in politicos:
         ds = desp_por.get(p["id"], [])
@@ -212,6 +247,8 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
             extra["custo_total"] = round(det["total"] + (extra["salario"] or 0) + (extra["verba_gabinete"] or 0)
                                          + (extra["outros_gastos"] or 0), 2)
             atuacao = dict(r.get("atuacao") or {})
+            aut = autorias_todas.get(p["id"], {})
+            atuacao.update(aut.get(ano) or aut.get(str(ano)) or {})
             if p["casa"] == "senado" and sum(pres_senado.get(ano, [])):
                 atuacao["plenario"] = pres_senado[ano]
                 atuacao["votacoes"] = pres_senado[ano][0]
@@ -256,19 +293,25 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
 
     # ---------- Empresas ----------
     lista_emp = []
-    for doc, quem in recebeu.items():
+    no_site = set(recebeu) | set(emd)
+    for doc in list(recebeu) + [c for c in emd if c not in recebeu]:
+        quem = recebeu.get(doc, {})
         total = round(sum(quem.values()), 2)
+        de_emendas = emd.get(doc)
         e = emps.get(doc)
         pagadores = sorted(({"politico": pid, "nome": por_id[pid]["nome"], "partido": por_id[pid]["partido"],
                              "uf": por_id[pid]["uf"], "valor": round(v, 2)} for pid, v in quem.items()),
                            key=lambda x: -x["valor"])
-        resumo_e = {"cnpj": doc, "nome": (e or {}).get("razao_social") or nome_forn.get(doc, ""),
+        resumo_e = {"cnpj": doc, "nome": (e or {}).get("razao_social") or nome_forn.get(doc, "") or (de_emendas or {}).get("nome", ""),
                     "total": total, "n_politicos": len(quem), "tem_socios": bool(e and e["socios"]),
-                    "n_mesmo_endereco": len(vizinhas.get(doc, []))}
-        lista_emp.append(resumo_e)
+                    "n_mesmo_endereco": len(vizinhas.get(doc, [])),
+                    **_emd(emd, doc)}
+        if quem:  # a lista de empresas é a da cota; as pagas só com emendas aparecem na página de emendas
+            lista_emp.append(resumo_e)
         def outras_de(s: dict) -> list[dict]:
-            return [{"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu[c].values()), 2)}
-                    for c in socio_empresas.get(cnpj.chave_dono(s), []) if c != doc and c in recebeu]
+            return [{"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu.get(c, {}).values()), 2),
+                     **_emd(emd, c)}
+                    for c in socio_empresas.get(cnpj.chave_dono(s), []) if c != doc and c in no_site]
         socios = [{**s, "tipo": cnpj.tipo_socio(s), "outras_empresas": outras_de(s),
                    "doc": cnpj.cnpj_socio(s) if cnpj.tipo_socio(s) == "empresa" else s["doc"]}
                   for s in (e or {}).get("socios", [])]
@@ -293,9 +336,11 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
                         for (pid, a, m), v in sorted(mensal.items(), key=lambda kv: (kv[0][1], kv[0][2], -kv[1]))],
             **resumo_e, "empresa": {k: v for k, v in (e or {}).items() if k != "socios"} or None,
             "socios": socios, "donos_finais": donos, "pagadores": pagadores,
-            "mesmo_endereco": [{"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu[c].values()), 2),
+            "mesmo_endereco": [{"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu.get(c, {}).values()), 2),
+                                **_emd(emd, c),
                                 "mesmos_socios": bool(cnpj.chaves_de_dono(c, todas_emps) & cnpj.chaves_de_dono(doc, todas_emps))}
-                               for c in vizinhas.get(doc, []) if c in recebeu],
+                               for c in vizinhas.get(doc, []) if c in no_site],
+            "emendas": {k: v for k, v in de_emendas.items() if k != "nome"} if de_emendas else None,
             "alertas": alertas(e, total, primeiro) + alertas_donos(donos) + ([
                 f"Há outras {len(vizinhas[doc])} empresas fornecedoras registradas no mesmo endereço. Isso pode indicar o mesmo dono."
                 if len(vizinhas[doc]) > 1 else
@@ -357,7 +402,7 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
     write_json(saida / "partidos.json", partidos)
 
     write_json(saida / "meta.json", {
-        "atualizado_em": hoje, "anos": anos, "grupos": GRUPOS, "medias": medias,
+        "atualizado_em": hoje, "anos": anos, "avisos": list(util.AVISOS), "grupos": GRUPOS, "medias": medias,
         "contagens": {"politicos": len(politicos), "despesas": len(despesas), "votacoes": len(votacoes),
                       "empresas_com_socios": len(emps)},
         "total_gasto": round(sum(d["valor"] for d in despesas), 2),
@@ -457,6 +502,12 @@ def custos_extras(casa: str, r: dict) -> dict:
             "n_pessoal": (r or {}).get("n_pessoal")}
 
 
+def _emd(emd: dict, c: str) -> dict:
+    """{"emendas": total} se a empresa recebeu pagamentos de emendas."""
+    v = (emd.get(c) or {}).get("total", 0)
+    return {"emendas": v} if v else {}
+
+
 def alertas_donos(donos: list[dict]) -> list[str]:
     fins = {d["fim"] for d in donos}
     out = []
@@ -500,10 +551,38 @@ def main() -> None:
     ap.add_argument("--anos", type=int, nargs="+", default=list(range(2023, dt.date.today().year + 1)))
     ap.add_argument("--sem-recursos", action="store_true", help="não baixa salário, verba de gabinete e equipe")
     ap.add_argument("--max-empresas", type=int, default=1500)
+    ap.add_argument("--sem-emendas", action="store_true", help="não baixa as emendas parlamentares (Portal da Transparência)")
+    ap.add_argument("--minutos-pagamentos", type=float, default=45,
+                    help="tempo máximo, por execução, para ler os arquivos diários de pagamentos das emendas")
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    dados = coletar(a.anos, a.cache, a.max_empresas, not a.sem_recursos)
+    pag = None if a.sem_emendas else pagamentos_emendas(a.anos, a.cache, a.minutos_pagamentos)
+    dados = coletar(a.anos, a.cache, a.max_empresas, not a.sem_recursos, cnpjs_emendas=pagamentos.cnpjs_empresas(pag))
+    if not a.sem_emendas:  # antes de montar(), para os avisos das emendas entrarem no meta.json
+        juntar_emendas(dados, a.anos, a.cache, a.saida, pag)
     montar(dados, a.saida, a.anos)
+
+
+def pagamentos_emendas(anos: list[int], cache: Path, minutos: float) -> dict | None:
+    """Pagamentos feitos com dinheiro de emendas (arquivos diários do Portal). Se falhar, o resto do site segue."""
+    try:
+        return pagamentos.resumir(pagamentos.coletar(anos, cache / "pagamentos", minutos), anos)
+    except Exception:  # noqa: BLE001
+        log.exception("Pagamentos de emendas: erro; a página de emendas fica sem os documentos de pagamento")
+        return None
+
+
+def juntar_emendas(dados: dict, anos: list[int], cache: Path, saida: Path, pag: dict | None) -> None:
+    """Grava as emendas e põe em dados["emendas_empresas"] as empresas pagas com emendas, para as páginas de empresa."""
+    emps = dados["empresas"]
+    alvo = pagamentos.cnpjs_empresas(pag)
+    publicas = {c for c in alvo if emendas.tipo_pela_receita(emps.get(c)) == "publico"}
+    da_cota = {d["doc"] for d in dados["despesas"]}
+    for c in publicas - da_cota:  # prefeituras e órgãos públicos não entram na análise de donos
+        emps.pop(c, None)
+    paginas = set(alvo) - publicas
+    r = emendas.coletar(dados["politicos"], anos, cache / "emendas", saida, pag, emps, paginas)
+    dados["emendas_empresas"] = pagamentos.por_empresa(pag, (r or {}).get("autores") or {}, paginas)
 
 
 if __name__ == "__main__":
