@@ -493,8 +493,13 @@ def favorecidos(rows, anos: list[int], n: int = 150) -> dict[int, dict]:
     return out
 
 
-def coletar(politicos: list[dict], anos: list[int], cache: Path, saida: Path) -> dict | None:
-    """Baixa, resume e grava data/emendas/{ano}.json. Se o Portal falhar, não interrompe o resto do site."""
+def coletar(politicos: list[dict], anos: list[int], cache: Path, saida: Path, pagos: dict | None = None,
+            receita: dict[str, dict] | None = None, paginas: set[str] | None = None) -> dict | None:
+    """Baixa, resume e grava data/emendas/{ano}.json. Se o Portal falhar, não interrompe o resto do site.
+
+    pagos: os pagamentos ligados às emendas (pagamentos.resumir), com quem pagou, a quem e os documentos.
+    receita: dados da Receita das empresas (para separar empresas de órgãos públicos); paginas: CNPJs com página no site.
+    Devolve o índice dos anos e, em "autores", o nome e o partido de cada autor (para as páginas das empresas)."""
     try:
         z = baixar(cache)
         if not z:
@@ -511,13 +516,73 @@ def coletar(politicos: list[dict], anos: list[int], cache: Path, saida: Path) ->
     if not res:
         avisar("Emendas: o arquivo do Portal da Transparência veio sem as colunas esperadas; a página de emendas não foi atualizada")
         return None
+    nomes: dict[str, dict] = {}
+    for ano in sorted(res, reverse=True):  # o nome e o partido mais recentes valem
+        for a in res[ano]["autores"] + res[ano]["coletivos"]:
+            nomes.setdefault(a["chave"], {"nome": a["nome"], "politico": a.get("politico"), "partido": a.get("partido", "")})
     for ano, d in res.items():
         f = fav.get(ano)
         por_autor = (f or {}).pop("_por_autor", {})
+        pg = ((pagos or {}).get("anos") or {}).get(ano)
         for a in d["autores"] + d["coletivos"]:
-            a["recebedores"] = por_autor.get(a.pop("chave"), [])
+            chave = a.pop("chave")
+            a["recebedores"] = por_autor.get(chave, [])
+            if pg and chave in pg["autores"]:
+                a["pagamentos"] = {"valor": round(pg["autores"][chave]["valor"], 2), "arquivo": arquivo_docs(chave)}
         d["favorecidos"] = f
+        d["pagamentos"] = resumo_pagamentos(pg, nomes, pagos.get("ate", ""), receita or {}, paginas or set()) if pg else None
+        if pg:
+            for chave, au in pg["autores"].items():
+                write_json(saida / "emendas" / "docs" / str(ano) / f"{arquivo_docs(chave)}.json",
+                           {"nome": _mostrar(chave, au["nome"], nomes), "valor": round(au["valor"], 2), "n": au["n"],
+                            "docs": [_documento(i) for i in au["docs"]]})
         write_json(saida / "emendas" / f"{ano}.json", d)
     indice = {"anos": sorted(res), "totais": {str(a): d["total"] for a, d in res.items()}}
     write_json(saida / "emendas" / "anos.json", indice)
-    return indice
+    return {**indice, "autores": nomes}
+
+
+def arquivo_docs(chave: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", chave)[:80].strip("-") or "sem-nome"
+
+
+def _mostrar(chave: str, bruto: str, nomes: dict[str, dict]) -> str:
+    return (nomes.get(chave) or {}).get("nome") or nome_autor(bruto)[1]
+
+
+def _documento(i: dict) -> dict:
+    from .pagamentos import documento
+    return documento(i)
+
+
+def tipo_pela_receita(e: dict | None) -> str:
+    """empresa, entidade, publico ou '' (sem dados), pela natureza jurídica na Receita."""
+    if not e or not e.get("natureza"):
+        return ""
+    c = categoria(e["natureza"], "Pessoa Jurídica")
+    return "publico" if c in ("prefeitura", "estado", "federal") else c if c in ("empresa", "entidade") else "outro"
+
+
+def resumo_pagamentos(pg: dict, nomes: dict[str, dict], ate: str, receita: dict[str, dict], paginas: set[str]) -> dict:
+    """Quem pagou (órgãos), quem mais teve pagamentos e quais empresas e entidades receberam, num ano."""
+    def autor(k: str, bruto: str) -> dict:
+        n = nomes.get(k) or {}
+        return {"nome": _mostrar(k, bruto, nomes), "politico": n.get("politico"), "partido": n.get("partido", "")}
+    brutos = {k: a["nome"] for k, a in pg["autores"].items()}
+    empresas = sorted(((d, f) for d, f in pg["favorecidos"].items() if tipo_pela_receita(receita.get(d)) != "publico"),
+                      key=lambda kv: -kv[1]["valor"])
+    return {
+        "ate": ate, "total": round(pg["total"], 2), "n": pg["n"],
+        "orgaos": [{"nome": k, "valor": round(o["valor"], 2), "n": o["n"], "ugs": _top(o["ugs"], 5)}
+                   for k, o in sorted(pg["orgaos"].items(), key=lambda kv: -kv[1]["valor"])[:40]],
+        "autores": [{**autor(k, a["nome"]), "valor": round(a["valor"], 2), "n": a["n"], "orgaos": _top(a["orgaos"], 3),
+                     "arquivo": arquivo_docs(k)}
+                    for k, a in sorted(pg["autores"].items(), key=lambda kv: -kv[1]["valor"])],
+        "empresas": [{"cnpj": doc, "nome": bonito((receita.get(doc) or {}).get("razao_social") or f["nome"]),
+                      "tipo": tipo_pela_receita(receita.get(doc)), "pagina": doc in paginas,
+                      "valor": round(f["valor"], 2), "n": f["n"],
+                      "autores": [{**autor(k, brutos.get(k, k)), "valor": round(v, 2)}
+                                  for k, v in sorted(f["autores"].items(), key=lambda kv: -kv[1])[:5]],
+                      "orgaos": _top(f["orgaos"], 2)} for doc, f in empresas[:200]],
+        "n_empresas": len(empresas),
+    }

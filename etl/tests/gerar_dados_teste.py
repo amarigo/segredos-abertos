@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from fakegov import FakeGov  # noqa: E402
-from sa_etl import build, emendas  # noqa: E402
+from sa_etl import build, pagamentos  # noqa: E402
 from sa_etl.validar import validar  # noqa: E402
 
 
@@ -24,8 +24,9 @@ def main(saida: Path) -> None:
     import time
     time.sleep = lambda s: None
     with tempfile.TemporaryDirectory() as cache:
-        dados = build.coletar([2025], Path(cache), max_empresas=200, com_recursos=False)
-        emendas.coletar(dados["politicos"], [2025], Path(cache) / "emendas", saida)
+        pag = build.pagamentos_emendas([2025], Path(cache), 5)
+        dados = build.coletar([2025], Path(cache), max_empresas=200, com_recursos=False, cnpjs_emendas=pagamentos.cnpjs_empresas(pag))
+        build.juntar_emendas(dados, [2025], Path(cache), saida, pag)
         build.montar(dados, saida, [2025])
     r = validar(saida, minimos={"camara": 1, "senado": 1, "votacoes": 1})
     assert r.ok, r.erros

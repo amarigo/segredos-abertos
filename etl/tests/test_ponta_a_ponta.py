@@ -111,6 +111,23 @@ def test_emendas_somam_certo(coleta):
     assert d["favorecidos"]["total"] == 10 * 700
 
 
+def test_empresas_pagas_com_emendas_tem_donos_e_documentos(coleta):
+    gov = coleta.usar(FakeGov())
+    saida = coleta.rodar()
+    pg = coleta.ler(saida, "emendas/2025.json")["pagamentos"]
+    assert pg["total"] == 5 * 30000 and pg["orgaos"][0]["nome"] == "Ministério da Saúde"
+    assert {e["cnpj"] for e in pg["empresas"]} == set(gov.emenda_empresas)  # a prefeitura não entra como empresa
+    e = coleta.ler(saida, f"e/{gov.emenda_empresas[0]}.json")
+    assert e["emendas"]["total"] == 60000 and e["emendas"]["autores"][0]["politico"] == "dep-1000"
+    assert e["emendas"]["docs"][0]["url"].startswith("https://portaldatransparencia.gov.br/despesas/pagamento/")
+    outras = {o["cnpj"] for s in e["socios"] for o in s["outras_empresas"]}
+    assert gov.fornecedoras[3] in outras  # o mesmo dono tem uma fornecedora da cota
+    f = coleta.ler(saida, f"e/{gov.fornecedoras[3]}.json")
+    assert any(o["cnpj"] == gov.emenda_empresas[0] and o["emendas"] == 60000 for s in f["socios"] for o in s["outras_empresas"])
+    docs = coleta.ler(saida, f"emendas/docs/2025/{pg['autores'][0]['arquivo']}.json")
+    assert docs["docs"][0]["empenho"].endswith("NE000000")
+
+
 def test_rodar_duas_vezes_da_o_mesmo_resultado(coleta):
     """Idempotência: com o cache cheio, a segunda coleta gera exatamente os mesmos arquivos."""
     coleta.usar(FakeGov())

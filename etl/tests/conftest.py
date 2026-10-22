@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from fakegov import FakeGov, instalar
-from sa_etl import build, emendas, util
+from sa_etl import build, pagamentos, util
 from sa_etl.validar import validar
 
 MINIMOS_TESTE = {"camara": 1, "senado": 1, "votacoes": 1}
@@ -30,9 +30,10 @@ class Coleta:
         self.n += 1
         saida = self.tmp / f"saida{self.n}"
         anos = list(anos)
-        dados = build.coletar(anos, self.cache, max_empresas=200, com_recursos=False)
+        pag = build.pagamentos_emendas(anos, self.cache, 5) if com_emendas else None
+        dados = build.coletar(anos, self.cache, max_empresas=200, com_recursos=False, cnpjs_emendas=pagamentos.cnpjs_empresas(pag))
         if com_emendas:
-            emendas.coletar(dados["politicos"], anos, self.cache / "emendas", saida)
+            build.juntar_emendas(dados, anos, self.cache, saida, pag)
         build.montar(dados, saida, anos)
         return saida
 

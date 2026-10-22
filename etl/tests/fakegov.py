@@ -78,6 +78,15 @@ class FakeGov:
                 qsa = [empresa(h1[:8], "HOLDING UM")]  # a Receita às vezes traz só a raiz do CNPJ
             end = {"cep": "01001000", "numero": "100" if i in (3, 4) else str(200 + i), "complemento": ""}
             self.receita[c] = self._empresa(c, f"FORNECEDORA FICTICIA {i:02d} LTDA", qsa, end)
+        # empresas pagas com emendas: a primeira tem o mesmo dono de duas fornecedoras da cota
+        r2 = random.Random(seed + 2)  # separado, para não mudar os outros dados fictícios
+        self.emenda_empresas = [_cnpj(r2), _cnpj(r2)]
+        self.receita[self.emenda_empresas[0]] = self._empresa(self.emenda_empresas[0], "CONSTRUTORA DA EMENDA LTDA",
+                                                              [pessoa("DONO FICTICIO 3", "***100003**")], {"cep": "02002000"})
+        self.receita[self.emenda_empresas[1]] = self._empresa(self.emenda_empresas[1], "SERVICOS DA EMENDA LTDA",
+                                                              [pessoa("OUTRA DONA", "***200000**")], {"cep": "03003000"})
+        self.receita["46395000000139"] = {**self._empresa("46395000000139", "MUNICIPIO DE SAO PAULO", [], {}),
+                                          "natureza_juridica": "Município"}
         self.receita[h1] = self._empresa(h1, "HOLDING UM SA", [empresa(h2, "HOLDING DOIS")], {})
         self.receita[h2] = self._empresa(h2, "HOLDING DOIS SA", [pessoa("DONA FINAL", "***777777**")], {})
         self.receita[h3] = self._empresa(h3, "HOLDING TRES SA", [empresa(h4, "HOLDING QUATRO")], {})
@@ -300,6 +309,11 @@ class FakeGov:
         if "emendas-parlamentares" in url or "EmendasParlamentares.zip" in url:
             return 200, self._emendas_zip(), "application/zip"
 
+        if "/download-de-dados/despesas/" in url:  # arquivos diários de despesas (pagamentos das emendas)
+            dia = path.rstrip("/").rsplit("/", 1)[-1]
+            z = self._despesas_dia(dia)
+            return (200, z, "application/zip") if z else (404, b"", "text/html")
+
         return 404, b"", "text/html"
 
     def _emendas_zip(self) -> bytes:
@@ -322,6 +336,49 @@ class FakeGov:
             z.writestr("EmendasParlamentares_PorFavorecido.csv", _csv(
                 ["Código da Emenda", "Nome do Autor da Emenda", "Tipo de Emenda", "Ano/Mês", "Código do Favorecido", "Favorecido",
                  "Natureza Jurídica", "Tipo Favorecido", "UF Favorecido", "Município Favorecido", "Valor Recebido"], fav).encode("latin-1"))
+        return buf.getvalue()
+
+
+    def _despesas_dia(self, dia: str) -> bytes | None:
+        """Empenhos de emenda em 10/03 e pagamentos em 20/04 de cada ano. Nos outros dias, não há arquivo."""
+        ano = dia[:4]
+        if not ano.isdigit() or int(ano) not in self.anos or dia[4:] not in ("0310", "0420"):
+            return None
+        ug = "UNIDADE FICTICIA DE OBRAS"
+        favs = [(self.emenda_empresas[0], "CONSTRUTORA DA EMENDA LTDA"), (self.emenda_empresas[1], "SERVICOS DA EMENDA LTDA"),
+                ("46395000000139", "MUNICIPIO DE SAO PAULO")]
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            if dia.endswith("0310"):
+                cab = ["Id Empenho", "Código Empenho", "Data Emissão", "Órgão Superior", "Órgão", "Unidade Gestora",
+                       "Código Favorecido", "Favorecido", "Observação", "Função", "Modalidade de Aplicação", "Autor Emenda",
+                       "Valor do Empenho Convertido pra R$"]
+                linhas = []
+                for i, d in enumerate(self.deputados[:5]):
+                    c, nome = favs[i % 3]
+                    linhas.append([str(i), f"11111111111{ano}NE00000{i}", f"10/03/{ano}", "Ministério da Saúde", "Fundo Nacional de Saúde",
+                                   ug, c, nome, f"OBRA FICTICIA {i} - EMENDA", "Saúde", "Aplicações Diretas",
+                                   f"{d['nome'].upper()} / EMENDA {i + 1}", "50000,00"])
+                linhas.append(["9", f"11111111111{ano}NE000099", f"10/03/{ano}", "Ministério da Saúde", "Fundo Nacional de Saúde",
+                               ug, favs[0][0], favs[0][1], "SEM RELACAO COM EMENDA", "Saúde", "Aplicações Diretas", "Sem emenda", "999,00"])
+                z.writestr(f"{dia}_Despesas_Empenho.csv", _csv(cab, linhas).encode("latin-1"))
+            else:
+                imp, pag = [], []
+                for i in range(5):
+                    c, nome = favs[i % 3]
+                    cod = f"11111111111{ano}OB00000{i}"
+                    imp.append([cod, f"11111111111{ano}NE00000{i}", "33903900", "39", "30000,00", "0,00"])
+                    pag.append([cod, f"20/04/{ano}", "Ordem Bancária", "Ministério da Saúde", "Fundo Nacional de Saúde", ug,
+                                c, nome, "PAGAMENTO DA OBRA", "30000,00"])
+                imp.append([f"11111111111{ano}OB000099", f"11111111111{ano}NE000099", "33903900", "39", "999,00", "0,00"])
+                pag.append([f"11111111111{ano}OB000099", f"20/04/{ano}", "Ordem Bancária", "Ministério da Saúde", "Fundo Nacional de Saúde",
+                            ug, favs[0][0], favs[0][1], "OUTRA COISA", "999,00"])
+                z.writestr(f"{dia}_Despesas_Pagamento_EmpenhosImpactados.csv", _csv(
+                    ["Código Pagamento", "Código Empenho", "Código Natureza Despesa Completa", "Subitem", "Valor Pago (R$)",
+                     "Valor Restos a Pagar Pagos (R$)"], imp).encode("latin-1"))
+                z.writestr(f"{dia}_Despesas_Pagamento.csv", _csv(
+                    ["Código Pagamento", "Data Emissão", "Tipo Documento", "Órgão Superior", "Órgão", "Unidade Gestora",
+                     "Código Favorecido", "Favorecido", "Observação", "Valor do Pagamento Convertido pra R$"], pag).encode("latin-1"))
         return buf.getvalue()
 
 
