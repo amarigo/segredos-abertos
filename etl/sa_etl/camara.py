@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+from urllib.parse import quote
 from collections import defaultdict
 from pathlib import Path
 
@@ -60,6 +61,24 @@ def _validade(ano: int) -> float | None:
     return 20 if ano >= dt.date.today().year - 1 else None
 
 
+DETALHE = ("https://www.camara.leg.br/cota-parlamentar/documento?nuDeputadoId={nu}&numMes={mes}&numAno={ano}"
+           "&despesa={sub}&cnpjFornecedor={cnpj}&idDocumento={num}&idDocumentoFiscal={ide}")
+LISTA_MES = ("https://www.camara.leg.br/cota-parlamentar/analitico?nuDeputadoId={nu}&dataInicio={mes}/{ano}&dataFim={mes}/{ano}"
+             "&despesa={sub}&nomeHospede=&nomePassageiro=&nomeFornecedor=&cnpjFornecedor=&numDocumento=&sguf=")
+
+
+def link_detalhe(nu, ano, mes, sub, cnpj, num, ide) -> str:
+    """Página oficial de detalhe da despesa, a mesma que o site da Câmara abre em "detalhe".
+
+    Serve para as despesas sem documento digitalizado (passagens compradas pelo sistema da Câmara, telefonia).
+    """
+    nu = (nu or "").strip()
+    if not nu:
+        return ""
+    return DETALHE.format(nu=nu, mes=mes, ano=ano, sub=(sub or "").strip(), cnpj=digits(cnpj),
+                          num=quote((num or "").strip()), ide=(ide or "").strip() or "0")
+
+
 def parse_cota(rows, ids: set[str]) -> list[dict]:
     """Converte linhas do arquivo da cota em despesas no formato comum."""
     out = []
@@ -74,17 +93,28 @@ def parse_cota(rows, ids: set[str]) -> list[dict]:
         if valor == 0:
             continue
         cat = r.get("txtDescricao") or ""
+        url = (r.get("urlDocumento") or "").strip()
+        nu = (r.get("nuDeputadoId") or "").strip()
+        ano, mes = int(to_float(r.get("numAno"))), int(to_float(r.get("numMes")))
+        detalhe = " · ".join(x for x in (
+            f"Passageiro: {r['txtPassageiro'].strip()}" if (r.get("txtPassageiro") or "").strip() else "",
+            f"Trecho: {r['txtTrecho'].strip()}" if (r.get("txtTrecho") or "").strip() else "",
+            f"Documento nº {r['txtNumero'].strip()}" if not url and (r.get("txtNumero") or "").strip() else "") if x)
         out.append({
             "politico": pid(dep),
-            "ano": int(to_float(r.get("numAno"))),
-            "mes": int(to_float(r.get("numMes"))),
+            "ano": ano,
+            "mes": mes,
             "data": (r.get("datEmissao") or "")[:10],
             "categoria": categoria_curta(cat),
             "grupo": grupo_de(cat),
             "fornecedor": (r.get("txtFornecedor") or "").strip(),
             "doc": digits(r.get("txtCNPJCPF")),
             "valor": round(valor, 2),
-            "url": (r.get("urlDocumento") or "").strip(),
+            "url": url or link_detalhe(nu, ano, mes, r.get("numSubCota"), r.get("txtCNPJCPF"), r.get("txtNumero"), r.get("ideDocumento")),
+            "link": "nota" if url else "detalhe" if nu else "",
+            "detalhe": detalhe,
+            "nu": nu,
+            "num": (r.get("txtNumero") or "").strip(),
         })
     return out
 

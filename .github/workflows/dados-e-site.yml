@@ -70,6 +70,9 @@ jobs:
         run: |
           grep -E "INFO|WARNING|ERROR" etl/coleta.log | cut -c1-240 | tail -n 60
           python etl/resumo.py site/public/data | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Conferir links das notas
+        continue-on-error: true
+        run: python etl/conferir_links.py site/public/data etl/.cache | tee -a "$GITHUB_STEP_SUMMARY"
 
   publicar:
     needs: coletar

@@ -29,10 +29,12 @@ export interface AnoDetalhe extends AnoResumo {
   meses: { mes: number; valor: number }[];
   fornecedores: Fornecedor[];
   maiores_notas: Nota[];
+  sem_nota_meses?: { mes: number; valor: number; url: string }[];
+  passagens_da_lista?: { n: number; valor: number };
   recursos: Recursos | null;
 }
 export interface Fornecedor { doc: string; tipo: string; nome: string; valor: number; n: number; ficha: boolean; socios: string[] }
-export interface Nota { data: string; categoria: string; fornecedor: string; doc: string; valor: number; url: string }
+export interface Nota { data: string; categoria: string; fornecedor: string; doc: string; valor: number; url: string; link?: string; detalhe?: string }
 export interface Politico extends Resumo {
   anos: Record<string, AnoDetalhe>;
   temas?: Record<string, { Sim?: number; "Não"?: number; Outros?: number; contra_partido?: number }>;
@@ -67,7 +69,9 @@ export interface Empresa extends EmpresaResumo {
   mesmo_endereco?: { cnpj: string; nome: string; total: number; mesmos_socios: boolean }[]; pagadores: { politico: string; nome: string; partido: string; uf: string; valor: number }[]; alertas: string[];
 }
 /* Nota fiscal na página da empresa: [data, id do político, tipo de gasto, valor, link] */
-export type NotaEmpresa = [string, string, string, number, string];
+/** [data, parlamentar, tipo de gasto, valor, link, tipo de link, detalhe]. Tipo de link: "nota" (imagem da nota),
+ *  "detalhe" (página oficial da despesa na Câmara), "lista" (lista oficial do Senado ou resumo do mês na Câmara). */
+export type NotaEmpresa = [string, string, string, number, string, string?, string?];
 export interface PartidoAno { n: number; cota: number; cota_por_membro: number; custo_total: number; custo_por_membro: number }
 export interface Partido { casa: Casa; sigla: string; n: number; posicao: number | null; alinhamento_governo: number | null; fidelidade: number | null; total: number; por_ano: Record<string, PartidoAno> }
 export interface Meta {
@@ -112,8 +116,37 @@ export const GRUPO_EXPLICA: Record<Grupo, string> = {
   escritorio: "Aluguel e contas do escritório no estado, telefone, correio, material e assinaturas.",
   servicos: "Divulgação do mandato, consultorias, pesquisas e segurança.",
 };
+const semAcento = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/** Que parte da proposta estava em votação. Num mesmo dia a mesma proposta pode ter várias votações:
+ *  o texto principal, cada destaque, emendas e requerimentos. */
+export function tipoVotacao(descricao: string): string {
+  const d = semAcento(descricao || "");
+  if (/requerimento/.test(d)) return /urgencia/.test(d) ? "Pedido de urgência" : "Requerimento";
+  if (/destaque|\bdtq\b|mantid[oa] o texto|supressiva/.test(d)) return "Destaque (trecho votado à parte)";
+  if (/emenda aglutinativa/.test(d)) return "Emenda aglutinativa";
+  if (/redacao final/.test(d)) return "Redação final";
+  if (/segundo turno|2o turno/.test(d)) return "Texto principal, 2º turno";
+  if (/primeiro turno|1o turno/.test(d)) return "Texto principal, 1º turno";
+  if (/subemenda substitutiva|substitutivo|parecer|projeto|proposta|texto|materia/.test(d)) return "Texto principal";
+  if (/emenda/.test(d)) return "Emenda";
+  return "";
+}
+
+/** Descrição oficial da votação sem a contagem de votos no final (já mostramos Sim e Não ao lado). */
+export function descricaoCurta(descricao: string): string {
+  return (descricao || "").replace(/\s*(Sim|SIM)\s*:\s*\d+.*$/s, "").replace(/\s*Total\s*:.*$/is, "").trim();
+}
+
 export function proposicaoNome(p: Proposicao | null): string {
   if (!p) return "";
   if (p.sigla && p.numero) return `${p.sigla} ${p.numero}/${p.ano}`;
   return p.titulo || "";
+}
+
+/** Cor conhecida de cada partido (PT vermelho, PL azul...). Partidos sem cor definida ficam cinza. */
+const PARTIDOS_COM_COR = new Set(["pt", "pcdob", "pdt", "psb", "psol", "pv", "rede", "avante", "psd", "mdb", "pode", "pp", "uniao", "republicanos", "psdb", "pl", "novo", "solidariedade", "cidadania", "prd", "missao", "agir", "dc", "pcb"]);
+export function corPartido(sigla: string): string {
+  const k = (sigla || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]/g, "");
+  return PARTIDOS_COM_COR.has(k) ? `var(--p-${k})` : "var(--c-outros)";
 }

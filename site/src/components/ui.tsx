@@ -1,6 +1,6 @@
 import { Fragment, createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { load, reais, MESES, type Grupo } from "../data";
+import { corPartido, load, reais, MESES, type Grupo } from "../data";
 
 export function useData<T>(path: string | null): { data: T | null; error: string | null } {
   const [state, set] = useState<{ data: T | null; error: string | null }>({ data: null, error: null });
@@ -141,7 +141,6 @@ export function Espectro({ pontos, destaque }: { pontos: { id: string; pos: numb
 
 /* Uma linha por partido, em ordem da esquerda para a direita: nenhum nome fica por cima de outro */
 export function EspectroPartidos({ partidos }: { partidos: { sigla: string; pos: number; n: number; href?: string }[] }) {
-  const cor = (p: number) => (p < -0.15 ? "var(--esq)" : p > 0.15 ? "var(--dir)" : "var(--centro)");
   const ordem = partidos.slice().sort((a, b) => a.pos - b.pos);
   return (
     <div className="esp-partidos">
@@ -149,11 +148,12 @@ export function EspectroPartidos({ partidos }: { partidos: { sigla: string; pos:
         {ordem.map((p) => (
           <li key={p.sigla}>
             <span className="esp-nome">
+              <i className="partido-cor" style={{ background: corPartido(p.sigla) }} />
               {p.href ? <Link to={p.href}><strong>{p.sigla}</strong></Link> : <strong>{p.sigla}</strong>}
               <small>{p.n} dep.</small>
             </span>
             <span className="esp-trilho" title={`${p.sigla}: posição ${p.pos.toFixed(2)} (de -1 a +1), ${p.n} deputados`}>
-              <i style={{ left: `${((p.pos + 1) / 2) * 100}%`, background: cor(p.pos) }} />
+              <i style={{ left: `${((p.pos + 1) / 2) * 100}%`, background: corPartido(p.sigla) }} />
             </span>
           </li>
         ))}
@@ -190,4 +190,16 @@ export function VotoLegenda() {
 export function VotoChip({ voto }: { voto: string }) {
   const cls = voto === "Sim" ? "chip ok" : voto === "Não" ? "chip no" : "chip";
   return <span className={cls}>{voto}</span>;
+}
+
+/* Link oficial de uma despesa. Nem toda despesa tem a imagem da nota: passagens compradas pelo sistema da Câmara
+   e telefonia têm uma página de detalhe; o Senado só publica a lista de despesas de cada senador. */
+export function LinkNota({ url, link }: { url?: string; link?: string }) {
+  if (!url) return <span className="muted">Sem link oficial</span>;
+  const senado = url.includes("senado.leg.br");
+  const texto = link === "detalhe" ? "Ver detalhe na Câmara" : link === "lista" ? (senado ? "Ver na lista do Senado" : "Ver o mês na Câmara") : "Abrir nota";
+  const dica = link === "detalhe" ? "Página oficial da despesa no site da Câmara (para passagens e telefonia não há imagem de nota)"
+    : link === "lista" ? (senado ? "O Senado não publica a imagem das notas: o link abre a lista oficial de despesas do senador, por tipo e ano" : "Resumo oficial das despesas do mês no site da Câmara")
+    : "Imagem da nota fiscal no site oficial";
+  return <a href={url} target="_blank" rel="noreferrer" title={dica}>{texto} ↗</a>;
 }

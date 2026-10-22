@@ -180,3 +180,134 @@ footer .wrap { display: grid; gap: 6px; }
 .cadeia > span + span::before { content: "→"; color: var(--muted); margin-right: 6px; }
 .donos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .donos li { display: grid; gap: 4px; padding: 12px 14px; }
+
+/* Organograma dos donos: a empresa no topo, os donos de cada empresa logo abaixo dela */
+.lead-donos p { margin: 0 0 6px; }
+.lead-donos ul { margin: 0 0 8px; padding-left: 20px; }
+.fluxo { --fio: color-mix(in srgb, var(--muted) 55%, var(--line)); overflow-x: auto; padding: 8px 0 12px; }
+.fluxo ul { list-style: none; margin: 0; padding: 0; }
+.fluxo li { position: relative; }
+.no { display: inline-flex; flex-direction: column; gap: 2px; text-align: left; max-width: 240px; padding: 8px 12px; border-radius: 8px;
+  background: var(--surface); border: 2px solid var(--fio); font-size: .86rem; line-height: 1.3; }
+.no strong { overflow-wrap: anywhere; }
+.no-tipo { font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.no-doc { font-size: .75rem; color: var(--muted); }
+.no-motivo { font-size: .75rem; color: var(--ink-2); margin-top: 2px; }
+.no-raiz { border-color: var(--ink); background: color-mix(in srgb, var(--ink) 6%, var(--surface)); }
+.no-empresa { border-color: var(--gold); }
+.no-pessoa { border-color: var(--accent); }
+.no-estrangeiro { border-color: var(--muted); }
+.no-parou { border-style: dashed; border-color: var(--muted); }
+.fluxo-legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); margin-bottom: 12px; }
+.fluxo-legenda i { display: inline-block; width: 14px; height: 10px; border-radius: 3px; border: 2px solid; margin-right: 6px; vertical-align: -1px; }
+.fluxo-legenda .no-empresa { border-color: var(--gold); } .fluxo-legenda .no-pessoa { border-color: var(--accent); }
+.fluxo-legenda .no-estrangeiro { border-color: var(--muted); } .fluxo-legenda .no-parou { border-color: var(--muted); border-style: dashed; }
+
+/* Celular: árvore vertical, cada nível um pouco mais para a direita */
+.fluxo ul ul { padding-left: 22px; }
+.fluxo ul ul > li { padding: 10px 0 0 18px; }
+.fluxo ul ul > li::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; border-left: 2px solid var(--fio); }
+.fluxo ul ul > li:last-child::before { bottom: auto; height: 30px; }
+.fluxo ul ul > li::after { content: ""; position: absolute; left: 0; top: 30px; width: 16px; border-top: 2px solid var(--fio); }
+
+/* Tela larga: organograma de cima para baixo, com setas */
+@media (min-width: 760px) {
+  .fluxo > ul { display: flex; justify-content: center; min-width: max-content; }
+  .fluxo ul ul { display: flex; justify-content: center; padding: 22px 0 0; position: relative; }
+  .fluxo ul ul::before { content: ""; position: absolute; top: 0; left: 50%; height: 22px; border-left: 2px solid var(--fio); }
+  .fluxo li { display: flex; flex-direction: column; align-items: center; }
+  .fluxo ul ul > li { padding: 22px 8px 0; }
+  .fluxo ul ul > li::before, .fluxo ul ul > li::after { content: ""; position: absolute; top: 0; bottom: auto; height: 22px; width: 50%; border-top: 2px solid var(--fio); }
+  .fluxo ul ul > li::before { left: 0; border-left: 0; }
+  .fluxo ul ul > li::after { left: 50%; border-left: 2px solid var(--fio); }
+  .fluxo ul ul > li:last-child::before { height: 22px; }
+  .fluxo ul ul > li:first-child::before, .fluxo ul ul > li:last-child::after { border-top: 0; }
+  .fluxo ul ul > li:only-child::after { border-top: 0; }
+  .fluxo ul ul > li:only-child { padding-top: 22px; }
+  .no { min-width: 150px; }
+}
+
+h1 .h1-sub { display: block; font-size: 1rem; font-weight: 600; color: var(--muted); margin-top: 4px; font-family: inherit; }
+tr.atual td { background: color-mix(in srgb, var(--gold) 12%, transparent); }
+
+/* Cores dos partidos (as conhecidas de cada um). No modo escuro, versões mais claras para dar contraste. */
+:root {
+  --p-pt: #d7192a;
+  --p-pcdob: #8e1b1b;
+  --p-pdt: #e4572e;
+  --p-psb: #f6a04d;
+  --p-psol: #f2c200;
+  --p-pv: #2bae66;
+  --p-rede: #00b5a5;
+  --p-avante: #7e57c2;
+  --p-psd: #b8860b;
+  --p-mdb: #00703c;
+  --p-pode: #86c440;
+  --p-pp: #0e8aa7;
+  --p-uniao: #41b6e6;
+  --p-republicanos: #5b5fc7;
+  --p-psdb: #2b7bb9;
+  --p-pl: #13307a;
+  --p-novo: #f47920;
+  --p-solidariedade: #a0522d;
+  --p-cidadania: #e5007e;
+  --p-prd: #607d8b;
+  --p-missao: #3d3d3d;
+  --p-agir: #9e9d24;
+  --p-dc: #795548;
+  --p-pcb: #b71c1c;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --p-pt: #ef4b55;
+  --p-pcdob: #c95050;
+  --p-pdt: #f07a52;
+  --p-psb: #f6b06a;
+  --p-psol: #f5cf33;
+  --p-pv: #45c47f;
+  --p-rede: #2bcfbf;
+  --p-avante: #9c7ddb;
+  --p-psd: #d6a531;
+  --p-mdb: #2fa866;
+  --p-pode: #9bd45a;
+  --p-pp: #36a9c4;
+  --p-uniao: #5cc4ee;
+  --p-republicanos: #8187e0;
+  --p-psdb: #4f98d1;
+  --p-pl: #4f74d9;
+  --p-novo: #f78f45;
+  --p-solidariedade: #c87a52;
+  --p-cidadania: #f0479f;
+  --p-prd: #8ea3ad;
+  --p-missao: #a8a8a8;
+  --p-agir: #c0bf45;
+  --p-dc: #a1887f;
+  --p-pcb: #e05555;
+} }
+:root[data-theme="dark"] {
+  --p-pt: #ef4b55;
+  --p-pcdob: #c95050;
+  --p-pdt: #f07a52;
+  --p-psb: #f6b06a;
+  --p-psol: #f5cf33;
+  --p-pv: #45c47f;
+  --p-rede: #2bcfbf;
+  --p-avante: #9c7ddb;
+  --p-psd: #d6a531;
+  --p-mdb: #2fa866;
+  --p-pode: #9bd45a;
+  --p-pp: #36a9c4;
+  --p-uniao: #5cc4ee;
+  --p-republicanos: #8187e0;
+  --p-psdb: #4f98d1;
+  --p-pl: #4f74d9;
+  --p-novo: #f78f45;
+  --p-solidariedade: #c87a52;
+  --p-cidadania: #f0479f;
+  --p-prd: #8ea3ad;
+  --p-missao: #a8a8a8;
+  --p-agir: #c0bf45;
+  --p-dc: #a1887f;
+  --p-pcb: #e05555;
+}
+.partido-cor { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.esp-eixo .spectrum-labels { font-size: .74rem; gap: 4px; } .esp-eixo .spectrum-labels span { white-space: nowrap; }

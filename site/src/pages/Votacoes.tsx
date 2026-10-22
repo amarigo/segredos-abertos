@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Explain, Loading, useData } from "../components/ui";
-import { TEMAS, casaNome, dataBR, proposicaoNome, type VotacaoResumo } from "../data";
+import { TEMAS, casaNome, dataBR, descricaoCurta, proposicaoNome, tipoVotacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 
 export default function Votacoes() {
@@ -45,7 +45,9 @@ export default function Votacoes() {
               <tr key={v.id}>
                 <td className="num">{dataBR(v.data)}</td>
                 <td>{casaNome(v.casa)}</td>
-                <td><Link to={`/v/${v.id}`}>{proposicaoNome(v.proposicao) || "Votação"}</Link><div className="small muted">{(v.proposicao?.ementa || v.descricao).slice(0, 200)}</div>
+                <td><Link to={`/v/${v.id}`}>{proposicaoNome(v.proposicao) || "Votação"}</Link>{tipoVotacao(v.descricao) && <> <span className="chip">{tipoVotacao(v.descricao)}</span></>}
+                  {descricaoCurta(v.descricao) && <div className="small">{descricaoCurta(v.descricao).slice(0, 220)}</div>}
+                  {v.proposicao?.ementa && <div className="small muted">{v.proposicao.ementa.slice(0, 160)}</div>}
                   {v.temas && v.temas.length > 0 && <div className="small" style={{ marginTop: 2 }}>{v.temas.join(" · ")}</div>}</td>
                 <td className="r num">{v.sim}</td>
                 <td className="r num">{v.nao}</td>
