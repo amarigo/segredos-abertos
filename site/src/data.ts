@@ -121,13 +121,15 @@ const semAcento = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, 
 /** Que parte da proposta estava em votação. Num mesmo dia a mesma proposta pode ter várias votações:
  *  o texto principal, cada destaque, emendas e requerimentos. */
 export function tipoVotacao(descricao: string): string {
-  const d = semAcento(descricao || "");
+  // "ressalvado o destaque" quer dizer que o texto principal foi votado e os destaques ficaram para depois
+  const d = semAcento(descricao || "").replace(/ressalvad[oa]s? (os? )?(destaques?|emendas?)( destacadas?)?/g, "");
   if (/requerimento/.test(d)) return /urgencia/.test(d) ? "Pedido de urgência" : "Requerimento";
-  if (/destaque|\bdtq\b|mantid[oa] o texto|supressiva/.test(d)) return "Destaque (trecho votado à parte)";
-  if (/emenda aglutinativa/.test(d)) return "Emenda aglutinativa";
+  if (/destaque|destacad|\bdtq\b|mantid[oa] o texto|supressiva/.test(d)) return "Destaque (trecho votado à parte)";
   if (/redacao final/.test(d)) return "Redação final";
   if (/segundo turno|2o turno/.test(d)) return "Texto principal, 2º turno";
   if (/primeiro turno|1o turno/.test(d)) return "Texto principal, 1º turno";
+  if (/emenda aglutinativa/.test(d)) return "Emenda aglutinativa";
+  if (/preferencia/.test(d)) return "Preferência (ordem de votação)";
   if (/subemenda substitutiva|substitutivo|parecer|projeto|proposta|texto|materia/.test(d)) return "Texto principal";
   if (/emenda/.test(d)) return "Emenda";
   return "";

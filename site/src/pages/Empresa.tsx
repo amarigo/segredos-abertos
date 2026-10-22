@@ -118,14 +118,15 @@ function Notas({ e }: { e: Empresa }) {
         <div className="search"><input aria-label="Filtrar por parlamentar" value={q} onChange={(ev) => { setQ(ev.target.value); setN(100); }} placeholder="Filtrar por parlamentar" /></div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Data</th><th>Parlamentar e tipo de gasto</th><th className="r">Valor</th><th>Nota</th></tr></thead>
+            <thead><tr><th className="so-largo">Data</th><th>Parlamentar e tipo de gasto</th><th className="r">Valor</th><th className="so-largo">Nota</th></tr></thead>
             <tbody>
               {lista.slice(0, n).map((x, i) => (
                 <tr key={i}>
-                  <td className="num">{dataBR(x[0])}</td>
-                  <td><Link to={`/p/${x[1]}`}>{nomes.get(x[1]) || x[1]}</Link><div className="small muted">{x[2]}</div>{x[6] && <div className="small">{x[6]}</div>}</td>
+                  <td className="num so-largo">{dataBR(x[0])}</td>
+                  <td><Link to={`/p/${x[1]}`}>{nomes.get(x[1]) || x[1]}</Link><div className="small muted">{x[2]}</div>{x[6] && <div className="small">{x[6]}</div>}
+                    <div className="small so-celular"><span className="num muted">{dataBR(x[0])}</span> · <LinkNota url={x[4]} link={x[5] || (x[4] ? "nota" : "")} /></div></td>
                   <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(x[3], true)}</td>
-                  <td className="small"><LinkNota url={x[4]} link={x[5] || (x[4] ? "nota" : "")} /></td>
+                  <td className="small so-largo"><LinkNota url={x[4]} link={x[5] || (x[4] ? "nota" : "")} /></td>
                 </tr>
               ))}
             </tbody>
