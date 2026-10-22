@@ -1,0 +1,62 @@
+name: Sondar pagamentos de emendas (temporário)
+on:
+  push:
+    branches: [claude/project-thread-960m2s]
+jobs:
+  sondar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: API e documentação
+        run: |
+          set +e
+          curl -sS -o api.json -w "api-docs %{http_code} %{size_download}\n" https://api.portaldatransparencia.gov.br/v3/api-docs
+          python3 - <<'PY'
+          import json
+          try:
+              d = json.load(open("api.json"))
+              for p, v in d.get("paths", {}).items():
+                  if "emenda" in p.lower() or "documento" in p.lower() or "despesa" in p.lower():
+                      for m, o in v.items():
+                          print("PATH", m, p, [x.get("name") for x in o.get("parameters", [])])
+          except Exception as e:
+              print("sem api-docs", e, open("api.json").read()[:300])
+          PY
+          curl -sS -w "\nsem-chave %{http_code}\n" "https://api.portaldatransparencia.gov.br/api-de-dados/emendas/documentos/202541440013?pagina=1" | head -c 400
+      - name: Arquivo diário de despesas
+        run: |
+          set +e
+          for d in 20251015; do
+            curl -sSL -A "Mozilla/5.0" -o desp.zip -w "despesas $d %{http_code} %{size_download} %{url_effective}\n" "https://portaldatransparencia.gov.br/download-de-dados/despesas/$d"
+          done
+          ls -la desp.zip; unzip -l desp.zip
+          python3 - <<'PY'
+          import zipfile, io, csv
+          z = zipfile.ZipFile("desp.zip")
+          for n in z.namelist():
+              with z.open(n) as f:
+                  t = io.TextIOWrapper(f, encoding="latin-1", newline="")
+                  r = csv.DictReader(t, delimiter=";")
+                  print("ARQ", n, r.fieldnames)
+                  k = 0
+                  for row in r:
+                      if any("emenda" in (c or "").lower() for c in row) or k < 1:
+                          print("  LINHA", {a: b for a, b in row.items() if b}.__repr__()[:1500])
+                          k += 1
+                      if k >= 2: break
+          # empenhos com emenda
+          for n in z.namelist():
+              if n.endswith("_Despesas_Empenho.csv"):
+                  with z.open(n) as f:
+                      r = csv.DictReader(io.TextIOWrapper(f, encoding="latin-1", newline=""), delimiter=";")
+                      cols = [c for c in r.fieldnames if "emenda" in c.lower() or "autor" in c.lower()]
+                      print("COLS EMENDA", cols)
+                      n_tot = n_em = 0; amostra = []
+                      for row in r:
+                          n_tot += 1
+                          if any(row.get(c) and row.get(c) not in ("0", "-1", "Sem informação") for c in cols):
+                              n_em += 1
+                              if len(amostra) < 3: amostra.append(row)
+                      print("EMPENHOS", n_tot, "com emenda", n_em)
+                      for a in amostra: print("  EMP", repr(a)[:2500])
+          PY
