@@ -197,6 +197,10 @@ jobs:
       - name: Conferir links das notas
         continue-on-error: true
         run: python etl/conferir_links.py site/public/data etl/.cache | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Resumo do Minas Nossa
+        if: always()
+        continue-on-error: true
+        run: python mg/etl/resumo_mg.py site/public-mg/data | tee -a "$GITHUB_STEP_SUMMARY"
 
   publicar:
     needs: coletar
