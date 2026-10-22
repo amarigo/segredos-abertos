@@ -72,7 +72,7 @@ def test_favorecidos(tmp_path):
     assert a["total"] == 1100.0 and a["lista"][0]["doc"] == "18715383000140" and a["lista"][0]["cat"] == "prefeitura"
     assert a["municipios"][0] == {"nome": "Belo Horizonte", "uf": "MG", "valor": 600.0, "n": 1}
     assert a["por_uf"] == [["MG", 1100.0]] and [e["nome"] for e in a["entidades"]] == ["Hospital X"]
-    assert a["_por_autor"]["fulano de tal"][0] == ["Municipio de Belo Horizonte (Belo Horizonte-MG)", 600.0]
+    assert a["_por_autor"]["fulano de tal"][0] == ["Municipio de Belo Horizonte (Belo Horizonte-MG)", 600.0, "18715383000140", ["1"]]
     assert f[2024]["lista"][0]["nome"] == "Hospital X"
 
 
@@ -87,4 +87,4 @@ def test_coletar_grava_arquivos(tmp_path, monkeypatch):
     d = json.loads((tmp_path / "out" / "emendas" / "2025.json").read_text())
     assert d["favorecidos"]["lista"][0]["valor"] == 600.0 and "_por_autor" not in d["favorecidos"]
     fulano = next(a for a in d["autores"] if a["politico"] == "dep-1")
-    assert fulano["recebedores"][1] == ["Hospital X (Contagem-MG)", 500.0] and "chave" not in fulano
+    assert fulano["recebedores"][1] == ["Hospital X (Contagem-MG)", 500.0, "12345678000195", ["2"]] and "chave" not in fulano
