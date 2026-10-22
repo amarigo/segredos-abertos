@@ -111,6 +111,8 @@ section { display: grid; gap: 16px; min-width: 0; }
 
 /* Tabelas */
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+/* Itens de grade não crescem além da tela: tabelas e fluxogramas largos rolam dentro da própria caixa */
+section > *, .wrap > * { min-width: 0; }
 table { border-collapse: collapse; width: 100%; font-size: .92rem; }
 th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; background: var(--surface); position: sticky; top: 0; }
@@ -311,3 +313,8 @@ tr.atual td { background: color-mix(in srgb, var(--gold) 12%, transparent); }
 }
 .partido-cor { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
 .esp-eixo .spectrum-labels { font-size: .74rem; gap: 4px; } .esp-eixo .spectrum-labels span { white-space: nowrap; }
+.voto-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-bottom: 2px; }
+/* Tabelas de notas: no celular, data e link vão para baixo do nome, para caber sem rolar para o lado */
+@media (max-width: 599px) { .so-largo { display: none; } }
+@media (min-width: 600px) { .so-celular { display: none; } }
+.so-celular { margin-top: 4px; }

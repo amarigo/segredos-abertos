@@ -1,6 +1,8 @@
 """Agrupa as dezenas de tipos de despesa da cota em três grupos fáceis de entender."""
 from __future__ import annotations
 
+import re
+
 from .util import norm_name
 
 GRUPOS = {
@@ -34,4 +36,6 @@ def categoria_curta(categoria: str) -> str:
     c = (categoria or "Não informado").strip()
     if len(c) > 70:
         c = c.split(",")[0].strip()
-    return c[:1].upper() + c[1:].lower() if c.isupper() else c
+    c = c[:1].upper() + c[1:].lower() if c.isupper() else c
+    # Siglas da Câmara: SIGEPA é a passagem comprada pela própria Câmara; RPA é a passagem paga pelo deputado e reembolsada
+    return re.sub(r"\s*-\s*sigepa$", " (comprada pela Câmara)", re.sub(r"\s*-\s*rpa$", " (reembolsada ao deputado)", c, flags=re.I), flags=re.I)

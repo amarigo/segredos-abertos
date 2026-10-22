@@ -16,6 +16,7 @@ export default function VotacaoPage() {
   const nome = proposicaoNome(v.proposicao);
   const irmas = nome ? (todas || []).filter((x) => x.casa === v.casa && proposicaoNome(x.proposicao) === nome)
     .sort((a, b) => a.data.localeCompare(b.data) || a.id.localeCompare(b.id)) : [];
+  const variosDias = new Set(irmas.map((x) => x.data)).size > 1;
   const partidos = Object.entries(v.por_partido).sort((a, b) => tot(b[1]) - tot(a[1]));
   const orient = Object.entries(v.orientacoes || {});
   return (
@@ -36,19 +37,23 @@ export default function VotacaoPage() {
       {irmas.length > 1 && (
         <section>
           <h2>Todas as votações de {nome}</h2>
+          {!variosDias && <p className="muted small" style={{ marginTop: -4 }}>Todas em {dataBR(irmas[0].data)}.</p>}
           <Explain>Uma proposta costuma ter várias votações: primeiro o texto principal e depois os destaques, que são trechos que um partido pede para votar separadamente. Cada linha abaixo é uma votação diferente.</Explain>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Data</th><th>O que foi votado</th><th className="r">Sim</th><th className="r">Não</th><th>Resultado</th></tr></thead>
+              <thead><tr><th>O que foi votado</th><th className="r">Sim</th><th className="r">Não</th></tr></thead>
               <tbody>
                 {irmas.map((x) => (
                   <tr key={x.id} className={x.id === v.id ? "atual" : ""}>
-                    <td className="num">{dataBR(x.data)}</td>
-                    <td>{x.id === v.id ? <strong>{tipoVotacao(x.descricao) || "Votação"} (esta)</strong> : <Link to={`/v/${x.id}`}>{tipoVotacao(x.descricao) || "Votação"}</Link>}
-                      <div className="small muted">{descricaoCurta(x.descricao).slice(0, 200)}</div></td>
+                    <td>
+                      <div className="voto-linha">
+                        {x.id === v.id ? <strong>{tipoVotacao(x.descricao) || "Votação"} (esta)</strong> : <Link to={`/v/${x.id}`}>{tipoVotacao(x.descricao) || "Votação"}</Link>}
+                        <span className={`chip ${x.aprovada ? "ok" : "no"}`}>{x.aprovada ? "Aprovado" : "Rejeitado"}</span>
+                      </div>
+                      <div className="small muted">{variosDias && <>{dataBR(x.data)} · </>}{descricaoCurta(x.descricao).slice(0, 200)}</div>
+                    </td>
                     <td className="r num">{x.sim}</td>
                     <td className="r num">{x.nao}</td>
-                    <td><span className={`chip ${x.aprovada ? "ok" : "no"}`}>{x.aprovada ? "Aprovado" : "Rejeitado"}</span></td>
                   </tr>
                 ))}
               </tbody>

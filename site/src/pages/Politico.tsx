@@ -143,14 +143,15 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
         <h2>Maiores notas fiscais de {ano}</h2>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Data</th><th>Fornecedor e tipo de gasto</th><th className="r">Valor</th><th>Documento</th></tr></thead>
+            <thead><tr><th className="so-largo">Data</th><th>Fornecedor e tipo de gasto</th><th className="r">Valor</th><th className="so-largo">Documento</th></tr></thead>
             <tbody>
               {d.maiores_notas.map((n, i) => (
                 <tr key={i}>
-                  <td className="num">{dataBR(n.data)}</td>
-                  <td>{n.doc.length === 14 ? <Link to={`/e/${n.doc}`}>{n.fornecedor}</Link> : n.fornecedor}<div className="small muted">{n.categoria}</div>{n.detalhe && <div className="small">{n.detalhe}</div>}</td>
+                  <td className="num so-largo">{dataBR(n.data)}</td>
+                  <td>{n.doc.length === 14 ? <Link to={`/e/${n.doc}`}>{n.fornecedor}</Link> : n.fornecedor}<div className="small muted">{n.categoria}</div>{n.detalhe && <div className="small">{n.detalhe}</div>}
+                    <div className="small so-celular"><span className="num muted">{dataBR(n.data)}</span> · <LinkNota url={n.url} link={n.link || (n.url ? "nota" : "")} /></div></td>
                   <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(n.valor, true)}</td>
-                  <td className="small"><LinkNota url={n.url} link={n.link || (n.url ? "nota" : "")} /></td>
+                  <td className="small so-largo"><LinkNota url={n.url} link={n.link || (n.url ? "nota" : "")} /></td>
                 </tr>
               ))}
             </tbody>
@@ -330,7 +331,7 @@ function SemNota({ d, ano }: { d: AnoDetalhe; ano: string }) {
       </p>
       {lista && lista.n > 0 && (
         <p className="small" style={{ margin: "6px 0" }}>
-          Em {ano}, buscamos na lista oficial <strong>{lista.n.toLocaleString("pt-BR")} bilhete{lista.n > 1 ? "s" : ""}</strong> ({reais(lista.valor)}). Eles aparecem como "Passagem aérea - sigepa", com a companhia, a data, o número do bilhete e o link "Ver detalhe na Câmara". Valores negativos são bilhetes devolvidos ou remarcados.
+          Em {ano}, buscamos na lista oficial <strong>{lista.n.toLocaleString("pt-BR")} bilhete{lista.n > 1 ? "s" : ""}</strong> ({reais(lista.valor)}). Eles aparecem como "Passagem aérea (comprada pela Câmara)", com a companhia, a data, o número do bilhete e o link "Ver detalhe na Câmara". Valores negativos são bilhetes devolvidos ou remarcados.
         </p>
       )}
       {resto.length > 0 && (
