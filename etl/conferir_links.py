@@ -10,10 +10,7 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from sa_etl import passagens  # noqa: E402
-from sa_etl.camara import LISTA_MES  # noqa: E402
-from sa_etl.recursos import _get_text  # noqa: E402
-from sa_etl.util import _session, read_csv_file  # noqa: E402
+import requests  # noqa: E402
 
 dados, cache = Path(sys.argv[1]), Path(sys.argv[2])
 random.seed(1)
@@ -41,7 +38,7 @@ for casa in sorted({c for c, _ in tipos}):
 
 def status(u):
     try:
-        r = _session.get(u, timeout=30, allow_redirects=True, stream=True, headers={"Accept": "*/*"})
+        r = requests.get(u, timeout=15, allow_redirects=True, stream=True, headers={"Accept": "*/*", "User-Agent": "segredos-abertos"})
         ct = r.headers.get("content-type", "")
         r.close()
         return f"{r.status_code} {ct[:30]}"
@@ -50,22 +47,17 @@ def status(u):
 
 
 for (casa, link), us in sorted(exemplos.items()):
-    print(f"- {casa} / {link}: testando 3 links")
+    print(f"- {casa} / {link}: testando até 3 links")
     for u in random.sample(us, min(3, len(us))):
-        print(f"  - {status(u)} · {u}")
+        st = status(u)
+        print(f"  - {st} · {u}")
+        if st.startswith("erro"):
+            break  # site fora do ar ou lento: não insiste
 
-# A lista oficial de passagens (SIGEPA) é lida da página da Câmara: confere se a leitura funciona na página real.
-print("\n### Lista oficial de passagens (teste da leitura)\n")
-for f in sorted(cache.glob("camara-cota-*.csv.zip"))[-1:]:
-    rows = list(read_csv_file(f))
-    nus = Counter((r.get("nuDeputadoId") or "").strip() for r in rows if (r.get("nuDeputadoId") or "").strip())
-    ano = int(f.name.split("-")[-1].split(".")[0])
-    for nu, _ in nus.most_common(2):
-        for mes in (3, 6):
-            u = LISTA_MES.format(nu=nu, mes=mes, ano=ano, sub=passagens.SIGEPA)
-            h = _get_text(u)
-            linhas = passagens.parse_lista(h or "")
-            print(f"- deputado {nu}, {mes:02d}/{ano}: página {'ok' if h else 'sem resposta'}, {len(linhas)} bilhetes lidos, "
-                  f"R$ {sum(x['valor'] for x in linhas):.2f}")
-            for x in linhas[:2]:
-                print(f"  - {x}")
+# Passagens lidas da lista oficial da Câmara (guardadas em cache pela coleta)
+arqs = list((cache / "passagens").glob("*.json"))
+bilhetes = [x for f in arqs for x in json.loads(f.read_text() or "[]")]
+print(f"\n- Lista oficial de passagens: {len(arqs)} meses lidos, {len(bilhetes)} bilhetes, "
+      f"R$ {sum(x['valor'] for x in bilhetes):,.2f}, {sum(1 for x in bilhetes if not x['numero'])} sem número")
+for x in random.sample(bilhetes, min(3, len(bilhetes))):
+    print(f"  - {x}")

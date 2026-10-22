@@ -67,10 +67,25 @@ def parse_lista(h: str) -> list[dict]:
     return out
 
 
-def coletar(meses: list[tuple[str, str, int, int]], ja_temos: Counter, cache: Path, workers: int = 6) -> list[dict]:
-    """meses: (politico, nuDeputadoId, ano, mes) em que falta valor. Devolve as despesas novas, sem repetir as que já temos."""
+def _num(n: str) -> str:
+    """Número do bilhete sem pontuação nem zeros à esquerda, para comparar com os dados abertos."""
+    return re.sub(r"[^0-9A-Z]", "", (n or "").upper()).lstrip("0")
+
+
+def coletar(meses: list[tuple[str, str, int, int]], existentes: list[dict], falta: dict, cache: Path,
+            workers: int = 6) -> list[dict]:
+    """meses: (politico, nuDeputadoId, ano, mes) em que falta valor; falta: quanto falta em cada um.
+
+    Devolve só os bilhetes que ainda não estão nos dados abertos. Um bilhete é considerado repetido se o
+    mesmo número e valor já aparecem em qualquer mês do deputado. Se mesmo assim a soma do mês passar do
+    que falta, tiramos os que coincidem só pelo número ou por companhia e valor; se ainda passar, não usamos
+    a lista nesse mês (a diferença fica como "sem nota"), para nunca somar acima do total oficial.
+    """
     cache.mkdir(parents=True, exist_ok=True)
     hoje = dt.date.today()
+    ja_exato = Counter((d["politico"], _num(d.get("num", "")), round(d["valor"], 2)) for d in existentes if _num(d.get("num", "")))
+    ja_num = Counter((d["politico"], _num(d.get("num", ""))) for d in existentes if _num(d.get("num", "")))
+    ja_valor = Counter((d["politico"], d.get("doc", ""), round(d["valor"], 2)) for d in existentes if d.get("doc"))
 
     def um(item):
         pid, nu, ano, mes = item
@@ -88,18 +103,35 @@ def coletar(meses: list[tuple[str, str, int, int]], ja_temos: Counter, cache: Pa
         f.write_text(json.dumps(linhas, ensure_ascii=False), encoding="utf-8")
         return item, linhas
 
-    novas, falhas = [], 0
+    def tira(cand, cont, chave):
+        out = []
+        for x in cand:
+            k = chave(x)
+            if k[1] and cont[k] > 0:
+                cont[k] -= 1
+                continue
+            out.append(x)
+        return out
+
+    novas, falhas, repetidas, cortados, exemplos = [], 0, 0, 0, []
     with ThreadPoolExecutor(max_workers=workers) as ex:
         for (pid, nu, ano, mes), linhas in ex.map(um, meses):
             if linhas is None:
                 falhas += 1
                 continue
-            vistos = Counter()
-            for x in linhas:
-                chave = (pid, ano, mes, x["numero"], x["valor"])
-                vistos[chave] += 1
-                if vistos[chave] <= ja_temos.get(chave, 0):
-                    continue  # este bilhete já está nos dados abertos
+            cand = tira(linhas, ja_exato, lambda x: (pid, _num(x["numero"]), round(x["valor"], 2)))
+            repetidas += len(linhas) - len(cand)
+            limite = falta.get((pid, ano, mes), 0) + 1
+            if sum(x["valor"] for x in cand) > limite:
+                cand = tira(cand, ja_num, lambda x: (pid, _num(x["numero"])))
+            if sum(x["valor"] for x in cand) > limite:
+                cand = tira(cand, ja_valor, lambda x: (pid, x["doc"], round(x["valor"], 2)))
+            if sum(x["valor"] for x in cand) > limite:
+                cortados += 1
+                if len(exemplos) < 5:
+                    exemplos.append(f"{pid} {mes:02d}/{ano}: lista R$ {sum(x['valor'] for x in cand):.2f}, falta R$ {limite - 1:.2f}")
+                continue
+            for x in cand:
                 novas.append({
                     "politico": pid, "ano": ano, "mes": mes, "data": x["data"] or f"{ano}-{mes:02d}-01",
                     "categoria": CATEGORIA, "grupo": grupo_de("PASSAGEM AÉREA - SIGEPA"),
@@ -107,6 +139,9 @@ def coletar(meses: list[tuple[str, str, int, int]], ja_temos: Counter, cache: Pa
                     "link": "detalhe", "detalhe": f"Bilhete nº {x['numero']}" if x["numero"] else "",
                     "nu": nu, "num": x["numero"], "fonte_lista": True,
                 })
-    log.info("Câmara: %d passagens buscadas na lista oficial em %d meses (%d meses sem resposta), R$ %.2f",
-             len(novas), len(meses), falhas, sum(n["valor"] for n in novas))
+    log.info("Câmara: %d passagens buscadas na lista oficial em %d meses (%d meses sem resposta, %d bilhetes já nos dados "
+             "abertos, %d meses em que a lista passaria do total oficial e não foi usada), R$ %.2f",
+             len(novas), len(meses), falhas, repetidas, cortados, sum(n["valor"] for n in novas))
+    for e in exemplos:
+        log.info("  lista acima do que falta: %s", e)
     return novas

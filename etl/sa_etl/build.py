@@ -74,8 +74,8 @@ def buscar_passagens(despesas: list[dict], politicos: list[dict], rec: dict, cac
             nu_de.setdefault(d["politico"], d["nu"])
     falta = meses_faltando(despesas, politicos, rec)
     meses = [(pid, nu_de[pid], ano, mes) for (pid, ano, mes) in sorted(falta) if pid in nu_de]
-    ja_temos = Counter((d["politico"], d["ano"], d["mes"], d.get("num", ""), d["valor"]) for d in despesas if d.get("num"))
-    return passagens.coletar(meses, ja_temos, cache)
+    pids = {m[0] for m in meses}
+    return passagens.coletar(meses, [d for d in despesas if d["politico"] in pids], falta, cache)
 
 
 def completar_com_oficial(despesas: list[dict], politicos: list[dict], rec: dict) -> list[dict]:

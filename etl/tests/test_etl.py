@@ -310,3 +310,18 @@ def test_links_oficiais_das_notas():
     assert u == ("https://www.camara.leg.br/cota-parlamentar/documento?nuDeputadoId=2227&numMes=1&numAno=2025"
                  "&despesa=10&cnpjFornecedor=66970229001805&idDocumento=0013648685&idDocumentoFiscal=7867324")
     assert "/sen/6008/ceaps/8/?ano=2025" in link_lista(6008, "Passagens aéreas, aquáticas e terrestres nacionais", 2025)
+
+
+def test_passagens_nunca_passam_do_total_oficial(tmp_path, monkeypatch):
+    from sa_etl import build, passagens
+    monkeypatch.setattr(passagens, "_get_text", lambda url: LISTA_HTML)
+    pols = [{"id": "dep-1", "casa": "camara"}]
+    # O bilhete da LATAM já está nos dados abertos, mas em outro mês e com zeros à esquerda: não entra de novo.
+    desp = [{"politico": "dep-1", "ano": 2025, "mes": 9, "valor": 3019.06, "nu": "2227", "num": "0009572255027892"}]
+    rec = {"dep-1": {2025: {"cota_meses": [{"mes": 9, "valor": 3019.06}, {"mes": 10, "valor": 50}]}}}
+    novas = build.buscar_passagens(desp, pols, rec, tmp_path / "a")
+    assert [n["num"] for n in novas] == ["1272148920939"]
+    # Sem nada nos dados abertos e com pouca diferença, a lista passaria do total oficial: não é usada.
+    rec = {"dep-1": {2025: {"cota_meses": [{"mes": 10, "valor": 50}]}}}
+    desp = [{"politico": "dep-1", "ano": 2025, "mes": 9, "valor": 10, "nu": "2227", "num": "1"}]
+    assert build.buscar_passagens(desp, pols, rec, tmp_path / "b") == []
