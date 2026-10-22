@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Barras, Explain, Loading, useAno, useData } from "../components/ui";
-import { casaNome, cnpjFmt, corPartido, reais, reaisCurto, type Casa } from "../data";
+import { casaNome, cnpjFmt, corPartido, linkSeguro, reais, reaisCurto, type Casa } from "../data";
 import { Pizza } from "./Partidos";
 import "./emendas.css";
 
@@ -119,7 +119,7 @@ export default function Emendas() {
       <section>
         <h2>De onde vêm estes dados</h2>
         <p className="small">
-          Portal da Transparência do governo federal (Controladoria-Geral da União), arquivo completo de emendas parlamentares, atualizado todo dia. <a href={data.fonte} target="_blank" rel="noreferrer">Consultar uma emenda no Portal ↗</a>
+          Portal da Transparência do governo federal (Controladoria-Geral da União), arquivo completo de emendas parlamentares, atualizado todo dia. <a href={linkSeguro(data.fonte)} target="_blank" rel="noreferrer">Consultar uma emenda no Portal ↗</a>
         </p>
         <ul className="small muted emd-notas">
           <li>O ano é o ano do Orçamento em que a emenda foi feita. "Pago" soma o que foi pago no próprio ano e o que ficou para depois (restos a pagar) e já foi pago.</li>

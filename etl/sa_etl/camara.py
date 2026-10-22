@@ -14,7 +14,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from .categorias import categoria_curta, grupo_de
-from .util import digits, download, get_json, read_csv_file, to_float
+from .util import avisar, digits, download, eh_csv, eh_zip, get_json, id_seguro, read_csv_file, to_float, url_segura
 
 log = logging.getLogger("sa_etl.camara")
 
@@ -40,6 +40,9 @@ def deputados() -> list[dict]:
     while url:
         data = get_json(url, params=params)
         for d in data.get("dados", []):
+            if not str(d.get("id", "")).isdigit():
+                log.warning("Câmara: deputado com id inválido ignorado: %r", d.get("id"))
+                continue
             out.append({
                 "id": pid(d["id"]),
                 "casa": "camara",
@@ -47,7 +50,7 @@ def deputados() -> list[dict]:
                 "nome": d.get("nome", "").strip(),
                 "partido": d.get("siglaPartido") or "",
                 "uf": d.get("siglaUf") or "",
-                "foto": d.get("urlFoto") or "",
+                "foto": url_segura(d.get("urlFoto")),
                 "fonte": f"https://www.camara.leg.br/deputados/{d['id']}",
             })
         url = next((l["href"] for l in data.get("links", []) if l.get("rel") == "next"), None)
@@ -75,6 +78,9 @@ def link_detalhe(nu, ano, mes, sub, cnpj, num, ide) -> str:
     nu = (nu or "").strip()
     if not nu:
         return ""
+    if len(digits(cnpj)) == 11:
+        # Fornecedor pessoa física: o link de detalhe levaria o CPF no endereço. Usamos a lista do mês, sem o CPF.
+        return LISTA_MES.format(nu=nu, mes=mes, ano=ano, sub=(sub or "").strip())
     return DETALHE.format(nu=nu, mes=mes, ano=ano, sub=(sub or "").strip(), cnpj=digits(cnpj),
                           num=quote((num or "").strip()), ide=(ide or "").strip() or "0")
 
@@ -93,7 +99,7 @@ def parse_cota(rows, ids: set[str]) -> list[dict]:
         if valor == 0:
             continue
         cat = r.get("txtDescricao") or ""
-        url = (r.get("urlDocumento") or "").strip()
+        url = url_segura(r.get("urlDocumento"))
         nu = (r.get("nuDeputadoId") or "").strip()
         ano, mes = int(to_float(r.get("numAno"))), int(to_float(r.get("numMes")))
         detalhe = " · ".join(x for x in (
@@ -111,7 +117,7 @@ def parse_cota(rows, ids: set[str]) -> list[dict]:
             "doc": digits(r.get("txtCNPJCPF")),
             "valor": round(valor, 2),
             "url": url or link_detalhe(nu, ano, mes, r.get("numSubCota"), r.get("txtCNPJCPF"), r.get("txtNumero"), r.get("ideDocumento")),
-            "link": "nota" if url else "detalhe" if nu else "",
+            "link": "nota" if url else ("lista" if len(digits(r.get("txtCNPJCPF"))) == 11 else "detalhe") if nu else "",
             "detalhe": detalhe,
             "nu": nu,
             "num": (r.get("txtNumero") or "").strip(),
@@ -124,9 +130,11 @@ def despesas(anos: list[int], ids: set[str], cache: Path) -> list[dict]:
     out: list[dict] = []
     for ano in anos:
         try:
-            f = download(COTA_URL.format(ano=ano), cache / f"camara-cota-{ano}.csv.zip", max_horas=_validade(ano))
+            f = download(COTA_URL.format(ano=ano), cache / f"camara-cota-{ano}.csv.zip", max_horas=_validade(ano),
+                         validar=eh_zip)
         except Exception as e:  # noqa: BLE001 - um ano faltando não deve parar tudo
             log.warning("Cota da Câmara %s indisponível: %s", ano, e)
+            avisar(f"Cota da Câmara {ano}: o arquivo oficial não pôde ser baixado; as despesas de deputados neste ano estão faltando")
             continue
         rows = parse_cota(read_csv_file(f), ids)
         log.info("Câmara: %d despesas em %s", len(rows), ano)
@@ -137,10 +145,12 @@ def despesas(anos: list[int], ids: set[str], cache: Path) -> list[dict]:
 def parse_votacoes(votacoes_rows, votos_rows, orient_rows, prop_rows, ids: set[str]) -> tuple[list[dict], list[dict]]:
     """Monta as votações nominais do plenário e os votos de cada deputado."""
     votos_por = defaultdict(list)
+    ja_votou = set()  # o arquivo às vezes repete a linha do mesmo voto
     for r in votos_rows:
         dep = (r.get("deputado_id") or "").strip()
-        if not dep:
+        if not dep.isdigit() or (r.get("idVotacao"), dep) in ja_votou:
             continue
+        ja_votou.add((r.get("idVotacao"), dep))
         votos_por[r["idVotacao"]].append({
             "politico": pid(dep),
             "voto": normaliza_voto(r.get("voto", "")),
@@ -167,10 +177,12 @@ def parse_votacoes(votacoes_rows, votos_rows, orient_rows, prop_rows, ids: set[s
         }
 
     votacoes, votos = [], []
+    vistas = set()
     for r in votacoes_rows:
-        vid = r.get("id", "")
-        if (r.get("siglaOrgao") or "").upper() != "PLEN" or vid not in votos_por:
+        vid = id_seguro(r.get("id"))
+        if not vid or vid in vistas or (r.get("siglaOrgao") or "").upper() != "PLEN" or vid not in votos_por:
             continue
+        vistas.add(vid)
         vs = [v for v in votos_por[vid] if v["politico"] in ids]
         if not vs:
             continue
@@ -193,10 +205,12 @@ def votacoes(anos: list[int], ids: set[str], cache: Path) -> tuple[list[dict], l
     all_v, all_votos = [], []
     for ano in anos:
         try:
-            files = {k: download(u.format(ano=ano), cache / f"camara-{k}-{ano}.csv", max_horas=_validade(ano))
+            files = {k: download(u.format(ano=ano), cache / f"camara-{k}-{ano}.csv", max_horas=_validade(ano),
+                                 validar=eh_csv)
                      for k, u in VOT_URLS.items()}
         except Exception as e:  # noqa: BLE001
             log.warning("Votações da Câmara %s indisponíveis: %s", ano, e)
+            avisar(f"Votações da Câmara {ano}: os arquivos oficiais não puderam ser baixados; as votações deste ano estão faltando")
             continue
         v, vs = parse_votacoes(
             read_csv_file(files["votacoes"]), read_csv_file(files["votos"]),

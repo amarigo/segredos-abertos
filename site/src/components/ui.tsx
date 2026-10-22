@@ -1,6 +1,6 @@
-import { Fragment, createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { Component, Fragment, createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { corPartido, load, reais, MESES, type Grupo } from "../data";
+import { corPartido, linkSeguro, load, reais, MESES, type Grupo } from "../data";
 
 export function useData<T>(path: string | null): { data: T | null; error: string | null } {
   const [state, set] = useState<{ data: T | null; error: string | null }>({ data: null, error: null });
@@ -29,6 +29,20 @@ export function AnoSeletor() {
       </select>
     </label>
   );
+}
+
+/* Se um arquivo de dados vier com defeito e a página quebrar, mostra um aviso no lugar da tela em branco.
+   O resto do site (menu, outras páginas) continua funcionando. */
+export class ErroNaPagina extends Component<{ children: ReactNode }, { erro: boolean }> {
+  state = { erro: false };
+  static getDerivedStateFromError() { return { erro: true }; }
+  componentDidCatch(e: unknown) { console.error("Erro ao mostrar a página:", e); }
+  render() {
+    if (this.state.erro) {
+      return <div className="empty" role="alert">Não foi possível mostrar esta página. Os dados podem estar sendo atualizados: tente de novo em alguns minutos. <a href="#/">Voltar ao início</a></div>;
+    }
+    return this.props.children;
+  }
 }
 
 export function Loading({ error }: { error?: string | null }) {
@@ -195,7 +209,8 @@ export function VotoChip({ voto }: { voto: string }) {
 /* Link oficial de uma despesa. Nem toda despesa tem a imagem da nota: passagens compradas pelo sistema da Câmara
    e telefonia têm uma página de detalhe; o Senado só publica a lista de despesas de cada senador. "sem_pdf" é uma nota
    cujo PDF dá erro 404 no site da Câmara (a coleta confere todo dia): o link vai para a página de detalhe. */
-export function LinkNota({ url, link }: { url?: string; link?: string }) {
+export function LinkNota({ url: bruto, link }: { url?: string; link?: string }) {
+  const url = linkSeguro(bruto);
   if (!url) return <span className="muted">Sem link oficial</span>;
   const senado = url.includes("senado.leg.br");
   const texto = link === "detalhe" ? "Ver detalhe na Câmara" : link === "sem_pdf" ? "Ver detalhe (a Câmara não publicou o PDF)"

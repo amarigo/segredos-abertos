@@ -35,6 +35,12 @@ npm install
 npm run dev
 ```
 
+## Testes e qualidade
+
+Testes unitários e de propriedades, integração com os sites do governo simulados, engenharia de caos e testes no
+navegador. A cada coleta, os dados só são publicados se passarem na conferência (`etl/sa_etl/validar.py`): somas,
+votos repetidos, CPFs, links e quedas bruscas. Veja [TESTES.md](TESTES.md).
+
 ## Próximas etapas
 
 1. Salários da equipe do gabinete (verba de gabinete).

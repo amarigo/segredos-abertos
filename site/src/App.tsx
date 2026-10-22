@@ -10,7 +10,7 @@ import VotacaoPage from "./pages/Votacao";
 import Sobre from "./pages/Sobre";
 import Partidos from "./pages/Partidos";
 import Emendas from "./pages/Emendas";
-import { AnoCtx, AnoSeletor, useData } from "./components/ui";
+import { AnoCtx, AnoSeletor, ErroNaPagina, useData } from "./components/ui";
 import { dataBR, type Meta } from "./data";
 
 export default function App() {
@@ -41,6 +41,7 @@ export default function App() {
         </div>
       </header>
       <main className="wrap">
+        <ErroNaPagina key={pathname}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/politicos" element={<Politicos />} />
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="/sobre" element={<Sobre />} />
           <Route path="*" element={<div className="empty">Página não encontrada. <Link to="/">Voltar ao início</Link></div>} />
         </Routes>
+        </ErroNaPagina>
       </main>
       <footer>
         <div className="wrap">

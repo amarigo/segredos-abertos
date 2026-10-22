@@ -3,7 +3,7 @@ import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Barras, COR_GRUPO, Espectro, Explain, GastoMensal, LinkNota, Loading, VotoChip, useAno, useData } from "../components/ui";
 import {
-  GRUPO_CURTO, GRUPO_EXPLICA, casaNome, cnpjFmt, dataBR, pct, proposicaoNome, reais,
+  GRUPO_CURTO, GRUPO_EXPLICA, casaNome, cnpjFmt, dataBR, linkSeguro, pct, proposicaoNome, reais,
   type Grupo, type Meta, type Politico, type Recursos, type Resumo, type VotacaoResumo,
   MESES_LONGOS, descricaoCurta, tipoVotacao, type AnoDetalhe,
 } from "../data";
@@ -19,7 +19,7 @@ export default function PoliticoPage() {
   return (
     <>
       <section className="profile">
-        {p.foto ? <img src={p.foto} alt={`Foto de ${p.nome}`} /> : <span className="avatar" style={{ width: 112, height: 112 }} />}
+        {linkSeguro(p.foto) ? <img src={linkSeguro(p.foto)} alt={`Foto de ${p.nome}`} /> : <span className="avatar" style={{ width: 112, height: 112 }} />}
         <div>
           <span className="eyebrow">{p.cargo} · {p.uf}</span>
           <h1>{p.nome}</h1>
@@ -27,7 +27,7 @@ export default function PoliticoPage() {
             <span className="chip">{p.partido}</span>
             {p.posicao != null && <span className="chip">{p.rotulo}</span>}
             {p.campo && <span className="chip">{p.campo}</span>}
-            <a className="chip" href={p.fonte} target="_blank" rel="noreferrer">Página oficial ↗</a>
+            <a className="chip" href={linkSeguro(p.fonte)} target="_blank" rel="noreferrer">Página oficial ↗</a>
           </div>
         </div>
       </section>
@@ -198,7 +198,7 @@ function Equipe({ p, r, ano }: { p: Politico; r: Recursos; ano: string }) {
     return (
       <section>
         <h2>Equipe do gabinete</h2>
-        <Explain>Ainda não há dados da equipe para {ano}. A lista oficial está na <a href={p.fonte} target="_blank" rel="noreferrer">página do parlamentar</a>.</Explain>
+        <Explain>Ainda não há dados da equipe para {ano}. A lista oficial está na <a href={linkSeguro(p.fonte)} target="_blank" rel="noreferrer">página do parlamentar</a>.</Explain>
       </section>
     );
   }
@@ -342,7 +342,7 @@ function SemNota({ d, ano }: { d: AnoDetalhe; ano: string }) {
             Ainda sobra <strong>{reais(totalResto)}</strong> que a página oficial soma e que não aparece em nenhuma nota nem na lista de despesas. Mostramos esse valor como "Despesas sem nota nos dados abertos" para o total ficar igual ao oficial. Mês a mês:
           </p>
           <div className="small" style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px" }}>
-            {resto.map((x) => <span key={x.mes}>{MESES_LONGOS[x.mes - 1]}: <span className="num">{reais(x.valor)}</span>{x.url && <> · <a href={x.url} target="_blank" rel="noreferrer">ver o mês na Câmara ↗</a></>}</span>)}
+            {resto.map((x) => <span key={x.mes}>{MESES_LONGOS[x.mes - 1]}: <span className="num">{reais(x.valor)}</span>{linkSeguro(x.url) && <> · <a href={linkSeguro(x.url)} target="_blank" rel="noreferrer">ver o mês na Câmara ↗</a></>}</span>)}
           </div>
         </>
       )}

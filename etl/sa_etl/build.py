@@ -13,21 +13,26 @@ from pathlib import Path
 
 from . import camara, cnpj, emendas, ideologia, links_notas, passagens, recursos, senado, temas
 from .categorias import GRUPOS
+from . import util
 from .util import cnpj_valido, doc_kind, mask_cpf, write_json
 
 log = logging.getLogger("sa_etl")
 
 
 def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool = True) -> dict:
-    deps = camara.deputados()
-    sens = senado.senadores()
+    util.AVISOS.clear()
+    deps = sem_repetidos(camara.deputados(), "id")
+    sens = sem_repetidos(senado.senadores(), "id")
+    if not deps or not sens:
+        # Sem a lista de parlamentares não há site: melhor falhar e manter no ar a versão anterior
+        raise RuntimeError(f"Lista de parlamentares vazia (Câmara: {len(deps)}, Senado: {len(sens)})")
     politicos = deps + sens
     ids_c = {p["id"] for p in deps}
     ids_s = {p["id"] for p in sens}
 
-    despesas = camara.despesas(anos, ids_c, cache) + senado.despesas(anos, ids_s)
+    despesas = camara.despesas(anos, ids_c, cache) + senado.despesas(anos, ids_s, cache)
     vc, votos_c = camara.votacoes(anos, ids_c, cache)
-    vs, votos_s = senado.votacoes(anos, ids_s)
+    vs, votos_s = senado.votacoes(anos, ids_s, cache / "senado-votacoes")
 
     por_cnpj = Counter()
     for d in despesas:
@@ -132,13 +137,33 @@ def salario_senadores(politicos: list[dict], rec: dict) -> dict:
     return out
 
 
+def sem_repetidos(itens: list[dict], *chaves: str) -> list[dict]:
+    """Remove itens repetidos (mesma chave), mantendo o primeiro. As APIs às vezes repetem linhas ao paginar."""
+    vistos, out = set(), []
+    for x in itens:
+        k = tuple(x.get(c) for c in chaves)
+        if k not in vistos:
+            vistos.add(k)
+            out.append(x)
+    return out
+
+
 def montar(dados: dict, saida: Path, anos: list[int]) -> None:
-    politicos = dados["politicos"]
-    despesas = completar_com_oficial(dados["despesas"], politicos, dados.get("recursos") or {})
-    votacoes = dados["votacoes"]
-    votos = dados["votos"]
-    emps = dados["empresas"]
+    politicos = sem_repetidos(dados["politicos"], "id")
     por_id = {p["id"]: p for p in politicos}
+    despesas = [d for d in dados["despesas"] if d["ano"] in anos and d["politico"] in por_id]
+    if len(despesas) != len(dados["despesas"]):  # uma linha de outro ano no arquivo deixaria os totais do site sem bater
+        log.warning("Despesas: %d fora dos anos pedidos ou de parlamentar desconhecido foram descartadas",
+                    len(dados["despesas"]) - len(despesas))
+    despesas = completar_com_oficial(despesas, politicos, dados.get("recursos") or {})
+    votacoes = sem_repetidos(dados["votacoes"], "id")
+    ids_v = {v["id"] for v in votacoes}
+    # um voto por parlamentar em cada votação, e só de votações e parlamentares conhecidos
+    votos = [v for v in sem_repetidos(dados["votos"], "votacao", "politico")
+             if v["votacao"] in ids_v and v["politico"] in por_id]
+    if len(votos) != len(dados["votos"]):
+        log.warning("Votos: %d repetidos ou sem votação/parlamentar conhecido foram descartados", len(dados["votos"]) - len(votos))
+    emps = dados["empresas"]
     partido_de = {p["id"]: p["partido"] for p in politicos}
     hoje = dt.date.today().isoformat()
 
@@ -361,7 +386,7 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
     write_json(saida / "partidos.json", partidos)
 
     write_json(saida / "meta.json", {
-        "atualizado_em": hoje, "anos": anos, "grupos": GRUPOS, "medias": medias,
+        "atualizado_em": hoje, "anos": anos, "avisos": list(util.AVISOS), "grupos": GRUPOS, "medias": medias,
         "contagens": {"politicos": len(politicos), "despesas": len(despesas), "votacoes": len(votacoes),
                       "empresas_com_socios": len(emps)},
         "total_gasto": round(sum(d["valor"] for d in despesas), 2),
@@ -508,9 +533,9 @@ def main() -> None:
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     dados = coletar(a.anos, a.cache, a.max_empresas, not a.sem_recursos)
-    montar(dados, a.saida, a.anos)
-    if not a.sem_emendas:
+    if not a.sem_emendas:  # antes de montar(), para os avisos das emendas entrarem no meta.json
         emendas.coletar(dados["politicos"], a.anos, a.cache / "emendas", a.saida)
+    montar(dados, a.saida, a.anos)
 
 
 if __name__ == "__main__":
