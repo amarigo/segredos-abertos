@@ -25,41 +25,23 @@ def st(u, corpo=False):
 
 
 cache = Path("/tmp/cache"); cache.mkdir(exist_ok=True)
-alvo = None
-for ano in (2026, 2025, 2024, 2023):
-    rows = list(read_csv_file(download(COTA_URL.format(ano=ano), cache / f"c{ano}.zip")))
-    com = [r for r in rows if (r.get("urlDocumento") or "").strip()]
-    tipos = Counter(re.sub(r"\d+", "N", r["urlDocumento"].split("?")[0])[:70] for r in com)
-    print(f"\n=== {ano}: {len(rows)} linhas, {len(com)} com urlDocumento. Padrões: {tipos.most_common(4)}")
-    print("    indTipoDocumento:", Counter(r.get("indTipoDocumento") for r in com).most_common(5))
-    for r in rows:
-        if r.get("ideDocumento") == "8165838":
-            alvo = r
-    res = Counter()
-    ruins = []
-    for r in random.sample(com, min(40, len(com))):
-        s, ct, _ = st(r["urlDocumento"].strip())
-        chave = ("pdf" if r["urlDocumento"].endswith(".pdf") else "nfe", r.get("indTipoDocumento"), s)
-        res[chave] += 1
-        if s != 200:
-            ruins.append(r)
-    print("    status (formato, tipo de documento, http):", dict(res))
-    for r in ruins[:4]:
-        nu, ide, cad = r.get("nuDeputadoId"), r.get("ideDocumento"), r.get("ideCadastro")
-        print("    -- quebrado:", {k: r.get(k) for k in ("urlDocumento", "indTipoDocumento", "datEmissao", "numMes", "txtDescricao", "ideCadastro", "nuDeputadoId", "txtFornecedor")})
-        det = link_detalhe(nu, ano, int(r.get("numMes") or 0), r.get("numSubCota"), r.get("txtCNPJCPF"), r.get("txtNumero"), ide)
-        s, ct, h = st(det, corpo=True)
-        links = sorted(set(re.findall(r'href="([^"]*(?:publ|nota-fiscal|\.pdf)[^"]*)"', h)))[:5]
-        print(f"       detalhe {s} {ct} · links na página: {links}")
-        for alt in (f"https://www.camara.leg.br/cota-parlamentar/nota-fiscal-eletronica?ideDocumentoFiscal={ide}",
-                    f"https://www.camara.leg.br/cota-parlamentar/documentos/publ/{cad}/{ano}/{ide}.pdf",
-                    r["urlDocumento"].replace("http://", "https://").replace("//camara", "//www.camara")):
-            print(f"       {st(alt)[:2]} {alt}")
-print("\n=== Nota do print (ideDocumento 8165838):", {k: (alvo or {}).get(k) for k in ("urlDocumento", "indTipoDocumento", "datEmissao", "numMes", "numAno", "txtDescricao", "nuDeputadoId", "ideCadastro", "txtFornecedor", "numSubCota", "txtNumero")})
-if alvo:
-    det = link_detalhe(alvo["nuDeputadoId"], 2026, int(alvo["numMes"]), alvo.get("numSubCota"), alvo.get("txtCNPJCPF"), alvo.get("txtNumero"), alvo["ideDocumento"])
-    s, ct, h = st(det, corpo=True)
-    print("    detalhe:", s, ct, det)
-    i = h.find("Documento")
-    print("    trecho:", re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", h))[:1200])
-    print("    links:", sorted(set(re.findall(r'href="([^"]+)"', h)))[-30:])
+print("print do usuário:", st("https://www.camara.leg.br/cota-parlamentar/documentos/publ/1649/2026/8165838.pdf")[:2])
+rows = list(read_csv_file(download(COTA_URL.format(ano=2026), cache / "c2026.zip")))
+import datetime as dt
+hoje = dt.date.today()
+faixas = Counter()
+exemplos = {}
+for r in rows:
+    u = (r.get("urlDocumento") or "").strip()
+    d = (r.get("datEmissao") or "")[:10]
+    if not u or not d:
+        continue
+    dias = (hoje - dt.date.fromisoformat(d)).days
+    f = "0-15" if dias <= 15 else "16-30" if dias <= 30 else "31-60" if dias <= 60 else "61-120" if dias <= 120 else "120+"
+    exemplos.setdefault((f, "pdf" if u.endswith(".pdf") else "nfe"), []).append(r)
+for (f, tipo), rs in sorted(exemplos.items()):
+    amostra = random.sample(rs, min(25, len(rs)))
+    c = Counter(st(r["urlDocumento"].strip())[0] for r in amostra)
+    print(f"emitidas há {f} dias, {tipo}: {len(rs)} notas · amostra {dict(c)}")
+# Mês de lançamento (numMes) x emissão: quando a nota entra nos dados abertos?
+print("notas por mês de emissão em 2026:", sorted(Counter((r.get("datEmissao") or "")[:7] for r in rows).items())[-6:])
