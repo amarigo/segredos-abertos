@@ -25,19 +25,21 @@ import time
 import zipfile
 from pathlib import Path
 
+from .emendas import _chave, nome_autor
 from .util import _session, digits, norm_name, to_float
 
 log = logging.getLogger("sa_etl.pagamentos")
 
 URL = "https://portaldatransparencia.gov.br/download-de-dados/despesas/{dia}"
-DOC = "https://portaldatransparencia.gov.br/despesas/documento/{fase}/{codigo}"
+DOC = "https://portaldatransparencia.gov.br/despesas/{fase}/{codigo}"
 VERSAO = 1
 SEM_AUTOR = {"", "SEM INFORMACAO", "SEM EMENDA", "NAO SE APLICA", "-1", "0", "-8"}
 
 
 def url_documento(codigo: str) -> str:
     """Página oficial do documento no Portal (empenho, liquidação ou pagamento)."""
-    tipo = codigo[11:13] if len(codigo) > 13 else ""
+    m = re.search(r"\d{4}([A-Z]{2})\d+$", codigo or "")  # ...2025NE002378: o tipo vem depois do ano
+    tipo = m.group(1) if m else ""
     fase = "empenho" if tipo == "NE" else "liquidacao" if tipo in ("NS", "NL") else "pagamento"
     return DOC.format(fase=fase, codigo=codigo)
 
@@ -143,7 +145,8 @@ def coletar(anos: list[int], cache: Path, minutos: float = 30, hoje: dt.date | N
     hoje = hoje or dt.date.today()
     cache.mkdir(parents=True, exist_ok=True)
     inicio = time.time()
-    dia = dt.date(min(anos), 1, 1)
+    # um ano antes: muitos pagamentos quitam empenhos (reservas) feitos no ano anterior
+    dia = dt.date(min(anos) - 1, 1, 1)
     empenhos_emenda: set[str] = set()
     lidos, novos, falhas = [], 0, 0
     tmp = cache / "dia.zip"
@@ -188,3 +191,133 @@ def coletar(anos: list[int], cache: Path, minutos: float = 30, hoje: dt.date | N
              novos, len(lidos), len(empenhos_emenda),
              "tudo em dia" if falta <= 0 else f"faltam {falta} dias (continua na próxima execução)")
     return lidos
+
+
+# ---------------------------------------------------------------- resumo
+
+# Quem recebe e não é empresa nem entidade: prefeituras, governos, órgãos e bancos públicos
+PUBLICO = re.compile(r"\b(MUNICIPIO|PREFEITURA|FUNDO (MUNICIPAL|ESTADUAL|NACIONAL)|SECRETARIA|ESTADO D[OEA]|GOVERNO|"
+                     r"MINISTERIO|TRIBUNAL|CAMARA MUNICIPAL|ASSEMBLEIA|UNIVERSIDADE FEDERAL|INSTITUTO FEDERAL|"
+                     r"CAIXA ECONOMICA|BANCO DO BRASIL|BANCO DO NORDESTE|BANCO DA AMAZONIA|COMANDO D[OA]|"
+                     r"FUNDACAO OSWALDO CRUZ|INSTITUTO NACIONAL|SUPERINTENDENCIA|DEPARTAMENTO NACIONAL|POLICIA|EXERCITO|"
+                     r"COMPANHIA DE DESENVOLVIMENTO DOS VALES|CODEVASF|DNIT|INCRA|FUNASA|EBSERH|HOSPITAL UNIVERSITARIO)\b")
+N_DOCS = 60
+
+
+def eh_publico(nome: str) -> bool:
+    return bool(PUBLICO.search(norm_name(nome)))
+
+
+def _ler(f: Path) -> dict:
+    return json.loads(gzip.decompress(f.read_bytes()))
+
+
+def resumir(arquivos: list[Path], anos: list[int]) -> dict:
+    """Soma os pagamentos pelo ano em que foram feitos: quem pagou, a quem e por emenda de quem.
+
+    Devolve {"ate": última data lida, "anos": {ano: {...}}}. Os empenhos são lidos numa segunda passada,
+    só os que tiveram pagamento, para não guardar centenas de milhares na memória."""
+    anos_set = set(anos)
+    pagos: list[dict] = []
+    usados: set[str] = set()
+    ate = ""
+    for f in sorted(arquivos):
+        d = _ler(f)
+        if d.get("empenhos") or d.get("pagamentos"):
+            ate = max(ate, f.name[:8])
+        for p in d.get("pagamentos", []):
+            if p["data"][:4].isdigit() and int(p["data"][:4]) in anos_set:
+                pagos.append(p)
+                usados.update(e for e, _ in p["empenhos"])
+    emp: dict[str, dict] = {}
+    for f in sorted(arquivos):
+        for e in _ler(f).get("empenhos", []):
+            if e["codigo"] in usados:
+                emp[e["codigo"]] = e
+
+    nova_ano = lambda: {"total": 0.0, "n": 0, "orgaos": {}, "autores": {}, "favorecidos": {}}  # noqa: E731
+    out: dict[int, dict] = {}
+    for p in pagos:
+        ano = int(p["data"][:4])
+        a = out.setdefault(ano, nova_ano())
+        doc = p["doc"] if len(p["doc"]) == 14 else ""  # CPF (mascarado) não vai para o site
+        for cod_emp, valor in p["empenhos"]:
+            e = emp.get(cod_emp)
+            if not e:
+                continue
+            chave = _chave(e["autor"])
+            item = {"data": p["data"], "pag": p["codigo"], "tipo": p["tipo"], "orgao": p["orgao_sup"] or e["orgao_sup"],
+                    "ug": p["ug"] or e["ug"], "fav": p["favorecido"], "doc": doc, "valor": valor, "emp": cod_emp,
+                    "emenda": e["emenda"], "desc": e["descricao"] or p["descricao"]}
+            a["total"] += valor
+            a["n"] += 1
+            o = a["orgaos"].setdefault(item["orgao"] or "Não informado", {"valor": 0.0, "n": 0, "ugs": {}})
+            o["valor"] += valor; o["n"] += 1
+            o["ugs"][item["ug"]] = o["ugs"].get(item["ug"], 0.0) + valor
+            au = a["autores"].setdefault(chave, {"nome": e["autor"], "valor": 0.0, "n": 0, "orgaos": {}, "docs": []})
+            au["valor"] += valor; au["n"] += 1
+            au["orgaos"][item["orgao"]] = au["orgaos"].get(item["orgao"], 0.0) + valor
+            au["docs"].append(item)
+            if doc and not eh_publico(p["favorecido"]):
+                fv = a["favorecidos"].setdefault(doc, {"nome": p["favorecido"], "valor": 0.0, "n": 0, "autores": {},
+                                                       "orgaos": {}, "docs": []})
+                fv["valor"] += valor; fv["n"] += 1
+                fv["autores"][chave] = fv["autores"].get(chave, 0.0) + valor
+                fv["orgaos"][item["orgao"]] = fv["orgaos"].get(item["orgao"], 0.0) + valor
+                fv["docs"].append(item)
+    for a in out.values():
+        for grupo in (a["autores"], a["favorecidos"]):
+            for x in grupo.values():
+                x["docs"].sort(key=lambda i: -i["valor"])
+                x["docs"] = x["docs"][:N_DOCS]
+    log.info("Pagamentos de emendas: %s (dados até %s)",
+             ", ".join(f"{k}: {v['n']} pagamentos, R$ {v['total']:.0f}" for k, v in sorted(out.items())) or "nenhum", ate or "-")
+    return {"ate": f"{ate[:4]}-{ate[4:6]}-{ate[6:8]}" if ate else "", "anos": out}
+
+
+def cnpjs_empresas(res: dict | None, n: int = 600) -> list[str]:
+    """As empresas e entidades que mais receberam pagamentos de emendas, para buscar os donos na Receita."""
+    soma: dict[str, float] = {}
+    for a in ((res or {}).get("anos") or {}).values():
+        for doc, f in a["favorecidos"].items():
+            soma[doc] = soma.get(doc, 0.0) + f["valor"]
+    return [c for c, _ in sorted(soma.items(), key=lambda kv: -kv[1])[:n]]
+
+
+def por_empresa(res: dict | None, nomes: dict[str, dict], so: set[str]) -> dict[str, dict]:
+    """Para a página de cada empresa: quanto recebeu de emendas, de quem e por qual órgão, com os documentos.
+    nomes: chave do autor → {"nome", "politico", "partido"} (vem das emendas, que acham o partido)."""
+    out: dict[str, dict] = {}
+    brutos: dict[str, str] = {}
+    for ano, a in sorted(((res or {}).get("anos") or {}).items()):
+        brutos.update({k: x["nome"] for k, x in a["autores"].items()})
+        for doc, f in a["favorecidos"].items():
+            if doc not in so:
+                continue
+            e = out.setdefault(doc, {"nome": f["nome"], "total": 0.0, "por_ano": {}, "autores": {}, "orgaos": {}, "docs": []})
+            e["total"] += f["valor"]
+            e["por_ano"][str(ano)] = round(f["valor"], 2)
+            for k, v in f["autores"].items():
+                e["autores"][k] = e["autores"].get(k, 0.0) + v
+            for k, v in f["orgaos"].items():
+                e["orgaos"][k] = e["orgaos"].get(k, 0.0) + v
+            e["docs"] += f["docs"]
+    for e in out.values():
+        e["total"] = round(e["total"], 2)
+        e["autores"] = [{**autor_mostrado(k, nomes, brutos.get(k, "")), "valor": round(v, 2)}
+                        for k, v in sorted(e["autores"].items(), key=lambda kv: -kv[1])]
+        e["orgaos"] = [[k, round(v, 2)] for k, v in sorted(e["orgaos"].items(), key=lambda kv: -kv[1])]
+        e["docs"] = [documento(i) for i in sorted(e["docs"], key=lambda i: -i["valor"])[:N_DOCS]]
+    return out
+
+
+def autor_mostrado(chave: str, nomes: dict[str, dict], bruto: str = "") -> dict:
+    n = nomes.get(chave) or {}
+    return {"nome": n.get("nome") or nome_autor(bruto or chave)[1], "politico": n.get("politico"), "partido": n.get("partido", "")}
+
+
+def documento(i: dict) -> dict:
+    """Um pagamento para o site, com os links oficiais do pagamento e do empenho."""
+    return {"data": i["data"], "codigo": i["pag"], "tipo": i["tipo"], "orgao": i["orgao"], "ug": i["ug"],
+            "favorecido": i["fav"], "cnpj": i["doc"], "valor": round(i["valor"], 2), "empenho": i["emp"],
+            "emenda": i["emenda"], "descricao": i["desc"], "url": url_documento(i["pag"]), "url_empenho": url_documento(i["emp"])}

@@ -29,3 +29,12 @@
 @media (min-width: 600px) { .emd-areas-cel { display: none; } }
 .emd-areas-cel { margin-top: 4px; }
 .emd-det li .num { white-space: nowrap; flex-shrink: 0; }
+
+/* Documentos de pagamento (lista com links oficiais) */
+.emd-docs { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 0; border-top: 1px solid var(--line); }
+.emd-docs li { display: grid; gap: 2px; padding: 10px 2px; border-bottom: 1px solid var(--line); min-width: 0; }
+.emd-docs li > div { overflow-wrap: anywhere; }
+.emd-doc-topo { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.emd-doc-topo strong { white-space: nowrap; }
+.emd-doc-desc { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.emd-doc-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }

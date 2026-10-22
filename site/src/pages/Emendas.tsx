@@ -1,7 +1,8 @@
 import { Fragment, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Barras, Explain, Loading, useAno, useData } from "../components/ui";
-import { casaNome, cnpjFmt, corPartido, linkSeguro, reais, reaisCurto, type Casa } from "../data";
+import { casaNome, cnpjFmt, corPartido, dataBR, linkSeguro, reais, reaisCurto, type Casa } from "../data";
+import { DocsDoAutor, type AutorEmenda } from "../components/DocsEmendas";
 import { Pizza } from "./Partidos";
 import "./emendas.css";
 
@@ -11,8 +12,17 @@ type Par = [string, number];
 interface Autor extends Valores {
   nome: string; n: number; areas: Par[]; recebedores: Par[]; pix: number;
   politico: string | null; partido: string; uf: string; casa: Casa | "";
+  pagamentos?: { valor: number; arquivo: string };
 }
-interface Coletivo extends Valores { nome: string; n: number; tipo: string; areas: Par[]; recebedores: Par[] }
+interface Coletivo extends Valores { nome: string; n: number; tipo: string; areas: Par[]; recebedores: Par[]; pagamentos?: { valor: number; arquivo: string } }
+/* Pagamentos ligados às emendas, pelo ano em que foram feitos (etl/sa_etl/pagamentos.py) */
+interface Pagamentos {
+  ate: string; total: number; n: number;
+  orgaos: { nome: string; valor: number; n: number; ugs: Par[] }[];
+  autores: (AutorEmenda & { valor: number; n: number; orgaos: Par[]; arquivo: string })[];
+  empresas: { cnpj: string; nome: string; tipo: string; pagina: boolean; valor: number; n: number; autores: (AutorEmenda & { valor: number })[]; orgaos: Par[] }[];
+  n_empresas: number;
+}
 interface PartidoEmendas extends Valores { sigla: string; n: number; camara: number; senado: number; pix: number; areas: Par[] }
 interface Favorecido { doc: string; nome: string; cat: string; natureza: string; uf: string; municipio: string; valor: number; autores: Par[] }
 interface Recebedores {
@@ -27,6 +37,7 @@ interface EmendasAno {
   autores: Autor[]; coletivos: Coletivo[]; partidos: PartidoEmendas[];
   sem_partido: Valores & { n: number };
   favorecidos: Recebedores | null;
+  pagamentos?: Pagamentos | null;
 }
 interface Indice { anos: number[]; totais: Record<string, Valores & { n: number }> }
 
@@ -111,6 +122,8 @@ export default function Emendas() {
       </section>
 
       {data.favorecidos && <Destinos f={data.favorecidos} ano={ano} />}
+      {data.pagamentos && <QuemPagou p={data.pagamentos} ano={ano} />}
+      {data.pagamentos && <EmpresasPagas p={data.pagamentos} ano={ano} />}
       <Autores data={data} medida={medida} />
       <PartidosEmendas data={data} medida={medida} />
       <Coletivas data={data} medida={medida} />
@@ -125,6 +138,7 @@ export default function Emendas() {
           <li>O ano é o ano do Orçamento em que a emenda foi feita. "Pago" soma o que foi pago no próprio ano e o que ficou para depois (restos a pagar) e já foi pago.</li>
           <li>O partido é o partido atual do parlamentar. Quem não está mais no cargo aparece com o último partido que teve na Câmara ou no Senado, quando encontramos. {data.sem_partido.n > 0 && <>Não achamos o partido de {data.sem_partido.n} autores ({reaisCurto(v(data.sem_partido))}).</>}</li>
           <li>Emendas de bancada, de comissão e do relator não são de uma pessoa só. Elas aparecem separadas e não entram na conta dos partidos.</li>
+          <li>Quem pagou, as empresas e os documentos vêm dos arquivos diários de despesas do Portal da Transparência. Cada pagamento é ligado à nota de empenho (a reserva do dinheiro), que diz de qual emenda ele é. Só entram pagamentos de empenhos feitos a partir do ano anterior ao primeiro ano do site, por isso a soma pode ser menor que o total pago acima.{data.pagamentos?.ate && <> Dados de pagamento até {dataBR(data.pagamentos.ate)}.</>}</li>
         </ul>
       </section>
     </>
@@ -215,6 +229,10 @@ function Autores({ data, medida }: { data: EmendasAno; medida: Medida }) {
                 {a.recebedores.length ? <ul>{a.recebedores.map(([k, x], j) => <li key={j}><span>{k}</span><span className="num">{reaisCurto(x)}</span></li>)}</ul>
                   : <p className="small muted">Nenhum pagamento em {data.ano}.</p>}
               </div>
+              {a.pagamentos && <div style={{ gridColumn: "1 / -1" }}>
+                <h4>Notas e documentos de pagamento de {data.ano}</h4>
+                <AbrirDocs ano={data.ano} arquivo={a.pagamentos.arquivo} />
+              </div>}
               <p className="small muted" style={{ gridColumn: "1 / -1" }}>
                 Reservado {reais(a.empenhado)} · pago {reais(a.pago)}{a.pix > 0 && <> · {reaisCurto(a.pix)} em emendas Pix</>}.
                 {a.politico && <> <Link to={`/p/${a.politico}`}>Ver gastos e votos de {a.nome}</Link></>}
@@ -324,6 +342,73 @@ function Favorecidos({ f, ano }: { f: Recebedores; ano: string }) {
         </table>
       </div>
       {lista.length > n && <button className="link" onClick={() => setN(n + 30)}>Mostrar mais</button>}
+    </section>
+  );
+}
+
+/** Botão que carrega os documentos só quando a pessoa pede (são centenas de arquivos pequenos). */
+function AbrirDocs({ ano, arquivo }: { ano: number | string; arquivo: string }) {
+  const [aberto, setAberto] = useState(false);
+  if (!aberto) return <button className="link" onClick={() => setAberto(true)}>Ver os pagamentos, quem recebeu e os links oficiais</button>;
+  return <DocsDoAutor ano={ano} arquivo={arquivo} />;
+}
+
+function QuemPagou({ p, ano }: { p: Pagamentos; ano: string }) {
+  return (
+    <section>
+      <h2>Quem pagou: os ministérios e órgãos</h2>
+      <Explain>
+        O parlamentar indica a emenda, mas quem paga é um ministério ou órgão do governo federal. Em {ano}, encontramos {p.n.toLocaleString("pt-BR")} pagamentos ligados a emendas, somando {reaisCurto(p.total)}.
+        Embaixo de cada órgão aparecem as unidades que fizeram os pagamentos.
+      </Explain>
+      <Barras itens={p.orgaos.slice(0, 12).map((o) => ({
+        label: <strong>{o.nome}</strong>,
+        nota: `${o.n.toLocaleString("pt-BR")} pagamentos · ${pctDe(o.valor, p.total)}${o.ugs.length ? ` · ${o.ugs.slice(0, 3).map(([u]) => u).join("; ")}` : ""}`,
+        valor: o.valor, cor: "var(--s1)",
+      }))} />
+    </section>
+  );
+}
+
+function EmpresasPagas({ p, ano }: { p: Pagamentos; ano: string }) {
+  const [q, setQ] = useState("");
+  const [n, setN] = useState(15);
+  const lista = useMemo(() => p.empresas.filter((e) => !q.trim()
+    || semAcento(`${e.nome} ${e.autores.map((a) => `${a.nome} ${a.partido}`).join(" ")}`).includes(semAcento(q.trim()))
+    || e.cnpj.includes(q.replace(/\D/g, "") || "x")), [p, q]);
+  return (
+    <section>
+      <h2>Empresas e entidades pagas com emendas, e por indicação de quem</h2>
+      <Explain>
+        Quando o próprio governo federal compra ou contrata com dinheiro de emenda (uma obra, equipamentos, um serviço), o pagamento vai direto para a empresa ou entidade.
+        Aqui estão as que mais receberam em {ano} ({p.n_empresas.toLocaleString("pt-BR")} ao todo), de quais parlamentares eram as emendas e qual órgão pagou.
+        Toque no nome para ver os donos, se o mesmo dono tem outras empresas e todos os documentos.
+      </Explain>
+      <div className="search"><input aria-label="Procurar empresa ou parlamentar" value={q} onChange={(e) => { setQ(e.target.value); setN(15); }} placeholder="Empresa, CNPJ, parlamentar ou partido" /></div>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Quem recebeu</th><th className="r">Valor</th></tr></thead>
+          <tbody>
+            {lista.slice(0, n).map((e) => (
+              <tr key={e.cnpj}>
+                <td>
+                  {e.pagina ? <Link to={`/e/${e.cnpj}`}><strong>{e.nome}</strong></Link> : <strong>{e.nome}</strong>}
+                  <div className="small muted">{[e.tipo === "entidade" ? "Entidade sem fins lucrativos" : e.tipo === "empresa" ? "Empresa" : "", cnpjFmt(e.cnpj),
+                    `${e.n.toLocaleString("pt-BR")} pagamento${e.n > 1 ? "s" : ""}`].filter(Boolean).join(" · ")}</div>
+                  <div className="small">Emendas de {e.autores.map((a, i) => (
+                    <Fragment key={i}>{i > 0 && ", "}{a.politico ? <Link to={`/p/${a.politico}`}>{a.nome}</Link> : a.nome}{a.partido && <span className="muted"> ({a.partido})</span>}</Fragment>
+                  ))}</div>
+                  {e.orgaos.length > 0 && <div className="small muted">Pago por {e.orgaos.map(([o]) => o).join(" e ")}</div>}
+                  {!e.pagina && <div className="small"><a href={`https://portaldatransparencia.gov.br/pessoa-juridica/${e.cnpj}`} target="_blank" rel="noreferrer">Ver no Portal da Transparência ↗</a></div>}
+                </td>
+                <td className="r num">{reais(e.valor)}</td>
+              </tr>
+            ))}
+            {!lista.length && <tr><td colSpan={2} className="muted">Nada encontrado.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      {lista.length > n && <button className="link" onClick={() => setN(n + 30)}>Mostrar mais ({lista.length - n} restantes)</button>}
     </section>
   );
 }

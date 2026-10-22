@@ -11,7 +11,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import camara, cnpj, emendas, ideologia, links_notas, passagens, recursos, senado, temas
+from . import camara, cnpj, emendas, ideologia, links_notas, pagamentos, passagens, recursos, senado, temas
 from .categorias import GRUPOS
 from . import util
 from .util import cnpj_valido, doc_kind, mask_cpf, write_json
@@ -19,7 +19,9 @@ from .util import cnpj_valido, doc_kind, mask_cpf, write_json
 log = logging.getLogger("sa_etl")
 
 
-def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool = True) -> dict:
+def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool = True,
+            cnpjs_emendas: list[str] | None = None) -> dict:
+    """cnpjs_emendas: empresas pagas com emendas, para buscar os donos junto com as fornecedoras da cota."""
     util.AVISOS.clear()
     deps = sem_repetidos(camara.deputados(), "id")
     sens = sem_repetidos(senado.senadores(), "id")
@@ -39,6 +41,7 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
         if cnpj_valido(d["doc"]):
             por_cnpj[d["doc"]] += d["valor"]
     alvo = [c for c, _ in por_cnpj.most_common(max_empresas)]
+    alvo += [c for c in cnpjs_emendas or [] if c not in set(alvo) and cnpj_valido(c)]
     emps = cnpj.empresas(alvo, cache / "cnpj")
     socias = cnpj.buscar_socias(emps, cache / "cnpj")  # holdings: sócios que são empresas
     rec = recursos.coletar(politicos, anos, cache / "recursos") if com_recursos else {}
@@ -211,6 +214,7 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
             if d["data"] and (d["doc"] not in primeiro_pag or d["data"] < primeiro_pag[d["doc"]]):
                 primeiro_pag[d["doc"]] = d["data"]
 
+    emd = dados.get("emendas_empresas") or {}  # cnpj -> o que recebeu de emendas (pagamentos.por_empresa)
     socias = dados.get("empresas_socias") or {}
     todas_emps = {**socias, **emps}
     comuns = cnpj.socios_em_comum(emps, socias)
@@ -285,19 +289,25 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
 
     # ---------- Empresas ----------
     lista_emp = []
-    for doc, quem in recebeu.items():
+    no_site = set(recebeu) | set(emd)
+    for doc in list(recebeu) + [c for c in emd if c not in recebeu]:
+        quem = recebeu.get(doc, {})
         total = round(sum(quem.values()), 2)
+        de_emendas = emd.get(doc)
         e = emps.get(doc)
         pagadores = sorted(({"politico": pid, "nome": por_id[pid]["nome"], "partido": por_id[pid]["partido"],
                              "uf": por_id[pid]["uf"], "valor": round(v, 2)} for pid, v in quem.items()),
                            key=lambda x: -x["valor"])
-        resumo_e = {"cnpj": doc, "nome": (e or {}).get("razao_social") or nome_forn.get(doc, ""),
+        resumo_e = {"cnpj": doc, "nome": (e or {}).get("razao_social") or nome_forn.get(doc, "") or (de_emendas or {}).get("nome", ""),
                     "total": total, "n_politicos": len(quem), "tem_socios": bool(e and e["socios"]),
-                    "n_mesmo_endereco": len(vizinhas.get(doc, []))}
-        lista_emp.append(resumo_e)
+                    "n_mesmo_endereco": len(vizinhas.get(doc, [])),
+                    **_emd(emd, doc)}
+        if quem:  # a lista de empresas é a da cota; as pagas só com emendas aparecem na página de emendas
+            lista_emp.append(resumo_e)
         def outras_de(s: dict) -> list[dict]:
-            return [{"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu[c].values()), 2)}
-                    for c in socio_empresas.get(cnpj.chave_dono(s), []) if c != doc and c in recebeu]
+            return [{"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu.get(c, {}).values()), 2),
+                     **_emd(emd, c)}
+                    for c in socio_empresas.get(cnpj.chave_dono(s), []) if c != doc and c in no_site]
         socios = [{**s, "tipo": cnpj.tipo_socio(s), "outras_empresas": outras_de(s),
                    "doc": cnpj.cnpj_socio(s) if cnpj.tipo_socio(s) == "empresa" else s["doc"]}
                   for s in (e or {}).get("socios", [])]
@@ -322,9 +332,11 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
                         for (pid, a, m), v in sorted(mensal.items(), key=lambda kv: (kv[0][1], kv[0][2], -kv[1]))],
             **resumo_e, "empresa": {k: v for k, v in (e or {}).items() if k != "socios"} or None,
             "socios": socios, "donos_finais": donos, "pagadores": pagadores,
-            "mesmo_endereco": [{"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu[c].values()), 2),
+            "mesmo_endereco": [{"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu.get(c, {}).values()), 2),
+                                **_emd(emd, c),
                                 "mesmos_socios": bool(cnpj.chaves_de_dono(c, todas_emps) & cnpj.chaves_de_dono(doc, todas_emps))}
-                               for c in vizinhas.get(doc, []) if c in recebeu],
+                               for c in vizinhas.get(doc, []) if c in no_site],
+            "emendas": {k: v for k, v in de_emendas.items() if k != "nome"} if de_emendas else None,
             "alertas": alertas(e, total, primeiro) + alertas_donos(donos) + ([
                 f"Há outras {len(vizinhas[doc])} empresas fornecedoras registradas no mesmo endereço. Isso pode indicar o mesmo dono."
                 if len(vizinhas[doc]) > 1 else
@@ -486,6 +498,12 @@ def custos_extras(casa: str, r: dict) -> dict:
             "n_pessoal": (r or {}).get("n_pessoal")}
 
 
+def _emd(emd: dict, c: str) -> dict:
+    """{"emendas": total} se a empresa recebeu pagamentos de emendas."""
+    v = (emd.get(c) or {}).get("total", 0)
+    return {"emendas": v} if v else {}
+
+
 def alertas_donos(donos: list[dict]) -> list[str]:
     fins = {d["fim"] for d in donos}
     out = []
@@ -530,12 +548,37 @@ def main() -> None:
     ap.add_argument("--sem-recursos", action="store_true", help="não baixa salário, verba de gabinete e equipe")
     ap.add_argument("--max-empresas", type=int, default=1500)
     ap.add_argument("--sem-emendas", action="store_true", help="não baixa as emendas parlamentares (Portal da Transparência)")
+    ap.add_argument("--minutos-pagamentos", type=float, default=45,
+                    help="tempo máximo, por execução, para ler os arquivos diários de pagamentos das emendas")
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    dados = coletar(a.anos, a.cache, a.max_empresas, not a.sem_recursos)
+    pag = None if a.sem_emendas else pagamentos_emendas(a.anos, a.cache, a.minutos_pagamentos)
+    dados = coletar(a.anos, a.cache, a.max_empresas, not a.sem_recursos, cnpjs_emendas=pagamentos.cnpjs_empresas(pag))
     if not a.sem_emendas:  # antes de montar(), para os avisos das emendas entrarem no meta.json
-        emendas.coletar(dados["politicos"], a.anos, a.cache / "emendas", a.saida)
+        juntar_emendas(dados, a.anos, a.cache, a.saida, pag)
     montar(dados, a.saida, a.anos)
+
+
+def pagamentos_emendas(anos: list[int], cache: Path, minutos: float) -> dict | None:
+    """Pagamentos feitos com dinheiro de emendas (arquivos diários do Portal). Se falhar, o resto do site segue."""
+    try:
+        return pagamentos.resumir(pagamentos.coletar(anos, cache / "pagamentos", minutos), anos)
+    except Exception:  # noqa: BLE001
+        log.exception("Pagamentos de emendas: erro; a página de emendas fica sem os documentos de pagamento")
+        return None
+
+
+def juntar_emendas(dados: dict, anos: list[int], cache: Path, saida: Path, pag: dict | None) -> None:
+    """Grava as emendas e põe em dados["emendas_empresas"] as empresas pagas com emendas, para as páginas de empresa."""
+    emps = dados["empresas"]
+    alvo = pagamentos.cnpjs_empresas(pag)
+    publicas = {c for c in alvo if emendas.tipo_pela_receita(emps.get(c)) == "publico"}
+    da_cota = {d["doc"] for d in dados["despesas"]}
+    for c in publicas - da_cota:  # prefeituras e órgãos públicos não entram na análise de donos
+        emps.pop(c, None)
+    paginas = set(alvo) - publicas
+    r = emendas.coletar(dados["politicos"], anos, cache / "emendas", saida, pag, emps, paginas)
+    dados["emendas_empresas"] = pagamentos.por_empresa(pag, (r or {}).get("autores") or {}, paginas)
 
 
 if __name__ == "__main__":

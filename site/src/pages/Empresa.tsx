@@ -1,13 +1,19 @@
 import { Link, useParams } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { Barras, Explain, LinkNota, Loading, useAno, useData } from "../components/ui";
-import { MESES, cnpjFmt, dataBR, reais, type DonoFinal, type Empresa, type NotaEmpresa, type Resumo } from "../data";
+import { MESES, cnpjFmt, dataBR, reais, type DonoFinal, type Empresa, type NotaEmpresa, type OutraEmpresa, type Resumo } from "../data";
+import { ListaDocumentos } from "../components/DocsEmendas";
+
+/** "R$ X da cota · R$ Y de emendas" */
+function recebeuTexto(o: OutraEmpresa) {
+  return [o.total ? `${reais(o.total)}${o.emendas ? " da cota" : ""}` : "", o.emendas ? `${reais(o.emendas)} de emendas` : ""].filter(Boolean).join(" + ") || reais(0);
+}
 import { norm } from "./Home";
 
 export default function EmpresaPage() {
   const { cnpj = "" } = useParams();
   const { data: e, error } = useData<Empresa>(`e/${cnpj}.json`);
-  if (!e) return <Loading error={error && "Esta empresa não está entre as que recebem dinheiro da cota no período."} />;
+  if (!e) return <Loading error={error && "Esta empresa não está entre as que recebem dinheiro da cota ou de emendas no período."} />;
   const emp = e.empresa;
   return (
     <>
@@ -18,7 +24,8 @@ export default function EmpresaPage() {
         {e.alertas.map((a) => <div className="alert" key={a} role="note"><strong>Ponto de atenção:</strong> {a}</div>)}
       </section>
       <section className="grid">
-        <div className="card stat"><span className="label">Recebeu de parlamentares (todos os anos)</span><span className="value">{reais(e.total)}</span><span className="hint">de {e.n_politicos} parlamentar{e.n_politicos > 1 ? "es" : ""}</span></div>
+        {e.total > 0 && <div className="card stat"><span className="label">Recebeu da cota de parlamentares (todos os anos)</span><span className="value">{reais(e.total)}</span><span className="hint">de {e.n_politicos} parlamentar{e.n_politicos > 1 ? "es" : ""}</span></div>}
+        {e.emendas && <div className="card stat"><span className="label">Recebeu de emendas parlamentares</span><span className="value">{reais(e.emendas.total)}</span><span className="hint">pagos pelo governo federal, por indicação de {e.emendas.autores.length} autor{e.emendas.autores.length > 1 ? "es" : ""}</span></div>}
         {emp && <>
           <div className="card stat"><span className="label">Situação na Receita</span><span className="value" style={{ fontSize: "1.3rem" }}>{emp.situacao || "—"}</span><span className="hint">Aberta em {dataBR(emp.abertura)}</span></div>
           <div className="card stat"><span className="label">Atividade</span><span style={{ fontWeight: 600 }}>{emp.atividade || "—"}</span><span className="hint">{emp.municipio}{emp.uf ? `-${emp.uf}` : ""} · {emp.porte}</span></div>
@@ -45,7 +52,7 @@ export default function EmpresaPage() {
                   <tr key={o.cnpj}>
                     <td><Link to={`/e/${o.cnpj}`}>{o.nome}</Link><div className="muted small mono">{cnpjFmt(o.cnpj)}</div></td>
                     <td>{o.mesmos_socios ? <strong>Sim</strong> : "Não"}</td>
-                    <td className="r num">{reais(o.total)}</td>
+                    <td className="r num">{recebeuTexto(o)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -54,14 +61,42 @@ export default function EmpresaPage() {
         </section>
       )}
 
-      <section>
-        <h2>Quem pagou (todos os anos)</h2>
-        <Barras itens={e.pagadores.slice(0, 30).map((p) => ({ label: <Link to={`/p/${p.politico}`}>{p.nome} <span className="muted small">({p.partido}-{p.uf})</span></Link>, valor: p.valor }))} />
-      </section>
+      {e.emendas && <Emendas em={e.emendas} />}
 
-      <PorMes e={e} />
-      <Notas e={e} />
+      {e.pagadores.length > 0 && <section>
+        <h2>{e.emendas ? "Quem pagou com a cota (todos os anos)" : "Quem pagou (todos os anos)"}</h2>
+        <Barras itens={e.pagadores.slice(0, 30).map((p) => ({ label: <Link to={`/p/${p.politico}`}>{p.nome} <span className="muted small">({p.partido}-{p.uf})</span></Link>, valor: p.valor }))} />
+      </section>}
+
+      {e.total > 0 && <PorMes e={e} />}
+      {e.total > 0 && <Notas e={e} />}
     </>
+  );
+}
+
+function Emendas({ em }: { em: NonNullable<Empresa["emendas"]> }) {
+  const anos = Object.entries(em.por_ano).sort();
+  return (
+    <section>
+      <h2>Dinheiro de emendas parlamentares</h2>
+      <Explain>
+        Esta empresa recebeu pagamentos do governo federal feitos com dinheiro de emendas: o parlamentar indica a emenda e um ministério ou órgão faz a compra ou a contratação.
+        {anos.length > 0 && <> Por ano: {anos.map(([a, v]) => `${a}: ${reais(v)}`).join(" · ")}.</>}
+      </Explain>
+      <h3>De quem eram as emendas</h3>
+      <Barras itens={em.autores.slice(0, 20).map((a) => ({
+        label: a.politico ? <Link to={`/p/${a.politico}`}>{a.nome} {a.partido && <span className="muted small">({a.partido})</span>}</Link>
+          : <span>{a.nome} {a.partido && <span className="muted small">({a.partido})</span>}</span>,
+        valor: a.valor,
+      }))} />
+      {em.orgaos.length > 0 && <>
+        <h3>Quem pagou</h3>
+        <Barras itens={em.orgaos.slice(0, 8).map(([o, v]) => ({ label: o, valor: v, cor: "var(--s3)" }))} />
+      </>}
+      <h3>Documentos de pagamento</h3>
+      <ListaDocumentos docs={em.docs} comFavorecido={false} />
+      <p className="muted small">Cada pagamento tem dois links oficiais do Portal da Transparência: o documento de pagamento e a nota de empenho, que é a reserva do dinheiro e diz de qual emenda ele saiu.</p>
+    </section>
   );
 }
 
@@ -226,7 +261,7 @@ function Donos({ e }: { e: Empresa }) {
               <li key={`${d.nome}|${d.doc}`} className="card">
                 <strong>{d.nome}</strong>
                 <div className="small">{d.outras_empresas.map((o, k) => (
-                  <span key={o.cnpj}>{k > 0 && ", "}<Link to={`/e/${o.cnpj}`}>{o.nome}</Link> <span className="muted num">({reais(o.total)})</span></span>
+                  <span key={o.cnpj}>{k > 0 && ", "}<Link to={`/e/${o.cnpj}`}>{o.nome}</Link> <span className="muted num">({recebeuTexto(o)})</span></span>
                 ))}</div>
               </li>
             ))}
