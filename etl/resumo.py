@@ -91,3 +91,8 @@ for ano in meta["anos"]:
                 pct = [v[0] / sum(v) for v in vs]
                 partes.append(f"{k}: {len(vs)} com dado, presença mediana {statistics.median(pct):.0%}")
         print(f"- {ano} {casa}: {len(com)} de {len(at)} com atuação · " + " · ".join(partes))
+for casa in ("camara", "senado"):
+    for k in ("autoria", "relatadas", "discursos"):
+        top = sorted(((a[k], p["nome"], ano) for p in pols if p["casa"] == casa for ano in meta["anos"]
+                      if (a := p["por_ano"].get(str(ano), {}).get("atuacao") or {}).get(k) is not None), reverse=True)[:4]
+        print(f"- {casa}, mais {k}: " + ", ".join(f"{n} ({ano}) {v}" for v, n, ano in top))
