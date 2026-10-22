@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Explain, Loading, useData } from "../components/ui";
+import { Explain, Loading, ResultadoChip, useData } from "../components/ui";
 import { TEMAS, casaNome, dataBR, descricaoCurta, proposicaoNome, tipoVotacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 
@@ -51,7 +51,7 @@ export default function Votacoes() {
                   {v.temas && v.temas.length > 0 && <div className="small" style={{ marginTop: 2 }}>{v.temas.join(" · ")}</div>}</td>
                 <td className="r num">{v.sim}</td>
                 <td className="r num">{v.nao}</td>
-                <td><span className={`chip ${v.aprovada ? "ok" : "no"}`}>{v.aprovada ? "Aprovado" : "Rejeitado"}</span></td>
+                <td><ResultadoChip aprovada={v.aprovada} /></td>
               </tr>
             ))}
           </tbody>

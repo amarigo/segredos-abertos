@@ -1,9 +1,9 @@
 import { AtuacaoPolitico } from "./Atuacao";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Barras, COR_GRUPO, Espectro, Explain, GastoMensal, LinkNota, Loading, VotoChip, useAno, useData } from "../components/ui";
+import { Barras, COR_GRUPO, Espectro, Explain, GastoMensal, LinkNota, Loading, ResultadoChip, VotoChip, useAno, useData } from "../components/ui";
 import {
-  GRUPO_CURTO, GRUPO_EXPLICA, casaNome, cnpjFmt, dataBR, linkSeguro, pct, proposicaoNome, reais,
+  GRUPO_CURTO, GRUPO_EXPLICA, cnpjFmt, dataBR, linkSeguro, pct, proposicaoNome, reais,
   type Grupo, type Meta, type Politico, type Recursos, type Resumo, type VotacaoResumo,
   MESES_LONGOS, descricaoCurta, tipoVotacao, type AnoDetalhe,
 } from "../data";
@@ -258,9 +258,9 @@ function Votos({ p }: { p: Politico }) {
       </section>
       {p.posicao != null && colegas.length > 0 && (
         <section>
-          <h2>Onde fica entre os colegas da {casaNome(p.casa)}</h2>
-          <Espectro destaque={p.id} pontos={colegas.map((c) => ({ id: c.id, pos: c.posicao!, label: `${c.nome} (${c.partido}-${c.uf})`, href: `/p/${c.id}` }))} />
-          <p className="muted small">O ponto amarelo é {p.nome}. Passe o mouse sobre os outros pontos para ver quem são.</p>
+          <h2>Onde fica entre os colegas {p.casa === "camara" ? "da Câmara" : "do Senado"}</h2>
+          <Espectro destaque={p.id} nomeDestaque={p.nome} pontos={colegas.map((c) => ({ id: c.id, pos: c.posicao!, label: `${c.nome} (${c.partido}-${c.uf})`, href: `/p/${c.id}` }))} />
+          <p className="muted small">O ponto dourado, marcado com o nome, é {p.nome}. Passe o mouse sobre os outros pontos para ver quem são.</p>
         </section>
       )}
       {temas.length > 0 && (
@@ -293,18 +293,25 @@ function Votos({ p }: { p: Politico }) {
         </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Data</th><th>O que foi votado</th><th>Voto</th><th>Maioria do partido</th></tr></thead>
+            <thead><tr><th className="so-largo">Data</th><th>O que foi votado</th><th className="so-largo">Voto</th><th className="so-largo">Maioria do partido</th><th className="so-largo">Resultado</th></tr></thead>
             <tbody>
               {lista.slice(0, 300).map((v) => {
                 const info = porId.get(v.votacao);
                 return (
                   <tr key={v.votacao}>
-                    <td className="num">{info ? dataBR(info.data) : ""}</td>
+                    <td className="num so-largo">{info ? dataBR(info.data) : ""}</td>
                     <td><Link to={`/v/${v.votacao}`}>{info ? (proposicaoNome(info.proposicao) || "Votação") : v.votacao}</Link>{info && tipoVotacao(info.descricao) && <> <span className="chip">{tipoVotacao(info.descricao)}</span></>}
                       {info && descricaoCurta(info.descricao) && <div className="small">{descricaoCurta(info.descricao).slice(0, 200)}</div>}
-                      {info?.proposicao?.ementa && <div className="small muted">{info.proposicao.ementa.slice(0, 140)}</div>}</td>
-                    <td><VotoChip voto={v.voto} /></td>
-                    <td>{v.partido ? <VotoChip voto={v.partido} /> : <span className="muted">—</span>}</td>
+                      {info?.proposicao?.ementa && <div className="small muted">{info.proposicao.ementa.slice(0, 140)}</div>}
+                      <div className="small so-celular voto-linha">
+                        {info && <span className="num muted">{dataBR(info.data)}</span>}
+                        <span>Votou <VotoChip voto={v.voto} /></span>
+                        {v.partido && <span>Partido <VotoChip voto={v.partido} /></span>}
+                        {info && <span>Resultado <ResultadoChip aprovada={info.aprovada} /></span>}
+                      </div></td>
+                    <td className="so-largo"><VotoChip voto={v.voto} /></td>
+                    <td className="so-largo">{v.partido ? <VotoChip voto={v.partido} /> : <span className="muted">—</span>}</td>
+                    <td className="so-largo">{info ? <ResultadoChip aprovada={info.aprovada} /> : <span className="muted">—</span>}</td>
                   </tr>
                 );
               })}
