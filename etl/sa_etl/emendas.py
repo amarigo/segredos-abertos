@@ -154,6 +154,7 @@ REGRAS = {
     "rap_pago": [["restos", "pagos"], ["restos", "pago"]],
 }
 REGRAS_FAV = {
+    "codigo": [["codigo", "emenda"]],
     "autor": [["nome", "autor"], ["autor"]],
     "tipo_emenda": [["tipo", "emenda"]],
     "anomes": [["ano", "mes"]],
@@ -428,6 +429,7 @@ def favorecidos(rows, anos: list[int], n: int = 150) -> dict[int, dict]:
     ufs = {a: defaultdict(float) for a in anos}
     muns = {a: defaultdict(lambda: [0.0, set()]) for a in anos}
     autor_rec = {a: defaultdict(lambda: defaultdict(float)) for a in anos}  # autor -> recebedor -> valor
+    autor_cod = {a: defaultdict(lambda: defaultdict(set)) for a in anos}  # autor -> recebedor -> códigos das emendas
     for r in rows:
         if col is None:
             col = achar_colunas(list(r.keys()), REGRAS_FAV)
@@ -464,6 +466,8 @@ def favorecidos(rows, anos: list[int], n: int = 150) -> dict[int, dict]:
             if cat != "estado" and mun:
                 m = muns[ano][(mun, uf)]; m[0] += v; m[1].add(chave)
         autor_rec[ano][_chave(autor)][chave] += v
+        if g("codigo"):
+            autor_cod[ano][_chave(autor)][chave].add(g("codigo"))
     out = {}
     for ano, fs in por.items():
         if not fs:
@@ -474,9 +478,10 @@ def favorecidos(rows, anos: list[int], n: int = 150) -> dict[int, dict]:
         ordem = sorted(fs.items(), key=lambda kv: -kv[1]["valor"])
         por_autor = {}
         for a, recs in autor_rec[ano].items():
-            top = sorted(recs.items(), key=lambda kv: -kv[1])[:5]
+            top = sorted(recs.items(), key=lambda kv: -kv[1])[:8]
             por_autor[a] = [[fs[k]["nome"] + (f" ({fs[k]['municipio']}-{fs[k]['uf']})" if fs[k]["municipio"] and fs[k]["cat"] not in ("estado", "federal") else
-                                              f" ({fs[k]['uf']})" if fs[k]["uf"] else ""), round(x, 2)] for k, x in top]
+                                              f" ({fs[k]['uf']})" if fs[k]["uf"] else ""), round(x, 2),
+                            k if len(k) == 14 and k.isdigit() else "", sorted(autor_cod[ano][a][k])[:3]] for k, x in top]
         out[ano] = {
             "n": len(fs), "total": round(sum(f["valor"] for f in fs.values()), 2),
             "por_categoria": [{"cat": k, "rotulo": CATEGORIAS[k], "valor": round(v[0], 2), "n": len(v[1])}
