@@ -1,6 +1,6 @@
 import { Component, Fragment, createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { corPartido, linkSeguro, load, reais, MESES, type Grupo } from "../data";
+import { linkSeguro, load, reais, MESES, type Grupo } from "../data";
 
 export function useData<T>(path: string | null): { data: T | null; error: string | null } {
   const [state, set] = useState<{ data: T | null; error: string | null }>({ data: null, error: null });
@@ -149,30 +149,6 @@ export function Espectro({ pontos, destaque }: { pontos: { id: string; pos: numb
       </div>
       <div className="spectrum-labels"><span>◀ Esquerda</span><span>Centro</span><span>Direita ▶</span></div>
       {tip.el}
-    </div>
-  );
-}
-
-/* Uma linha por partido, em ordem da esquerda para a direita: nenhum nome fica por cima de outro */
-export function EspectroPartidos({ partidos }: { partidos: { sigla: string; pos: number; n: number; href?: string }[] }) {
-  const ordem = partidos.slice().sort((a, b) => a.pos - b.pos);
-  return (
-    <div className="esp-partidos">
-      <ol aria-label="Partidos da esquerda para a direita">
-        {ordem.map((p) => (
-          <li key={p.sigla}>
-            <span className="esp-nome">
-              <i className="partido-cor" style={{ background: corPartido(p.sigla) }} />
-              {p.href ? <Link to={p.href}><strong>{p.sigla}</strong></Link> : <strong>{p.sigla}</strong>}
-              <small>{p.n} dep.</small>
-            </span>
-            <span className="esp-trilho" title={`${p.sigla}: posição ${p.pos.toFixed(2)} (de -1 a +1), ${p.n} deputados`}>
-              <i style={{ left: `${((p.pos + 1) / 2) * 100}%`, background: corPartido(p.sigla) }} />
-            </span>
-          </li>
-        ))}
-        <li className="esp-eixo" aria-hidden="true"><span /><span className="spectrum-labels"><span>◀ Esquerda</span><span>Centro</span><span>Direita ▶</span></span></li>
-      </ol>
     </div>
   );
 }
