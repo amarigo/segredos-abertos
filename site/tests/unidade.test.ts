@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  atuacaoAtiva, cnpjFmt, corPartido, dataBR, descricaoCurta, linkSeguro, pct, proposicaoNome, reais, reaisCurto,
+  atuacaoAtiva, cnpjFmt, partidoComHoje, corPartido, dataBR, descricaoCurta, linkSeguro, pct, proposicaoNome, reais, reaisCurto,
   taxaPresenca, tipoVotacao,
 } from "../src/data.ts";
 
@@ -60,4 +60,12 @@ test("cor de partido desconhecido é cinza", () => {
   assert.equal(corPartido("PT"), "var(--p-pt)");
   assert.equal(corPartido("União"), "var(--p-uniao)");
   assert.equal(corPartido("XYZ"), "var(--c-outros)");
+});
+
+test("partido antigo com o nome de hoje", () => {
+  assert.equal(partidoComHoje("PMDB", "MDB"), "PMDB (hoje MDB)");
+  assert.equal(partidoComHoje("PT", "PT"), "PT");
+  assert.equal(partidoComHoje("PC do B", "PCdoB"), "PC do B");
+  assert.equal(partidoComHoje("UNIÃO", "UNIAO"), "UNIÃO");
+  assert.equal(partidoComHoje("PSD", null), "PSD");
 });

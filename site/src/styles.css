@@ -351,3 +351,31 @@ tr.atual td { background: color-mix(in srgb, var(--gold) 12%, transparent); }
 .atu-comp-trilha { height: 12px; border-radius: 4px; background: color-mix(in srgb, var(--line) 70%, transparent); overflow: hidden; }
 .atu-comp-eu, .atu-comp-tipico { display: block; height: 100%; border-radius: 4px; min-width: 2px; }
 .atu-comp-eu { background: var(--s1); } .atu-comp-tipico { background: var(--muted); }
+/* Minas Nossa: página da cidade */
+.cidade-card { text-decoration: none; color: inherit; }
+.cidade-card:hover .cidade-nome { text-decoration: underline; }
+.cidade-nome { font-family: var(--display); font-size: 1.5rem; }
+.stat .value.cidade-quem { font-size: 1.3rem; line-height: 1.2; }
+.partido-tag { white-space: nowrap; font-weight: 600; }
+.txt-sim { color: var(--sim); } .txt-nao { color: var(--nao); }
+.resumo-cidade { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; font-size: 1.02rem; }
+.cidade-foco { display: grid; gap: 8px; justify-items: start; }
+.historia { width: 100%; }
+.historia h3 { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.historia p { margin: 0; }
+.linha-tempo { margin: 12px 0 4px; }
+.linha-faixas { display: flex; gap: 2px; height: 26px; border-radius: 6px; overflow: hidden; }
+.linha-faixas span { flex: 1 1 0; min-width: 0; transition: opacity .15s; }
+.linha-rotulos { display: flex; gap: 2px; margin-top: 4px; }
+.linha-rotulos span { flex: 1 1 0; min-width: 0; display: grid; text-align: center; font-size: .72rem; line-height: 1.2; overflow: hidden; }
+.linha-rotulos strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.linha-rotulos small { color: var(--muted); }
+.mandatos { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; }
+.mandato { background: var(--surface); border: 1px solid var(--line); border-left: 6px solid var(--line); border-radius: 8px; padding: 10px 14px; display: grid; gap: 4px; transition: opacity .15s; }
+.mandato.apagado { opacity: .35; }
+.mandato-topo { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.legislaturas { display: grid; gap: 12px; margin-top: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); }
+.cadeiras { display: flex; flex-wrap: wrap; gap: 4px; }
+.cadeira { width: 22px; height: 22px; border-radius: 4px; border: 2px solid transparent; transition: opacity .15s; }
+.cadeira.colig { border-color: var(--ink); }
+.eleitos { margin: 6px 0 0; padding-left: 18px; columns: 2 180px; }

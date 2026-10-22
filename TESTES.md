@@ -118,3 +118,27 @@ npm run test:e2e
 cd ../etl
 python -m sa_etl.validar ../site/public/data --anterior https://amarigo.github.io/segredos-abertos/data/meta.json
 ```
+
+## 7. Minas Nossa (pasta `mg/`)
+
+O Minas Nossa é o recorte de Minas Gerais, publicado em `/mg/`. Usa os mesmos testes do nacional e mais estes:
+
+| Risco | Como testamos |
+|---|---|
+| Recorte deixa político de outro estado, ou somas de empresas e votações erradas | `mg/etl/tests/test_recorte.py`: o recorte passa na conferência nacional (`sa_etl.validar`) e na de MG |
+| Placar errado na votação (bancada de MG no lugar da Casa) | O placar da Casa vai em `placar_casa`; a conferência barra se for menor que o de MG |
+| CPF dos candidatos (os arquivos do TSE trazem) | Só lemos colunas de uma lista fechada; a conferência procura números com cara de CPF na página da cidade; teste no navegador |
+| TSE fora do ar, .zip cortado, página de erro, arquivo sem cabeçalho ou sem a cidade | FakeTSE (`faketse.py`) com esses defeitos; a coleta usa a última cópia ou deixa o ano de fora com aviso. Rodadas de caos com falhas ao acaso |
+| Cadeiras da Câmara que não somam as vagas, dois prefeitos na mesma eleição, percentuais acima de 100 | Conferência das cidades (`mg_etl.validar`) e testes de mutação: estragamos um arquivo bom de 26 jeitos e cada defeito tem de ser pego |
+| Partido antigo sem o nome de hoje (PMDB, PFL, PR...) | Tabela de sucessores (`partidos_hist.py`) com teste de cada linhagem |
+| Falha no Minas Nossa derrubar o site nacional | No GitHub Actions, a coleta de MG roda à parte (`continue-on-error`); se falhar, publica de novo o `dados-mg.zip` anterior |
+
+```bash
+# coletor de MG
+python -m pytest -q mg/etl/tests
+
+# site de MG no navegador
+python etl/tests/gerar_dados_teste.py site/public/data
+python mg/etl/tests/gerar_dados_teste_mg.py site/public/data site/public-mg/data
+cd site && npm run build:mg && npm run test:e2e:mg
+```

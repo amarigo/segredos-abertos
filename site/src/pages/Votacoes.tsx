@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Explain, Loading, ResultadoChip, useData } from "../components/ui";
 import { TEMAS, casaNome, dataBR, descricaoCurta, proposicaoNome, tipoVotacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
+import { MG } from "../recorte";
 
 export default function Votacoes() {
   const { data, error } = useData<VotacaoResumo[]>("votacoes.json");
@@ -20,7 +21,7 @@ export default function Votacoes() {
   return (
     <section>
       <h1>Votações</h1>
-      <Explain>Votações nominais do plenário, em que cada parlamentar registra o próprio voto. PEC é proposta de emenda à Constituição, PL é projeto de lei, MPV é medida provisória e PLP é projeto de lei complementar.</Explain>
+      <Explain>Votações nominais do plenário, em que cada parlamentar registra o próprio voto.{MG && " Sim e Não mostram o placar da Casa inteira; ao lado, como votou a bancada de Minas Gerais."} PEC é proposta de emenda à Constituição, PL é projeto de lei, MPV é medida provisória e PLP é projeto de lei complementar.</Explain>
       <div className="search">
         <input id="busca-votacao" aria-label="Buscar votação" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Assunto ou número (ex.: PEC 45)" />
         <select id="filtro-casa-v" aria-label="Casa" value={casa} onChange={(e) => setCasa(e.target.value)}>
@@ -39,7 +40,7 @@ export default function Votacoes() {
       <p className="muted small">{lista.length} votações{tema ? ` sobre ${tema.toLowerCase()}` : ""}. Os temas são definidos por palavras da ementa. <Link to="/sobre">Entenda</Link>.</p>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Data</th><th>Casa</th><th>O que foi votado</th><th className="r">Sim</th><th className="r">Não</th><th>Resultado</th></tr></thead>
+          <thead><tr><th>Data</th><th>Casa</th><th>O que foi votado</th><th className="r">Sim</th><th className="r">Não</th>{MG && <th>Bancada de MG</th>}<th>Resultado</th></tr></thead>
           <tbody>
             {lista.slice(0, 400).map((v) => (
               <tr key={v.id}>
@@ -49,8 +50,9 @@ export default function Votacoes() {
                   {descricaoCurta(v.descricao) && <div className="small">{descricaoCurta(v.descricao).slice(0, 220)}</div>}
                   {v.proposicao?.ementa && <div className="small muted">{v.proposicao.ementa.slice(0, 160)}</div>}
                   {v.temas && v.temas.length > 0 && <div className="small" style={{ marginTop: 2 }}>{v.temas.join(" · ")}</div>}</td>
-                <td className="r num">{v.sim}</td>
-                <td className="r num">{v.nao}</td>
+                <td className="r num">{(v.placar_casa || v).sim}</td>
+                <td className="r num">{(v.placar_casa || v).nao}</td>
+                {MG && <td className="small num" style={{ whiteSpace: "nowrap" }}>{v.sim} Sim · {v.nao} Não</td>}
                 <td><ResultadoChip aprovada={v.aprovada} /></td>
               </tr>
             ))}

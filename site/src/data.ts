@@ -89,13 +89,16 @@ export interface Politico extends Resumo {
   votos: { votacao: string; voto: string; partido: string }[];
 }
 export interface Proposicao { sigla: string; numero: string; ano: string; ementa: string; titulo: string; url: string }
-export interface VotacaoResumo { id: string; casa: Casa; data: string; descricao: string; aprovada: boolean; proposicao: Proposicao | null; sim: number; nao: number; temas?: string[] }
+/** No Minas Nossa, sim e não são os votos da bancada de MG; placar_casa é o placar da Casa inteira. */
+export interface VotacaoResumo { id: string; casa: Casa; data: string; descricao: string; aprovada: boolean; proposicao: Proposicao | null; sim: number; nao: number; temas?: string[]; placar_casa?: { sim: number; nao: number } }
 export const TEMAS = ["Mulheres", "Micro e pequenas empresas", "Saúde", "Educação", "Segurança pública", "Armas", "Meio ambiente",
   "Impostos e contas públicas", "Trabalho e aposentadoria", "Agropecuária", "Crianças e adolescentes", "Indígenas e minorias",
   "Energia e combustíveis", "Eleições e política"];
 export interface Votacao extends VotacaoResumo {
   orientacoes: Record<string, string>; fonte: string; contagem: Record<string, number>;
   por_partido: Record<string, Record<string, number>>; por_lado: Record<string, Record<string, number>>;
+  /** Minas Nossa: votos da bancada de MG por partido (por_partido e por_lado continuam sendo da Casa inteira) */
+  por_partido_mg?: Record<string, Record<string, number>>;
   votos: { politico: string; nome: string; partido: string; uf: string; voto: string; posicao: number | null }[];
 }
 export interface Socio { nome: string; doc: string; qualificacao: string; entrada: string; faixa_etaria: string; tipo?: "empresa" | "pessoa" | "estrangeiro" | ""; outras_empresas: OutraEmpresa[] }
@@ -128,12 +131,35 @@ export interface Empresa extends Omit<EmpresaResumo, "emendas"> {
 export type NotaEmpresa = [string, string, string, number, string, string?, string?];
 export interface PartidoAno { n: number; cota: number; cota_por_membro: number; custo_total: number; custo_por_membro: number }
 export interface Partido { casa: Casa; sigla: string; n: number; posicao: number | null; alinhamento_governo: number | null; fidelidade: number | null; total: number; por_ano: Record<string, PartidoAno> }
+/* Página da cidade (Minas Nossa): dados do TSE desde 1996 */
+export interface PessoaEleita { nome: string; partido: string; partido_hoje: string; mudou: string | null; votos?: number; pct?: number | null }
+export interface Candidato { turno?: number; nome: string; partido: string; votos: number; pct: number | null; eleito: boolean }
+export interface MandatoPrefeito {
+  eleicao: number; inicio: number; fim: number; turnos: number; prefeito: PessoaEleita; vice: PessoaEleita | null;
+  coligacao: { nome: string; partidos: string[] }; candidatos: Candidato[];
+}
+export interface Legislatura {
+  eleicao: number; inicio: number; fim: number; vagas: number;
+  por_partido: { partido: string; partido_hoje: string; cadeiras: number; do_prefeito: boolean; da_coligacao: boolean }[];
+  eleitos: { nome: string; partido: string; votos: number }[]; do_partido_do_prefeito: number; da_coligacao_do_prefeito: number;
+}
+export interface EleicaoGeral { eleicao: number; cargos: { cargo: string; turno: number; total_votos: number; n_candidatos: number; candidatos: Candidato[] }[] }
+export interface Cidade {
+  id: string; nome: string; uf: string; links: { nome: string; url: string }[];
+  executivo: MandatoPrefeito[]; camara: Legislatura[]; gerais: EleicaoGeral[]; avisos: string[];
+  resumo: { anos_por_partido: { partido: string; anos: number; siglas: string[] }[]; cadeiras_por_partido: { partido: string; cadeiras: number }[];
+    mandatos: number; camaras: number; coligacao_do_prefeito_com_maioria: number };
+}
+export interface CidadeResumo { id: string; nome: string; uf: string; prefeito: PessoaEleita | null; desde: number | null; vereadores: number | null }
+
 export interface Meta {
   /** Problemas da última coleta (fonte oficial fora do ar, cópia antiga em uso...), para avisar quem lê */
   avisos?: string[];
   atualizado_em: string; anos: number[]; grupos: Record<Grupo, string>; medias: Record<string, Record<Casa, number>>;
   contagens: { politicos: number; despesas: number; votacoes: number; empresas_com_socios: number }; total_gasto: number;
   total_por_ano: Record<string, number>; custo_por_ano: Record<string, number>;
+  /** Minas Nossa: "MG" e as cidades acompanhadas */
+  recorte?: string; cidades?: string[];
 }
 
 /** Só links http(s). Um link "javascript:" ou "data:" vindo de dados adulterados vira undefined, e o React não põe o href. */
@@ -214,3 +240,10 @@ export function corPartido(sigla: string): string {
   const k = (sigla || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]/g, "");
   return PARTIDOS_COM_COR.has(k) ? `var(--p-${k})` : "var(--c-outros)";
 }
+
+/** "PMDB (hoje MDB)". Partidos que mudaram de nome ou se juntaram a outro aparecem com o nome de hoje ao lado. */
+export function partidoComHoje(partido: string, hoje?: string | null): string {
+  const k = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z]/g, "");
+  return hoje && k(hoje) !== k(partido) ? `${partido} (hoje ${hoje})` : partido;
+}
+export const numero = (n: number) => (n || 0).toLocaleString("pt-BR");

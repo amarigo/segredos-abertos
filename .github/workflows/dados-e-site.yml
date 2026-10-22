@@ -34,6 +34,8 @@ jobs:
           python-version: "3.12"
       - run: pip install -r etl/requirements.txt -r etl/requirements-dev.txt
       - run: python -m pytest -q etl/tests
+      - name: Coletor do Minas Nossa (MG)
+        run: python -m pytest -q mg/etl/tests
 
   # Topo da pirâmide: o site no navegador (jornada, segurança e caos), com dados fictícios
   testes-site:
@@ -46,7 +48,9 @@ jobs:
           python-version: "3.12"
       - run: pip install -r etl/requirements.txt
       - name: Dados fictícios para o navegador
-        run: python etl/tests/gerar_dados_teste.py site/public/data
+        run: |
+          python etl/tests/gerar_dados_teste.py site/public/data
+          python mg/etl/tests/gerar_dados_teste_mg.py site/public/data site/public-mg/data
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -56,7 +60,7 @@ jobs:
         working-directory: site
       - run: npm test
         working-directory: site
-      - run: npm run build
+      - run: npm run build && npm run build:mg
         working-directory: site
       - run: npx playwright install --with-deps chromium
         working-directory: site
@@ -64,11 +68,18 @@ jobs:
         working-directory: site
         env:
           CI: "1"
+      - name: Navegador no Minas Nossa
+        run: npm run test:e2e:mg
+        working-directory: site
+        env:
+          CI: "1"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: relatorio-playwright
-          path: site/playwright-report
+          path: |
+            site/playwright-report
+            site/playwright-report-mg
           retention-days: 7
 
   # Dependências com falhas de segurança conhecidas. Não trava a coleta diária: aparece como falha para corrigir.
@@ -127,8 +138,59 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: site/package-lock.json
+      # Minas Nossa (/mg/): recorte de MG dos dados acima e histórico das cidades no TSE. Qualquer falha aqui não
+      # trava o site nacional: o Minas Nossa usa a última versão publicada (dados-mg.zip) e avisa no resumo.
+      - name: Cache do TSE (Minas Nossa)
+        uses: actions/cache@v4
+        with:
+          path: mg/etl/.cache
+          key: mg-tse-${{ github.run_id }}
+          restore-keys: mg-tse-
+      - name: "Minas Nossa: montar os dados de MG"
+        id: mg
+        continue-on-error: true
+        working-directory: mg/etl
+        env:
+          PYTHONPATH: ../../etl
+        run: |
+          set -o pipefail
+          python -m mg_etl.build --nacional ../../site/public/data --saida ../../site/public-mg/data --cache .cache 2>&1 | tee coleta-mg.log
+      - name: "Minas Nossa: conferir os dados"
+        id: mg_conf
+        if: steps.mg.outcome == 'success'
+        continue-on-error: true
+        working-directory: mg/etl
+        env:
+          PYTHONPATH: ../../etl
+          IGNORAR_QUEDA: ${{ inputs.ignorar_queda && '--ignorar-queda' || '' }}
+        run: |
+          set -o pipefail
+          python -m mg_etl.validar ../../site/public-mg/data --anterior https://amarigo.github.io/segredos-abertos/mg/data/meta.json $IGNORAR_QUEDA \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: "Minas Nossa: se algo falhou, usar a versão publicada"
+        id: mg_dados
+        env:
+          CONFERIDO: ${{ steps.mg_conf.outcome }}
+        run: |
+          if [ "$CONFERIDO" = "success" ]; then echo "ok=1" >> "$GITHUB_OUTPUT"; exit 0; fi
+          echo "::warning::Minas Nossa: a coleta ou a conferência falhou; usando a última versão publicada"
+          rm -rf site/public-mg/data && mkdir -p site/public-mg/data
+          if curl -fsSL --retry 3 -o "$RUNNER_TEMP/dados-mg.zip" https://amarigo.github.io/segredos-abertos/mg/dados-mg.zip \
+             && unzip -q "$RUNNER_TEMP/dados-mg.zip" -d site/public-mg/data; then
+            echo "ok=1" >> "$GITHUB_OUTPUT"
+            echo "### Minas Nossa: dados novos com problema; publicada de novo a versão anterior" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ok=0" >> "$GITHUB_OUTPUT"
+            echo "### Minas Nossa: sem dados novos nem versão anterior; fica fora desta publicação" >> "$GITHUB_STEP_SUMMARY"
+          fi
       - run: npm ci && npm run build
         working-directory: site
+      - name: "Minas Nossa: montar o site em /mg/"
+        if: steps.mg_dados.outputs.ok == '1'
+        working-directory: site
+        run: |
+          npm run build:mg
+          (cd public-mg/data && zip -qr ../../dist/mg/dados-mg.zip .)
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist

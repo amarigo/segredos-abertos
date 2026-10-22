@@ -10,6 +10,9 @@ import VotacaoPage from "./pages/Votacao";
 import Sobre from "./pages/Sobre";
 import Partidos from "./pages/Partidos";
 import Emendas from "./pages/Emendas";
+import Cidades from "./pages/Cidades";
+import CidadePage from "./pages/Cidade";
+import { MG, SITE } from "./recorte";
 import { AnoCtx, AnoSeletor, ErroNaPagina, useData } from "./components/ui";
 import { dataBR, type Meta } from "./data";
 
@@ -28,13 +31,14 @@ export default function App() {
     <AnoCtx.Provider value={{ ano, anos, setAno }}>
       <header className="top">
         <div className="wrap">
-          <Link to="/" className="brand"><img src="./icon.svg" alt="" /><span>Segredos Abertos <span style={{ color: "var(--gold)" }}>Brasil</span></span></Link>
+          <Link to="/" className="brand"><img src="./icon.svg" alt="" /><span>{SITE.nome} <span style={{ color: "var(--gold)" }}>{SITE.destaque}</span></span></Link>
           <nav className="nav" aria-label="Principal">
             <NavLink to="/politicos">Políticos</NavLink>
+            {MG && <NavLink to="/cidades">Cidades</NavLink>}
             <NavLink to="/empresas">Empresas</NavLink>
             <NavLink to="/votacoes">Votações</NavLink>
             <NavLink to="/partidos">Partidos</NavLink>
-            <NavLink to="/emendas">Emendas</NavLink>
+            {!MG && <NavLink to="/emendas">Emendas</NavLink>}
             <NavLink to="/sobre">Como funciona</NavLink>
           </nav>
           <AnoSeletor />
@@ -51,7 +55,9 @@ export default function App() {
           <Route path="/votacoes" element={<Votacoes />} />
           <Route path="/v/:id" element={<VotacaoPage />} />
           <Route path="/partidos" element={<Partidos />} />
-          <Route path="/emendas" element={<Emendas />} />
+          {!MG && <Route path="/emendas" element={<Emendas />} />}
+          {MG && <Route path="/cidades" element={<Cidades />} />}
+          {MG && <Route path="/cidade/:id" element={<CidadePage />} />}
           <Route path="/sobre" element={<Sobre />} />
           <Route path="*" element={<div className="empty">Página não encontrada. <Link to="/">Voltar ao início</Link></div>} />
         </Routes>
@@ -59,7 +65,8 @@ export default function App() {
       </main>
       <footer>
         <div className="wrap">
-          <span>Dados oficiais da Câmara dos Deputados, do Senado Federal, da Receita Federal e do Portal da Transparência{meta ? `, atualizados em ${dataBR(meta.atualizado_em)}` : ""}.</span>
+          <span>{SITE.fontes}{meta ? `, atualizados em ${dataBR(meta.atualizado_em)}` : ""}.</span>
+          {MG && <span>O Minas Nossa é a parte de Minas Gerais do <a href={SITE.nacional}>Segredos Abertos Brasil</a>.</span>}
           <span>Projeto independente e sem fins lucrativos. Código aberto em <a href="https://github.com/amarigo/segredos-abertos">GitHub</a>.</span>
         </div>
       </footer>
