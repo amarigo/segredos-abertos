@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Explain, Loading, VotoBarra, VotoChip, VotoLegenda, useData } from "../components/ui";
+import { Explain, Loading, ResultadoChip, VotoBarra, VotoChip, VotoLegenda, useData } from "../components/ui";
 import { casaNome, dataBR, descricaoCurta, linkSeguro, proposicaoNome, tipoVotacao, type Votacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 
@@ -27,7 +27,7 @@ export default function VotacaoPage() {
         {descricaoCurta(v.descricao) && <p style={{ fontSize: "1.05rem" }}><strong>O que foi votado:</strong> {descricaoCurta(v.descricao)}</p>}
         {v.proposicao?.ementa && <p className="muted"><strong>Sobre a proposta:</strong> {v.proposicao.ementa}</p>}
         <div className="row">
-          <span className={`chip ${v.aprovada ? "ok" : "no"}`}>{v.aprovada ? "Aprovado" : "Rejeitado"}</span>
+          <ResultadoChip aprovada={v.aprovada} />
           <span className="chip">Sim {v.sim} · Não {v.nao}</span>
           {linkSeguro(v.proposicao?.url) && <a className="chip" href={linkSeguro(v.proposicao?.url)} target="_blank" rel="noreferrer">Ver a proposta e as votações no site {v.casa === "camara" ? "da Câmara" : "do Senado"} ↗</a>}
           {v.temas?.map((t) => <Link key={t} className="chip" to={`/votacoes?tema=${encodeURIComponent(t)}`}>{t}</Link>)}
@@ -48,7 +48,7 @@ export default function VotacaoPage() {
                     <td>
                       <div className="voto-linha">
                         {x.id === v.id ? <strong>{tipoVotacao(x.descricao) || "Votação"} (esta)</strong> : <Link to={`/v/${x.id}`}>{tipoVotacao(x.descricao) || "Votação"}</Link>}
-                        <span className={`chip ${x.aprovada ? "ok" : "no"}`}>{x.aprovada ? "Aprovado" : "Rejeitado"}</span>
+                        <ResultadoChip aprovada={x.aprovada} />
                       </div>
                       <div className="small muted">{variosDias && <>{dataBR(x.data)} · </>}{descricaoCurta(x.descricao).slice(0, 200)}</div>
                     </td>

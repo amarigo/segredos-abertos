@@ -202,8 +202,13 @@ export function VotoLegenda() {
 }
 
 export function VotoChip({ voto }: { voto: string }) {
-  const cls = voto === "Sim" ? "chip ok" : voto === "Não" ? "chip no" : "chip";
+  const cls = voto === "Sim" ? "chip ok" : voto === "Não" ? "chip nao" : "chip";
   return <span className={cls}>{voto}</span>;
+}
+
+/* Se a proposta foi aprovada ou rejeitada na votação */
+export function ResultadoChip({ aprovada }: { aprovada: boolean }) {
+  return <span className={`chip ${aprovada ? "ok" : "nao"}`}>{aprovada ? "Aprovado" : "Rejeitado"}</span>;
 }
 
 /* Link oficial de uma despesa. Nem toda despesa tem a imagem da nota: passagens compradas pelo sistema da Câmara

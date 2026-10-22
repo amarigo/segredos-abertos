@@ -97,7 +97,7 @@ section { display: grid; gap: 16px; min-width: 0; }
 
 .chip { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); white-space: nowrap; }
 .chip.ok { color: var(--sim); border-color: currentColor; }
-.chip.no { color: var(--nao); border-color: currentColor; }
+.chip.nao { color: var(--nao); border-color: currentColor; }
 
 /* Perfil */
 .profile { display: grid; grid-template-columns: 112px 1fr; gap: 20px; align-items: center; }
