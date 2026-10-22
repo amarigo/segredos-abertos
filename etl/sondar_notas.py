@@ -25,23 +25,42 @@ def st(u, corpo=False):
 
 
 cache = Path("/tmp/cache"); cache.mkdir(exist_ok=True)
-print("print do usuário:", st("https://www.camara.leg.br/cota-parlamentar/documentos/publ/1649/2026/8165838.pdf")[:2])
+from concurrent.futures import ThreadPoolExecutor
+
+
+def cod(u):
+    try:
+        r = S.head(u, timeout=25, allow_redirects=True)
+        return r.status_code
+    except Exception as e:  # noqa: BLE001
+        return type(e).__name__
+
+
+for ano in (2026, 2025):
+    rows = list(read_csv_file(download(COTA_URL.format(ano=ano), cache / f"c{ano}.zip")))
+    pdf = [r for r in rows if (r.get("urlDocumento") or "").strip().endswith(".pdf")]
+    nfe = [r for r in rows if "nota-fiscal-eletronica" in (r.get("urlDocumento") or "")]
+    amostra = random.sample(pdf, 600) + random.sample(nfe, 200)
+    with ThreadPoolExecutor(8) as ex:
+        res = list(ex.map(lambda r: cod(r["urlDocumento"].strip()), amostra))
+    por = Counter()
+    ruins = []
+    for r, c in zip(amostra, res):
+        tipo = "pdf" if r["urlDocumento"].endswith(".pdf") else "nfe"
+        por[(tipo, c)] += 1
+        if c != 200:
+            ruins.append(r)
+    print(f"\n=== {ano}: {dict(por)}")
+    print("   quebrados por categoria:", Counter(r["txtDescricao"][:40] for r in ruins).most_common(8))
+    print("   quebrados por deputado:", Counter(r["nuDeputadoId"] for r in ruins).most_common(5))
+    print("   quebrados por mês:", Counter(r["numMes"] for r in ruins).most_common(12))
+    print("   quebrados por fornecedor:", Counter(r["txtFornecedor"][:30] for r in ruins).most_common(6))
+    print("   categorias na amostra:", Counter(r["txtDescricao"][:40] for r in amostra if r["urlDocumento"].endswith(".pdf")).most_common(8))
+    for r in ruins[:3]:
+        print("   ex:", {k: r.get(k) for k in ("urlDocumento", "datEmissao", "numMes", "txtDescricao", "txtFornecedor", "indTipoDocumento", "vlrLiquido", "numRessarcimento", "vlrRestituicao")})
+# Notas da mesma pessoa e mês do print
 rows = list(read_csv_file(download(COTA_URL.format(ano=2026), cache / "c2026.zip")))
-import datetime as dt
-hoje = dt.date.today()
-faixas = Counter()
-exemplos = {}
-for r in rows:
-    u = (r.get("urlDocumento") or "").strip()
-    d = (r.get("datEmissao") or "")[:10]
-    if not u or not d:
-        continue
-    dias = (hoje - dt.date.fromisoformat(d)).days
-    f = "0-15" if dias <= 15 else "16-30" if dias <= 30 else "31-60" if dias <= 60 else "61-120" if dias <= 120 else "120+"
-    exemplos.setdefault((f, "pdf" if u.endswith(".pdf") else "nfe"), []).append(r)
-for (f, tipo), rs in sorted(exemplos.items()):
-    amostra = random.sample(rs, min(25, len(rs)))
-    c = Counter(st(r["urlDocumento"].strip())[0] for r in amostra)
-    print(f"emitidas há {f} dias, {tipo}: {len(rs)} notas · amostra {dict(c)}")
-# Mês de lançamento (numMes) x emissão: quando a nota entra nos dados abertos?
-print("notas por mês de emissão em 2026:", sorted(Counter((r.get("datEmissao") or "")[:7] for r in rows).items())[-6:])
+mes = [r for r in rows if r.get("nuDeputadoId") == "1649" and r.get("numMes") in ("9", "10") and r["urlDocumento"].endswith(".pdf")]
+with ThreadPoolExecutor(8) as ex:
+    cs = list(ex.map(lambda r: cod(r["urlDocumento"].strip()), mes))
+print("\n=== deputado 1649, set-out/2026:", [(r["numMes"], r["datEmissao"][:10], r["txtDescricao"][:25], c) for r, c in zip(mes, cs)])
