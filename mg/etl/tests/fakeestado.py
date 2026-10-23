@@ -387,6 +387,10 @@ def _resp(status: int, corpo: bytes, url: str, tipo: str = "application/json") -
 def instalar(monkeypatch, fake: FakeEstado) -> FakeEstado:
     """Troca a internet pelo FakeEstado (e o TSE simulado) e tira as esperas entre tentativas."""
     def request(self, method, url, params=None, **kw):
+        cab = {**self.headers, **(kw.get("headers") or {})}
+        if "/arquivo/" in url and "json" in cab.get("Accept", ""):
+            # como a ALMG em 23/10/2026: os arquivos não vêm com o cabeçalho padrão da coleta
+            return _resp(406, b"<html>Not Acceptable</html>", url, "text/html")
         return fake.responder(method.upper(), url, params)
     monkeypatch.setattr(requests.Session, "request", request)
     import time

@@ -141,10 +141,16 @@ def parece_csv(minimo: int = 200, colunas: tuple[str, ...] = ()):
     return ok
 
 
+# Os arquivos da ALMG (/arquivo/.../download) não vieram com o cabeçalho padrão da coleta (Accept: application/json)
+# na execução de 23/10/2026; com este, testado na sondagem no GitHub Actions, vieram.
+CABECALHO_ARQUIVOS = {"Accept": "*/*",
+                      "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) segredos-abertos/1.0 (+https://github.com/amarigo/segredos-abertos)"}
+
+
 def baixar(url: str, dest: Path, max_horas: float, nome: str, colunas: tuple[str, ...] = (), minimo: int = 200) -> str | None:
     """Baixa (ou usa o cache) e devolve o texto. Se a fonte falhar e não houver cópia, avisa e devolve None."""
     try:
-        f = download(url, dest, max_horas=max_horas, validar=parece_csv(minimo, colunas))
+        f = download(url, dest, max_horas=max_horas, validar=parece_csv(minimo, colunas), headers=CABECALHO_ARQUIVOS)
         return decodificar(f.read_bytes())
     except Exception as e:  # noqa: BLE001 - fonte fora do ar: o resto do site segue
         log.warning("%s: %s", nome, e)

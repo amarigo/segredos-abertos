@@ -43,10 +43,19 @@ SEM_AREA_PIX = "Sem finalidade definida (emenda Pix)"
 
 # ---------------------------------------------------------------- download e leitura
 
+PASTA_CACHE = "emendas"  # dentro do cache da coleta nacional (o Minas Nossa lê o .zip daqui)
+ARQUIVO_ZIP = "EmendasParlamentares.zip"
+
+
+def zip_no_cache(cache_raiz: Path) -> Path:
+    """Onde a coleta nacional guarda o .zip, a partir da pasta raiz do cache (etl/.cache)."""
+    return cache_raiz / PASTA_CACHE / ARQUIVO_ZIP
+
+
 def baixar(cache: Path, max_horas: float = 20) -> Path | None:
     """Baixa o .zip para o cache. Se o Portal estiver fora do ar, usa a última cópia que tiver."""
     import time
-    dest = cache / "EmendasParlamentares.zip"
+    dest = cache / ARQUIVO_ZIP
     if dest.exists() and dest.stat().st_size > 0 and (time.time() - dest.stat().st_mtime) / 3600 < max_horas:
         return dest
     dest.parent.mkdir(parents=True, exist_ok=True)
