@@ -12,6 +12,10 @@ import Partidos from "./pages/Partidos";
 import Emendas from "./pages/Emendas";
 import Cidades from "./pages/Cidades";
 import CidadePage from "./pages/Cidade";
+import Assembleia from "./pages/Assembleia";
+import DeputadoEstadualPage from "./pages/DeputadoEstadual";
+import GovernoPage from "./pages/Governo";
+import EmendasEstaduais from "./pages/EmendasEstaduais";
 import { MG, SITE } from "./recorte";
 import { AnoCtx, AnoSeletor, ErroNaPagina, useData } from "./components/ui";
 import { dataBR, type Meta } from "./data";
@@ -33,8 +37,11 @@ export default function App() {
         <div className="wrap">
           <Link to="/" className="brand"><img src="./icon.svg" alt="" /><span>{SITE.nome} <span style={{ color: "var(--gold)" }}>{SITE.destaque}</span></span></Link>
           <nav className="nav" aria-label="Principal">
-            <NavLink to="/politicos">Políticos</NavLink>
+            {MG && <NavLink to="/governo">Governo</NavLink>}
+            {MG && <NavLink to="/assembleia">Deputados estaduais</NavLink>}
+            <NavLink to="/politicos">{MG ? "Federais" : "Políticos"}</NavLink>
             {MG && <NavLink to="/cidades">Cidades</NavLink>}
+            {MG && <NavLink to="/emendas-estaduais">Emendas</NavLink>}
             <NavLink to="/empresas">Empresas</NavLink>
             <NavLink to="/votacoes">Votações</NavLink>
             <NavLink to="/partidos">Partidos</NavLink>
@@ -58,6 +65,10 @@ export default function App() {
           {!MG && <Route path="/emendas" element={<Emendas />} />}
           {MG && <Route path="/cidades" element={<Cidades />} />}
           {MG && <Route path="/cidade/:id" element={<CidadePage />} />}
+          {MG && <Route path="/governo" element={<GovernoPage />} />}
+          {MG && <Route path="/assembleia" element={<Assembleia />} />}
+          {MG && <Route path="/deputado-estadual/:id" element={<DeputadoEstadualPage />} />}
+          {MG && <Route path="/emendas-estaduais" element={<EmendasEstaduais />} />}
           <Route path="/sobre" element={<Sobre />} />
           <Route path="*" element={<div className="empty">Página não encontrada. <Link to="/">Voltar ao início</Link></div>} />
         </Routes>

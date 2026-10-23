@@ -17,6 +17,13 @@ def main(pasta: Path) -> None:
     print("### Minas Nossa\n")
     print(f"- {sum(p['casa'] == 'camara' for p in pols)} deputados federais, {sum(p['casa'] == 'senado' for p in pols)} senadores, "
           f"{meta['contagens']['votacoes']} votações, {len(ler('empresas.json'))} empresas")
+    est = meta.get("estado") or {}
+    print(f"- {est.get('deputados_estaduais', 0)} deputados estaduais, {est.get('emendas_estaduais', 0)} emendas estaduais, "
+          f"{est.get('governo', 0)} eleições para governador, {est.get('equipe_governo', 0)} pessoas da equipe do governo")
+    if (pasta / "almg/deputados.json").exists():
+        falta = [a for a, ok in (ler("almg/deputados.json").get("verba_completa") or {}).items() if not ok]
+        if falta:
+            print(f"- verba indenizatória ainda incompleta em: {', '.join(sorted(falta))}")
     for a in meta.get("avisos") or []:
         print(f"- aviso: {a}")
     for c in ler("cidades.json"):

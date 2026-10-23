@@ -149,6 +149,7 @@ jobs:
       - name: "Minas Nossa: montar os dados de MG"
         id: mg
         continue-on-error: true
+        timeout-minutes: 40
         working-directory: mg/etl
         env:
           PYTHONPATH: ../../etl

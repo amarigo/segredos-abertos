@@ -375,3 +375,11 @@ tr.atual td { background: color-mix(in srgb, var(--gold) 12%, transparent); }
 .cadeira { width: 22px; height: 22px; border-radius: 4px; border: 2px solid transparent; transition: opacity .15s; }
 .cadeira.colig { border-color: var(--ink); }
 .eleitos { margin: 6px 0 0; padding-left: 18px; columns: 2 180px; }
+/* Minas Nossa: estado (Assembleia, governo) e dinheiro das cidades */
+.sigla-avatar { display: grid; place-items: center; color: #fff; font: 700 .7rem/1 var(--body, inherit); letter-spacing: .02em; }
+.r-col { text-align: right; }
+.fonte-linha { margin-top: 8px; }
+.pf-tag { color: var(--muted); font-style: italic; }
+.dinheiro-total { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.lista-viagens { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
+.lista-viagens li { border-top: 1px solid var(--line); padding-top: 6px; }

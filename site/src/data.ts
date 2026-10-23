@@ -160,6 +160,7 @@ export interface Meta {
   total_por_ano: Record<string, number>; custo_por_ano: Record<string, number>;
   /** Minas Nossa: "MG" e as cidades acompanhadas */
   recorte?: string; cidades?: string[];
+  estado?: { deputados_estaduais: number; emendas_estaduais: number; governo: number; equipe_governo: number };
 }
 
 /** Só links http(s). Um link "javascript:" ou "data:" vindo de dados adulterados vira undefined, e o React não põe o href. */
@@ -247,3 +248,60 @@ export function partidoComHoje(partido: string, hoje?: string | null): string {
   return hoje && k(hoje) !== k(partido) ? `${partido} (hoje ${hoje})` : partido;
 }
 export const numero = (n: number) => (n || 0).toLocaleString("pt-BR");
+
+/* Minas Nossa: deputados estaduais (ALMG) */
+export interface AlmgAno { verba: number; projetos: number; requerimentos: number; aprovadas: number; emendas_indicado: number; emendas_pago: number }
+export interface DeputadoEstadualResumo { id: string; nome: string; partido: string; url: string; url_verba?: string; por_ano: Record<string, AlmgAno> }
+export interface AlmgIndice { anos: string[]; medianas: Record<string, AlmgAno>; deputados: DeputadoEstadualResumo[]; fontes: { verba: string; dados: string };
+  verba_completa?: Record<string, boolean> }
+export interface VerbaAno {
+  total: number; tipos: { tipo: string; valor: number }[]; meses: { mes: number; valor: number }[]; meses_faltando?: number[];
+  fornecedores: { nome: string; cnpj: string; pf: boolean; valor: number; n: number }[]; n_fornecedores: number; n_notas: number;
+  notas: { data: string; mes: number; fornecedor: string; cnpj: string; pf: boolean; tipo: string; valor: number }[];
+}
+export interface ProposicaoAlmg { sigla: string; numero: string; ano: number; ementa: string; situacao: string; aprovada: boolean; data: string; url: string }
+export interface EmendasDeputado {
+  indicado: number; pago: number; n: number; n_municipios: number;
+  municipios: { nome: string; indicado: number; pago: number; n: number }[];
+  beneficiarios: { nome: string; municipio: string; indicado: number; pago: number; n: number; descricao: string; area: string }[];
+}
+export interface DeputadoEstadual extends DeputadoEstadualResumo {
+  anos: Record<string, { verba: VerbaAno | null; proposicoes: { projetos: number; requerimentos: number; outras: number; coautor: number; aprovadas: number; lista: ProposicaoAlmg[] } | null; emendas: EmendasDeputado | null }>;
+}
+export interface EmendasEstado {
+  fonte: string;
+  anos: Record<string, { indicado: number; pago: number; n: number; n_municipios: number; municipios: { nome: string; indicado: number; pago: number; n: number }[];
+    autores: { nome: string; deputado: string | null; indicado: number; pago: number; n: number }[] }>;
+}
+/* Minas Nossa: governo do estado */
+export interface PessoaGoverno { nome: string; partido: string; partido_hoje: string; mudou: string | null }
+export interface Governo {
+  eleicoes: { eleicao: number; inicio: number; fim: number; turnos: number; governador: PessoaGoverno & { votos: number; pct: number }; vice: PessoaGoverno | null;
+    candidatos: { nome: string; partido: string; votos: number; pct: number; eleito: boolean }[] }[];
+  links: { nome: string; url: string; explica: string }[]; fonte_tse: string;
+  equipe?: EquipeGoverno | null;
+}
+export interface ViagensPessoa {
+  nome: string; cargo: string; anos: { ano: number; viagens: number; diarias: number; passagens: number }[];
+  destinos: { nome: string; vezes: number }[];
+  ultimas: { inicio: string; fim: string; destinos: string[]; valor: number; motivo: string }[];
+}
+export interface PessoaEquipe {
+  nome: string; cargo: string; orgao: string; bruto: number; abate_teto: number; ferias_13: number; eventual: number; jetons: number;
+  descontos: number; liquido: number; viagens: ViagensPessoa | null;
+}
+export interface EquipeGoverno {
+  mes_salarios: string | null; pessoas: PessoaEquipe[]; tem_salarios: boolean; tem_viagens: boolean;
+  fontes: { salarios: string; viagens: string; portal_salarios: string; portal_viagens: string };
+}
+/* Minas Nossa: dinheiro que chega à cidade e onde a prefeitura gasta */
+export interface EmendaEstadualCidade { ano: number; autor: string; deputado: string | null; beneficiario: string; tipo_beneficiario: string; descricao: string; area: string; orgao: string; indicado: number; pago: number; situacao: string }
+export interface DinheiroCidade {
+  id: string; nome: string;
+  estaduais: { fonte: string; lista: EmendaEstadualCidade[] | null } | null;
+  federais: { fonte: string; por_ano: { ano: number; valor: number; n: number }[];
+    favorecidos: { nome: string; cnpj: string; valor: number; anos: number[]; url: string; autores: { nome: string; valor: number }[] }[];
+    autores: { nome: string; politico: string | null; partido: string; valor: number; n: number }[] } | null;
+  contas: { cod_ibge: number; fonte: string; api: string; anos: { ano: number; instituicao: string; total_empenhado: number; total_liquidado: number; total_pago: number;
+    funcoes: { codigo: string; funcao: string; empenhado: number; liquidado: number; pago: number; principais: { nome: string; valor: number }[] }[] }[] } | null;
+}

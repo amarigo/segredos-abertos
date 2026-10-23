@@ -135,11 +135,30 @@ class FakeTSE:
                                     "QT_VOTOS_NOMINAIS": rng.randint(100, 9000) // (i + 1), "DS_SIT_TOT_TURNO": sit})
         return vot
 
+    def geral_cand(self, ano: int) -> list[dict]:
+        """Candidatos a governador e vice (o vice vem na lista de candidatos com o número da chapa). O vice com
+        registro indeferido e o de uma eleição suplementar não podem entrar."""
+        parts = partidos_do_ano(ano)
+        base = dict(ANO_ELEICAO=ano, CD_TIPO_ELEICAO=2, NM_TIPO_ELEICAO="Eleição Ordinária", SG_UF="MG", NM_UE="MINAS GERAIS",
+                    NR_CPF_CANDIDATO=CPF_FALSO, DS_EMAIL="x@y.com", DS_SITUACAO_CANDIDATURA="APTO", DS_DETALHE_SITUACAO_CAND="DEFERIDO")
+        out = []
+        for i in range(3):
+            out.append({**base, "DS_CARGO": "GOVERNADOR", "NR_CANDIDATO": str(10 + i), "NM_CANDIDATO": f"GOVERNADOR {i}",
+                        "NM_URNA_CANDIDATO": f"Governador {i}", "SG_PARTIDO": parts[i % len(parts)]})
+            out.append({**base, "DS_CARGO": "VICE-GOVERNADOR", "NR_CANDIDATO": f"0{10 + i}", "NM_CANDIDATO": f"VICE TROCADO {i}",
+                        "SG_PARTIDO": parts[(i + 1) % len(parts)], "DS_SITUACAO_CANDIDATURA": "INAPTO", "DS_DETALHE_SITUACAO_CAND": "INDEFERIDO"})
+            out.append({**base, "DS_CARGO": "VICE-GOVERNADOR", "NR_CANDIDATO": f"0{10 + i}", "NM_CANDIDATO": f"VICE DO GOVERNADOR {i}",
+                        "NM_URNA_CANDIDATO": f"Vice do Governador {i}", "SG_PARTIDO": parts[(i + 1) % len(parts)]})
+        out.append({**base, "CD_TIPO_ELEICAO": 1, "NM_TIPO_ELEICAO": "Eleição Suplementar", "DS_CARGO": "VICE-GOVERNADOR",
+                    "NR_CANDIDATO": "10", "NM_CANDIDATO": "VICE SUPLEMENTAR", "SG_PARTIDO": "PSOL"})
+        outro = [{**r, "SG_UF": "SP", "NM_UE": "SÃO PAULO", "NM_CANDIDATO": "VICE DE SP"} for r in out if r["DS_CARGO"] == "VICE-GOVERNADOR"][:1]
+        return out + outro
+
     def _zip(self, tipo: str, ano: int, modo: str | None) -> bytes:
         if ano % 4 == 0:
             vot, cand = self.municipal(ano)
         else:
-            vot, cand = self.geral(ano), []
+            vot, cand = self.geral(ano), self.geral_cand(ano)
         linhas, cols = (vot, VOT_COLS) if tipo == "votacao" else (cand, CAND_COLS)
         if modo == "sem_coluna":
             cols = [c for c in cols if c != "DS_CARGO"]

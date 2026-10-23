@@ -11,12 +11,16 @@ from mg_etl import validar as V
 
 @pytest.fixture(scope="module")
 def boa_base(tmp_path_factory, nacional):
-    from faketse import FakeTSE, instalar
+    from fakeestado import FakeEstado, instalar
+    from mg_etl import almg
     tmp = tmp_path_factory.mktemp("mg_boa")
+    fake = FakeEstado()
+    fake.emendas_federais_zip(tmp / "nac" / "EmendasParlamentares.zip")
     with pytest.MonkeyPatch.context() as mp:
-        instalar(mp, FakeTSE())
-        mp.setattr(cidades.tse, "anos_ate", lambda hoje=None: ([2016, 2020, 2024], [2022]))
-        build.montar(nacional, tmp / "mg", tmp / "cache", CIDADES_TESTE)
+        instalar(mp, fake)
+        mp.setattr(cidades.tse, "anos_ate", lambda hoje=None: ([2016, 2020, 2024], [2018, 2022]))
+        mp.setattr(almg, "ORCAMENTO_VERBA", 100_000)
+        build.montar(nacional, tmp / "mg", tmp / "cache", CIDADES_TESTE, cache_nacional=tmp / "nac")
     return tmp / "mg"
 
 
@@ -46,6 +50,10 @@ def _cam0(fn):
 
 def _exe0(fn):
     return _ita(lambda d: fn(d["executivo"][0]))
+
+
+def _dep(fn):
+    return lambda s: _mudar(s, "almg/d/20003.json", fn)
 
 
 def _primeira_votacao(s):
@@ -79,6 +87,28 @@ DEFEITOS = {
     "poucos mandatos": _ita(lambda d: d.update(executivo=[])),
     "cidade em formato errado": lambda s: (s / "cidades" / "itajuba.json").write_text("[1, 2]", encoding="utf-8"),
     "prefeito sem nome": _exe0(lambda m: m.pop("prefeito")),
+    # estado
+    "verba que não soma por tipo": _dep(lambda d: d["anos"]["2025"]["verba"]["tipos"][0].update(valor=1)),
+    "verba que não soma por mês": _dep(lambda d: d["anos"]["2025"]["verba"]["meses"].pop(0)),
+    "nota com valor negativo": _dep(lambda d: d["anos"]["2025"]["verba"]["notas"][0].update(valor=-5)),
+    "resumo da verba diferente": _dep(lambda d: d["por_ano"]["2025"].update(verba=1)),
+    "mais aprovados que projetos": _dep(lambda d: d["anos"]["2025"]["proposicoes"].update(aprovadas=99)),
+    "CPF no lugar do CNPJ do fornecedor": _dep(lambda d: d["anos"]["2025"]["verba"]["fornecedores"][0].update(cnpj="52998224725")),
+    "CPF no nome do fornecedor": _dep(lambda d: d["anos"]["2025"]["verba"]["notas"][0].update(fornecedor="Jose 529.982.247-25")),
+    "arquivo do deputado faltando": lambda s: (s / "almg" / "d" / "20003.json").unlink(),
+    "deputado repetido": lambda s: _mudar(s, "almg/deputados.json", lambda x: x["deputados"].append(x["deputados"][0])),
+    "id de deputado inseguro": lambda s: _mudar(s, "almg/deputados.json", lambda x: x["deputados"][0].update(id="../x")),
+    "emendas por deputado acima do total": lambda s: _mudar(s, "estado/emendas.json", lambda x: x["anos"]["2024"].update(indicado=1)),
+    "CPF na descrição da emenda": lambda s: _mudar(s, "cidades/dinheiro/itajuba.json",
+                                                   lambda x: x["estaduais"]["lista"][0].update(descricao="para 52998224725")),
+    "governador não é o eleito": lambda s: _mudar(s, "estado/governo.json", lambda x: x["eleicoes"][0]["governador"].update(nome="Outro")),
+    "salário negativo": lambda s: _mudar(s, "estado/governo.json", lambda x: x["equipe"]["pessoas"][0].update(liquido=-1)),
+    "contas da prefeitura que não somam": lambda s: _mudar(s, "cidades/dinheiro/itajuba.json",
+                                                           lambda x: x["contas"]["anos"][0].update(total_liquidado=1)),
+    "pessoa física com nome": lambda s: _mudar(s, "cidades/dinheiro/itajuba.json",
+                                               lambda x: [f.update(nome="Maria de Tal") for f in x["federais"]["favorecidos"] if not f["cnpj"]]),
+    "link de favorecido de outro site": lambda s: _mudar(s, "cidades/dinheiro/itajuba.json",
+                                                         lambda x: x["federais"]["favorecidos"][0].update(url="https://exemplo.com/x")),
 }
 
 

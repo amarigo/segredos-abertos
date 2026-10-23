@@ -173,3 +173,18 @@ def test_valores_nulos_do_tse_nao_viram_nome():
     assert cidades._nome({"NM_URNA_CANDIDATO": "#NULO#", "NM_CANDIDATO": "MARIA DA SILVA"}) == "Maria da Silva"
     assert cidades._nome({"NM_URNA_CANDIDATO": "#NE#", "NM_CANDIDATO": "#NULO#"}) == ""
     assert cidades._coligacao_nome({"NM_COLIGACAO": "#NULO#"}) == ""
+
+
+def test_vice_de_2000_pela_coligacao_e_pelo_numero_do_partido():
+    """Em 2000 o vice não tinha o número do prefeito: era o número do partido do vice com um dígito a mais
+    (conferido no arquivo do TSE: prefeito 40, vice 401; prefeito 23 do PPS, vice 331 do PMN, da mesma coligação)."""
+    base = {"DS_CARGO": "VICE-PREFEITO", "CD_TIPO_ELEICAO": "2", "NM_TIPO_ELEICAO": "ELEIÇÃO ORDINÁRIA", "NM_URNA_CANDIDATO": "#NE",
+            "DS_SITUACAO_CANDIDATURA": "DEFERIDO"}
+    cand = [{**base, "NR_CANDIDATO": "401", "NM_CANDIDATO": "VICE DO QUARENTA", "SG_PARTIDO": "PSB", "NM_COLIGACAO": "#NE"},
+            {**base, "NR_CANDIDATO": "331", "NM_CANDIDATO": "VICE DA FRENTE", "SG_PARTIDO": "PMN", "NM_COLIGACAO": "FRENTE POPULAR"},
+            {**base, "NR_CANDIDATO": "221", "NM_CANDIDATO": "VICE DA UNIAO", "SG_PARTIDO": "PL", "NM_COLIGACAO": "UNIÃO POR TODOS"}]
+    assert cidades._vice(cand, "23", 2000, "Frente Popular", "PPS")["nome"] == "Vice da Frente"
+    assert cidades._vice(cand, "25", 2000, "UNIAO POR TODOS", "PFL")["nome"] == "Vice da Uniao"
+    assert cidades._vice(cand, "40", 2000, "", "PSB")["nome"] == "Vice do Quarenta"
+    assert cidades._vice(cand, "14", 2000, "", "PTB") is None, "sem coligação nem número que bata, fica sem vice"
+    assert cidades._vice(cand, "40", 2000, "", "PT") is None, "número parecido de outro partido não serve"
