@@ -581,7 +581,7 @@ def juntar_emendas(dados: dict, anos: list[int], cache: Path, saida: Path, pag: 
     for c in publicas - da_cota:  # prefeituras e órgãos públicos não entram na análise de donos
         emps.pop(c, None)
     paginas = set(alvo) - publicas
-    r = emendas.coletar(dados["politicos"], anos, cache / "emendas", saida, pag, emps, paginas)
+    r = emendas.coletar(dados["politicos"], anos, cache / emendas.PASTA_CACHE, saida, pag, emps, paginas)
     dados["emendas_empresas"] = pagamentos.por_empresa(pag, (r or {}).get("autores") or {}, paginas)
 
 

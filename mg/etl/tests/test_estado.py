@@ -16,7 +16,7 @@ from apoio_mg import CIDADES_TESTE, MINIMOS_TESTE
 from fakeestado import CPF_EMITENTE, EMENDAS_COLS, FakeEstado
 from mg_etl import almg, build, emendas_federais, emendas_mg, equipe, fontes, governo, siconfi
 from mg_etl.validar import validar
-from sa_etl import util
+from sa_etl import emendas as emendas_nac, util
 
 HOJE = dt.date(2026, 10, 23)
 MAPA_CIDADES = {emendas_mg.chave_cidade(c["nome"]): c["id"] for c in CIDADES_TESTE}
@@ -192,11 +192,11 @@ def test_salarios_e_viagens_da_equipe(estado, tmp_path):
 
 def _montar(nacional, tmp_path, cache=None):
     cache = cache or tmp_path / "cache"
-    fake_zip = tmp_path / "cache_nacional" / "EmendasParlamentares.zip"
+    fake_zip = emendas_nac.zip_no_cache(tmp_path / "cache_nacional")
     if not fake_zip.exists():
         FakeEstado().emendas_federais_zip(fake_zip)
     saida = tmp_path / "mg"
-    cont = build.montar(nacional, saida, cache, CIDADES_TESTE, cache_nacional=fake_zip.parent)
+    cont = build.montar(nacional, saida, cache, CIDADES_TESTE, cache_nacional=tmp_path / "cache_nacional")
     return saida, cont
 
 
@@ -229,6 +229,8 @@ def test_montagem_completa(estado, nacional, tmp_path):
         "a fonte respondeu e a cidade não recebeu nada: lista vazia, não 'fonte fora do ar'"
     meta = _json(saida, "meta.json")
     assert meta["estado"]["deputados_estaduais"] == 60
+    assert meta["avisos"] == [], "com todas as fontes no ar, nada pode ficar de fora (avisos da execução de 23/10/2026)"
+    assert sum(p["projetos"] for p in d3["por_ano"].values()) > 0, "proposições da ALMG lidas"
     r = validar(saida, minimos=MINIMOS_TESTE)
     assert r.erros == []
 
@@ -310,8 +312,8 @@ def test_fonte_fora_do_ar_usa_a_ultima_copia_e_avisa(estado, nacional, tmp_path,
 
 
 def _download_sempre_velho(orig):
-    def baixar(url, dest, max_horas=None, validar=None):
-        return orig(url, dest, max_horas=0 if max_horas is not None else None, validar=validar)
+    def baixar(url, dest, max_horas=None, validar=None, headers=None):
+        return orig(url, dest, max_horas=0 if max_horas is not None else None, validar=validar, headers=headers)
     return baixar
 
 

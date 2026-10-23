@@ -7,6 +7,7 @@ import pytest
 from apoio_mg import CIDADES_TESTE, MINIMOS_TESTE
 from mg_etl import build, cidades
 from mg_etl import validar as V
+from sa_etl import emendas as emendas_nac
 
 
 @pytest.fixture(scope="module")
@@ -15,7 +16,7 @@ def boa_base(tmp_path_factory, nacional):
     from mg_etl import almg
     tmp = tmp_path_factory.mktemp("mg_boa")
     fake = FakeEstado()
-    fake.emendas_federais_zip(tmp / "nac" / "EmendasParlamentares.zip")
+    fake.emendas_federais_zip(emendas_nac.zip_no_cache(tmp / "nac"))
     with pytest.MonkeyPatch.context() as mp:
         instalar(mp, fake)
         mp.setattr(cidades.tse, "anos_ate", lambda hoje=None: ([2016, 2020, 2024], [2018, 2022]))

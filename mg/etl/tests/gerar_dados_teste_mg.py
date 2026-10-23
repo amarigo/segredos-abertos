@@ -19,6 +19,7 @@ import requests  # noqa: E402
 
 from fakeestado import FakeEstado  # noqa: E402
 from mg_etl import almg, build, cidades, tse  # noqa: E402
+from sa_etl import emendas as emendas_nac  # noqa: E402
 from mg_etl.validar import validar  # noqa: E402
 
 
@@ -34,7 +35,7 @@ def main(nacional: Path, saida: Path) -> None:
     lista = [{**c, "links": c["links"][:1]} for c in cidades.CIDADES]
     with tempfile.TemporaryDirectory() as cache:
         nac = Path(cache) / "nacional"
-        fake.emendas_federais_zip(nac / "EmendasParlamentares.zip")
+        fake.emendas_federais_zip(emendas_nac.zip_no_cache(nac))
         build.montar(nacional, saida, Path(cache), lista, cache_nacional=nac)
     r = validar(saida, minimos={"camara": 1, "senado": 1, "votacoes": 1, "mandatos": 1})
     assert r.ok, r.erros

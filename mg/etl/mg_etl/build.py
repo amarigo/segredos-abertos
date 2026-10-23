@@ -20,7 +20,7 @@ import logging
 import shutil
 from pathlib import Path
 
-from sa_etl import util
+from sa_etl import emendas as emendas_nac, util
 
 from . import almg, cidades, emendas_federais, emendas_mg, equipe, fontes, governo, recorte, siconfi
 
@@ -89,7 +89,7 @@ def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[
     cont["governo"] = len(gov["eleicoes"])
     cont["equipe_governo"] = len((gov["equipe"] or {}).get("pessoas") or [])
     ids_mg = {f.stem for f in (saida / "p").glob("*.json")}
-    zip_nac = (cache_nacional or Path("../../etl/.cache")) / "EmendasParlamentares.zip"
+    zip_nac = emendas_nac.zip_no_cache(cache_nacional or Path("../../etl/.cache"))
     # None = a fonte falhou (o site diz isso); {} = a fonte respondeu e a cidade não recebeu nada
     fed = _seguro("Emendas federais nas cidades", lambda: emendas_federais.coletar(zip_nac, nacional, mapa_cidades, ids_mg))
     vazio_fed = {"fonte": emendas_federais.PAGINA, "por_ano": [], "favorecidos": [], "autores": []}
