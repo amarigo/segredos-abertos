@@ -11,13 +11,54 @@ import unicodedata
 import zipfile
 from pathlib import Path
 from typing import Any, Iterable, Iterator
+from urllib.parse import urlsplit
 
 import requests
 
 log = logging.getLogger("sa_etl")
 
 USER_AGENT = "SegredosAbertos/0.1 (+https://github.com/amarigo/segredos-abertos)"
-_session = requests.Session()
+
+# Site fora do ar: quanto esperar para ele aceitar a conexão, e depois de quantas esperas seguidas sem resposta
+# desistimos dele até o fim da coleta. Sem isso, um site parado custa minutos em cada endereço e a coleta
+# inteira estoura o tempo do GitHub Actions sem publicar nada.
+ESPERA_CONEXAO = 30
+QUEDAS_PARA_DESISTIR = 3
+_quedas: dict[str, int] = {}
+FORA_DO_AR: set[str] = set()
+
+
+class SiteForaDoAr(requests.ConnectionError):
+    """O site já deixou de responder nesta coleta; nem tentamos de novo."""
+
+
+def reiniciar_quedas() -> None:
+    _quedas.clear()
+    FORA_DO_AR.clear()
+
+
+class _Sessao(requests.Session):
+    def request(self, method, url, *args, **kw):
+        site = urlsplit(url).hostname or ""
+        if site in FORA_DO_AR:
+            raise SiteForaDoAr(f"{site} não respondeu nesta coleta; pulamos {url}")
+        t = kw.get("timeout")
+        if isinstance(t, (int, float)):
+            kw["timeout"] = (min(ESPERA_CONEXAO, t), t)  # (para conectar, para receber os dados)
+        try:
+            r = super().request(method, url, *args, **kw)
+        except requests.ConnectTimeout:
+            _quedas[site] = _quedas.get(site, 0) + 1
+            if _quedas[site] >= QUEDAS_PARA_DESISTIR and site not in FORA_DO_AR:
+                FORA_DO_AR.add(site)
+                log.warning("%s não aceita conexão (%s vezes seguidas); pulamos esse site até o fim da coleta",
+                            site, _quedas[site])
+            raise
+        _quedas.pop(site, None)
+        return r
+
+
+_session = _Sessao()
 _session.headers.update({"User-Agent": USER_AGENT, "Accept": "application/json"})
 
 
@@ -35,8 +76,13 @@ def get(url: str, *, params: dict | None = None, tries: int = 4, timeout: int = 
             if e.response is not None and 400 <= e.response.status_code < 500 and e.response.status_code != 429:
                 raise
             last = e
+        except SiteForaDoAr as e:
+            last = e
+            break
         except requests.RequestException as e:
             last = e
+            if urlsplit(url).hostname in FORA_DO_AR:
+                break
         wait = 2 ** (attempt + 1)
         log.warning("Falha em %s (%s); nova tentativa em %ss", url, last, wait)
         time.sleep(wait)

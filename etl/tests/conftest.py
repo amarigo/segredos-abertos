@@ -28,6 +28,7 @@ class Coleta:
     def rodar(self, anos=(2025,), com_emendas=True) -> Path:
         assert self.gov, "chame usar(FakeGov(...)) antes"
         self.n += 1
+        util.reiniciar_quedas()  # cada coleta é um processo novo no GitHub Actions
         saida = self.tmp / f"saida{self.n}"
         anos = list(anos)
         pag = build.pagamentos_emendas(anos, self.cache, 5) if com_emendas else None
@@ -49,5 +50,6 @@ class Coleta:
 @pytest.fixture
 def coleta(tmp_path, monkeypatch):
     util.AVISOS.clear()
+    util.reiniciar_quedas()
     logging.getLogger("sa_etl").setLevel(logging.WARNING)
     return Coleta(tmp_path, monkeypatch)

@@ -10,7 +10,7 @@ Os dados são fictícios e gerados com semente fixa (sempre os mesmos). Servem s
 - Portal da Transparência: arquivo de emendas (.zip).
 
 Engenharia de caos: `gov.falhar(padrao, modo, prob)` faz as URLs que contêm `padrao` falharem com a
-probabilidade `prob`. Modos: 500, 429, 404, timeout, conexao, html (página de erro no lugar do dado),
+probabilidade `prob`. Modos: 500, 429, 404, timeout, parado (não aceita conexão), conexao, html (página de erro no lugar do dado),
 vazio (resposta 200 sem corpo), truncado (JSON ou arquivo cortado no meio) e lixo (bytes aleatórios).
 """
 from __future__ import annotations
@@ -29,7 +29,7 @@ from sa_etl.cnpj import cnpj_matriz
 PARTIDOS_DEP = ["PL", "PL", "NOVO", "PT", "PT", "PSOL", "MDB", "PSD"]
 PARTIDOS_SEN = ["PL", "PT", "MDB", "PSD", "NOVO"]
 DIREITA = {"PL", "NOVO"}
-MODOS = {"500", "429", "404", "timeout", "conexao", "html", "vazio", "truncado", "lixo"}
+MODOS = {"500", "429", "404", "timeout", "parado", "conexao", "html", "vazio", "truncado", "lixo"}
 
 
 def _csv(cab: list[str], linhas: list[list]) -> str:
@@ -202,6 +202,8 @@ class FakeGov:
     def _falha(self, modo: str, url: str) -> requests.Response:
         if modo == "timeout":
             raise requests.Timeout(f"caos: tempo esgotado em {url}")
+        if modo == "parado":  # o site nem aceita a conexão (servidor fora do ar)
+            raise requests.ConnectTimeout(f"caos: {url} não aceitou a conexão")
         if modo == "conexao":
             raise requests.ConnectionError(f"caos: conexão recusada em {url}")
         if modo in ("500", "429", "404"):
