@@ -8,7 +8,7 @@ from pathlib import Path
 
 def main(cache: Path) -> None:
     def ler(nome):
-        f = cache / nome
+        f = cache / "tse" / nome
         if not f.exists():
             print(f"(sem {nome})")
             return []

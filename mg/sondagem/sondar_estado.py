@@ -95,172 +95,124 @@ def ckan(pacote):
     return []
 
 
-def almg():
-    p("\n## ALMG")
-    r, raw = baixar("https://dadosabertos.almg.gov.br/api/v2/deputados/em_exercicio?formato=json")
-    if raw:
-        try:
-            lst = json.loads(raw)["list"]
-            p(f"  em exercício: {len(lst)}; ex: {lst[:3]}")
-            dep = lst[0]["id"]
-        except Exception as e:  # noqa: BLE001
-            p(f"  em_exercicio: {r.status_code if r is not None else ''} {e} {raw[:200]!r}")
-            dep = 12193
-    time.sleep(3)
-    r, raw = baixar(f"https://dadosabertos.almg.gov.br/api/v2/deputados/{dep}?formato=json")
-    try:
-        d = json.loads(raw)["deputado"]
-        p("  ficha: " + json.dumps({k: v for k, v in d.items() if k not in ("vidaProfissionalPolitica", "atuacaoParlamentar", "condecoracao")}, ensure_ascii=False)[:2500])
-    except Exception as e:  # noqa: BLE001
-        p(f"  ficha: {e}")
-    r, raw = baixar("https://dadosabertos.almg.gov.br/arquivo/deputados/download")
-    csv_info("deputados", raw, contar=("UltimaLegislatura", "Partido"))
-    r, raw = baixar("https://dadosabertos.almg.gov.br/arquivo/verbas-indenizatorias/download")
-    cab = csv_info("verbas", raw, n=3, contar=("DescricaoTipoDespesa",), filtro=lambda d: d.get("ValorReembolso"))
-    t, _ = texto(raw)
-    rd = csv.DictReader(io.StringIO(t))
-    tam, ref, val, anos, vazias = Counter(), Counter(), Counter(), Counter(), 0
-    exemplos = []
-    for d in rd:
-        doc = re.sub(r"\D", "", d.get("CpfCnpj") or "")
-        tam[len(doc)] += 1
-        ref[re.sub(r"\d", "9", d.get("Referencia") or "")] += 1
-        val[re.sub(r"\d", "9", d.get("ValorReembolso") or "")[:12]] += 1
-        anos[(d.get("Referencia") or "")[-4:]] += 1
-        if not d.get("ValorReembolso"):
-            vazias += 1
-        elif len(exemplos) < 5 and d.get("Emitente"):
-            exemplos.append({k: v for k, v in d.items() if k != "CpfCnpj"})
-    p(f"    tamanho do doc: {tam.most_common()}; formatos ref {ref.most_common(5)}; valores {val.most_common(8)}; anos {sorted(anos.items())}; vazias {vazias}")
-    for e in exemplos:
-        p(f"    nota: {e}")
-    for ano in (2025, 2026):
-        r, raw = baixar(f"https://dadosabertos.almg.gov.br/arquivo/proposicoes/download?ano={ano}")
-        csv_info(f"proposições {ano}", raw, n=2, contar=("SiglaTipoProposicao", "Situacao", "NomeFaseAtual", "Origem"))
+def verba_almg():
+    p("\n## ALMG: verba indenizatória com valores")
+    base = "https://dadosabertos.almg.gov.br"
+    dep = 12193
+    urls = [
+        f"{base}/api/v2/prestacao_contas/verbas_indenizatorias/legislatura_atual/deputados/{dep}/datas?formato=json",
+        f"{base}/api/v2/prestacao_contas/verbas_indenizatorias/deputados/{dep}/2026/3?formato=json",
+        f"{base}/api/v2/prestacao_contas/verbas_indenizatorias/deputados/{dep}/2025/10?formato=json",
+        f"{base}/ws/prestacao_contas/verbas_indenizatorias/deputados/{dep}/2025/10?formato=json",
+        f"{base}/api/v2/prestacao_contas/verbas_indenizatorias/deputados/{dep}/2025/10",
+        f"{base}/arquivo/verbas-indenizatorias/download?ano=2025",
+        f"{base}/arquivo/verbas-indenizatorias/download?formato=json",
+        "https://www.almg.gov.br/transparencia/prestacao-de-contas/deputados/verba-indenizatoria/",
+        f"https://www.almg.gov.br/transparencia/prestacao-de-contas/deputados/verba-indenizatoria/detalhe.html?id={dep}",
+        f"https://www.almg.gov.br/deputados/conheca_deputados/deputados-info.html?idDep={dep}&aba=js_tabVerba",
+    ]
+    for u in urls:
+        time.sleep(8)
+        r, raw = baixar(u, limite=8_000_000)
+        st = r.status_code if r is not None else "?"
         t, _ = texto(raw)
-        aut = Counter()
-        for d in csv.DictReader(io.StringIO(t)):
-            try:
-                a = json.loads(d.get("Autores") or "[]")
-                aut[len(a)] += 1
-                if len(a) and aut[len(a)] <= 2:
-                    p(f"    autores: {a[:3]}")
-            except ValueError:
-                aut["erro"] += 1
-        p(f"    nº de autores: {aut.most_common(8)}")
-    # página da emenda e CSV
-    r, raw = baixar("https://www.almg.gov.br/atividade-parlamentar/emendas-parlamentares/inicial/")
-    t, _ = texto(raw)
-    LINK = re.compile(r"""href=["']([^"']+[.](?:csv|xlsx?|zip))""")
-    MEDIA = re.compile(r"""https?://mediaserver[^"'\s<>]+""")
-    p(f"  página de emendas: links {sorted(set(LINK.findall(t)))[:20]}")
-    p(f"  links mediaserver {sorted(set(MEDIA.findall(t)))[:20]}")
-    r, raw = baixar("https://mediaserver.almg.gov.br/acervo/497/469/2497469.csv")
-    alvo = lambda d: any(re.search(r"ITAJUB|PARAIS[OÓ]POLIS", v or "", re.I) for v in d.values())  # noqa: E731
-    csv_info("emendas ALMG", raw, n=2, contar=("Ano da Indicação", "Status da Indicação", "Tipo de Indicação", "Status", "Indicador de Impositividade"), filtro=alvo)
-    t, _ = texto(raw)
-    rd = csv.reader(io.StringIO(t), delimiter=";")
-    cab = next(rd)
-    p(f"  colunas finais: {cab[30:]}")
-    for ln in rd:
-        if alvo(dict(zip(cab, ln))):
-            p(f"  linha completa: {dict(zip(cab, ln))}")
-            break
+        p(f"  {st} {len(raw)}B {u}")
+        p(f"    início: {t[:700]!r}")
+        if "valor" in t.lower():
+            for m in list(re.finditer(r"(?i)valor", t))[:3]:
+                p(f"    trecho: {t[max(0, m.start()-300):m.start()+300]!r}")
+        links = sorted(set(re.findall(r"""["'](/?[^"'\s<>]*(?:verba|prestacao|api)[^"'\s<>]*)["']""", t)))[:40]
+        if links:
+            p(f"    links: {links}")
 
 
-def dados_mg():
-    p("\n## Dados MG")
-    for pac in ("despesa", "remuneracao-servidores-ativos", "viagens", "diarias", "portal_emendas_estaduais"):
-        rec = ckan(pac)
-        p(f"\n### {pac}: {len(rec)} recursos")
-        for rc in rec:
-            if not re.search(r"Remunera.*20(1|20|21|22|23|24)|Despesa 20(0|1|20|21|22|23|24)|Empenho", rc.get("name") or ""):
-                p(f"    - {rc.get('name')!r} {rc.get('url')}")
-        if pac == "despesa":
-            for rc in rec:
-                if re.search(r"^(Favorecido|Despesa - Ordem de Pagamento|Unidade Orçamentária|Situação Ordem)", rc.get("name") or ""):
-                    r, raw = baixar(rc["url"], limite=30_000_000)
-                    csv_info(rc["name"], raw, n=4, filtro=lambda d: any(re.search(r"ITAJUB|PARAISOPOL", v or "", re.I) for v in d.values()), maxlinhas=400000)
-        if pac == "remuneracao-servidores-ativos":
-            alvo = [rc for rc in rec if re.search(r"2026", rc.get("name") or "")]
-            if alvo:
-                rc = alvo[-1]
-                p(f"  lendo {rc['name']} {rc['url']}")
-                r, raw = baixar(rc["url"])
-                p(f"  {len(raw)} bytes")
-                csv_info(rc["name"], raw, n=3, filtro=lambda d: any(re.search(r"GOVERNADOR|SECRETARIO DE ESTADO|SECRETÁRIO DE ESTADO", v or "", re.I) for v in d.values()))
-        if pac in ("viagens", "diarias"):
-            for rc in rec[:12]:
-                if (rc.get("format") or "").upper() in ("CSV", "") and not rc["url"].endswith(".json"):
-                    r, raw = baixar(rc["url"], limite=20_000_000)
-                    csv_info(rc.get("name"), raw, n=2, filtro=lambda d: any(re.search(r"GOVERNADOR|SECRET[AÁ]RIO DE ESTADO", v or "", re.I) for v in d.values()), maxlinhas=300000)
-        if pac == "portal_emendas_estaduais":
-            for rc in rec:
-                if re.search(r"Execução$|Indicações$", rc.get("name") or ""):
-                    r, raw = baixar(rc["url"])
-                    csv_info(rc["name"], raw, n=2, filtro=lambda d: any(re.search(r"ITAJUB|PARAISOPOL", v or "", re.I) for v in d.values()))
-
-
-def siconfi():
-    p("\n## SICONFI (Tesouro)")
-    base = "https://apidatalake.tesouro.gov.br/ords/siconfi/tt"
-    r, raw = baixar(f"{base}/entes")
-    try:
-        entes = json.loads(raw)["items"]
-        ach = [e for e in entes if re.search(r"Itajub|Paraisópolis|Paraisopolis", e.get("ente") or "") and e.get("uf") == "MG"]
-        p(f"  entes: {len(entes)}; achados {ach}")
-    except Exception as e:  # noqa: BLE001
-        p(f"  entes: {e} {raw[:300]!r}")
-        ach = [{"cod_ibge": 3132404}]
-    for e in ach:
-        cod = e["cod_ibge"]
-        for anexo in ("DCA-Anexo I-E", "DCA-Anexo I-C"):
-            r, raw = baixar(f"{base}/dca", params={"an_exercicio": 2024, "no_anexo": anexo, "id_ente": cod})
-            try:
-                it = json.loads(raw)["items"]
-                p(f"  {cod} {anexo}: {len(it)} itens; colunas {Counter(i.get('coluna') for i in it)}")
-                for i in it[:3]:
-                    p(f"    {i}")
-                contas = Counter(i.get("conta") for i in it)
-                p(f"    contas: {list(contas)[:60]}")
-            except Exception as ex:  # noqa: BLE001
-                p(f"  {anexo}: {ex} {raw[:300]!r}")
-            time.sleep(1.5)
-        r, raw = baixar(f"{base}/rreo", params={"an_exercicio": 2026, "nr_periodo": 4, "co_tipo_demonstrativo": "RREO", "no_anexo": "RREO-Anexo 02", "id_ente": cod})
-        try:
-            it = json.loads(raw)["items"]
-            p(f"  {cod} RREO 2026/4 anexo 2: {len(it)} itens; colunas {Counter(i.get('coluna') for i in it)}")
-        except Exception as ex:  # noqa: BLE001
-            p(f"  rreo: {ex} {raw[:300]!r}")
-
-
-def cgu():
-    p("\n## CGU: emendas federais por cidade")
-    r, raw = baixar("https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares/UNICO")
-    p(f"  {r.status_code if r is not None else '?'} {len(raw)} bytes")
-    try:
-        z = zipfile.ZipFile(io.BytesIO(raw))
-    except zipfile.BadZipFile:
+def remuneracao_cargos():
+    p("\n## Dados MG: governador e secretários na remuneração")
+    rec = ckan("remuneracao-servidores-ativos")
+    alvo = [rc for rc in rec if re.search(r"2026", rc.get("name") or "")]
+    if not alvo:
         return
-    for n in z.namelist():
-        with z.open(n) as f:
-            t = io.TextIOWrapper(f, encoding="latin-1")
-            rd = csv.reader(t, delimiter=";")
-            cab = next(rd)
-            p(f"  {n}: {cab}")
-            k = 0
-            for ln in rd:
-                if any(re.search(r"ITAJUB|PARAIS[OÓ]POLIS", v, re.I) for v in ln):
-                    k += 1
-                    if k <= 4:
-                        p(f"    {ln}")
-            p(f"    linhas com as cidades: {k}")
+    rc = alvo[-1]
+    p(f"  lendo {rc['name']} {rc['url']}")
+    r, raw = baixar(rc["url"])
+    t, _ = texto(raw)
+    rd = csv.DictReader(io.StringIO(t), delimiter=";")
+    com, efe, org = Counter(), Counter(), Counter()
+    ex = []
+    cargo_alvo = re.compile(r"\bGOVERNADOR\b(?!\s+VALADARES)|SECRETARI[OA] DE ESTADO|SECRETARI[OA]-GERAL|VICE.GOVERNADOR|ADVOGADO.GERAL|CONTROLADOR.GERAL")
+    for d in rd:
+        cc, ce = (d.get("cargo_comissao") or "").strip(), (d.get("cargo_efetivo") or "").strip()
+        if cargo_alvo.search(cc) or cargo_alvo.search(ce):
+            com[cc] += 1
+            efe[ce] += 1
+            org[(d.get("orgao_exercicio") or "").strip()] += 1
+            if len(ex) < 40:
+                ex.append({k: (v or "").strip() for k, v in d.items() if k not in ("cpf", "masp", "numero_admissao") and (v or "").strip() not in ("", "0", "0,00")})
+    p(f"  cargo_comissao: {com.most_common(40)}")
+    p(f"  cargo_efetivo: {efe.most_common(20)}")
+    p(f"  órgãos: {org.most_common(40)}")
+    for e in ex:
+        p(f"    {e}")
+
+
+def scdp():
+    p("\n## Dados MG: diárias e viagens (SCDP)")
+    base = "https://dados.mg.gov.br/dataset/315840b0-49b5-45b6-8352-2fe3179a2b6d/resource/"
+    arqs = {
+        "funcao": base + "8472781b-84c5-41ca-981d-cc1f1c2c91fe/download/dm_funcao_scdp.csv.gz",
+        "favorecido": base + "ab8f386b-84ec-4ebc-9698-99f3fa06db2f/download/dm_favorecido_scdp.csv.gz",
+        "doc": base + "375b470f-0136-4fd9-918a-8fadc2099278/download/dm_documento_viagem.csv.gz",
+        "orgao": base + "05a282b5-60bc-471d-80b8-09016836a483/download/dm_orgao_scdp.csv.gz",
+        "cidade": base + "3fd7422c-1fb4-46f1-bc4f-06ab9e8b3520/download/dm_cidade.csv.gz",
+        "diarias": base + "c1d9d278-c828-4347-82d4-1e88dbddd6e0/download/ft_diarias_scdp.csv.gz",
+        "liqpag": base + "a35b5364-2b25-49e7-9081-d92a6b8112fd/download/ft_diarias_scdp_liqpag.csv.gz",
+    }
+    funcoes = {"12186", "12193", "11282", "12605", "15816"}
+    for k, u in arqs.items():
+        r, raw = baixar(u)
+        p(f"  {k}: {len(raw)} bytes")
+        t, enc = texto(raw)
+        sep = ";" if t[:2000].count(";") > t[:2000].count(",") else ","
+        rd = csv.reader(io.StringIO(t), delimiter=sep)
+        cab = [c.lstrip("﻿") for c in next(rd, [])]
+        p(f"    {len(cab)} colunas: {cab}")
+        n, ach = 0, 0
+        anos = Counter()
+        for ln in rd:
+            n += 1
+            if n <= 3:
+                p(f"    ex: {ln[:30]}")
+            d = dict(zip(cab, ln))
+            for c in cab:
+                if "ano" in c.lower() or "data" in c.lower() or c.startswith("dt"):
+                    anos[(d.get(c) or "")[:4] if not re.match(r"\d\d/", d.get(c) or "") else (d.get(c) or "")[-4:]] += 1
+                    break
+            if k in ("diarias", "liqpag", "favorecido") and any((d.get(c) or "") in funcoes for c in cab if "funcao" in c.lower()):
+                ach += 1
+                if ach <= 6:
+                    p(f"    governador/secretário: {d}")
+            if k == "funcao" and re.search(r"GOVERNADOR|SECRETARIO DE ESTADO", " ".join(ln)):
+                p(f"    função: {ln}")
+        p(f"    {n} linhas; achados {ach}; anos {sorted(anos.items())[-12:]}")
+
+
+def paginas_proposicao():
+    p("\n## ALMG: página pública de uma proposição")
+    for u in ("https://www.almg.gov.br/proposicoes/PL/3221/2025/",
+              "https://www.almg.gov.br/atividade-parlamentar/projetos-de-lei/texto/?tipo=PL&num=3221&ano=2025",
+              "https://www.almg.gov.br/atividade-parlamentar/projetos-de-lei/projetos/?tipo=PL&num=3221&ano=2025",
+              "https://www.almg.gov.br/deputados/conheca_deputados/deputados-info.html?idDep=12193"):
+        time.sleep(4)
+        r, raw = baixar(u, limite=3_000_000)
+        t, _ = texto(raw)
+        tit = re.search(r"<title>(.*?)</title>", t, re.S)
+        p(f"  {r.status_code if r is not None else '?'} {r.url if r is not None else ''} título={tit.group(1).strip()[:120] if tit else ''!r} cita3221={'3221' in t}")
 
 
 if __name__ == "__main__":
     saida = Path(sys.argv[1])
     saida.mkdir(parents=True, exist_ok=True)
-    for etapa in (almg, dados_mg, siconfi, cgu):
+    for etapa in (paginas_proposicao, verba_almg, scdp, remuneracao_cargos):
         try:
             etapa()
         except Exception as e:  # noqa: BLE001
