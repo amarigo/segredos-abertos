@@ -8,7 +8,7 @@ export const SITE = MG
     quem: "deputados federais e senadores de Minas Gerais",
     busca: "Procure seu deputado federal ou senador de Minas",
     buscaExemplo: "Nome ou partido (ex.: PT)",
-    fontes: "Dados oficiais da Câmara dos Deputados, do Senado Federal, do TSE, da Receita Federal e do Portal da Transparência",
+    fontes: "Dados oficiais da ALMG, do governo de Minas (Dados MG), da Câmara dos Deputados, do Senado Federal, do TSE, do Tesouro Nacional, da Receita Federal e do Portal da Transparência",
     nacional: "https://amarigo.github.io/segredos-abertos/",
   }
   : {

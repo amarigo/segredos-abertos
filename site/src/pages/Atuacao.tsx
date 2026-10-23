@@ -5,7 +5,7 @@ import { METRICAS_ATUACAO, atuacaoAtiva, taxaPresenca, type Atuacao, type Casa, 
 const num = (x: number) => x.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 
-function mediana(v: number[]): number {
+export function mediana(v: number[]): number {
   const s = [...v].sort((a, b) => a - b);
   const m = s.length >> 1;
   return !s.length ? 0 : s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
@@ -17,7 +17,7 @@ const pctBaixo = (x: number) => `${Math.floor(x * 100)}%`;
 
 type Lado = "acima" | "abaixo" | "meio";
 /** Compara o valor do político com o dos colegas. `todos` inclui o próprio político: ele é tirado uma vez. */
-function comparar(v: number, todos: number[], quem: string, verbos = { mais: "Fez mais", menos: "Fez menos" }, fmt = num) {
+export function comparar(v: number, todos: number[], quem: string, verbos = { mais: "Fez mais", menos: "Fez menos" }, fmt = num) {
   const outros = [...todos];
   const i = outros.indexOf(v);
   if (i >= 0) outros.splice(i, 1);
@@ -44,7 +44,7 @@ function comparar(v: number, todos: number[], quem: string, verbos = { mais: "Fe
 }
 
 const SETA: Record<Lado, string> = { acima: "▲", abaixo: "▼", meio: "●" };
-function Veredito({ c }: { c: ReturnType<typeof comparar> }) {
+export function Veredito({ c }: { c: ReturnType<typeof comparar> }) {
   return (
     <div className="atu-veredito">
       <p className={`atu-lado atu-${c.lado}`}><span aria-hidden="true">{SETA[c.lado]}</span> {c.titulo}</p>
@@ -143,23 +143,25 @@ function BarraPresenca({ rotulo, partes, texto }: { rotulo: string; partes: numb
   );
 }
 
-function Metrica({ nome, explica, quem, eu, v, todos }: { nome: string; explica: string; quem: string; eu: string; v: number; todos: number[] }) {
+export function Metrica({ nome, explica, quem, eu, v, todos, tipico: rotulo, fmt = num }: {
+  nome: string; explica: string; quem: string; eu: string; v: number; todos: number[]; tipico?: string; fmt?: (x: number) => string;
+}) {
   const med = Math.round(mediana(todos)); // contagens: o típico é um número inteiro
   const escala = Math.max(v, med, 1);
-  const c = comparar(v, todos, quem);
-  const tipico = quem === "deputados" ? "Deputado típico" : "Senador típico";
+  const c = comparar(v, todos, quem, undefined, fmt);
+  const tipico = rotulo || (quem === "deputados" ? "Deputado típico" : "Senador típico");
   return (
     <div className="card atu-card">
-      <div className="atu-topo"><h3>{nome}</h3><span className="atu-valor num">{num(v)}</span></div>
+      <div className="atu-topo"><h3>{nome}</h3><span className="atu-valor num">{fmt(v)}</span></div>
       {todos.length > 1 && <>
         <Veredito c={c} />
-        <div className="atu-comp" role="img" aria-label={`${nome}: ${eu} ${num(v)}; ${tipico.toLowerCase()} ${num(med)}.`}>
+        <div className="atu-comp" role="img" aria-label={`${nome}: ${eu} ${fmt(v)}; ${tipico.toLowerCase()} ${fmt(med)}.`}>
           <span className="small">{eu}</span>
           <span className="atu-comp-trilha"><span className="atu-comp-eu" style={{ width: `${(v / escala) * 100}%` }} /></span>
-          <span className="small num">{num(v)}</span>
+          <span className="small num">{fmt(v)}</span>
           <span className="small muted">{tipico}</span>
           <span className="atu-comp-trilha"><span className="atu-comp-tipico" style={{ width: `${(med / escala) * 100}%` }} /></span>
-          <span className="small num muted">{num(med)}</span>
+          <span className="small num muted">{fmt(med)}</span>
         </div>
       </>}
       <p className="muted small">{explica}</p>

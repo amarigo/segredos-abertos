@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import { DinheiroCidade } from "./CidadeDinheiro";
 import { Explain, Loading, useData } from "../components/ui";
 import {
   corPartido, linkSeguro, numero, partidoComHoje, type Candidato, type Cidade, type EleicaoGeral, type Legislatura, type MandatoPrefeito,
@@ -11,6 +12,8 @@ export default function CidadePage() {
   const { id = "" } = useParams();
   const { data: c, error } = useData<Cidade>(/^[a-z0-9-]+$/.test(id) ? `cidades/${id}.json` : null);
   const [foco, setFoco] = useState("");
+  const [params, setParams] = useSearchParams();
+  const aba = params.get("aba") === "dinheiro" ? "dinheiro" : "politica";
   const partidos = useMemo(() => {
     const s = new Set<string>();
     c?.executivo.forEach((m) => s.add(m.prefeito.partido_hoje));
@@ -40,6 +43,12 @@ export default function CidadePage() {
         <div className="alert" role="note"><div><strong>Dados incompletos.</strong><ul>{c.avisos.map((a) => <li key={a}>{a}</li>)}</ul></div></div>
       )}
 
+      <div className="tabs" role="tablist">
+        <button role="tab" aria-selected={aba === "politica"} onClick={() => setParams({}, { replace: true })}>Quem governa</button>
+        <button role="tab" aria-selected={aba === "dinheiro"} onClick={() => setParams({ aba: "dinheiro" }, { replace: true })}>Dinheiro</button>
+      </div>
+
+      {aba === "dinheiro" ? <DinheiroCidade id={c.id} nome={c.nome} /> : <>
       {atual && (
         <section>
           <h2>De quem cobrar hoje</h2>
@@ -107,11 +116,13 @@ export default function CidadePage() {
       </section>
 
       {c.gerais.length > 0 && <ComoVotou nome={c.nome} gerais={c.gerais} />}
+      </>}
 
       <section>
         <h2>Limites destes dados</h2>
         <ul className="small">
-          <li>Os dados são do <a href={fonteTSE} target="_blank" rel="noreferrer">Tribunal Superior Eleitoral (TSE)</a>, com os resultados de cada eleição desde 1996.</li>
+          {aba === "dinheiro" && <li>Na aba Dinheiro, cada valor tem o link da fonte oficial logo abaixo: SICONFI (Tesouro Nacional), Portal da Transparência (CGU) e Assembleia de Minas.</li>}
+          <li>Os dados eleitorais são do <a href={fonteTSE} target="_blank" rel="noreferrer">Tribunal Superior Eleitoral (TSE)</a>, com os resultados de cada eleição desde 1996.</li>
           <li>O partido é o do dia da eleição. Trocas de partido durante o mandato, cassações, renúncias e suplentes que assumiram a cadeira não aparecem aqui.</li>
           <li>Eleições suplementares (quando a eleição é refeita no meio do mandato) ficam de fora.</li>
           <li>Os percentuais são dos votos dados aos candidatos (votos válidos), sem brancos e nulos.</li>
@@ -216,7 +227,7 @@ function Mandato({ m, apagado }: { m: MandatoPrefeito; apagado: boolean }) {
         <PartidoTag p={m.prefeito.partido} hoje={m.prefeito.partido_hoje} />
       </div>
       <div className="small muted">
-        {m.vice ? <>Vice: {m.vice.nome} ({partidoComHoje(m.vice.partido, m.vice.partido_hoje)}). </> : null}
+        {m.vice ? <>Vice: {m.vice.nome} ({partidoComHoje(m.vice.partido, m.vice.partido_hoje)}). </> : m.eleicao <= 1996 ? <>O TSE não publica o vice-prefeito de {m.eleicao}. </> : null}
         Eleito em {m.eleicao}{m.prefeito.pct != null ? ` com ${pctTxt(m.prefeito.pct)} dos votos válidos` : ""}{m.turnos > 1 ? " no 2º turno" : ""}.
         {m.coligacao.partidos.length > 1 && <> Coligação{m.coligacao.nome ? ` "${m.coligacao.nome}"` : ""}: {m.coligacao.partidos.join(", ")}.</>}
       </div>

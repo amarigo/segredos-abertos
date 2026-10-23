@@ -51,10 +51,23 @@ export default function Home() {
         )}
       </section>
 
+      {MG && (
+        <section>
+          <h2>Minas em um só lugar</h2>
+          <Explain>Quem governa o estado, quem faz as leis na Assembleia, para onde vai o dinheiro das emendas e quanto cada um gasta. Tudo com o link da fonte oficial.</Explain>
+          <div className="grid">
+            <Link to="/governo" className="card cidade-card"><strong>Governo do estado</strong><span className="small muted">Governador e vice eleitos, quem está no cargo hoje, salários e viagens do governador e dos secretários.</span></Link>
+            <Link to="/assembleia" className="card cidade-card"><strong>Deputados estaduais</strong><span className="small muted">{meta.estado?.deputados_estaduais ? `${meta.estado.deputados_estaduais} deputados: ` : ""}gastos da verba indenizatória nota por nota, projetos apresentados e aprovados.</span></Link>
+            <Link to="/emendas-estaduais" className="card cidade-card"><strong>Emendas estaduais</strong><span className="small muted">Quanto cada deputado estadual indicou do orçamento de Minas, para quais cidades e quem recebeu.</span></Link>
+            <Link to="/politicos" className="card cidade-card"><strong>Deputados federais e senadores</strong><span className="small muted">Os {meta.contagens.politicos} que representam Minas em Brasília: cota parlamentar, empresas e votos.</span></Link>
+          </div>
+        </section>
+      )}
+
       {MG && cidades && cidades.length > 0 && (
         <section>
           <h2>Sua cidade</h2>
-          <Explain>Quem foi prefeito e quais partidos tiveram vereadores desde 1997, para saber de quem cobrar.</Explain>
+          <Explain>Quem foi prefeito e quais partidos tiveram vereadores desde 1997, para saber de quem cobrar. E o dinheiro: onde a prefeitura gasta e quanto chegou por emendas de deputados e senadores.</Explain>
           <div className="grid">
             {cidades.map((c) => (
               <Link key={c.id} to={`/cidade/${c.id}`} className="card cidade-card">

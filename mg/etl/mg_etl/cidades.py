@@ -10,7 +10,7 @@ import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from sa_etl.util import write_json
+from sa_etl.util import norm_name, write_json
 
 from . import partidos_hist, tse
 
@@ -116,22 +116,38 @@ def candidatos(rows: list[dict], cargo: str) -> dict[int, list[dict]]:
     return dict(por_turno)
 
 
+def _cargo(r: dict) -> str:
+    return re.sub(r"[^A-Z]", "", (r.get("DS_CARGO") or "").upper())
+
+
 def _pessoa(nome: str, partido: str, ano: int, **extra) -> dict:
     h = partidos_hist.hoje(partido, ano)
     return {"nome": nome, "partido": partido, "partido_hoje": h["sigla"], "mudou": h["mudou"], **extra}
 
 
-def _vice(cand_rows: list[dict] | None, numero: str, ano: int) -> dict | None:
+def _vice(cand_rows: list[dict] | None, numero: str, ano: int, coligacao: str = "", partido: str = "") -> dict | None:
+    """O vice da chapa do prefeito eleito, na lista de candidatos do TSE.
+
+    Desde 2004 o vice tem o mesmo número do prefeito. Em 2000 não: o vice tinha o número do próprio partido com
+    um dígito a mais (prefeito 40, vice 401; ou vice de outro partido da coligação, 331). Por isso, se o número
+    não bate, procuramos o vice da mesma coligação. Em 1996 o arquivo do TSE não traz os vices."""
     if not cand_rows or not numero:
         return None
-    vices = [r for r in cand_rows if (r.get("DS_CARGO") or "").upper() == "VICE-PREFEITO" and r.get("NR_CANDIDATO") == numero
-             and _ordinaria(r)]
-    if not vices:
+    vices = [r for r in cand_rows if _cargo(r) == "VICEPREFEITO" and _ordinaria(r)]
+    # Arquivos antigos escrevem "VICE PREFEITO" (sem hífen) e às vezes o número com zero à esquerda
+    achados = [r for r in vices if _int(r.get("NR_CANDIDATO")) == _int(numero)]
+    if not achados and coligacao:
+        chave = norm_name(coligacao)
+        achados = [r for r in vices if _coligacao_nome(r) and norm_name(_coligacao_nome(r)) == chave]
+    if not achados:  # partido sozinho (sem coligação): o vice é do mesmo partido, com o número começando igual
+        achados = [r for r in vices if str(_int(r.get("NR_CANDIDATO"))).startswith(str(_int(numero)))
+                   and len(str(_int(r.get("NR_CANDIDATO")))) == len(str(_int(numero))) + 1 and _partido(r) == partido]
+    if not achados:
         return None
     # "INAPTO" e "INDEFERIDO" contêm "APTO" e "DEFERIDO": só a palavra inteira conta
-    vices.sort(key=lambda r: 0 if re.search(r"\b(APTO|DEFERIDO)\b", f'{r.get("DS_SITUACAO_CANDIDATURA") or ""} '
-                                                                       f'{r.get("DS_DETALHE_SITUACAO_CAND") or ""}', re.I) else 1)
-    return _pessoa(_nome(vices[0]), _partido(vices[0]), ano)
+    achados.sort(key=lambda r: 0 if re.search(r"\b(APTO|DEFERIDO)\b", f'{r.get("DS_SITUACAO_CANDIDATURA") or ""} '
+                                                                        f'{r.get("DS_DETALHE_SITUACAO_CAND") or ""}', re.I) else 1)
+    return _pessoa(_nome(achados[0]), _partido(achados[0]), ano)
 
 
 def executivo(ano: int, rows: list[dict], cand_rows: list[dict] | None) -> dict | None:
@@ -148,7 +164,7 @@ def executivo(ano: int, rows: list[dict], cand_rows: list[dict] | None) -> dict 
     return {
         "eleicao": ano, "inicio": ano + 1, "fim": ano + 4, "turnos": ultimo,
         "prefeito": _pessoa(p["nome"], p["partido"], ano, votos=p["votos"], pct=p["pct"]),
-        "vice": _vice(cand_rows, p["numero"], ano),
+        "vice": _vice(cand_rows, p["numero"], ano, p["coligacao"], p["partido"]),
         "coligacao": {"nome": p["coligacao"], "partidos": p["partidos_coligacao"]},
         "candidatos": [{"turno": t, **{k: c[k] for k in ("nome", "partido", "votos", "pct", "eleito")}}
                        for t in sorted(turnos) for c in turnos[t]],

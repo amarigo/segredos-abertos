@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from faketse import FakeTSE, instalar
+from mg_etl import tse
 from sa_etl import build as build_nac, pagamentos, util
 
 from apoio_mg import CIDADES_TESTE, MINIMOS_TESTE  # noqa: E402,F401
@@ -48,3 +49,18 @@ def gov_tse(monkeypatch) -> FakeTSE:
     import time
     monkeypatch.setattr(time, "sleep", lambda s: None)
     return instalar(monkeypatch, FakeTSE())
+
+
+@pytest.fixture
+def estado(monkeypatch):
+    """Fontes do estado simuladas (ALMG, Dados MG, Tesouro e TSE) no lugar da internet, com poucas eleições."""
+    from fakeestado import FakeEstado, instalar as instalar_estado
+    from mg_etl import almg, siconfi
+    util.AVISOS.clear()
+    logging.getLogger("mg_etl").setLevel(logging.ERROR)
+    logging.getLogger("sa_etl").setLevel(logging.ERROR)
+    monkeypatch.setattr(tse, "anos_ate", lambda hoje=None: ([2016, 2020, 2024], [2018, 2022]))
+    monkeypatch.setattr(almg, "ORCAMENTO_VERBA", 100_000)
+    monkeypatch.setattr(almg, "PAUSA_VERBA", 0)
+    siconfi._ENTES.clear()
+    return instalar_estado(monkeypatch, FakeEstado())

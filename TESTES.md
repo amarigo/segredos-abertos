@@ -131,6 +131,10 @@ O Minas Nossa é o recorte de Minas Gerais, publicado em `/mg/`. Usa os mesmos t
 | TSE fora do ar, .zip cortado, página de erro, arquivo sem cabeçalho ou sem a cidade | FakeTSE (`faketse.py`) com esses defeitos; a coleta usa a última cópia ou deixa o ano de fora com aviso. Rodadas de caos com falhas ao acaso |
 | Cadeiras da Câmara que não somam as vagas, dois prefeitos na mesma eleição, percentuais acima de 100 | Conferência das cidades (`mg_etl.validar`) e testes de mutação: estragamos um arquivo bom de 26 jeitos e cada defeito tem de ser pego |
 | Partido antigo sem o nome de hoje (PMDB, PFL, PR...) | Tabela de sucessores (`partidos_hist.py`) com teste de cada linhagem |
+| Somas erradas no estado: verba por tipo e por mês que não fecha o total, emenda paga sem indicação, dois governadores eleitos | `mg/etl/tests/test_estado.py` com FakeEstado (`fakeestado.py`), que simula ALMG, Dados MG, SICONFI e Portal da Transparência; a conferência do estado (`conferir_estado`) e 17 defeitos de mutação a mais |
+| CPF de fornecedor pessoa física ou de servidor no nome ou no motivo da viagem | Nunca lemos as colunas de CPF; `sem_cpf` limpa o texto; a conferência procura CPF em todos os arquivos e o teste no navegador nas páginas do estado |
+| ALMG, Dados MG ou SICONFI fora do ar, lentos (429), com página de erro, vazios ou cortados | Caos em cada fonte: a parte afetada some com aviso e o resto é publicado; a verba para depois de 5 falhas seguidas e continua na próxima execução |
+| Ano de verba incompleto parecer que o deputado gastou pouco | `verba_completa` por ano e `meses_faltando` por deputado; o site mostra o aviso (teste no navegador) |
 | Falha no Minas Nossa derrubar o site nacional | No GitHub Actions, a coleta de MG roda à parte (`continue-on-error`); se falhar, publica de novo o `dados-mg.zip` anterior |
 
 ```bash

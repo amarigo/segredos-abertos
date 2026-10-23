@@ -5,7 +5,12 @@ function SobreMG() {
   return (
     <>
       <h2>O que é o Minas Nossa</h2>
-      <p>É a parte de Minas Gerais do <a href={SITE.nacional}>Segredos Abertos Brasil</a>. Mostra os deputados federais e os senadores eleitos por Minas, com os mesmos dados e as mesmas contas do site nacional, e páginas para cada cidade acompanhada. Os deputados estaduais, o governador e as Câmaras Municipais entram nas próximas etapas.</p>
+      <p>É a parte de Minas Gerais do <a href={SITE.nacional}>Segredos Abertos Brasil</a>. Mostra os deputados federais e os senadores eleitos por Minas, com os mesmos dados e as mesmas contas do site nacional,, o governo do estado, os deputados estaduais, as emendas estaduais e páginas para cada cidade acompanhada. Cada número tem o link para a página oficial de onde ele saiu.</p>
+      <h2>Governo e Assembleia</h2>
+      <p>Os gastos dos deputados estaduais vêm da <a href="https://dadosabertos.almg.gov.br" target="_blank" rel="noreferrer">Assembleia Legislativa (ALMG)</a>: a verba indenizatória, nota por nota, os projetos e as emendas que cada um indicou. Baixamos alguns meses por dia, do mais novo para o mais antigo; enquanto um ano não estiver completo, a página avisa. O salário e as viagens pagas ao governador, ao vice e aos secretários vêm do <a href="https://dados.mg.gov.br" target="_blank" rel="noreferrer">Dados MG</a>, o portal de dados abertos do governo de Minas.</p>
+      <p>Quando quem recebeu o dinheiro é uma pessoa, e não uma empresa, mostramos só "Pessoa física": CPF não aparece no site nem nos links.</p>
+      <h2>Dinheiro das cidades</h2>
+      <p>Quanto cada prefeitura gastou por área vem do <a href="https://siconfi.tesouro.gov.br" target="_blank" rel="noreferrer">SICONFI</a>, do Tesouro Nacional. As emendas de deputados federais e senadores que chegaram à cidade vêm do <a href="https://portaldatransparencia.gov.br" target="_blank" rel="noreferrer">Portal da Transparência</a>, e as de deputados estaduais, da ALMG.</p>
       <p>Nas votações, o resultado (aprovado ou rejeitado) e o placar são os da Casa inteira. Ao lado mostramos como votou a bancada de Minas. A posição de esquerda e direita de cada parlamentar continua calculada com todos os colegas da Casa, que é a régua certa para comparar.</p>
       <h2>Páginas das cidades</h2>
       <p>Usamos os resultados de todas as eleições desde 1996, publicados pelo <a href="https://dadosabertos.tse.jus.br" target="_blank" rel="noreferrer">Tribunal Superior Eleitoral (TSE)</a>: quem foi eleito prefeito, vice e vereador, por qual partido e coligação, com quantos votos, e como a cidade votou para presidente, governador, senador e deputados.</p>
@@ -72,7 +77,7 @@ export default function Sobre() {
       <h2>Limites</h2>
       <ul>
         <li>A Câmara não publica o salário de cada assessor na lista da equipe, só o total gasto com a verba de gabinete. O Senado não publica o custo total da equipe de cada senador.</li>
-        <li>Deputados estaduais e governadores ainda não estão incluídos{MG ? "" : " (o Minas Nossa começa por Minas Gerais)"}. Estão nas próximas etapas.</li>
+        {!MG && <li>Deputados estaduais e governadores ainda não estão incluídos (o <a href="https://amarigo.github.io/segredos-abertos/mg/">Minas Nossa</a> já mostra os de Minas Gerais).</li>}
         <li>Votações simbólicas e secretas não têm voto individual, então não aparecem.</li>
         <li>A Receita esconde parte do CPF dos sócios, então a ligação entre empresas do mesmo dono pode ter homônimos.</li>
       </ul>

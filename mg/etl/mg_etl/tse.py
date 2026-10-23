@@ -154,3 +154,30 @@ def linhas(tipo: str, ano: int, uf: str, cidades: set[str], cache: Path, hoje: d
 
 def _velho(p: Path, horas: float) -> bool:
     return (time.time() - p.stat().st_mtime) / 3600 > horas
+
+
+def linhas_estaduais(tipo: str, ano: int, uf: str, cargos: set[str], cache: Path) -> list[dict] | None:
+    """Linhas de cargos estaduais (governador, vice, senador) de `uf`, com cache permanente (a eleição já fechou)."""
+    alvo = cache / f"{tipo}_estado_{ano}_{uf}.json"
+    antigo = _ler_cache(alvo)
+    if antigo and set(antigo["cidades"]) >= cargos:
+        return antigo["linhas"]
+    zp = cache / "zips" / f"{tipo}_{ano}.zip"
+    so = lambda r: re.sub(r"[^A-Z]", "", (r.get("DS_CARGO") or "").upper()) in cargos  # noqa: E731
+    try:
+        download(URL[tipo].format(ano=ano), zp, validar=eh_zip)
+        rows = [r for r in linhas_do_zip(zp, uf, None, tipo) if so(r)]
+        if not rows:
+            raise ValueError(f"nenhuma linha de {sorted(cargos)}")
+    except Exception as e:  # noqa: BLE001
+        log.warning("TSE %s %s (estado): %s", tipo, ano, e)
+        if antigo:
+            return antigo["linhas"]
+        avisar(f"TSE: {NOME_TIPO[tipo]} de {ano} para governador não puderam ser baixados")
+        return None
+    finally:
+        zp.unlink(missing_ok=True)
+        zp.with_suffix(".zip.part").unlink(missing_ok=True)
+    alvo.parent.mkdir(parents=True, exist_ok=True)
+    alvo.write_text(json.dumps({"cidades": sorted(cargos), "linhas": rows}, ensure_ascii=False), encoding="utf-8")
+    return rows
