@@ -14,6 +14,7 @@ import time
 import pytest
 
 from fakegov import FakeGov
+from sa_etl import util
 
 SENADO_VOT = "legis.senado.leg.br/dadosabertos/votacao"
 CEAPS = "despesas_ceaps"
@@ -262,3 +263,42 @@ def test_macaco_do_caos(coleta, semente):
         # Qualquer outro erro seria dado inconsistente.
         inconsistentes = [e for e in r.erros if not e.startswith(("Poucas", "Poucos"))]
         assert inconsistentes == [], (semente, gov.falhas, inconsistentes[:5])
+
+
+# ---------------------------------------------------------------- site parado (não aceita conexão)
+
+def test_camara_parada_nao_trava_a_coleta(coleta):
+    """Em 23/10/2026 o site da Câmara parou de aceitar conexões: cada endereço esperava minutos e a coleta
+    estourou as 2 horas do GitHub Actions sem publicar nada. Depois de 3 esperas seguidas sem resposta,
+    o site fica de fora até o fim da coleta e o resto segue."""
+    gov = coleta.usar(FakeGov())
+    boa = coleta.rodar()
+    gov.falhar("dadosabertos.camara.leg.br", "parado")
+    antes = len(gov.chamadas)
+    try:
+        coleta.rodar()
+    except Exception:  # noqa: BLE001  (sem a Câmara a coleta pode parar de vez, e o site anterior fica no ar)
+        pass
+    na_camara = [c for c in gov.chamadas[antes:] if "dadosabertos.camara.leg.br" in c]
+    assert len(na_camara) <= 3, na_camara
+    assert "dadosabertos.camara.leg.br" in util.FORA_DO_AR
+    assert boa.exists()
+
+
+def test_site_parado_volta_a_ser_tentado_na_coleta_seguinte(coleta):
+    gov = coleta.usar(FakeGov())
+    gov.falhar(SENADO_VOT, "parado", vezes=util.QUEDAS_PARA_DESISTIR)
+    coleta.rodar()
+    gov.consertar()
+    saida = coleta.rodar()
+    assert "legis.senado.leg.br" not in util.FORA_DO_AR
+    assert any(v["casa"] == "senado" for v in coleta.ler(saida, "votacoes.json"))
+
+
+def test_uma_espera_isolada_nao_derruba_o_site(coleta):
+    """Só desistimos depois de esperas SEGUIDAS: uma resposta boa no meio zera a conta."""
+    gov = coleta.usar(FakeGov())
+    gov.falhar(SENADO_VOT, "parado", vezes=util.QUEDAS_PARA_DESISTIR - 1)
+    saida = coleta.rodar()
+    assert "legis.senado.leg.br" not in util.FORA_DO_AR
+    assert coleta.validar(saida).erros == []

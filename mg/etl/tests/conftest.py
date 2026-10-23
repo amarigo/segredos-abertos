@@ -31,6 +31,12 @@ def sem_internet():
     mp.undo()
 
 
+@pytest.fixture(autouse=True)
+def sites_parados_esquecidos():
+    """Cada teste começa sem nenhum site marcado como fora do ar (como um processo novo)."""
+    util.reiniciar_quedas()
+
+
 @pytest.fixture(scope="session")
 def nacional(tmp_path_factory) -> Path:
     from fakegov import FakeGov, instalar as instalar_gov
