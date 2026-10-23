@@ -3,9 +3,12 @@
 - `nacional`: dados do Segredos Abertos nacional gerados uma vez com o governo simulado (FakeGov), como na
   execução diária do GitHub Actions. O recorte de MG parte deles.
 - `tse`: o TSE simulado (FakeTSE) no lugar da internet.
+- `sem_internet`: nenhum teste sai para a internet de verdade. Sem isso, um teste que esquece de simular uma
+  fonte baixa os dados reais no GitHub Actions (onde há internet) e demora horas, mas passa no computador.
 """
 import logging
 import shutil
+import socket
 from pathlib import Path
 
 import pytest
@@ -15,6 +18,17 @@ from mg_etl import tse
 from sa_etl import build as build_nac, pagamentos, util
 
 from apoio_mg import CIDADES_TESTE, MINIMOS_TESTE  # noqa: E402,F401
+
+
+@pytest.fixture(scope="session", autouse=True)
+def sem_internet():
+    def bloquear(self, endereco):
+        raise OSError(f"teste tentou acessar a internet de verdade ({endereco}); simule a fonte")
+    mp = pytest.MonkeyPatch()
+    mp.setattr(socket.socket, "connect", bloquear)
+    mp.setattr(socket.socket, "connect_ex", bloquear)
+    yield
+    mp.undo()
 
 
 @pytest.fixture(scope="session")
