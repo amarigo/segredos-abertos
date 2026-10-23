@@ -1,4 +1,4 @@
-name: Sondar autoria (temporário)
+name: Sondar dados publicados (temporário)
 on:
   push:
     branches: [sondar-atuacao]
@@ -11,5 +11,5 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -q -r etl/requirements.txt
-      - run: python etl/sondar_autoria.py
+      - run: python etl/sondar_publicado.py
         continue-on-error: true
