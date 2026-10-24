@@ -43,6 +43,7 @@ PAGINA_DEPUTADO = "https://www.almg.gov.br/a-assembleia/deputados/deputado/?id={
 # Conferido: /proposicoes/PL/3221/2025/ dá 404; a página do texto do projeto é esta
 PAGINA_PROPOSICAO = "https://www.almg.gov.br/atividade-parlamentar/projetos-de-lei/texto/?tipo={sigla}&num={numero}&ano={ano}"
 INICIO_LEGISLATURA = 2023
+ANOS_RECENTES = 2  # foco no ano atual e no anterior (pedido em 24/10/2026): a verba desses anos completa primeiro
 ORCAMENTO_VERBA = 700  # consultas à API da verba por execução
 PAUSA_VERBA = 0.4  # segundos entre consultas (a API responde 429 se formos rápidos demais)
 MESES_ABERTOS = 3  # meses mais recentes, que ainda podem receber notas
@@ -57,7 +58,11 @@ APROVADA = re.compile(r"TRANSFORMAD|SANCIONAD|PROMULGAD|APROVAD|NORMA JURIDICA|L
 
 def anos_legislatura(hoje: dt.date | None = None) -> list[int]:
     hoje = hoje or dt.date.today()
-    return list(range(INICIO_LEGISLATURA, hoje.year + 1))
+    return list(range(_primeiro_ano(hoje), hoje.year + 1))
+
+
+def _primeiro_ano(hoje: dt.date) -> int:
+    return max(INICIO_LEGISLATURA, hoje.year - ANOS_RECENTES + 1)
 
 
 # ---------------------------------------------------------------- quem são
@@ -120,9 +125,11 @@ def _data_iso(s: str) -> str:
 
 
 def meses_legislatura(hoje: dt.date) -> list[tuple[int, int]]:
-    """(ano, mês) de fevereiro de 2023 (posse) até o mês atual, do mais novo para o mais antigo."""
+    """(ano, mês) dos anos acompanhados (desde a posse, em fevereiro de 2023, no máximo os ANOS_RECENTES mais
+    novos) até o mês atual, do mais novo para o mais antigo."""
     out, a, m = [], hoje.year, hoje.month
-    while (a, m) >= (INICIO_LEGISLATURA, 2):
+    inicio = (INICIO_LEGISLATURA, 2) if _primeiro_ano(hoje) == INICIO_LEGISLATURA else (_primeiro_ano(hoje), 1)
+    while (a, m) >= inicio:
         out.append((a, m))
         a, m = (a, m - 1) if m > 1 else (a - 1, 12)
     return out
