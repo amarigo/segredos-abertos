@@ -62,12 +62,13 @@ _session = _Sessao()
 _session.headers.update({"User-Agent": USER_AGENT, "Accept": "application/json"})
 
 
-def get(url: str, *, params: dict | None = None, tries: int = 4, timeout: int = 120) -> requests.Response:
+def get(url: str, *, params: dict | None = None, tries: int = 4, timeout: int = 120,
+        headers: dict | None = None) -> requests.Response:
     """GET com espera crescente entre tentativas (2s, 4s, 8s...)."""
     last: Exception | None = None
     for attempt in range(tries):
         try:
-            r = _session.get(url, params=params, timeout=timeout)
+            r = _session.get(url, params=params, timeout=timeout, headers=headers)
             if r.status_code >= 500 or r.status_code == 429:
                 raise requests.HTTPError(f"{r.status_code} em {url}")
             r.raise_for_status()  # outros erros 4xx não melhoram com nova tentativa
@@ -103,7 +104,8 @@ def get_json(url: str, *, tries: int = 4, **kw) -> Any:
     raise RuntimeError(f"JSON inválido em {url}: {last}")
 
 
-def download(url: str, dest: Path, max_horas: float | None = None, validar=None) -> Path:
+def download(url: str, dest: Path, max_horas: float | None = None, validar=None,
+             headers: dict | None = None) -> Path:
     """Baixa um arquivo para o cache local, se ainda não existir (ou se for mais velho que max_horas).
 
     Se o site do governo falhar e já houver uma cópia antiga no cache, usa a cópia antiga (e avisa), em vez de
@@ -117,7 +119,7 @@ def download(url: str, dest: Path, max_horas: float | None = None, validar=None)
             return dest
     dest.parent.mkdir(parents=True, exist_ok=True)
     try:
-        r = get(url, timeout=600)
+        r = get(url, timeout=600, headers=headers)
         if not r.content or (validar and not validar(r.content)):
             raise ValueError(f"resposta inválida de {url} ({len(r.content)} bytes)")
     except Exception as e:  # noqa: BLE001
