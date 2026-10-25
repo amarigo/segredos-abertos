@@ -65,7 +65,9 @@ def test_colunas_do_arquivo_de_emendas_da_almg():
 def test_meses_da_legislatura():
     m = almg.meses_legislatura(dt.date(2023, 4, 10))
     assert m == [(2023, 4), (2023, 3), (2023, 2)]
-    assert almg.meses_legislatura(HOJE)[0] == (2026, 10) and len(almg.meses_legislatura(HOJE)) == 45
+    m = almg.meses_legislatura(HOJE)
+    assert m[0] == (2026, 10) and m[-1] == (2025, 1) and len(m) == 22, "foco em 2025 e 2026"
+    assert almg.anos_legislatura(HOJE) == [2025, 2026]
 
 
 def test_cargos_da_equipe_de_governo():
@@ -249,7 +251,8 @@ def test_orcamento_da_verba_completa_aos_poucos(estado, nacional, tmp_path, monk
     saida, _ = _montar(nacional, tmp_path)
     assert sum("verbas_indenizatorias" in u for u in estado.chamadas) == 1000
     idx = _json(saida, "almg/deputados.json")
-    assert idx["verba_completa"]["2023"] is False, "o site avisa que o ano ainda está incompleto"
+    assert idx["verba_completa"]["2025"] is False, "o site avisa que o ano ainda está incompleto"
+    assert set(idx["verba_completa"]) == {"2025", "2026"}, "foco nos dois anos mais recentes"
     assert idx["verba_completa"]["2026"] is True, "os meses mais novos vêm primeiro"
     # nas execuções seguintes, completa (e não pergunta de novo o que já tem)
     for _ in range(3):
