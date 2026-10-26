@@ -25,10 +25,15 @@ site/             a página (HTML, CSS e JavaScript, sem build) e o desenho do m
    abriram) e soma os votos das urnas que fecharam depois de cada horário de corte.
 5. `noite.py` refaz a apuração ao longo da noite: soma os boletins na ordem em que o TSE os recebeu (hora oficial de
    recebimento de cada boletim) e guarda a parcial a cada 5 minutos, no Brasil e em cada estado.
-6. `validar.py` confere antes de publicar: a soma das urnas tem que ser igual ao total oficial, voto por voto
+6. `logs.py` baixa o registro (log) de cada urna, nos dois turnos, e conta as linhas "O voto do eleitor foi
+   computado" do dia da eleição, com a hora de cada uma. Guarda, por urna, quantos votos vieram depois das 17h
+   de Brasília (em `dados/brutos/<turno>turno_log/`). O registro não diz em quem foi o voto (o voto é secreto).
+   `depois17.py` junta isso aos boletins. Só entram as urnas em que o total de votos do registro é igual ao
+   comparecimento do boletim; se faltar o registro de alguma urna, o site não é publicado.
+7. `validar.py` confere antes de publicar: a soma das urnas tem que ser igual ao total oficial, voto por voto
    (cada candidato, brancos, nulos e comparecimento), no Brasil, em cada estado e no exterior. Se não bater, o
    site da eleição não é publicado.
-7. `montar.py` põe os números na página e gera as planilhas por estado para baixar.
+8. `montar.py` põe os números na página e gera as planilhas por estado para baixar.
 
 O GitHub Action do Segredos Abertos roda os testes, monta e confere o site da eleição a partir de `dados/` e
 publica em `/eleicao2026/`. Uma falha aqui não trava o site nacional.
@@ -41,6 +46,7 @@ publica em `/eleicao2026/`. Uma falha aqui não trava o site nacional.
 | Urnas do 1º turno (horário e votos) | [Boletim de Urna, Portal de Dados Abertos do TSE](https://dadosabertos.tse.jus.br/dataset/resultados-2026-boletim-de-urna) |
 | Urnas do 2º turno (horário e votos) | Boletim de urna digital de cada seção, no [site de resultados do TSE](https://resultados.tse.jus.br/oficial/app/index.html) |
 | Hora em que o TSE recebeu cada boletim | 1º turno: campo `DT_BU_RECEBIDO` do Boletim de Urna; 2º turno: registro de cada seção (`-aux.json`) no site de resultados |
+| Hora de cada voto (sem o voto) | Registro (log) de cada urna (`-log.jez`), no [site de resultados do TSE](https://resultados.tse.jus.br/oficial/app/index.html) |
 | Fotos dos candidatos | Fotos oficiais do [site de resultados do TSE](https://resultados.tse.jus.br/oficial/app/index.html) |
 | Mapa | MapSVG, pacote [@svg-maps/brazil](https://www.npmjs.com/package/@svg-maps/brazil) (CC BY 4.0) |
 

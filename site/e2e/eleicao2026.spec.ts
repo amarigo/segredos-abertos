@@ -59,7 +59,7 @@ test("planilha de um estado pode ser baixada e tem o cabeçalho certo", async ({
   const r = await request.get(href!);
   expect(r.ok()).toBe(true);
   expect((await r.text()).split("\n")[0]).toBe(
-    "UF;Municipio;Cod_municipio_TSE;Zona;Secao;Abertura_hora_local;Encerramento_hora_local;Encerramento_horario_Brasilia;Eleitores_aptos;Comparecimento;Votos_13_Lula;Votos_22_Flavio;Brancos;Nulos",
+    "UF;Municipio;Cod_municipio_TSE;Zona;Secao;Abertura_hora_local;Encerramento_hora_local;Encerramento_horario_Brasilia;Eleitores_aptos;Comparecimento;Votos_13_Lula;Votos_22_Flavio;Brancos;Nulos;Votos_depois_17h",
   );
 });
 
@@ -189,6 +189,32 @@ test("apuração hora a hora: a velocidade da animação pode ser ajustada", asy
   const devagar = await passos("500"), rapido = await passos("70");
   expect(devagar).toBeGreaterThan(0);
   expect(rapido).toBeGreaterThan(devagar * 2);
+});
+
+test("votos depois das 17h: números do registro das urnas, conferidos com o boletim", async ({ page }) => {
+  const erros = semErros(page);
+  const D = dados("dados/numeros_do_site.json");
+  for (const t of ["2", "1"]) {
+    const x = D.d17[t];
+    expect(x, `registros do ${t}º turno`).toBeTruthy();
+    // toda urna com boletim foi lida; só ficam de fora as que não têm registro publicado ou não batem
+    const sem = Object.entries(x.conf).filter(([k]) => k.startsWith("sem_registro_")).reduce((a, [, v]) => a + (v as number), 0);
+    expect(x.conf.bate + (x.conf.diferente || 0) + sem).toBe(x.conf.urnas);
+    expect(x.conf.bate / x.conf.urnas).toBeGreaterThan(0.999);
+    // por minuto soma o total; estados somam o Brasil
+    const br = x.uf.BR;
+    expect(x.pm.BR.reduce((a: number, [, q]: number[]) => a + q, 0)).toBe(br[2]);
+    const ufs = Object.keys(x.uf).filter((u) => u !== "BR");
+    expect(ufs.reduce((a, u) => a + x.uf[u][2], 0)).toBe(br[2]);
+    await page.goto("./#tarde");
+    await page.locator(`[data-tround='${t}']`).click();
+    await expect(page.locator("#t-short")).toContainText(br[2].toLocaleString("pt-BR"));
+    await expect(page.locator("#tmap path")).toHaveCount(27);
+    await expect(page.locator("#t-check")).toContainText("batem exatamente");
+    await expect(page.locator("#t-who")).toContainText("Não dá para saber");
+  }
+  await expect(page.locator("#t-tl tbody tr").first()).toBeVisible();
+  expect(erros).toEqual([]);
 });
 
 test.describe("tema escuro", () => {

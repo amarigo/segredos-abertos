@@ -170,6 +170,9 @@ details{border-top:1px solid var(--line)}
 .ngrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);grid-template-areas:"head head" "map graf" "map ctl";grid-template-rows:auto auto 1fr;gap:1.2rem 1.6rem;align-items:start}
 .ngrid .nhead{grid-area:head;margin:.4rem 0 0;max-width:44em}.ngrid #n-panel{grid-area:map}.ngrid #n-ctl{grid-area:ctl}.ngrid #n-graf{grid-area:graf}
 @media (max-width:860px){.ngrid{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "map" "ctl" "graf";grid-template-rows:none}}
+.linkbtn{background:none;border:0;padding:0;margin:0;font:inherit;font-weight:700;color:var(--br-ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.tgrid{grid-template-areas:"map graf";grid-template-rows:auto}.tgrid #t-mapp{grid-area:map}.tgrid #t-horap{grid-area:graf}
+@media (max-width:860px){.tgrid{grid-template-areas:"map" "graf"}}
 .nspeed{display:flex;align-items:center;gap:.4rem .8rem;flex-wrap:wrap;margin:.2rem 0 .6rem}
 .nsl{font-weight:700}
 .cmpt td,.cmpt th{text-align:right;white-space:nowrap}
@@ -365,14 +368,15 @@ nav.projetos a[aria-current="page"]{font-weight:700;text-decoration:none}
     <li><button type="button" data-go="diferencas">3. Onde mudou</button></li>
     <li><button type="button" data-go="simulador">4. Simulador</button></li>
     <li><button type="button" data-go="horario">5. Urnas e horário</button></li>
-    <li><button type="button" data-go="fontes">6. Dados abertos</button></li>
+    <li><button type="button" data-go="tarde">6. Depois das 17h</button></li>
+    <li><button type="button" data-go="fontes">7. Dados abertos</button></li>
   </ul>
 </nav>
 
 <button type="button" class="tomenu" id="tomenu" hidden aria-label="Voltar ao menu de seções">↑ Menu</button>
 <main class="wrap">
 <div class="ok" role="note" id="srcnote" style="margin-top:1rem">
-  <p><b>Todos os números desta página são oficiais, do TSE.</b> Os dois turnos estão 100% apurados (<span class="num" id="n-sec"></span> seções). Resultados e boletins de urna do 2º turno baixados de resultados.tse.jus.br; boletins de urna do 1º turno do Portal de Dados Abertos do TSE. Veja a seção 6.</p>
+  <p><b>Todos os números desta página são oficiais, do TSE.</b> Os dois turnos estão 100% apurados (<span class="num" id="n-sec"></span> seções). Resultados e boletins de urna do 2º turno baixados de resultados.tse.jus.br; boletins de urna do 1º turno do Portal de Dados Abertos do TSE. Veja a seção 7.</p>
   <p class="verify" style="margin-top:.4rem"><b>Confira no TSE</b><a class="ext" href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener">Site oficial de resultados</a><a class="ext" href="https://dadosabertos.tse.jus.br/dataset/resultados-2026" target="_blank" rel="noopener">Dados abertos de 2026</a></p>
 </div>
 
@@ -638,7 +642,88 @@ nav.projetos a[aria-current="page"]{font-weight:700;text-decoration:none}
   <div class="next"><button class="btn" data-go="fontes">Ver todas as fontes →</button></div>
 </section>
 
-<!-- 6. FONTES -->
+<!-- 6. VOTOS DEPOIS DAS 17H -->
+<section class="view" id="tarde" aria-labelledby="h-tar" hidden>
+  <h2 id="h-tar">Votos registrados depois das 17h</h2>
+  <p class="lead">Cada urna guarda um registro de tudo o que acontece nela, com data e hora. Quando um eleitor termina de votar, a urna anota: “O voto do eleitor foi computado”. O TSE publica esse registro (chamado de log da urna) de todas as urnas. Lemos o registro de cada urna e contamos quantos votos foram computados depois das 17h, horário de Brasília.</p>
+  <div class="toggle" role="group" aria-label="Escolha o turno">
+    <button type="button" data-tround="2" aria-pressed="true">2º turno (25/10)</button>
+    <button type="button" data-tround="1" aria-pressed="false">1º turno (4/10)</button>
+  </div>
+  <div id="t-missing" class="notice" role="note" hidden></div>
+  <div id="t-body">
+  <div class="panel">
+    <h3>Resumindo</h3>
+    <div id="t-short"></div>
+  </div>
+
+  <div class="panel" id="t-who">
+    <h3>Para quem foram esses votos?</h3>
+    <div class="notice" role="note" style="margin-top:0"><strong>Não dá para saber, e isso é de propósito.</strong><p>O voto é secreto. O registro da urna anota a hora em que cada voto foi computado, mas não em quem foi. Os votos ficam guardados em outro arquivo (o registro digital do voto), embaralhados e sem hora, justamente para ninguém ligar um voto a um eleitor ou a um horário.</p></div>
+    <p>O que dá para mostrar com os dados oficiais:</p>
+    <div id="t-res"></div>
+  </div>
+
+  <div class="ngrid tgrid">
+  <div class="panel" id="t-mapp">
+    <h3>Onde ficam essas urnas</h3>
+    <p>Cor mais forte quer dizer uma parte maior dos votos do estado computada depois das 17h. Toque em um estado para ver os números dele.</p>
+    <div class="mapwrap"><svg id="tmap" role="group" aria-label="Mapa: parte dos votos de cada estado computada depois das 17h"></svg><div class="maplegend" id="tlegend"></div></div>
+  </div>
+  <div class="panel" id="t-horap">
+    <h3 id="t-hh">A que horas foram esses votos</h3>
+    <div class="field"><label for="t-uf">Lugar</label><select id="t-uf"></select></div>
+    <div id="t-ufbox" aria-live="polite"></div>
+    <div class="hist" id="t-hist" role="img" aria-label="Votos computados em cada intervalo de horário depois das 17h"></div>
+  </div>
+  </div>
+
+  <div class="panel">
+    <h3>Hora em que a urna fechou × votos depois das 17h</h3>
+    <p>Uma urna que fechou tarde não teve, necessariamente, muitos votos depois das 17h. O mesário encerra a urna depois do último eleitor, e isso pode levar um tempo. A tabela cruza as duas informações.</p>
+    <div id="t-grp"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Estado por estado</h3>
+    <div id="t-tab"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Lista de urnas com votos depois das 17h</h3>
+    <div class="filters">
+      <div class="field"><label for="tl-uf">Estado</label><select id="tl-uf"></select></div>
+      <div class="field"><label for="tl-mun">Cidade</label><select id="tl-mun"><option value="">Todas</option></select></div>
+    </div>
+    <p id="tl-sum" aria-live="polite"></p>
+    <div class="tablewrap"><table id="t-tl" class="cards"><thead><tr><th>Cidade</th><th>Zona / Seção</th><th>Votos depois das 17h</th><th>Último voto</th><th>Votaram no dia</th><th>Lula</th><th>Flávio</th><th>No TSE</th></tr></thead><tbody></tbody></table></div>
+    <div class="next"><button class="btn alt" type="button" id="tl-more" hidden>Mostrar mais urnas</button></div>
+    <p class="small muted">“Lula” e “Flávio” são os votos da urna no dia inteiro, do boletim oficial, e não só os votos depois das 17h, que são secretos. Em “arquivos” estão o boletim e o registro (log) dessa urna no TSE.</p>
+  </div>
+
+  <div class="panel">
+    <h3>Por que há votos depois das 17h</h3>
+    <ol class="steps">
+      <li>A regra é votar das <b>8h às 17h, horário de Brasília</b>. Quem já está na fila às 17h recebe uma senha e <b>tem o direito de votar</b>, mesmo que isso leve mais tempo.</li>
+      <li id="t-why2"><span class="tag tag-nw">Notícia</span> No 2º turno, a votação foi prorrogada até as 19h onde as seções ainda não tinham sido encerradas. Nessas seções, quem chegou depois das 17h também pôde votar. Veja as decisões e as notícias na seção <button type="button" class="linkbtn" data-go="horario">5. Urnas e horário</button>.</li>
+      <li>Votos depois das 17h <b>não são irregulares</b> por si só. Eles mostram onde houve fila no fim do dia, ou onde valeu a prorrogação.</li>
+    </ol>
+  </div>
+
+  <div class="panel">
+    <h3>Como fizemos esta conta</h3>
+    <ul class="steps">
+      <li><b>Fonte:</b> o registro (log) de cada urna, no <a href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener">site de resultados do TSE</a>, o mesmo lugar do boletim de urna. É o arquivo “log” de cada seção.</li>
+      <li><b>Contagem:</b> contamos as linhas “O voto do eleitor foi computado” do dia da eleição. Quando a urna foi trocada durante o dia, o registro da urna antiga vem junto, e somamos os dois.</li>
+      <li><b>Hora:</b> é a hora do relógio da urna, que grava a hora local. Convertemos para Brasília do mesmo jeito da seção 5. No exterior, usamos 17h da hora local de cada país.</li>
+      <li><b>Conferência:</b> <span id="t-check"></span></li>
+    </ul>
+  </div>
+  </div>
+  <div class="next"><button class="btn" data-go="fontes">Ver todas as fontes →</button></div>
+</section>
+
+<!-- 7. FONTES -->
 <section class="view" id="fontes" aria-labelledby="h-fon" hidden>
   <h2 id="h-fon">Dados abertos: baixe, confira, refaça</h2>
   <p class="lead">Nada aqui é segredo. Todo número deste site sai de arquivos públicos do TSE. Abaixo estão os dados que usamos, o código que fez as contas e cada passo explicado. Qualquer pessoa pode baixar e chegar aos mesmos números.</p>
@@ -667,6 +752,7 @@ nav.projetos a[aria-current="page"]{font-weight:700;text-decoration:none}
       <li><b>Cada urna, 2º turno.</b> Esse arquivo ainda não tinha saído. Então baixamos, uma por uma, o boletim de urna digital de cada seção, publicado pelo TSE no site de resultados, e lemos a hora e os votos dentro dele.</li>
       <li><b>Hora de Brasília.</b> A urna grava a hora do lugar onde está. Convertemos para Brasília. Onde o fuso muda dentro do estado (oeste do Amazonas, Fernando de Noronha), usamos a hora em que as urnas da cidade abriram para saber o fuso.</li>
       <li><b>Conferência.</b> Somamos os votos de todas as urnas e comparamos com o total oficial. Bateu exatamente, nos dois turnos, no Brasil e em cada estado.</li>
+      <li><b>Votos depois das 17h.</b> Baixamos o registro (log) de cada urna, publicado pelo TSE no site de resultados, e contamos os votos computados depois das 17h. O registro diz a hora de cada voto, mas não em quem foi, porque o voto é secreto. Em cada urna, o total de votos do registro foi comparado com o boletim.</li>
       <li><b>Com e sem as urnas que fecharam tarde.</b> Para cada horário de corte, separamos as urnas que fecharam depois dele e tiramos os votos delas do total oficial. É só uma conta para entender o peso dessas urnas. O resultado oficial não muda.</li>
     </ol>
   </div>
@@ -721,6 +807,7 @@ nav.projetos a[aria-current="page"]{font-weight:700;text-decoration:none}
         <li>26/10: checagem completa de todas as urnas, sem nenhuma diferença; seção de dados abertos com planilhas e código para baixar.</li>
         <li>26/10: fotos oficiais dos candidatos; seção “Apuração hora a hora”; tabela 1º turno × 2º turno; texto sobre a origem dos votos corrigido (o voto é secreto, então não dá para saber quem votou em quem).</li>
         <li>26/10: versão para celular; botões visíveis no modo escuro; na “Apuração hora a hora”, mapa e gráfico lado a lado e escolha da velocidade da animação.</li>
+        <li>26/10: nova seção “Votos depois das 17h”, com a hora de cada voto tirada do registro (log) de todas as urnas; coluna Votos_depois_17h nas planilhas.</li>
       </ul>
     </details>
   </div>
@@ -754,13 +841,14 @@ const leader=o=>o.L>o.F?"Lula":"Flávio";
 const cls=o=>o.L>o.F?"c-l":"c-f";
 
 /* ---------- navegação ---------- */
-const VIEWS=["resultado","noite","diferencas","simulador","horario","fontes"];
+const VIEWS=["resultado","noite","diferencas","simulador","horario","tarde","fontes"];
 function go(id,scroll=true){
   if(!VIEWS.includes(id))id="resultado";
   VIEWS.forEach(v=>$(v).hidden=v!==id);
   document.querySelectorAll(".menu button").forEach(b=>b.setAttribute("aria-current",b.dataset.go===id?"page":"false"));
   $("srcnote").hidden=id!=="resultado";
   if(id==="horario")initH();
+  if(id==="tarde"){initT();if($("tmap").firstChild&&!$("tmap").dataset.lab)buildMap($("tmap"),tPick)}
   if(id==="noite"){initN();if($("nmap").firstChild&&!$("nmap").dataset.lab)buildMap($("nmap"),uf=>{nSel=uf;paintN();nUF()});nChart()}
   if(id==="simulador"&&!$("smap").dataset.lab)buildMap($("smap"),uf=>{$("sa-uf").value=uf;resetA()});
   if(id==="resultado"&&!$("brmap").dataset.lab)buildMap($("brmap"),uf=>selectUF(uf,window.innerWidth<860));
@@ -848,7 +936,7 @@ function paintMain(){
     $("legend").innerHTML=`<span class="small"><b>Urnas que fecharam depois das 17h15</b></span>`+L.map((l,i)=>`<span><i style="background:color-mix(in srgb, var(--warnc) ${[8,30,52,76,100][i]}%, var(--panel))"></i>${l}</span>`).join("");
   }
 }
-function paintMaps(){paintMain();if(typeof paintH==="function")paintH();if(typeof paintN==="function")paintN()}
+function paintMaps(){paintMain();if(typeof paintH==="function")paintH();if(typeof paintN==="function")paintN();if(typeof paintT==="function")paintT()}
 
 function drawTop(){
   const o=res("BR"),O=o.o;
@@ -1249,6 +1337,117 @@ function renderList(){
   $("t-l").querySelector("tbody").innerHTML=rows.slice(0,shown).map(r=>`<tr><td>${LST.mun[r[0]]}</td><td>${r[1]} / ${r[2]}</td><td>${hms(r[3])}</td><td>${fmt(r[5])}</td><td>${fmt(r[6])}</td><td>${fmt(r[7])}</td><td>${LST.cod?`<a class="ext" href="${urnaURL(HR,uf,LST.cod[r[0]],r[1],r[2])}" target="_blank" rel="noopener" aria-label="Arquivos oficiais da urna ${r[1]}/${r[2]} no TSE">arquivos</a>`:""}</td></tr>`).join("");
   $("l-more").hidden=rows.length<=shown;
   cardify($("t-l"));
+}
+
+/* ---------- 6. votos depois das 17h ---------- */
+let TR="2",tInit=false,tSel="BR",TL=null,tShown=0;
+const tcache={};
+function T(){return D.d17&&D.d17[TR]}
+const TBS={"2":[0,.0002,.0003,.0004,.0005],"1":[0,.01,.02,.04,.06]},TS=[8,30,52,76,100];
+const TB_=()=>TBS[TR];
+const tCol=i=>`color-mix(in srgb, var(--warnc) ${TS[i]}%, var(--panel))`;
+function tShare(u){const t=T(),a=t&&t.uf[u];return a&&a[3]?a[2]/a[3]:0}
+function tIdx(x){const TB=TB_();for(let i=TB.length-1;i>=0;i--)if(x>=TB[i])return i;return 0}
+const pcs=x=>pc(x);
+const tWhere=u=>u==="BR"?"no Brasil":u==="ZZ"?"no exterior":"em "+NAMES[u];
+const tWin=()=>TR==="2"?"venceu":"ficou na frente";
+function tMargin(u){const O=D.r[TR][u];return{L:O.v["13"],F:O.v["22"],M:Math.abs(O.v["13"]-O.v["22"]),W:O.v["13"]>O.v["22"]?"Lula":"Flávio",WC:O.v["13"]>O.v["22"]?"c-l":"c-f"}}
+function initT(){
+  if(tInit)return;tInit=true;
+  const all=`<option value="BR">Brasil inteiro</option>`+optsA+`<option value="ZZ">Exterior</option>`;
+  $("t-uf").innerHTML=all;$("tl-uf").innerHTML=UFS.map(u=>`<option value="${u}">${NAMES[u]}</option>`).join("")+`<option value="ZZ">Exterior</option>`;
+  $("t-uf").onchange=()=>{tSel=$("t-uf").value;if(tSel!=="BR")$("tl-uf").value=tSel;paintT();tPlace();if(tSel!=="BR")tLoad()};
+  $("tl-uf").onchange=tLoad;$("tl-mun").onchange=()=>{tShown=PAGE;tRender()};$("tl-more").onclick=()=>{tShown+=PAGE;tRender()};
+  document.querySelectorAll("[data-tround]").forEach(b=>b.onclick=()=>{TR=b.dataset.tround;document.querySelectorAll("[data-tround]").forEach(x=>x.setAttribute("aria-pressed",x===b));drawT()});
+  buildMap($("tmap"),tPick);
+  drawT();
+}
+function tPick(u){tSel=u;$("t-uf").value=u;$("tl-uf").value=u;paintT();tPlace();tLoad()}
+function drawT(){
+  const t=T();$("t-why2").hidden=TR!=="2";
+  $("t-missing").hidden=!!t;$("t-body").hidden=!t;
+  if(!t){$("t-missing").innerHTML="<strong>Dados deste turno ainda não disponíveis.</strong><p>Os registros das urnas deste turno ainda não foram lidos.</p>";return}
+  const b=t.uf.BR,O=D.r[TR].BR;
+  const last=t.ult;
+  $("t-short").innerHTML=`<p class="lead">No ${TR}º turno, <b class="num">${fmt(b[2])}</b> votos foram computados depois das 17h, em <b class="num">${fmt(b[1])}</b> urnas. É ${pc(b[2]/b[3])} de todos os votos. ${b[1]/b[0]<.5?"A maioria das urnas não teve nenhum voto depois das 17h.":"A maioria das urnas teve algum voto depois das 17h."}</p>
+  <div class="facts">
+   <div class="fact"><span class="muted small">Votos depois das 17h</span><b class="num">${fmt(b[2])}</b><span class="small">${pc(b[2]/b[3])} dos ${mil(b[3])} de votos</span></div>
+   <div class="fact"><span class="muted small">Urnas com algum voto depois das 17h</span><b class="num">${fmt(b[1])}</b><span class="small">${pc(b[1]/b[0])} das urnas</span></div>
+   <div class="fact"><span class="muted small">Último voto computado</span><b class="num">${last?hm(last[4]):"—"}</b><span class="small">${last?`${last[1]} (${last[0]}), zona ${last[2]}, seção ${last[3]}. Fora o exterior, que usa a hora local.`:""}</span></div>
+  </div>`;
+  tRes();paintT();tPlace();tGrp();tTable();tCheck();
+  if(!$("tl-uf").value)$("tl-uf").value="SP";
+  tLoad();
+}
+function tRes(){
+  const t=T(),b=t.uf.BR,m=tMargin("BR"),n=b[4]+b[5];
+  let concl;
+  if(b[2]<m.M)concl=`Mesmo no caso mais extremo, em que todos os ${fmt(b[2])} votos depois das 17h tivessem sido para ${m.W}, tirar todos eles deixaria ${m.W} na frente por ${fmt(m.M-b[2])} votos. Então esses votos, sozinhos, não decidiram quem ${tWin()}.`;
+  else concl=`Os ${fmt(b[2])} votos depois das 17h são mais que a diferença final entre os dois (${fmt(m.M)} votos). Como o voto é secreto, não dá para saber para quem foram.`;
+  $("t-res").innerHTML=`<ol class="steps">
+   <li><b>O tamanho desses votos perto da diferença final.</b> ${m.W} ${tWin()} com ${fmt(m.M)} votos a mais que ${m.W==="Lula"?"Flávio":"Lula"}.</li></ol>
+   <p class="concl">${concl}</p>
+   <ol class="steps" start="2"><li><b>O resultado das urnas que tiveram votos depois das 17h</b>, somando todos os votos do dia nessas urnas (de manhã até o fim), como está no boletim oficial:</li></ol>
+   <div class="three wwo">${tBox("Urnas com votos depois das 17h",b[4],b[5],b[1])}${tBox("Todas as urnas (oficial)",m.L,m.F,null)}</div>
+   <p class="small muted">Essas urnas costumam ser seções com muitos eleitores e fila no fim do dia, e não uma amostra igual ao resto do país. O resultado delas mostra quem ganhou nessas seções durante o dia todo, e não em quem votaram as pessoas que votaram depois das 17h.</p>`;
+}
+function tBox(tag,L,F,n){const T2=L+F;if(!T2)return `<div class="fact"><span class="tag">${tag}</span><b>—</b></div>`;
+  return `<div class="fact"><span class="tag">${tag}</span><b class="${L>F?"c-l":"c-f"}">${L>F?"Lula":"Flávio"} na frente</b><span class="num"><span class="c-l">Lula ${fmt(L)}</span> · <span class="c-f">Flávio ${fmt(F)}</span></span><span class="rbar" aria-hidden="true"><i class="l" style="width:${L/T2*100}%">${pc(L/T2)}</i><i class="f" style="width:${F/T2*100}%">${pc(F/T2)}</i></span>${n!=null?`<span class="small">${fmt(n)} urnas</span>`:""}</div>`}
+function paintT(){
+  const svg=$("tmap"),t=T();if(!svg||!svg.firstChild||!t)return;
+  svg.querySelectorAll("path").forEach(p=>{const u=p.dataset.uf,a=t.uf[u]||[0,0,0,0],x=tShare(u),i=tIdx(x);
+    p.style.fill=tCol(i);p.classList.toggle("sel",u===tSel);
+    const tip=`${NAMES[u]}: ${fmt(a[2])} votos depois das 17h (${pc(x)} dos votos do estado), em ${fmt(a[1])} urnas`;p.querySelector("title").textContent=tip;p.setAttribute("aria-label",tip);
+    const tx=svg.querySelector(`text[data-uf="${u}"]`);if(tx){tx.style.fill=i>=4?"#fff":"var(--fg)";tx.style.stroke=i>=4?"rgba(0,0,0,.35)":"var(--panel)";const sp=tx.querySelector("tspan");if(sp)sp.textContent=pcs(x)}});
+  const B=TB_(),L=B.map((v,i)=>i===0?`menos de ${pc(B[1])}`:i===B.length-1?`${pc(v)} ou mais`:`${pc(v).replace("%","")} a ${pc(B[i+1])}`);
+  $("tlegend").innerHTML=`<span class="small"><b>Parte dos votos do estado depois das 17h</b></span>`+L.map((l,i)=>`<span><i style="background:${tCol(i)}"></i>${l}</span>`).join("");
+}
+function tPlace(){
+  const t=T();if(!t)return;const u=tSel,a=t.uf[u]||[0,0,0,0,0,0,0];
+  $("t-uf").value=u;
+  const m=tMargin(u);
+  $("t-ufbox").innerHTML=`<p class="out"><b>${NAMES[u]}:</b> <b class="num">${fmt(a[2])}</b> votos depois das 17h (${pc(a[3]?a[2]/a[3]:0)} dos votos), em ${fmt(a[1])} de ${fmt(a[0])} urnas.${u!=="BR"?` Diferença entre os dois ${tWhere(u)}: ${fmt(m.M)} votos (${m.W} ${tWin()}).`:""}${u==="ZZ"?" No exterior, 17h da hora local de cada país.":""}</p>`;
+  const pm=t.pm[u]||[];let max=0;
+  const rows=[];const B=[[0,1],[1,2],[2,3],[3,5],[5,10],[10,15],[15,30],[30,60],[60,90],[90,120],[120,150],[150,180],[180,1e9]];
+  for(const [a0,b0] of B){let q=0;for(const [mm,qq] of pm)if(mm>=a0&&mm<b0)q+=qq;rows.push([a0,b0,q]);max=Math.max(max,q)}
+  while(rows.length>1&&rows[rows.length-1][2]===0)rows.pop();
+  $("t-hist").innerHTML=rows.map(([a0,b0,q])=>`<div class="hrow"><span>${b0>=1e9?hm(1020+a0)+" ou mais":hm(1020+a0)+" a "+hm(1020+b0)}</span><span class="hb"><i style="width:${max?Math.max(.3,q/max*(window.innerWidth<560?34:62)):0}%"></i><em>${fmt(q)}</em></span></div>`).join("")+`<p class="small muted">Votos computados em cada intervalo de horário depois das 17h (Brasília), ${tWhere(u)}. Os primeiros intervalos são mais curtos, porque é ali que fica a maior parte dos votos.</p>`;
+}
+function tGrp(){
+  const t=T(),G=t.grp||[],lab=["Até 17h15","Entre 17h15 e 18h","Entre 18h e 19h","Depois das 19h"];
+  $("t-grp").innerHTML=`<div class="tablewrap"><table class="cards"><thead><tr><th>A urna fechou</th><th>Urnas</th><th>Com algum voto depois das 17h</th><th>Votos depois das 17h</th></tr></thead><tbody>${G.map((g,i)=>`<tr><td>${lab[i]}</td><td>${fmt(g[0])}</td><td>${fmt(g[1])} <span class="muted small">(${pc(g[0]?g[1]/g[0]:0)})</span></td><td>${fmt(g[2])}</td></tr>`).join("")}</tbody></table></div><p class="small muted">Hora de fechamento do boletim de urna (seção 5) e votos depois das 17h do registro da urna. No exterior, hora local.</p>`;
+  cardify($("t-grp"));
+}
+function tTable(){
+  const t=T();const rows=[...UFS,"ZZ"].map(u=>{const a=t.uf[u]||[0,0,0,0];const m=tMargin(u);return{u,a,m}}).sort((x,y)=>y.a[2]-x.a[2]);
+  $("t-tab").innerHTML=`<div class="tablewrap"><table class="cards"><thead><tr><th>Estado</th><th>Votos depois das 17h</th><th>Urnas com esses votos</th><th>Diferença no estado</th><th>Mais que a diferença?</th></tr></thead><tbody>${rows.map(({u,a,m})=>`<tr><td>${NAMES[u]}</td><td>${fmt(a[2])} <span class="muted small">(${pc(a[3]?a[2]/a[3]:0)})</span></td><td>${fmt(a[1])}</td><td><span class="${m.WC}">${m.W}</span> por ${fmt(m.M)}</td><td>${a[2]>m.M?"<b>Sim</b>":"Não"}</td></tr>`).join("")}</tbody></table></div>
+  <p class="small muted">Entre parênteses: a parte dos votos do estado que veio depois das 17h. “Mais que a diferença?” compara o número de votos depois das 17h com a diferença entre Lula e Flávio no estado. “Não” quer dizer que, mesmo se todos esses votos tivessem ido para quem ${tWin()} e fossem tirados, o resultado no estado seria o mesmo. “Sim” não quer dizer que mudou nada: só que o tamanho desses votos é maior que a diferença. Como o voto é secreto, não dá para saber para quem foram.</p>`;
+  cardify($("t-tab"));
+}
+function tCheck(){
+  const t=T(),c=t.conf;const sem=Object.keys(c).filter(k=>k.startsWith("sem_registro_")).reduce((a,k)=>a+c[k],0);
+  $("t-check").innerHTML=`em cada urna, o total de votos do registro tem que ser igual ao número de eleitores que votaram, no boletim oficial. No ${TR}º turno: das ${fmt(c.urnas)} urnas com boletim, <b>${fmt(c.bate||0)}</b> batem exatamente${c.diferente?`; em ${fmt(c.diferente)} o registro tem um total diferente do boletim, e essas urnas ficaram de fora da conta`:""}${sem?`; ${fmt(sem)} não têm registro publicado`:""}.`+(t.dif&&t.dif.length&&t.dif.length<=30?` Urnas em que o registro não bate com o boletim: ${t.dif.map(x=>`${x[1]} (${x[0]}), zona ${+x[2]}, seção ${+x[3]}: ${fmt(x[4])} no registro e ${fmt(x[5])} no boletim`).join("; ")}. Isso pode acontecer, por exemplo, quando uma urna é trocada no dia e o registro guarda votos de outra seção. Conferimos o resultado dessas urnas pelo boletim, que é o documento oficial.`:"");
+}
+async function tLoad(){
+  const t=T();if(!t)return;const u=$("tl-uf").value;tShown=PAGE;
+  $("tl-sum").textContent="Carregando a lista…";$("t-tl").querySelector("tbody").innerHTML="";
+  const key=TR+"_"+u;
+  let L=null;
+  try{if(!cache[key]){const r=await fetch("urnas/"+key+".json");if(!r.ok)throw 0;cache[key]=await r.json()}const c=cache[key];
+    if(c.r.length&&c.r[0].length>=11)L={mun:c.mun,cod:c.cod,r:c.r.filter(r=>r[9]>0).map(r=>[r[0],r[1],r[2],r[9],r[10],r[5],r[6],r[7]]),full:true}}catch(e){}
+  if(!L){const tp=t.top[u]||[],mun=[...new Set(tp.map(x=>x[0]))];L={mun,cod:mun.map(m=>tp.find(x=>x[0]===m)[1]),r:tp.map(x=>[mun.indexOf(x[0]),x[2],x[3],x[4],x[8],x[5],x[6],x[7]]),full:false}}
+  L.r.sort((a,b)=>b[3]-a[3]||b[4]-a[4]);TL=L;
+  $("tl-mun").innerHTML=`<option value="">Todas</option>`+L.mun.map((m,i)=>[m,i]).filter(([,i])=>L.r.some(r=>r[0]===i)).sort((a,b)=>a[0].localeCompare(b[0],"pt")).map(([m,i])=>`<option value="${i}">${m}</option>`).join("");
+  tRender();
+}
+function tRender(){
+  if(!TL)return;const u=$("tl-uf").value,mun=$("tl-mun").value,t=T(),a=t.uf[u]||[0,0,0];
+  const rows=TL.r.filter(r=>mun===""||r[0]===+mun);let q=0;rows.forEach(r=>q+=r[3]);
+  $("tl-sum").innerHTML=TL.full?`<b class="num">${fmt(rows.length)}</b> urnas ${mun===""?"de "+NAMES[u]:"de "+TL.mun[+mun]} tiveram votos depois das 17h, somando <b class="num">${fmt(q)}</b> votos. A lista começa pelas que tiveram mais.`
+    :`As ${fmt(rows.length)} urnas de ${NAMES[u]} com mais votos depois das 17h (de ${fmt(a[1])} urnas com algum voto depois das 17h). A lista completa está na planilha do estado, na seção 7 (coluna Votos_depois_17h).`;
+  $("t-tl").querySelector("tbody").innerHTML=rows.slice(0,tShown).map(r=>`<tr><td>${TL.mun[r[0]]}</td><td>${r[1]} / ${r[2]}</td><td><b>${fmt(r[3])}</b></td><td>${r[4]>=0?hms(r[4]):"—"}</td><td>${fmt(r[5])}</td><td>${fmt(r[6])}</td><td>${fmt(r[7])}</td><td><a class="ext" href="${urnaURL(TR,u,TL.cod[r[0]],r[1],r[2])}" target="_blank" rel="noopener" aria-label="Arquivos oficiais da urna ${r[1]}/${r[2]} no TSE">arquivos</a></td></tr>`).join("");
+  $("tl-more").hidden=rows.length<=tShown;
+  cardify($("t-tl"));
 }
 
 go((location.hash||"").slice(1),false);

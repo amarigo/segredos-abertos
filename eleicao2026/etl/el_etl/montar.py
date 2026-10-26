@@ -21,6 +21,8 @@ Eleitores_aptos  eleitores que podiam votar nessa seção
 Comparecimento  eleitores que votaram
 Votos_13_Lula, Votos_22_Flavio  votos de cada candidato
 Brancos, Nulos  votos em branco e nulos
+Votos_depois_17h  votos registrados na urna depois das 17h de Brasília (no exterior, 17h locais), contados no registro (log)
+  da urna publicado pelo TSE. O registro diz a hora de cada voto, mas não em quem foi. Vazio: registro não lido ou diferente do boletim.
 """
 
 
@@ -29,9 +31,10 @@ def titulo(n):
     return ' '.join(w.capitalize() if w not in pequenas else w.lower() for w in n.split())
 
 
-def dados_site(oficial, resumos, noites=None):
+def dados_site(oficial, resumos, noites=None, d17=None):
     """O objeto D usado pela página. `noites`: a apuração ao longo da noite, por turno (noite.apuracao)."""
-    D = {'cand': {}, 'r': {}, 'h': {}, 'noite': {r: n for r, n in (noites or {}).items() if n}}
+    D = {'cand': {}, 'r': {}, 'h': {}, 'noite': {r: n for r, n in (noites or {}).items() if n},
+         'd17': {r: x for r, x in (d17 or {}).items() if x}}
     for e, r in (('6257', '1'), ('6258', '2')):
         D['r'][r] = {}
         for uf, rec in oficial[e].items():
