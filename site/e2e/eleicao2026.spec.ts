@@ -106,3 +106,31 @@ test("tabela 1º × 2º turno mostra os números oficiais do estado escolhido", 
   await expect(page.locator("#t-cmp")).toContainText(fmt(ba["13"].v));
   await expect(page.locator("#d-txt")).toContainText("voto é secreto");
 });
+
+test.describe("celular pequeno (320 px)", () => {
+  test.use({ viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+
+  test("nenhuma seção passa da largura da tela e as tabelas viram cartões", async ({ page }) => {
+    const erros = semErros(page);
+    await page.goto("./");
+    for (const nome of ["Mapa e resultado", "Apuração hora a hora", "Onde mudou", "Simulador", "Urnas e horário", "Dados abertos"]) {
+      await page.locator("nav.menu button", { hasText: nome }).click();
+      await page.waitForTimeout(300);
+      expect(await page.evaluate(() => window.innerWidth), nome).toBe(320);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth), nome).toBeLessThanOrEqual(321);
+    }
+    await page.locator("nav.menu button", { hasText: "Urnas e horário" }).click();
+    await expect(page.locator("#t-l thead")).toBeHidden();
+    await expect(page.locator("#t-l tbody td").nth(2)).toHaveAttribute("data-l", "Fechou às");
+    expect(erros).toEqual([]);
+  });
+
+  test("botão Menu aparece ao rolar e volta ao menu", async ({ page }) => {
+    await page.goto("./");
+    await expect(page.locator("#tomenu")).toBeHidden();
+    await page.evaluate(() => window.scrollTo(0, 3000));
+    await expect(page.locator("#tomenu")).toBeVisible();
+    await page.locator("#tomenu").click();
+    await expect(page.locator("nav.menu")).toBeInViewport();
+  });
+});
