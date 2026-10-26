@@ -13,6 +13,13 @@ eleicao2026/  Eleição 2026 Aberta: presidente, 1º e 2º turno, urna por urna,
 
 Um GitHub Action roda todo dia: baixa os dados, gera os JSON em `site/public/data/`, monta o site e publica no GitHub Pages.
 
+Se algum site oficial não responder, a coleta usa a última cópia que tem, mostra um aviso no site com a data dessa
+cópia e tenta de novo sozinha a cada 2 horas ([`tentar-de-novo.yml`](.github/workflows/tentar-de-novo.yml)) até
+todos os sites responderem.
+
+**Atualizar na hora:** abra [Actions > Dados e site](https://github.com/amarigo/segredos-abertos/actions/workflows/dados-e-site.yml),
+clique em **Run workflow** e confirme com o branch `main`. Em cerca de 30 a 60 minutos o site é publicado de novo.
+
 ### Fontes
 
 | Dado | Fonte |

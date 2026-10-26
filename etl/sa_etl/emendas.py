@@ -19,7 +19,7 @@ import zipfile
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from .util import _session, avisar, digits, get_json, norm_name, to_float, write_json
+from .util import _session, avisar, data_do_arquivo, digits, get_json, norm_name, to_float, write_json
 
 log = logging.getLogger("sa_etl.emendas")
 
@@ -86,7 +86,7 @@ def baixar(cache: Path, max_horas: float = 20) -> Path | None:
                     time.sleep(2 ** (tentativa + 1))
     if dest.exists():
         log.warning("Emendas: usando a cópia antiga do cache")
-        avisar("Emendas: o Portal da Transparência não respondeu; usamos a última cópia baixada")
+        avisar(f"Emendas: o Portal da Transparência não respondeu; usamos a última cópia baixada, de {data_do_arquivo(dest)}")
         return dest
     log.error("Emendas: não foi possível baixar o arquivo do Portal da Transparência")
     avisar("Emendas: o Portal da Transparência não respondeu; a página de emendas não foi atualizada")

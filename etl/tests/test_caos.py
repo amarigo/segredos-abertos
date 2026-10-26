@@ -10,6 +10,7 @@ Cada teste é um experimento:
 """
 import os
 import time
+from datetime import datetime, timezone
 
 import pytest
 
@@ -97,9 +98,14 @@ def test_ceaps_fora_do_ar_usa_a_ultima_copia(coleta):
     gov = coleta.usar(FakeGov())
     boa = coleta.rodar()
     gov.falhar(CEAPS, "500")
+    baixada = datetime(2026, 10, 25, 18, 0, tzinfo=timezone.utc).timestamp()  # 15h em Brasília
+    for f in coleta.cache.glob("senado-ceaps-*.json"):
+        os.utime(f, (baixada, baixada))
     ruim = coleta.rodar()
     assert coleta.ler(ruim, "meta.json")["total_gasto"] == coleta.ler(boa, "meta.json")["total_gasto"]
-    assert any("Cota do Senado 2025" in a and "última cópia" in a for a in coleta.ler(ruim, "meta.json")["avisos"])
+    # o aviso diz de quando é a cópia em uso
+    assert "Cota do Senado 2025: a API oficial não respondeu; usamos a última cópia baixada, de 25/10/2026" in \
+        coleta.ler(ruim, "meta.json")["avisos"]
 
 
 def test_ceaps_fora_do_ar_sem_copia_bloqueia_publicacao_pela_queda(coleta, tmp_path):
@@ -213,6 +219,20 @@ def test_portal_da_transparencia_fora_do_ar(coleta, modo):
     assert not (saida / "emendas" / "anos.json").exists()
     assert any("Emendas" in a for a in coleta.ler(saida, "meta.json")["avisos"])
     assert coleta.validar(saida).erros == []
+
+
+def test_portal_fora_do_ar_usa_a_ultima_copia_e_diz_de_quando(coleta):
+    gov = coleta.usar(FakeGov())
+    boa = coleta.rodar()
+    z = coleta.cache / "emendas" / "EmendasParlamentares.zip"
+    assert z.exists()
+    baixada = datetime(2026, 10, 24, 2, 30, tzinfo=timezone.utc).timestamp()  # 23h30 do dia 23 em Brasília
+    os.utime(z, (baixada, baixada))
+    gov.falhar(EMENDAS, "500").falhar("EmendasParlamentares.zip", "500")
+    ruim = coleta.rodar()
+    assert coleta.ler(ruim, "emendas/anos.json") == coleta.ler(boa, "emendas/anos.json")
+    assert "Emendas: o Portal da Transparência não respondeu; usamos a última cópia baixada, de 23/10/2026" in \
+        coleta.ler(ruim, "meta.json")["avisos"]
 
 
 # ---------------------------------------------------------------- falha total: não publica nada

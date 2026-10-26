@@ -34,8 +34,11 @@ export default function Home() {
     <>
       {meta.avisos && meta.avisos.length > 0 && (
         <div className="alert" role="note">
-          <strong>Dados incompletos nesta atualização.</strong> Alguns sites oficiais não responderam na última coleta:
-          <ul>{meta.avisos.map((a) => <li key={a}>{a}</li>)}</ul>
+          <div>
+            <strong>Dados incompletos nesta atualização.</strong> Alguns sites oficiais não responderam na última coleta:
+            <ul>{meta.avisos.map((a) => <li key={a}>{a}</li>)}</ul>
+            {!MG && <p className="alert-nota">Tentamos de novo sozinhos a cada 2 horas, até todos os sites responderem.</p>}
+          </div>
         </div>
       )}
       <section className="hero">

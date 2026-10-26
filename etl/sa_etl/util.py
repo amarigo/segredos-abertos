@@ -9,6 +9,7 @@ import re
 import time
 import unicodedata
 import zipfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 from urllib.parse import urlsplit
@@ -125,7 +126,7 @@ def download(url: str, dest: Path, max_horas: float | None = None, validar=None,
     except Exception as e:  # noqa: BLE001
         if tem_copia:
             log.warning("Usando cópia antiga de %s (%s)", dest.name, e)
-            avisar(f"{dest.name}: o site oficial não respondeu; usamos a última cópia baixada")
+            avisar(f"{dest.name}: o site oficial não respondeu; usamos a última cópia baixada, de {data_do_arquivo(dest)}")
             return dest
         raise
     tmp = dest.with_suffix(dest.suffix + ".part")
@@ -147,6 +148,13 @@ def eh_csv(raw: bytes) -> bool:
 # ---------------------------------------------------------------- avisos da coleta
 
 AVISOS: list[str] = []
+
+_BRASILIA = timezone(timedelta(hours=-3))
+
+
+def data_do_arquivo(f: Path) -> str:
+    """Dia em que a cópia do cache foi baixada (horário de Brasília), para o aviso dizer de quando é o dado."""
+    return datetime.fromtimestamp(f.stat().st_mtime, _BRASILIA).strftime("%d/%m/%Y")
 
 
 def avisar(msg: str) -> None:
