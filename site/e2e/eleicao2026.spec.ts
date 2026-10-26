@@ -1,0 +1,73 @@
+import { readFileSync } from "node:fs";
+import { expect, test, type Page } from "@playwright/test";
+
+// Os números esperados vêm do arquivo oficial do TSE gerado no mesmo build, não de valores escritos à mão.
+const dados = (rel: string) => JSON.parse(readFileSync(new URL(`../dist/eleicao2026/${rel}`, import.meta.url), "utf-8"));
+const oficial = dados("dados/resultados_oficiais.json");
+const fmt = (n: number) => n.toLocaleString("pt-BR");
+
+const semErros = (page: Page) => {
+  const erros: string[] = [];
+  page.on("pageerror", (e) => erros.push(e.message));
+  return erros;
+};
+
+test("resultado oficial do 2º turno aparece igual ao do TSE", async ({ page }) => {
+  const erros = semErros(page);
+  await page.goto("./");
+  const br = oficial["6258"].BR.cand;
+  await expect(page.locator("body")).toContainText(fmt(br["13"].v));
+  await expect(page.locator("body")).toContainText(fmt(br["22"].v));
+  await expect(page.locator("#brmap path")).toHaveCount(27);
+  expect(erros).toEqual([]);
+});
+
+test("todas as seções abrem pelo menu", async ({ page }) => {
+  const erros = semErros(page);
+  await page.goto("./");
+  for (const nome of ["Onde mudou", "Simulador", "Urnas e horário", "Dados abertos", "Mapa e resultado"]) {
+    await page.locator("nav.menu button", { hasText: nome }).click();
+    await expect(page.locator("section.view:not([hidden])")).toHaveCount(1);
+  }
+  expect(erros).toEqual([]);
+});
+
+test("lista de urnas de um estado carrega e tem link para o TSE", async ({ page }) => {
+  await page.goto("./");
+  await page.locator("nav.menu button", { hasText: "Urnas e horário" }).click();
+  await page.selectOption("#l-uf", "SP");
+  await expect(page.locator("#l-sum")).toContainText("urnas");
+  const link = page.locator("#t-l tbody a").first();
+  await expect(link).toHaveAttribute("href", /^https:\/\/resultados\.tse\.jus\.br\/oficial\/ele2026\/arquivo-urna\/3221\/dados\/sp\//);
+});
+
+test("planilha de um estado pode ser baixada e tem o cabeçalho certo", async ({ page, request }) => {
+  await page.goto("./");
+  await page.locator("nav.menu button", { hasText: "Dados abertos" }).click();
+  await page.selectOption("#dl-uf", "MG");
+  const href = await page.locator("#dl-links a").first().getAttribute("href");
+  expect(href).toBe("dados/urnas/2turno_MG.csv");
+  const r = await request.get(href!);
+  expect(r.ok()).toBe(true);
+  expect((await r.text()).split("\n")[0]).toBe(
+    "UF;Municipio;Cod_municipio_TSE;Zona;Secao;Abertura_hora_local;Encerramento_hora_local;Encerramento_horario_Brasilia;Eleitores_aptos;Comparecimento;Votos_13_Lula;Votos_22_Flavio;Brancos;Nulos",
+  );
+});
+
+test("caos: se a lista de urnas não carregar, avisa e o resto continua", async ({ page }) => {
+  const erros = semErros(page);
+  await page.route("**/urnas/2_RJ.json", (r) => r.abort("failed"));
+  await page.goto("./");
+  await page.locator("nav.menu button", { hasText: "Urnas e horário" }).click();
+  await page.selectOption("#l-uf", "RJ");
+  await expect(page.locator("#l-sum")).toContainText("ainda não está disponível");
+  await page.locator("nav.menu button", { hasText: "Simulador" }).click();
+  await expect(page.locator("#smap path")).toHaveCount(27);
+  expect(erros).toEqual([]);
+});
+
+test("cabe na tela do celular sem rolar para o lado", async ({ page }) => {
+  await page.goto("./");
+  const largura = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(largura).toBeLessThanOrEqual(1);
+});

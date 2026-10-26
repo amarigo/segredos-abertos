@@ -36,6 +36,8 @@ jobs:
       - run: python -m pytest -q etl/tests
       - name: Coletor do Minas Nossa (MG)
         run: python -m pytest -q mg/etl/tests
+      - name: Coletor da Eleição 2026
+        run: python -m pytest -q eleicao2026/etl/tests
 
   # Topo da pirâmide: o site no navegador (jornada, segurança e caos), com dados fictícios
   testes-site:
@@ -73,6 +75,15 @@ jobs:
         working-directory: site
         env:
           CI: "1"
+      # Eleição 2026: com os dados reais (boletins guardados em eleicao2026/dados), já conferidos com o oficial
+      - name: "Eleição 2026: montar o site"
+        working-directory: eleicao2026/etl
+        run: python -m el_etl.build montar --saida ../../site/dist/eleicao2026
+      - name: Navegador na Eleição 2026
+        run: npm run test:e2e:eleicao
+        working-directory: site
+        env:
+          CI: "1"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -80,6 +91,7 @@ jobs:
           path: |
             site/playwright-report
             site/playwright-report-mg
+            site/playwright-report-eleicao
           retention-days: 7
 
   # Dependências com falhas de segurança conhecidas. Não trava a coleta diária: aparece como falha para corrigir.
@@ -192,6 +204,14 @@ jobs:
         run: |
           npm run build:mg
           (cd public-mg/data && zip -qr ../../dist/mg/dados-mg.zip .)
+      # Eleição 2026 (/eleicao2026/): boletins de urna do TSE guardados em eleicao2026/dados. Só entra no site se a soma
+      # das urnas bater com o resultado oficial, voto por voto. Uma falha aqui não trava o site nacional.
+      - name: "Eleição 2026: conferir e montar o site em /eleicao2026/"
+        continue-on-error: true
+        working-directory: eleicao2026/etl
+        run: |
+          set -o pipefail
+          python -m el_etl.build montar --saida ../../site/dist/eleicao2026 | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist

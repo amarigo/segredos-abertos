@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "node --test \"tests/*.test.ts\"",
     "test:e2e": "tsc -p tsconfig.e2e.json --noEmit && playwright test",
-    "test:e2e:mg": "tsc -p tsconfig.e2e.json --noEmit && playwright test -c playwright.mg.config.ts"
+    "test:e2e:mg": "tsc -p tsconfig.e2e.json --noEmit && playwright test -c playwright.mg.config.ts",
+    "test:e2e:eleicao": "tsc -p tsconfig.e2e.json --noEmit && playwright test -c playwright.eleicao.config.ts"
   },
   "dependencies": {
     "react": "18.3.1",
