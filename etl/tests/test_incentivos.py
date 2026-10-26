@@ -76,7 +76,7 @@ def test_renuncia_ano_parcial_e_cnpj_invalido(tmp_path, monkeypatch):
     gov = FakeGov()
     for ano in (2024, 2025):
         (tmp_path / f"{ano}_RenunciasFiscais.zip").write_bytes(gov._renuncias_zip(ano))
-    monkeypatch.setattr(renuncias, "download", lambda url, dest, **kw: dest if dest.exists() else (_ for _ in ()).throw(RuntimeError("403")))
+    monkeypatch.setattr(renuncias, "_baixar_url", lambda url, dest: "HTTP 403")
     r = renuncias.coletar(tmp_path, 2026)
     assert sorted(r["anos"]) == [2024, 2025]
     a = r["anos"][2024]
@@ -136,3 +136,20 @@ def test_resumo_geral_ignora_arquivo_com_defeito(tmp_path):
     ruim.write_bytes(b"lixo")
     r = pagamentos.resumir_geral([bom, ruim], [2025], hoje=dt.date(2025, 1, 4))
     assert r["anos"][2025]["12345678000195"]["orgaos"] == {"M": 10} and r["cobertura"][2025]["dias"] == 1
+
+
+def test_renuncia_baixa_com_cara_de_navegador(coleta):
+    """O servidor de arquivos da CGU recusa pedidos que pedem JSON ou não parecem de navegador."""
+    gov = coleta.usar(FakeGov())
+    gov.renuncia_so_navegador = True
+    saida = coleta.rodar()
+    assert [x["ano"] for x in coleta.ler(saida, "incentivos/indice.json")["anos_renuncia"]] == [2024, 2025]
+    assert not any("Renúncia" in a for a in coleta.ler(saida, "meta.json")["avisos"])
+
+
+def test_aviso_da_renuncia_diz_o_motivo(coleta):
+    gov = coleta.usar(FakeGov())
+    gov.falhar("/renuncias/", "500")
+    saida = coleta.rodar()
+    aviso = next(a for a in coleta.ler(saida, "meta.json")["avisos"] if "Renúncia fiscal" in a)
+    assert "HTTP 500" in aviso

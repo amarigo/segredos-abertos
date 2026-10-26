@@ -608,6 +608,8 @@ def coletar_incentivos(anos: list[int], cache: Path, minutos: float) -> tuple[di
     try:
         arqs = pagamentos.coletar_geral(anos, cache / "pagamentos", minutos)
         geral = pagamentos.resumir_geral(arqs, anos)
+        for ano, c in sorted(geral["cobertura"].items()):
+            log.info("Pagamentos gerais %s: %s de %s dias lidos (%s a %s)", ano, c["dias"], c["dias_ano"], c["de"], c["ate"])
     except Exception:  # noqa: BLE001
         log.exception("Incentivos: erro nos pagamentos a empresas")
         util.avisar("Incentivos: os pagamentos do governo federal a empresas não foram atualizados")

@@ -48,6 +48,7 @@ class FakeGov:
         self.anos = list(anos)
         self.falhas: list[list] = []  # [padrao, modo, prob, vezes restantes ou None]
         self.chamadas: list[str] = []
+        self.renuncia_so_navegador = False  # o servidor de arquivos da CGU recusa quem não parece navegador
         self.repetir_linhas = False  # caos de dados: arquivos com linhas repetidas
         rng = self.rng
 
@@ -205,6 +206,10 @@ class FakeGov:
                 if vezes is not None:
                     f[3] -= 1
                 return self._falha(modo, full)
+        h = kw.get("headers") or {}
+        if "/renuncias/" in url and (self.renuncia_so_navegador and "Mozilla" not in h.get("User-Agent", "")
+                                     or "json" in h.get("Accept", "")):
+            return self._resp(403, b"<Error>AccessDenied</Error>", full, "application/xml")
         status, corpo, tipo = self._rota(method, url, params or {})
         return self._resp(status, corpo, full, tipo)
 
@@ -440,7 +445,7 @@ class FakeGov:
 def instalar(monkeypatch, gov: FakeGov) -> FakeGov:
     """Troca a internet pelo FakeGov e tira as esperas entre tentativas (os testes não precisam esperar)."""
     def request(self, method, url, params=None, **kw):
-        return gov.responder(method.upper(), url, params)
+        return gov.responder(method.upper(), url, params, headers={**self.headers, **(kw.get("headers") or {})})
     monkeypatch.setattr(requests.Session, "request", request)
     import time
     monkeypatch.setattr(time, "sleep", lambda s: None)
