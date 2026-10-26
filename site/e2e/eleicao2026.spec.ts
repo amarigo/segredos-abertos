@@ -25,7 +25,7 @@ test("resultado oficial do 2º turno aparece igual ao do TSE", async ({ page }) 
 test("todas as seções abrem pelo menu", async ({ page }) => {
   const erros = semErros(page);
   await page.goto("./");
-  for (const nome of ["Onde mudou", "Simulador", "Urnas e horário", "Dados abertos", "Mapa e resultado"]) {
+  for (const nome of ["Apuração hora a hora", "Onde mudou", "Simulador", "Urnas e horário", "Dados abertos", "Mapa e resultado"]) {
     await page.locator("nav.menu button", { hasText: nome }).click();
     await expect(page.locator("section.view:not([hidden])")).toHaveCount(1);
   }
@@ -70,4 +70,39 @@ test("cabe na tela do celular sem rolar para o lado", async ({ page }) => {
   await page.goto("./");
   const largura = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(largura).toBeLessThanOrEqual(1);
+});
+
+test("fotos oficiais dos candidatos carregam", async ({ page }) => {
+  await page.goto("./");
+  for (const img of await page.locator(".avatar.ph img").all()) {
+    await expect(img).toBeVisible();
+    expect(await img.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(100);
+  }
+});
+
+test("apuração hora a hora termina no resultado oficial e mostra as viradas", async ({ page }) => {
+  const erros = semErros(page);
+  const D = dados("dados/numeros_do_site.json");
+  const n = D.noite["2"];
+  const ult = n.n.length - 1;
+  expect(n["13"][ult]).toBe(oficial["6258"].BR.cand["13"].v);
+  expect(n["22"][ult]).toBe(oficial["6258"].BR.cand["22"].v);
+  await page.goto("./#noite");
+  await expect(page.locator("#nchart path.ln")).toHaveCount(2);
+  await expect(page.locator("#nmap path")).toHaveCount(27);
+  await expect(page.locator("#n-check")).toContainText("igual ao total oficial");
+  await page.locator("#n-play").click();
+  await page.waitForTimeout(400);
+  await page.locator("#n-play").click();
+  await page.locator("[data-nround='1']").click();
+  await expect(page.locator("#n-h")).toContainText("na frente");
+  expect(erros).toEqual([]);
+});
+
+test("tabela 1º × 2º turno mostra os números oficiais do estado escolhido", async ({ page }) => {
+  await page.goto("./#diferencas");
+  await page.selectOption("#cmp-uf", "BA");
+  const ba = oficial["6258"].BA.cand;
+  await expect(page.locator("#t-cmp")).toContainText(fmt(ba["13"].v));
+  await expect(page.locator("#d-txt")).toContainText("voto é secreto");
 });

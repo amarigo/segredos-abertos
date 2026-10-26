@@ -23,10 +23,12 @@ site/             a página (HTML, CSS e JavaScript, sem build) e o desenho do m
    resultados, porque o arquivo do Portal ainda não tinha saído. `ber.py` lê o formato do boletim (ASN.1/BER).
 4. `analisar.py` converte a hora de cada urna para Brasília (o fuso de cada cidade sai da hora em que as urnas
    abriram) e soma os votos das urnas que fecharam depois de cada horário de corte.
-5. `validar.py` confere antes de publicar: a soma das urnas tem que ser igual ao total oficial, voto por voto
+5. `noite.py` refaz a apuração ao longo da noite: soma os boletins na ordem em que o TSE os recebeu (hora oficial de
+   recebimento de cada boletim) e guarda a parcial a cada 5 minutos, no Brasil e em cada estado.
+6. `validar.py` confere antes de publicar: a soma das urnas tem que ser igual ao total oficial, voto por voto
    (cada candidato, brancos, nulos e comparecimento), no Brasil, em cada estado e no exterior. Se não bater, o
    site da eleição não é publicado.
-6. `montar.py` põe os números na página e gera as planilhas por estado para baixar.
+7. `montar.py` põe os números na página e gera as planilhas por estado para baixar.
 
 O GitHub Action do Segredos Abertos roda os testes, monta e confere o site da eleição a partir de `dados/` e
 publica em `/eleicao2026/`. Uma falha aqui não trava o site nacional.
@@ -38,6 +40,8 @@ publica em `/eleicao2026/`. Uma falha aqui não trava o site nacional.
 | Resultados oficiais por estado | [Site de resultados do TSE](https://resultados.tse.jus.br/oficial/app/index.html) |
 | Urnas do 1º turno (horário e votos) | [Boletim de Urna, Portal de Dados Abertos do TSE](https://dadosabertos.tse.jus.br/dataset/resultados-2026-boletim-de-urna) |
 | Urnas do 2º turno (horário e votos) | Boletim de urna digital de cada seção, no [site de resultados do TSE](https://resultados.tse.jus.br/oficial/app/index.html) |
+| Hora em que o TSE recebeu cada boletim | 1º turno: campo `DT_BU_RECEBIDO` do Boletim de Urna; 2º turno: registro de cada seção (`-aux.json`) no site de resultados |
+| Fotos dos candidatos | Fotos oficiais do [site de resultados do TSE](https://resultados.tse.jus.br/oficial/app/index.html) |
 | Mapa | MapSVG, pacote [@svg-maps/brazil](https://www.npmjs.com/package/@svg-maps/brazil) (CC BY 4.0) |
 
 O único texto que não é do TSE é o quadro sobre a prorrogação até as 19h no 2º turno: são fatos relatados pela
@@ -78,5 +82,6 @@ No 1º turno, o TSE conta como nulo o voto no número 28 (candidatura que não v
 | Soma das urnas diferente do oficial | `test_validar`, `test_ponta_a_ponta::test_nao_publica_se_nao_bater` | `validar.py` bloqueia a publicação |
 | Seção contada duas vezes | `test_validar::test_secao_repetida_bloqueia` | `validar.py` bloqueia |
 | Fuso errado (hora de Brasília errada) | `test_analisar::test_fuso_*`, `test_todas_fecham_as_17h_*` | fuso tirado da hora de abertura de cada cidade |
+| Gráfico da noite diferente do oficial | `test_noite`, `test_ponta_a_ponta::test_site_completo`, e2e confere que a última parcial é igual ao total oficial | a página mostra a conferência e as seções sem hora |
 | Boletim lido errado | `test_boletim` (boletim de urna verdadeiro do TSE) | soma tem que bater com o oficial |
 | Página quebrada ou número diferente do oficial na tela | `site/e2e/eleicao2026.spec.ts` (computador e celular, com caos) | testes no navegador antes de publicar |
