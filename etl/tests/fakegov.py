@@ -15,6 +15,7 @@ vazio (resposta 200 sem corpo), truncado (JSON ou arquivo cortado no meio) e lix
 """
 from __future__ import annotations
 
+import csv
 import io
 import json
 import random
@@ -49,6 +50,8 @@ class FakeGov:
         self.falhas: list[list] = []  # [padrao, modo, prob, vezes restantes ou None]
         self.chamadas: list[str] = []
         self.renuncia_so_navegador = False  # o servidor de arquivos da CGU recusa quem não parece navegador
+        self.api_chave = "chave-de-teste"  # a API de dados do Portal pede a chave no cabeçalho chave-api-dados
+        self.api_exige_uf = False  # a consulta sem filtro pode não ser aceita
         self.repetir_linhas = False  # caos de dados: arquivos com linhas repetidas
         rng = self.rng
 
@@ -207,6 +210,8 @@ class FakeGov:
                     f[3] -= 1
                 return self._falha(modo, full)
         h = kw.get("headers") or {}
+        if "api.portaldatransparencia.gov.br" in url and h.get("chave-api-dados") != self.api_chave:
+            return self._resp(401, b'{"Erro":"chave"}', full)
         if "/renuncias/" in url and (self.renuncia_so_navegador and "Mozilla" not in h.get("User-Agent", "")
                                      or "json" in h.get("Accept", "")):
             return self._resp(403, b"<Error>AccessDenied</Error>", full, "application/xml")
@@ -325,6 +330,15 @@ class FakeGov:
         if "emendas-parlamentares" in url or "EmendasParlamentares.zip" in url:
             return 200, self._emendas_zip(), "application/zip"
 
+        if u.netloc == "api.portaldatransparencia.gov.br" and path == "/api-de-dados/renuncias-valor":
+            if self.api_exige_uf and "nomeSiglaUF" not in params:
+                return 400, b'{"Erro":"Filtro obrigatorio"}', "application/json"
+            todos = [x for ano in range(2015, 2031) for x in self._renuncias_api(ano)]
+            if "nomeSiglaUF" in params:
+                todos = [x for x in todos if x["municipio"]["uf"]["sigla"] == params["nomeSiglaUF"]]
+            p = int(params.get("pagina", 1))
+            return self._json(todos[(p - 1) * 15: p * 15])
+
         m = re.search(r"/renuncias/(\d{4})_RenunciasFiscais\.zip$", path)
         if m:
             z = self._renuncias_zip(int(m.group(1)))
@@ -413,6 +427,21 @@ class FakeGov:
                      "Código Favorecido", "Favorecido", "Observação", "Valor do Pagamento Convertido pra R$"], pag).encode("latin-1"))
         return buf.getvalue()
 
+
+    def _renuncias_api(self, ano: int) -> list[dict]:
+        """As mesmas linhas do .zip, no formato da API (campos aninhados, número com ponto)."""
+        z = self._renuncias_zip(ano)
+        if not z:
+            return []
+        with zipfile.ZipFile(io.BytesIO(z)) as zz:
+            nome = next(n for n in zz.namelist() if n.endswith("_RenúnciasFiscais.csv"))
+            linhas = list(csv.DictReader(io.StringIO(zz.read(nome).decode("latin-1")), delimiter=";"))
+        return [{"id": i, "ano": int(r["Ano-calendário"]), "cnpj": r["CNPJ"], "razaoSocial": r["Razão Social"],
+                 "nomeFantasia": r["Nome Fantasia"], "cnae": {"codigo": r["Código CNAE"], "descricao": r["CNAE"]},
+                 "municipio": {"codigoIBGE": "", "nomeIBGE": r["Município"], "uf": {"sigla": r["UF"], "nome": ""}},
+                 "tipoRenuncia": r["Tipo Renúncia"], "beneficioFiscal": r["Benefício Fiscal"],
+                 "fundamentoLegal": r["Fundamento Legal"], "tributo": r["Tributo"], "formaTributacao": r["Forma Tributação"],
+                 "valorRenunciado": float(r["Valor Renúncia Fiscal (R$)"].replace(",", "."))} for i, r in enumerate(linhas)]
 
     def _renuncias_zip(self, ano: int) -> bytes | None:
         """Renúncia fiscal do ano do site e do anterior (o mais recente pela metade, como na Receita)."""

@@ -132,6 +132,11 @@ jobs:
           restore-keys: dados-
       - name: Coletar dados oficiais
         working-directory: etl
+        env:
+          # Chave da API de dados do Portal da Transparência (cadastro grátis em
+          # https://portaldatransparencia.gov.br/api-de-dados/cadastrar-email). Sem ela, a renúncia fiscal só vem
+          # pelos arquivos de download, que o Portal às vezes recusa.
+          PORTAL_TRANSPARENCIA_CHAVE: ${{ secrets.PORTAL_TRANSPARENCIA_CHAVE }}
         run: python -m sa_etl.build --saida ../site/public/data --cache .cache 2>&1 | tee coleta.log
       - name: Resumo da coleta
         run: |
