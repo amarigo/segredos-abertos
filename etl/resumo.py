@@ -96,3 +96,20 @@ for casa in ("camara", "senado"):
         top = sorted(((a[k], p["nome"], ano) for p in pols if p["casa"] == casa for ano in meta["anos"]
                       if (a := p["por_ano"].get(str(ano), {}).get("atuacao") or {}).get(k) is not None), reverse=True)[:4]
         print(f"- {casa}, mais {k}: " + ", ".join(f"{n} ({ano}) {v}" for v, n, ano in top))
+
+print("\n### Incentivos (dinheiro público para empresas)")
+inc = d / "incentivos"
+if (inc / "indice.json").exists():
+    idx = json.loads((inc / "indice.json").read_text())
+    for ano in idx.get("anos", []):
+        x = json.loads((inc / f"{ano}.json").read_text())
+        p, em = x.get("pagamentos"), x.get("emendas")
+        if p:
+            c = p["cobertura"]
+            print(f"- {ano}: pagos a empresas e entidades R$ {p['total']:,.2f} ({p['n']} recebedores, {c['dias']}/{c['dias_ano']} dias lidos)")
+        if em:
+            print(f"- {ano}: emendas pagas a empresas e entidades R$ {em['total']:,.2f} ({em['n_politicos']} parlamentares)")
+    for r in idx.get("anos_renuncia", []):
+        print(f"- Renúncia {r['ano']}: R$ {r['total']:,.2f}{' (incompleto)' if r['parcial'] else ''}")
+else:
+    print("- sem dados")

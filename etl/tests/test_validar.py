@@ -28,6 +28,18 @@ def _primeiro(saida, pasta, casa=None):
     return sorted((saida / pasta).glob(f"{casa or ''}*.json"))[0].stem
 
 
+def _da_cota(saida):
+    """Uma empresa paga pela cota (há também as que só aparecem por emendas ou pela página de incentivos)."""
+    return json.loads((saida / "empresas.json").read_text())[0]["cnpj"]
+
+
+def _com(saida, chave):
+    for f in sorted((saida / "e").glob("*.json")):
+        if json.loads(f.read_text()).get(chave):
+            return f.stem
+    raise AssertionError(f"nenhuma empresa com {chave}")
+
+
 def _empresa_com_holding(saida):
     for f in sorted((saida / "e").glob("*.json")):
         x = json.loads(f.read_text())
@@ -50,10 +62,13 @@ DEFEITOS = {
     "CPF no link": lambda s: _mudar(s, f"p/{_primeiro(s, 'p', 'dep')}.json", lambda x: x["anos"]["2025"]["maiores_notas"][0].update(
         url="https://www.camara.leg.br/cota-parlamentar/documento?cnpjFornecedor=12345678909&x=1")),
     "nota a mais": lambda s: _mudar(s, f"e/notas/{_primeiro(s, 'e/notas')}.json", lambda x: x.append(x[0])),
-    "pagadores não somam": lambda s: _mudar(s, f"e/{_primeiro(s, 'e')}.json", lambda x: x["pagadores"][0].update(valor=0)),
+    "pagadores não somam": lambda s: _mudar(s, f"e/{_da_cota(s)}.json", lambda x: x["pagadores"][0].update(valor=0)),
     "ciclo escondido": lambda s: _mudar(s, f"e/{_empresa_com_holding(s)}.json",
                                         lambda x: [d["cadeia"].append(d["cadeia"][0]) for d in x["donos_finais"] if d["cadeia"]] and None),
     "emendas por tipo": lambda s: _mudar(s, "emendas/2025.json", lambda x: x["por_tipo"][0].update(empenhado=0)),
+    "incentivos por categoria": lambda s: _mudar(s, "incentivos/2025.json", lambda x: x["pagamentos"]["por_categoria"][0].update(valor=1)),
+    "renúncia por estado": lambda s: _mudar(s, "incentivos/renuncia-2024.json", lambda x: x["por_uf"][0].__setitem__(1, 1)),
+    "renúncia na empresa": lambda s: _mudar(s, f"e/{_com(s, 'renuncia')}.json", lambda x: x["renuncia"].update(total=1)),
     "arquivo faltando": lambda s: (s / "partidos.json").unlink(),
     "JSON quebrado": lambda s: (s / "votacoes.json").write_text("[{", encoding="utf-8"),
     "nome de arquivo": lambda s: shutil.copy(s / "meta.json", s / "p" / "x.y.json"),

@@ -1,19 +1,22 @@
 import { Link, useParams } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { Barras, Explain, LinkNota, Loading, useAno, useData } from "../components/ui";
-import { MESES, cnpjFmt, dataBR, reais, type DonoFinal, type Empresa, type NotaEmpresa, type OutraEmpresa, type Resumo } from "../data";
+import { MESES, cnpjFmt, dataBR, linkSeguro, reais, type DonoFinal, type Empresa, type NotaEmpresa, type OutraEmpresa, type Resumo } from "../data";
 import { ListaDocumentos } from "../components/DocsEmendas";
 
-/** "R$ X da cota · R$ Y de emendas" */
+/** "R$ X da cota + R$ Y de emendas + R$ Z do governo federal · R$ W de renúncia fiscal" */
 function recebeuTexto(o: OutraEmpresa) {
-  return [o.total ? `${reais(o.total)}${o.emendas ? " da cota" : ""}` : "", o.emendas ? `${reais(o.emendas)} de emendas` : ""].filter(Boolean).join(" + ") || reais(0);
+  const so = !o.emendas && !o.governo;
+  const recebeu = [o.total ? `${reais(o.total)}${so ? "" : " da cota"}` : "", o.emendas ? `${reais(o.emendas)} de emendas` : "",
+    o.governo ? `${reais(o.governo)} do governo federal` : ""].filter(Boolean).join(" + ");
+  return [recebeu, o.renuncia ? `${reais(o.renuncia)} de renúncia fiscal` : ""].filter(Boolean).join(" · ") || reais(0);
 }
 import { norm } from "./Home";
 
 export default function EmpresaPage() {
   const { cnpj = "" } = useParams();
   const { data: e, error } = useData<Empresa>(`e/${cnpj}.json`);
-  if (!e) return <Loading error={error && "Esta empresa não está entre as que recebem dinheiro da cota ou de emendas no período."} />;
+  if (!e) return <Loading error={error && "Esta empresa não está entre as que recebem dinheiro da cota, de emendas ou do governo federal, nem entre as que mais têm renúncia fiscal no período."} />;
   const emp = e.empresa;
   return (
     <>
@@ -25,6 +28,8 @@ export default function EmpresaPage() {
       </section>
       <section className="grid">
         {e.total > 0 && <div className="card stat"><span className="label">Recebeu da cota de parlamentares (todos os anos)</span><span className="value">{reais(e.total)}</span><span className="hint">de {e.n_politicos} parlamentar{e.n_politicos > 1 ? "es" : ""}</span></div>}
+        {e.governo && <div className="card stat"><span className="label">Recebeu do governo federal</span><span className="value">{reais(e.governo.total)}</span><span className="hint">pagamentos por compras, obras, serviços, convênios e subsídios ({Object.keys(e.governo.por_ano).sort().join(", ")})</span></div>}
+        {e.renuncia && <div className="card stat"><span className="label">Deixou de pagar de impostos</span><span className="value">{reais(e.renuncia.total)}</span><span className="hint">renúncia fiscal federal, anos {Object.keys(e.renuncia.por_ano).sort().join(", ")}</span></div>}
         {e.emendas && <div className="card stat"><span className="label">Recebeu de emendas parlamentares</span><span className="value">{reais(e.emendas.total)}</span><span className="hint">pagos pelo governo federal, por indicação de {e.emendas.autores.length} autor{e.emendas.autores.length > 1 ? "es" : ""}</span></div>}
         {emp && <>
           <div className="card stat"><span className="label">Situação na Receita</span><span className="value" style={{ fontSize: "1.3rem" }}>{emp.situacao || "—"}</span><span className="hint">Aberta em {dataBR(emp.abertura)}</span></div>
@@ -61,6 +66,8 @@ export default function EmpresaPage() {
         </section>
       )}
 
+      {e.governo && <Governo g={e.governo} cnpj={e.cnpj} />}
+      {e.renuncia && <Renuncia r={e.renuncia} />}
       {e.emendas && <Emendas em={e.emendas} />}
 
       {e.pagadores.length > 0 && <section>
@@ -71,6 +78,40 @@ export default function EmpresaPage() {
       {e.total > 0 && <PorMes e={e} />}
       {e.total > 0 && <Notas e={e} />}
     </>
+  );
+}
+
+function Governo({ g, cnpj }: { g: NonNullable<Empresa["governo"]>; cnpj: string }) {
+  const anos = Object.entries(g.por_ano).sort();
+  return (
+    <section>
+      <h2>Pagamentos do governo federal</h2>
+      <Explain>
+        O que o governo federal pagou a esta empresa ou entidade por compras, obras, serviços, convênios e subsídios (salários e dívida pública não entram).
+        Por ano: {anos.map(([a, v]) => `${a}: ${reais(v)}`).join(" · ")}. <Link to="/incentivos">Comparar com as outras</Link>.
+      </Explain>
+      <div className="two">
+        <div><h3>Para quê</h3><Barras itens={g.cats.map(([c, v]) => ({ label: c, valor: v, cor: "var(--s1)" }))} /></div>
+        <div><h3>Quem pagou</h3><Barras itens={g.orgaos.map(([o, v]) => ({ label: o, valor: v, cor: "var(--s3)" }))} /></div>
+      </div>
+      <p className="small"><a href={`https://portaldatransparencia.gov.br/pessoa-juridica/${cnpj}`} target="_blank" rel="noreferrer">Todos os pagamentos, contratos e convênios no Portal da Transparência ↗</a></p>
+    </section>
+  );
+}
+
+function Renuncia({ r }: { r: NonNullable<Empresa["renuncia"]> }) {
+  const anos = Object.entries(r.por_ano).sort();
+  return (
+    <section>
+      <h2>Renúncia fiscal: imposto que deixou de pagar</h2>
+      <Explain>
+        Por causa de benefícios fiscais, esta empresa deixou de pagar impostos federais, segundo a Receita Federal. É dinheiro que o governo deixa de arrecadar.
+        Por ano-calendário: {anos.map(([a, v]) => `${a}: ${reais(v)}`).join(" · ")}.
+      </Explain>
+      <h3>Quais benefícios</h3>
+      <Barras itens={r.beneficios.map(([b, v]) => ({ label: b, valor: v, cor: "var(--c4)" }))} />
+      <p className="small"><a href={linkSeguro(r.fonte)} target="_blank" rel="noreferrer">Consultar a renúncia por empresa no Portal da Transparência ↗</a></p>
+    </section>
   );
 }
 
@@ -255,7 +296,7 @@ function Donos({ e }: { e: Empresa }) {
       </div>
       {comOutras.length > 0 && (
         <>
-          <h3>Outras empresas dos mesmos donos que recebem de parlamentares</h3>
+          <h3>Outras empresas dos mesmos donos que recebem dinheiro público</h3>
           <ul className="donos">
             {comOutras.map((d) => (
               <li key={`${d.nome}|${d.doc}`} className="card">

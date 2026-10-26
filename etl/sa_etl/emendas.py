@@ -533,7 +533,8 @@ def coletar(politicos: list[dict], anos: list[int], cache: Path, saida: Path, pa
     nomes: dict[str, dict] = {}
     for ano in sorted(res, reverse=True):  # o nome e o partido mais recentes valem
         for a in res[ano]["autores"] + res[ano]["coletivos"]:
-            nomes.setdefault(a["chave"], {"nome": a["nome"], "politico": a.get("politico"), "partido": a.get("partido", "")})
+            nomes.setdefault(a["chave"], {"nome": a["nome"], "politico": a.get("politico"), "partido": a.get("partido", ""),
+                                          "uf": a.get("uf", ""), "casa": a.get("casa", "")})
     for ano, d in res.items():
         f = fav.get(ano)
         por_autor = (f or {}).pop("_por_autor", {})

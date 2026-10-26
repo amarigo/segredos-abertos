@@ -108,6 +108,13 @@ export default function Home() {
         </section>
       </div>
 
+      {!MG && (
+        <section>
+          <h2>Quem ganha com o dinheiro público</h2>
+          <Explain>Empresas, ONGs e entidades que mais recebem do governo federal, as que deixam de pagar impostos por benefícios fiscais e os parlamentares, partidos e estados que mais mandaram emendas para elas. Com os donos de cada empresa.</Explain>
+          <Link to="/incentivos" className="card cidade-card"><strong>Incentivos e dinheiro para empresas</strong><span className="small muted">Pagamentos, renúncia fiscal e emendas: quem recebeu mais e quem deu mais.</span></Link>
+        </section>
+      )}
       {partidos && partidos.some((p) => p.casa === "camara") && (
         <section>
           <h2>Onde cada partido está, pelos votos</h2>
