@@ -22,6 +22,15 @@ test("resultado oficial do 2º turno aparece igual ao do TSE", async ({ page }) 
   expect(erros).toEqual([]);
 });
 
+test("barra dos projetos liga a Eleição 2026 aos outros sites do Segredos Abertos", async ({ page }) => {
+  await page.goto("./");
+  const nav = page.getByRole("navigation", { name: "Projetos do Segredos Abertos" });
+  await expect(nav.getByRole("link", { name: "Brasil" })).toHaveAttribute("href", "../");
+  await expect(nav.getByRole("link", { name: "Minas Nossa" })).toHaveAttribute("href", "../mg/");
+  await expect(nav.getByRole("link", { name: "Eleição 2026" })).toHaveAttribute("href", "./");
+  await expect(nav.locator('a[aria-current="page"]')).toHaveText("Eleição 2026");
+});
+
 test("todas as seções abrem pelo menu", async ({ page }) => {
   const erros = semErros(page);
   await page.goto("./");

@@ -325,7 +325,21 @@ a.dlrow:hover{background:var(--soft)}
 .dlrow b.nolink::before{content:""}
 .codelist{line-height:1.9}
 .sa-link{color:inherit;text-underline-offset:3px}
+/* barra dos projetos do Segredos Abertos */
+nav.projetos{font-size:.75rem;padding-block:.6rem .2rem}
+nav.projetos .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:.2rem .8rem;color:var(--muted)}
+nav.projetos a{color:var(--fg);text-underline-offset:3px;padding-block:.3rem}
+nav.projetos a[aria-current="page"]{font-weight:700;text-decoration:none}
 </style>
+
+<nav class="projetos" aria-label="Projetos do Segredos Abertos">
+  <div class="wrap">
+    <span>Projetos:</span>
+    <a href="../">Brasil</a>
+    <a href="../mg/">Minas Nossa</a>
+    <a href="./" aria-current="page">Eleição 2026</a>
+  </div>
+</nav>
 
 <div class="wrap">
 <header class="top">

@@ -20,6 +20,28 @@ import { MG, SITE } from "./recorte";
 import { AnoCtx, AnoSeletor, ErroNaPagina, useData } from "./components/ui";
 import { dataBR, type Meta } from "./data";
 
+/* Os projetos do Segredos Abertos, publicados lado a lado no mesmo site (/, /mg/ e /eleicao2026/).
+   Links relativos: funcionam no GitHub Pages e numa cópia local de site/dist. */
+const PROJETOS = [
+  { id: "brasil", nome: "Brasil", href: MG ? "../" : "./" },
+  { id: "mg", nome: "Minas Nossa", href: MG ? "./" : "mg/" },
+  { id: "eleicao", nome: "Eleição 2026", href: MG ? "../eleicao2026/" : "eleicao2026/" },
+];
+
+function Projetos() {
+  const atual = MG ? "mg" : "brasil";
+  return (
+    <nav className="projetos" aria-label="Projetos do Segredos Abertos">
+      <div className="wrap">
+        <span>Projetos:</span>
+        {PROJETOS.map((p) => (
+          <a key={p.id} href={p.href} aria-current={p.id === atual ? "page" : undefined}>{p.nome}</a>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
 export default function App() {
   const { pathname } = useLocation();
   // Chaves: scrollTo pode devolver uma Promise em navegadores novos, e o React trataria isso como limpeza
@@ -33,6 +55,7 @@ export default function App() {
   const setAno = (a: string) => { setEscolhido(a); try { localStorage.setItem("ano", a); } catch { /* sem armazenamento */ } };
   return (
     <AnoCtx.Provider value={{ ano, anos, setAno }}>
+      <Projetos />
       <header className="top">
         <div className="wrap">
           <Link to="/" className="brand"><img src="./icon.svg" alt="" /><span>{SITE.nome} <span style={{ color: "var(--gold)" }}>{SITE.destaque}</span></span></Link>

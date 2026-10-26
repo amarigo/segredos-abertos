@@ -94,6 +94,15 @@ test.describe("jornada", () => {
   });
 });
 
+test("barra dos projetos liga o nacional aos outros sites do Segredos Abertos", async ({ page }) => {
+  await page.goto("./");
+  const nav = page.getByRole("navigation", { name: "Projetos do Segredos Abertos" });
+  await expect(nav.getByRole("link", { name: "Brasil" })).toHaveAttribute("href", "./");
+  await expect(nav.getByRole("link", { name: "Minas Nossa" })).toHaveAttribute("href", "mg/");
+  await expect(nav.getByRole("link", { name: "Eleição 2026" })).toHaveAttribute("href", "eleicao2026/");
+  await expect(nav.locator('a[aria-current="page"]')).toHaveText("Brasil");
+});
+
 test.describe("segurança", () => {
   test("CSP no HTML publicado", async ({ page }) => {
     await page.goto("./");
