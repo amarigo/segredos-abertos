@@ -60,6 +60,7 @@ def test_resumo(tmp_path):
     fulano = next(a for a in r["autores"] if a["politico"] == "dep-1")
     assert fulano["pago"] == 1200.0 and fulano["pix"] == 500.0 and fulano["partido"] == "AAA" and fulano["n"] == 2
     assert dict(fulano["areas"])[emendas.SEM_AREA_PIX] == 500.0 and fulano["nome"] == "Fulano de Tal"
+    assert fulano["pix_emendas"] == [["2", "Contagem - MG", 500.0]]  # cada Pix, para abrir o plano de ação
     beltrana = next(a for a in r["autores"] if a["nome"] == "Beltrana Silva")
     assert beltrana["partido"] == "BBB" and beltrana["politico"] is None  # não é parlamentar atual: sem página, mas com partido
     assert [c["tipo"] for c in r["coletivos"]] == ["bancada"]

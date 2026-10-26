@@ -28,7 +28,7 @@ export function ListaDocumentos({ docs, comFavorecido = true, inicial = 8 }: { d
               {d.cnpj && <span className="small muted mono"> {cnpjFmt(d.cnpj)}</span>}
             </div>}
             <div className="small">Pago por {d.ug || d.orgao}{d.ug && d.orgao && d.ug !== d.orgao ? <span className="muted"> ({d.orgao})</span> : null}{d.emenda && <span className="muted"> · emenda nº {d.emenda}</span>}</div>
-            {d.descricao && <div className="small muted emd-doc-desc">{d.descricao}</div>}
+            {d.descricao && <div className="small emd-doc-desc"><b>Para quê:</b> {d.descricao}</div>}
             <div className="small emd-doc-links">
               <a href={linkSeguro(d.url)} target="_blank" rel="noreferrer">{d.tipo || "Pagamento"} {d.codigo.slice(-12)} ↗</a>
               <a href={linkSeguro(d.url_empenho)} target="_blank" rel="noreferrer">Nota de empenho {d.empenho.slice(-12)} ↗</a>
