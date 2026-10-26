@@ -15,12 +15,18 @@ A Receita publica os dados com atraso: o ano mais recente costuma estar incomple
 from __future__ import annotations
 
 import csv
+import gzip
 import io
+import json
 import logging
+import os
+import re
+import shutil
 import time
 import zipfile
 from collections import defaultdict
 from pathlib import Path
+from typing import Iterator
 
 from .emendas import SIGLAS, achar_colunas, bonito
 from .util import SiteForaDoAr, _session, avisar, data_do_arquivo, digits, to_float
@@ -88,6 +94,12 @@ NAVEGADOR = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gec
 _falhas: dict[int, str] = {}  # ano -> o que o Portal respondeu (vai para o aviso da coleta)
 
 
+def _servidor(r) -> str:
+    """Quem respondeu (o servidor ou o firewall na frente dele): ajuda a saber se é bloqueio."""
+    s = r.headers.get("server") or r.headers.get("via") or ""
+    return f", {s[:40]}" if s else ""
+
+
 def _baixar_url(url: str, dest: Path) -> str | None:
     """None se baixou; senão, o motivo. Pede um .zip (a sessão padrão pede JSON) e tenta também com cara de
     navegador, como nas emendas: o servidor de arquivos da CGU recusa alguns pedidos que não parecem de navegador."""
@@ -98,7 +110,7 @@ def _baixar_url(url: str, dest: Path) -> str | None:
                 r = _session.get(url, timeout=600, stream=True, allow_redirects=True,
                                  headers={"Accept": "application/zip,application/octet-stream,*/*", "User-Agent": ua})
                 if r.status_code != 200:
-                    motivo = f"HTTP {r.status_code}"
+                    motivo = f"HTTP {r.status_code}{_servidor(r)}"
                     if r.status_code >= 500 or r.status_code == 429:
                         time.sleep(2 ** (tentativa + 1))
                         continue
@@ -157,6 +169,15 @@ def _linhas(z: zipfile.ZipFile, nome: str):
         yield from csv.DictReader(io.TextIOWrapper(f, encoding="latin-1", errors="replace", newline=""), delimiter=";")
 
 
+def _normalizadas(linhas, regras: dict) -> "Iterator[dict]":
+    """Linhas com as nossas chaves (as da regra), seja qual for o nome da coluna no arquivo."""
+    col = None
+    for r in linhas:
+        if col is None:
+            col = achar_colunas(list(r.keys()), regras)
+        yield {k: (str(r.get(c) or "")).strip() if c else "" for k, c in col.items()}
+
+
 def ler_ano(zip_path: Path, ano: int, n_top: int = N_TOP) -> tuple[dict, dict[str, dict]] | None:
     """Resumo do ano e, para cada CNPJ, o total e os benefícios (para as páginas das empresas)."""
     with zipfile.ZipFile(zip_path) as z:
@@ -164,53 +185,53 @@ def ler_ano(zip_path: Path, ano: int, n_top: int = N_TOP) -> tuple[dict, dict[st
         if not ben:
             log.warning("Renúncias %d: tabela por beneficiário não encontrada (%s)", ano, z.namelist())
             return None
-        empresas: dict[str, dict] = {}
-        total, sem_cnpj, col = 0.0, 0.0, None
-        por_uf: dict[str, list] = defaultdict(lambda: [0.0, 0])
-        por_setor: dict[str, list] = defaultdict(lambda: [0.0, 0])
-        for r in _linhas(z, ben):
-            if col is None:
-                col = achar_colunas(list(r.keys()), REGRAS_BEN)
-                if not col["cnpj"] or not col["valor"]:
-                    log.error("Renúncias %d: colunas essenciais não encontradas (%s)", ano, list(r.keys()))
-                    return None
-            g = lambda k: (r.get(col[k]) or "").strip() if col.get(k) else ""  # noqa: E731
-            v = to_float(g("valor"))
-            if not v:
-                continue
-            total += v
-            doc = cnpj_de(g("cnpj"))
-            uf = g("uf").upper() if g("uf").upper() in SIGLAS else ""
-            st = setor(g("cnae_cod"))
-            por_uf[uf or "Não informado"][0] += v
-            por_uf[uf or "Não informado"][1] += 1
-            por_setor[st][0] += v
-            por_setor[st][1] += 1
-            if not doc:
-                sem_cnpj += v
-                continue
-            e = empresas.setdefault(doc, {"nome": bonito(g("nome")) or g("fantasia"), "uf": uf, "municipio": bonito(g("municipio")),
-                                          "setor": st, "atividade": g("cnae"), "valor": 0.0, "beneficios": defaultdict(float)})
-            e["valor"] += v
-        por_ben: dict[tuple, list] = defaultdict(lambda: [0.0, set()])
-        por_tributo: dict[str, float] = defaultdict(float)
-        if det:
-            col = None
-            for r in _linhas(z, det):
-                if col is None:
-                    col = achar_colunas(list(r.keys()), REGRAS_DET)
-                g = lambda k: (r.get(col[k]) or "").strip() if col.get(k) else ""  # noqa: E731
-                v = to_float(g("valor"))
-                if not v:
-                    continue
-                nome_b = g("beneficio") or g("fundamento") or "Não informado"
-                doc = cnpj_de(g("cnpj"))
-                b = por_ben[(nome_b, g("tributo"))]
-                b[0] += v
-                b[1].add(doc)
-                por_tributo[g("tributo") or "Não informado"] += v
-                if doc in empresas:
-                    empresas[doc]["beneficios"][nome_b] += v
+        cab = next(_linhas(z, ben), {})
+        col = achar_colunas(list(cab.keys()), REGRAS_BEN)
+        if not col["cnpj"] or not col["valor"]:
+            log.error("Renúncias %d: colunas essenciais não encontradas (%s)", ano, list(cab.keys()))
+            return None
+        return resumir(ano, _normalizadas(_linhas(z, ben), REGRAS_BEN),
+                       _normalizadas(_linhas(z, det), REGRAS_DET) if det else [], n_top)
+
+
+def resumir(ano: int, ben, det, n_top: int = N_TOP) -> tuple[dict, dict[str, dict]]:
+    """ben: uma linha por CNPJ (total); det: uma linha por CNPJ × benefício. As duas com as chaves das regras."""
+    empresas: dict[str, dict] = {}
+    total, sem_cnpj = 0.0, 0.0
+    por_uf: dict[str, list] = defaultdict(lambda: [0.0, 0])
+    por_setor: dict[str, list] = defaultdict(lambda: [0.0, 0])
+    for g in ben:
+        v = to_float(g["valor"])
+        if not v:
+            continue
+        total += v
+        doc = cnpj_de(g["cnpj"])
+        uf = g["uf"].upper() if g["uf"].upper() in SIGLAS else ""
+        st = setor(g["cnae_cod"])
+        por_uf[uf or "Não informado"][0] += v
+        por_uf[uf or "Não informado"][1] += 1
+        por_setor[st][0] += v
+        por_setor[st][1] += 1
+        if not doc:
+            sem_cnpj += v
+            continue
+        e = empresas.setdefault(doc, {"nome": bonito(g["nome"]) or g["fantasia"], "uf": uf, "municipio": bonito(g["municipio"]),
+                                      "setor": st, "atividade": g["cnae"], "valor": 0.0, "beneficios": defaultdict(float)})
+        e["valor"] += v
+    por_ben: dict[tuple, list] = defaultdict(lambda: [0.0, set()])
+    por_tributo: dict[str, float] = defaultdict(float)
+    for g in det:
+        v = to_float(g["valor"])
+        if not v:
+            continue
+        nome_b = g["beneficio"] or g["fundamento"] or "Não informado"
+        doc = cnpj_de(g["cnpj"])
+        b = por_ben[(nome_b, g["tributo"])]
+        b[0] += v
+        b[1].add(doc)
+        por_tributo[g["tributo"] or "Não informado"] += v
+        if doc in empresas:
+            empresas[doc]["beneficios"][nome_b] += v
     ordem = sorted(empresas.items(), key=lambda kv: -kv[1]["valor"])
     par = lambda d, n: [[k, round(x, 2)] for k, x in sorted(d.items(), key=lambda kv: -kv[1])[:n]]  # noqa: E731
     resumo = {
@@ -229,7 +250,174 @@ def ler_ano(zip_path: Path, ano: int, n_top: int = N_TOP) -> tuple[dict, dict[st
     return resumo, por_empresa
 
 
-def coletar(cache: Path, ano_atual: int, n_anos: int = N_ANOS) -> dict:
+# ---------------------------------------------------------------- pela API de dados do Portal
+
+API = "https://api.portaldatransparencia.gov.br/api-de-dados/renuncias-valor"
+API_CADASTRO = "https://portaldatransparencia.gov.br/api-de-dados/cadastrar-email"
+API_POR_MINUTO = 300  # o limite do Portal é 400 por minuto (700 de madrugada); acima disso a chave fica suspensa por 8 horas
+API_REFAZER_DIAS = 30  # a Receita atualiza a renúncia uma ou duas vezes por ano; relemos tudo uma vez por mês
+REGRAS_API = {**REGRAS_DET, **{k: v for k, v in REGRAS_BEN.items() if k not in REGRAS_DET},
+              "nome": [["razao", "social"], ["nome", "beneficiario"], ["nome", "empresa"]],
+              "fantasia": [["nome", "fantasia"]],
+              "cnae_cod": [["cnae", "codigo"], ["codigo", "cnae"], ["codigo", "atividade"]],
+              "cnae": [["cnae", "descricao"], ["cnae", "denominacao"], ["cnae", "nome"], ["cnae"]],
+              "municipio": [["municipio", "nome"], ["municipio"]],
+              "uf": [["uf", "sigla"], ["sigla", "uf"], ["uf"]],
+              "valor": [["valor", "renunciado"], ["valor", "renuncia"], ["valor"]]}
+
+
+def _camel(k: str) -> str:
+    return re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", k)
+
+
+def _achatar(d: dict, pre: str = "") -> dict[str, str]:
+    """{"municipio": {"nomeIBGE": "X", "uf": {"sigla": "SP"}}} -> {"municipio nome IBGE": "X", "municipio uf sigla": "SP"}"""
+    out: dict[str, str] = {}
+    for k, v in d.items():
+        chave = f"{pre} {_camel(k)}".strip()
+        if isinstance(v, dict):
+            out.update(_achatar(v, chave))
+        elif not isinstance(v, list):
+            out[chave] = "" if v is None else str(v)
+    return out
+
+
+def _valor_api(v: str) -> str:
+    """A API devolve número com ponto (1234.5) ou texto com vírgula (1.234,50); to_float espera o formato do CSV."""
+    v = v.strip()
+    return v.replace(".", ",") if re.fullmatch(r"-?\d+(\.\d+)?", v) else v
+
+
+class ApiRenuncia:
+    """Lê a consulta de valores renunciados página por página, guardando cada página no cache. A leitura completa pode
+    levar algumas execuções; enquanto não termina, nada da API vai para o site."""
+
+    def __init__(self, cache: Path, chave: str):
+        # "api": a última leitura completa (é a que vai para o site); "api-lendo": a leitura em andamento
+        self.pasta = cache / "api"
+        self.lendo = cache / "api-lendo"
+        self.lendo.mkdir(parents=True, exist_ok=True)
+        self.estado_f = self.lendo / "estado.json"
+        self.chave = chave
+        self.motivo = ""
+
+    def _completa_em(self) -> float | None:
+        try:
+            return json.loads((self.pasta / "estado.json").read_text())["fim_em"]
+        except (OSError, ValueError, KeyError):
+            return None
+
+    def _estado(self) -> dict:
+        self.lendo.mkdir(parents=True, exist_ok=True)
+        try:
+            e = json.loads(self.estado_f.read_text())
+        except (OSError, ValueError):
+            e = {}
+        if not e:
+            for f in self.lendo.glob("p*.json.gz"):
+                f.unlink()
+            e = {"filtros": [{}], "i": 0, "pagina": 1, "fim": False, "paginas": 0}
+        return e
+
+    def _pedir(self, filtro: dict, pagina: int) -> list | None:
+        for tentativa in range(4):
+            try:
+                r = _session.get(API, params={**filtro, "pagina": pagina}, timeout=120,
+                                 headers={"chave-api-dados": self.chave, "Accept": "application/json"})
+            except SiteForaDoAr as e:
+                self.motivo = str(e)[:120]
+                return None
+            except Exception as e:  # noqa: BLE001
+                self.motivo = str(e)[:120]
+                time.sleep(2 ** (tentativa + 1))
+                continue
+            if r.status_code == 200:
+                try:
+                    d = r.json()
+                except ValueError:
+                    self.motivo = f"resposta não é JSON ({r.headers.get('content-type')})"
+                    return None
+                return d if isinstance(d, list) else None
+            self.motivo = f"HTTP {r.status_code}{_servidor(r)}"
+            if r.status_code in (429,) or r.status_code >= 500:
+                time.sleep(2 ** (tentativa + 2))
+                continue
+            return None
+        return None
+
+    def coletar(self, minutos: float) -> bool:
+        """True quando há uma leitura completa para o site. Uma nova leitura começa a cada API_REFAZER_DIAS dias;
+        enquanto ela não termina, o site continua com a anterior."""
+        feita = self._completa_em()
+        if feita and time.time() - feita < API_REFAZER_DIAS * 86400:
+            return True
+        e = self._estado()
+        inicio, pausa = time.time(), 60 / API_POR_MINUTO
+        while not e["fim"] and time.time() - inicio < minutos * 60:
+            filtro = e["filtros"][e["i"]]
+            linhas = self._pedir(filtro, e["pagina"])
+            if linhas is None:
+                if e["paginas"] == 0 and not filtro and self.motivo.startswith("HTTP 400"):
+                    # a consulta sem filtro não é aceita: lê estado por estado
+                    log.info("Renúncias (API): consulta sem filtro recusada (%s); lendo por UF", self.motivo)
+                    e.update(filtros=[{"nomeSiglaUF": uf} for uf in sorted(SIGLAS)], i=0, pagina=1)
+                    continue
+                log.warning("Renúncias (API): parou em %s, página %d (%s)", filtro or "sem filtro", e["pagina"], self.motivo)
+                break
+            if linhas:
+                f = self.lendo / f"p{e['paginas']:06d}.json.gz"
+                f.write_bytes(gzip.compress(json.dumps([_achatar(x) for x in linhas if isinstance(x, dict)],
+                                                       ensure_ascii=False).encode()))
+                e["paginas"] += 1
+                e["pagina"] += 1
+            else:  # página vazia: acabou este filtro
+                e["i"] += 1
+                e["pagina"] = 1
+                if e["i"] >= len(e["filtros"]):
+                    e.update(fim=True, fim_em=time.time())
+            self.estado_f.write_text(json.dumps(e))
+            time.sleep(pausa)
+        self.estado_f.write_text(json.dumps(e))
+        if e["fim"]:
+            shutil.rmtree(self.pasta, ignore_errors=True)
+            self.lendo.rename(self.pasta)
+        log.info("Renúncias (API): %d páginas lidas%s", e["paginas"], ", completa" if e["fim"] else
+                 f", leitura continua na próxima execução (filtro {e['i'] + 1} de {len(e['filtros'])}, página {e['pagina']})")
+        return e["fim"] or bool(feita)
+
+    def anos(self, n_anos: int) -> dict[int, tuple[dict, dict]]:
+        """Os resumos por ano, do mesmo jeito que os do arquivo .zip."""
+        det_por_ano: dict[int, list[dict]] = defaultdict(list)
+        col = None
+        for f in sorted(self.pasta.glob("p*.json.gz")):
+            for r in json.loads(gzip.decompress(f.read_bytes())):
+                if col is None:
+                    col = achar_colunas(list(r.keys()), REGRAS_API)
+                    log.info("Renúncias (API): colunas %s", {k: v for k, v in col.items() if v})
+                    if not col["valor"] or not col["cnpj"] or not col["ano"]:
+                        log.error("Renúncias (API): campos essenciais não encontrados (%s)", list(r.keys()))
+                        self.motivo = "a API mudou o formato"
+                        return {}
+                g = {k: (r.get(c) or "").strip() if c else "" for k, c in col.items()}
+                g["valor"] = _valor_api(g["valor"])
+                a = digits(g["ano"])[:4]
+                if a:
+                    det_por_ano[int(a)].append(g)
+        out = {}
+        for ano in sorted(det_por_ano, reverse=True)[:n_anos]:
+            det = det_por_ano[ano]
+            ben: dict[str, dict] = {}
+            for g in det:  # o total por CNPJ é a soma dos benefícios
+                doc = cnpj_de(g["cnpj"]) or f"sem-{len(ben)}"
+                b = ben.setdefault(doc, {**g, "valor": 0.0})
+                b["valor"] += to_float(g["valor"])
+            linhas_ben = [{**b, "valor": f"{b['valor']:.2f}".replace(".", ",")} for b in ben.values()]
+            out[ano] = resumir(ano, linhas_ben, det)
+            out[ano][0]["url"] = CONSULTA
+        return out
+
+
+def coletar(cache: Path, ano_atual: int, n_anos: int = N_ANOS, chave: str | None = None, minutos_api: float = 20) -> dict:
     """Os anos-calendário mais recentes que o Portal tiver. {"anos": {ano: resumo}, "empresas": {cnpj: {ano: {...}}}}"""
     cache.mkdir(parents=True, exist_ok=True)
     anos: dict[int, dict] = {}
@@ -251,10 +439,24 @@ def coletar(cache: Path, ano_atual: int, n_anos: int = N_ANOS) -> dict:
         anos[ano], emps = r
         for doc, x in emps.items():
             por_emp[doc][ano] = x
+    chave = chave if chave is not None else os.environ.get("PORTAL_TRANSPARENCIA_CHAVE", "").strip()
+    if not anos and chave:
+        # Os arquivos não vieram: tenta a API de dados do Portal, que pede uma chave (cadastro grátis por e-mail)
+        api = ApiRenuncia(cache, chave)
+        completa = api.coletar(minutos_api)
+        if completa:
+            for ano, (r, emps) in api.anos(n_anos).items():
+                anos[ano] = r
+                for doc, x in emps.items():
+                    por_emp[doc][ano] = x
+        if not anos:
+            _falhas[0] = f"API: {api.motivo}" if api.motivo else "API: leitura em andamento, continua na próxima execução"
     if not anos:
-        motivos = "; ".join(f"{a}: {m}" for a, m in sorted(_falhas.items(), reverse=True)[:3])
+        api_motivo = _falhas.pop(0, "")
+        motivos = "; ".join([f"{a}: {m}" for a, m in sorted(_falhas.items(), reverse=True)[:3]] + ([api_motivo] if api_motivo else []))
+        dica = "" if chave else f"; para usar a API, cadastre uma chave em {API_CADASTRO} e guarde no secret PORTAL_TRANSPARENCIA_CHAVE"
         avisar("Renúncia fiscal: o Portal da Transparência não respondeu; a parte de renúncias da página de incentivos "
-               f"não foi atualizada ({motivos or 'sem resposta'})")
+               f"não foi atualizada ({motivos or 'sem resposta'}){dica}")
     # Ano incompleto: a Receita ainda não processou todas as declarações (fica bem abaixo do ano anterior)
     for ano, r in anos.items():
         ant = anos.get(ano - 1)

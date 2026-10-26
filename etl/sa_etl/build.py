@@ -578,8 +578,11 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
              com_emendas: bool = True, com_incentivos: bool = True, minutos_pagamentos: float = 45,
              minutos_gerais: float = 40) -> None:
     """A coleta inteira, na ordem certa (usada também pelos testes)."""
+    # A renúncia vem antes dos arquivos diários: o Portal passa a recusar downloads (HTTP 405) depois de muitos
+    # pedidos seguidos, e os arquivos de renúncia são poucos (e ficam uma semana no cache)
+    ren = coletar_renuncia(anos, cache) if com_incentivos else None
     pag = pagamentos_emendas(anos, cache, minutos_pagamentos) if com_emendas else None
-    inc = coletar_incentivos(anos, cache, minutos_gerais) if com_incentivos else None
+    inc = (coletar_incentivos(anos, cache, minutos_gerais), ren) if com_incentivos else None
     avisos = list(util.AVISOS)  # coletar() recomeça a lista de avisos
     dados = coletar(anos, cache, max_empresas, com_recursos,
                     cnpjs_emendas=pagamentos.cnpjs_empresas(pag) + incentivos.cnpjs_para_receita(*(inc or (None, None))))
@@ -603,24 +606,27 @@ def pagamentos_emendas(anos: list[int], cache: Path, minutos: float) -> dict | N
         return None
 
 
-def coletar_incentivos(anos: list[int], cache: Path, minutos: float) -> tuple[dict | None, dict | None]:
-    """(pagamentos a empresas e entidades, renúncia fiscal). Se uma parte falhar, o resto do site segue."""
+def coletar_renuncia(anos: list[int], cache: Path) -> dict | None:
+    try:
+        return renuncias.coletar(cache / "renuncias", max(anos))
+    except Exception:  # noqa: BLE001
+        log.exception("Incentivos: erro na renúncia fiscal")
+        util.avisar("Incentivos: a renúncia fiscal não foi atualizada")
+        return None
+
+
+def coletar_incentivos(anos: list[int], cache: Path, minutos: float) -> dict | None:
+    """Pagamentos a empresas e entidades. Se falhar, o resto do site segue."""
     try:
         arqs = pagamentos.coletar_geral(anos, cache / "pagamentos", minutos)
         geral = pagamentos.resumir_geral(arqs, anos)
         for ano, c in sorted(geral["cobertura"].items()):
             log.info("Pagamentos gerais %s: %s de %s dias lidos (%s a %s)", ano, c["dias"], c["dias_ano"], c["de"], c["ate"])
+        return geral
     except Exception:  # noqa: BLE001
         log.exception("Incentivos: erro nos pagamentos a empresas")
         util.avisar("Incentivos: os pagamentos do governo federal a empresas não foram atualizados")
-        geral = None
-    try:
-        ren = renuncias.coletar(cache / "renuncias", max(anos))
-    except Exception:  # noqa: BLE001
-        log.exception("Incentivos: erro na renúncia fiscal")
-        util.avisar("Incentivos: a renúncia fiscal não foi atualizada")
-        ren = None
-    return geral, ren
+        return None
 
 
 def juntar_incentivos(dados: dict, inc: tuple[dict | None, dict | None]) -> None:

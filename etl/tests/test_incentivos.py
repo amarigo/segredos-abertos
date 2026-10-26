@@ -153,3 +153,70 @@ def test_aviso_da_renuncia_diz_o_motivo(coleta):
     saida = coleta.rodar()
     aviso = next(a for a in coleta.ler(saida, "meta.json")["avisos"] if "Renúncia fiscal" in a)
     assert "HTTP 500" in aviso
+
+
+def test_renuncia_pela_api_quando_os_arquivos_nao_vem(coleta, monkeypatch):
+    """O Portal recusa os .zip (HTTP 405), mas a API de dados responde: a página sai com os mesmos números."""
+    monkeypatch.setenv("PORTAL_TRANSPARENCIA_CHAVE", "chave-de-teste")
+    gov = coleta.usar(FakeGov())
+    gov.falhar("RenunciasFiscais.zip", "404").falhar("/download-de-dados/renuncias/", "404")
+    saida = coleta.rodar()
+    idx = coleta.ler(saida, "incentivos/indice.json")
+    assert [x["ano"] for x in idx["anos_renuncia"]] == [2024, 2025]
+    a = coleta.ler(saida, "incentivos/renuncia-2024.json")
+    assert a["total"] == 1001000.0 and a["sem_cnpj"] == 1000.0 and [x["valor"] for x in a["top"]] == [500000.0, 300000.0, 200000.0]
+    assert a["top"][0]["beneficios"] == [["Sudene", 375000.0], ["Desoneração da folha", 125000.0]]
+    assert a["top"][0]["uf"] == "SP" and a["top"][0]["setor"] == "Construção" and a["url"] == renuncias.CONSULTA
+    assert not any("Renúncia" in x for x in coleta.ler(saida, "meta.json")["avisos"])
+    assert coleta.validar(saida).erros == []
+
+
+def test_api_le_por_estado_se_a_consulta_sem_filtro_for_recusada(tmp_path, monkeypatch):
+    gov = FakeGov()
+    gov.api_exige_uf = True
+    from fakegov import instalar
+    instalar(monkeypatch, gov)
+    api = renuncias.ApiRenuncia(tmp_path, "chave-de-teste")
+    assert api.coletar(5)
+    anos = api.anos(4)
+    assert sorted(anos) == [2024, 2025]
+    assert anos[2024][0]["total"] == 1000000.0  # o registro sem UF fica de fora da consulta por estado
+
+
+def test_api_para_no_limite_de_tempo_e_continua_depois(tmp_path, monkeypatch):
+    from fakegov import instalar
+    instalar(monkeypatch, FakeGov())
+    api = renuncias.ApiRenuncia(tmp_path, "chave-de-teste")
+    assert not api.coletar(0)  # sem tempo: nada lido, nada publicado
+    assert api.coletar(5) and sorted(api.anos(4)) == [2024, 2025]
+
+
+def test_sem_chave_o_aviso_ensina_a_cadastrar(coleta, monkeypatch):
+    monkeypatch.delenv("PORTAL_TRANSPARENCIA_CHAVE", raising=False)
+    gov = coleta.usar(FakeGov())
+    gov.falhar("RenunciasFiscais.zip", "404").falhar("/download-de-dados/renuncias/", "404")
+    saida = coleta.rodar()
+    aviso = next(a for a in coleta.ler(saida, "meta.json")["avisos"] if "Renúncia fiscal" in a)
+    assert "PORTAL_TRANSPARENCIA_CHAVE" in aviso and renuncias.API_CADASTRO in aviso
+
+
+def test_chave_errada_diz_o_motivo(coleta, monkeypatch):
+    monkeypatch.setenv("PORTAL_TRANSPARENCIA_CHAVE", "outra")
+    gov = coleta.usar(FakeGov())
+    gov.falhar("RenunciasFiscais.zip", "404").falhar("/download-de-dados/renuncias/", "404")
+    saida = coleta.rodar()
+    aviso = next(a for a in coleta.ler(saida, "meta.json")["avisos"] if "Renúncia fiscal" in a)
+    assert "API: HTTP 401" in aviso
+
+
+def test_api_relida_todo_mes_sem_tirar_os_dados_do_site(tmp_path, monkeypatch):
+    from fakegov import instalar
+    instalar(monkeypatch, FakeGov())
+    api = renuncias.ApiRenuncia(tmp_path, "chave-de-teste")
+    assert api.coletar(5)
+    est = tmp_path / "api" / "estado.json"
+    e = json.loads(est.read_text())
+    e["fim_em"] -= 40 * 86400
+    est.write_text(json.dumps(e))
+    assert api.coletar(0)  # a releitura começou e não terminou: o site continua com a leitura anterior
+    assert sorted(api.anos(4)) == [2024, 2025]

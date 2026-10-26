@@ -101,6 +101,21 @@ test.describe("jornada", () => {
     expect(erros).toEqual([]);
   });
 
+  test("incentivos: sem dados do ano do menu, mostra o ano mais recente que existe e avisa", async ({ page }) => {
+    const erros = vigiar(page);
+    const ANTES = String(Number(ANO) - 1);
+    const idx = dados("incentivos/indice.json");
+    const inc = dados(`incentivos/${ANO}.json`);
+    await page.route("**/data/incentivos/indice.json", (r) => r.fulfill({ json: { ...idx, anos: [Number(ANTES)], anos_renuncia: [] } }));
+    await page.route(`**/data/incentivos/${ANTES}.json`, (r) => r.fulfill({ json: { ...inc, ano: Number(ANTES) } }));
+    await page.goto("./#/incentivos");
+    await expect(page.locator(".aviso-ano")).toContainText(`Ainda não temos os pagamentos de ${ANO}`);
+    await expect(page.locator(".aviso-ano")).toContainText(`são de ${ANTES}`);
+    await expect(page.locator(".inc-tabela tbody tr").first()).toContainText(inc.pagamentos.top[0].nome);
+    await expect(page.locator("main")).toContainText("O arquivo ainda não foi baixado do Portal da Transparência");
+    expect(erros).toEqual([]);
+  });
+
   test("todas as páginas do menu abrem sem erro", async ({ page }) => {
     const erros = vigiar(page);
     for (const rota of ["politicos", "empresas", "votacoes", "partidos", "emendas", "incentivos", "sobre"]) {

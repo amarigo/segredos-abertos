@@ -5,3 +5,4 @@
 .inc-donos { margin-top: 2px; overflow-wrap: anywhere; }
 .inc-tabela td:first-child { width: 2.5em; }
 @media (max-width: 520px) { .inc-tabela th:first-child, .inc-tabela td:first-child { display: none; } }
+.aviso-ano { background: var(--alert-bg); color: var(--alert-ink); padding: 10px 14px; border-radius: 8px; margin: 12px 0 0; max-width: 820px; }
