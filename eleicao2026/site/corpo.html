@@ -466,7 +466,8 @@ a.dlrow:hover{background:var(--soft)}
     <p>Os números oficiais dos dois turnos. A última coluna mostra quanto mudou do 1º para o 2º turno.</p>
     <div class="field"><label for="cmp-uf">Escolha o lugar</label><select id="cmp-uf"></select></div>
     <div class="tablewrap"><table class="cmpt" id="t-cmp"><thead><tr><th>No total</th><th>1º turno</th><th>2º turno</th><th>Diferença</th></tr></thead><tbody></tbody></table></div>
-    <p class="small muted">Porcentagens: quem foi votar e quem não foi, sobre os eleitores aptos; brancos e nulos, sobre quem foi votar; candidatos, sobre os votos válidos (votos em candidatos). No 1º turno, o TSE conta como nulo o voto no número 28 (candidatura que não valeu). Fonte: TSE, 100% das seções apuradas.</p>
+    <p class="small muted">Porcentagens: quem foi votar e quem não foi, sobre os eleitores aptos das seções instaladas, como faz o TSE; brancos e nulos, sobre quem foi votar; candidatos, sobre os votos válidos (votos em candidatos). No 1º turno, o TSE conta como nulo o voto no número 28 (candidatura que não valeu). Fonte: TSE, 100% das seções apuradas.</p>
+    <p class="small muted" id="cmp-ni"></p>
     <p class="verify" id="cmp-verify"></p>
   </div>
   <div class="panel">
@@ -752,7 +753,7 @@ function cardify(root){
 })();
 function factsHTML(o){
   return `<div class="fact"><span class="muted small">Eleitores aptos</span><b class="num">${fmt(o.apt)}</b></div>
-  <div class="fact"><span class="muted small">Não foram votar</span><b class="num">${pc(o.abst/o.apt)}</b><span class="small">${fmt(o.abst)} pessoas</span></div>
+  <div class="fact"><span class="muted small">Não foram votar</span><b class="num">${pc(o.abst/o.ai)}</b><span class="small">${fmt(o.abst)} pessoas</span></div>
   <div class="fact"><span class="muted small">Votaram em branco</span><b class="num">${fmt(o.br)}</b><span class="small">${pc(o.br/o.comp)} de quem votou</span></div>
   <div class="fact"><span class="muted small">Anularam o voto</span><b class="num">${fmt(o.nu)}</b><span class="small">${pc(o.nu/o.comp)} de quem votou</span></div>`;
 }
@@ -844,7 +845,7 @@ function selectUF(uf,scroll){
      <div class="mini"><span class="eyebrow">2º turno</span>
       <div class="mbar" aria-hidden="true"><i class="bl" style="width:${b.L/b.T*100}%"></i><i class="bf" style="width:${b.F/b.T*100}%"></i></div>
       <p><span class="c-l">Lula ${pc(b.L/b.T)} · ${fmt(b.L)}</span><br><span class="c-f">Flávio ${pc(b.F/b.T)} · ${fmt(b.F)}</span></p>
-      <p><b class="${cls(b)}">${leader(b)} venceu</b> por <b class="num">${fmt(Math.abs(b.L-b.F))}</b> votos. Não foram votar: ${pc(b.o.abst/b.o.apt)}.</p></div>
+      <p><b class="${cls(b)}">${leader(b)} venceu</b> por <b class="num">${fmt(Math.abs(b.L-b.F))}</b> votos. Não foram votar: ${pc(b.o.abst/b.o.ai)}.</p></div>
      <div class="mini"><span class="eyebrow">1º turno</span>
       <div class="mbar" aria-hidden="true"><i class="bl" style="width:${a.L/a.T*100}%"></i><i class="bo" style="width:${a.O/a.T*100}%"></i><i class="bf" style="width:${a.F/a.T*100}%"></i></div>
       <p><span class="c-l">Lula ${pc(a.L/a.T)} · ${fmt(a.L)}</span><br><span class="c-f">Flávio ${pc(a.F/a.T)} · ${fmt(a.F)}</span><br><span class="muted">Outros ${pc(a.O/a.T)} · ${fmt(a.O)}</span></p></div>
@@ -880,7 +881,7 @@ document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{mode=b.datase
   $("d-gf").textContent="+"+fmt(b.F-a.F);$("d-gf2").textContent=`de ${mil(a.F)} para ${mil(b.F)}`;
   $("d-m").textContent=fmt(b.L-b.F);
   const sobe=(x,y)=>y>x?"subiu":y<x?"caiu":"ficou igual";
-  $("d-txt").innerHTML=`<b>De onde vieram esses votos?</b> Ninguém sabe ao certo, porque o voto é secreto. Os números oficiais mostram só os totais: no 1º turno, os outros 10 candidatos tiveram <b class="num">${fmt(a.O)}</b> votos; a abstenção ${sobe(a.o.abst/a.o.apt,b.o.abst/b.o.apt)}, de ${pc(a.o.abst/a.o.apt)} para ${pc(b.o.abst/b.o.apt)} dos eleitores; brancos e nulos foram de ${fmt(a.o.br+a.o.nu)} para ${fmt(b.o.br+b.o.nu)}. Os votos novos de Lula e de Flávio podem ter vindo de vários grupos ao mesmo tempo: de quem votou em outro candidato, de quem não foi votar ou votou em branco ou nulo no 1º turno, e até de quem trocou entre os dois. E parte de quem votou nos outros candidatos pode ter votado em branco, anulado ou não ter ido votar no 2º turno. Por isso não dá para dizer que os votos de um candidato “foram” para outro. Compare os números na tabela abaixo.`;
+  $("d-txt").innerHTML=`<b>De onde vieram esses votos?</b> Ninguém sabe ao certo, porque o voto é secreto. Os números oficiais mostram só os totais: no 1º turno, os outros 10 candidatos tiveram <b class="num">${fmt(a.O)}</b> votos; a abstenção ${sobe(a.o.abst/a.o.ai,b.o.abst/b.o.ai)}, de ${pc(a.o.abst/a.o.ai)} para ${pc(b.o.abst/b.o.ai)} dos eleitores; brancos e nulos foram de ${fmt(a.o.br+a.o.nu)} para ${fmt(b.o.br+b.o.nu)}. Os votos novos de Lula e de Flávio podem ter vindo de vários grupos ao mesmo tempo: de quem votou em outro candidato, de quem não foi votar ou votou em branco ou nulo no 1º turno, e até de quem trocou entre os dois. E parte de quem votou nos outros candidatos pode ter votado em branco, anulado ou não ter ido votar no 2º turno. Por isso não dá para dizer que os votos de um candidato “foram” para outro. Compare os números na tabela abaixo.`;
   $("cmp-uf").innerHTML=`<option value="BR">Brasil inteiro</option>`+UFS.map(u=>`<option value="${u}">${NAMES[u]}</option>`).join("")+`<option value="ZZ">Exterior</option>`;
   $("cmp-uf").onchange=()=>cmpTable($("cmp-uf").value);
   cmpTable("BR");
@@ -900,8 +901,8 @@ function cmpTable(uf){
   const row=(lab,x,y,px,py,k="")=>`<tr class="${k}"><td>${lab}</td>${cel(x,px,"1º turno")}${cel(y,py,"2º turno")}<td data-l="Diferença">${dif(x,y)}</td></tr>`;
   $("t-cmp").querySelector("tbody").innerHTML=
     row("Eleitores aptos",A.apt,B.apt)+
-    row("Foram votar",A.comp,B.comp,A.comp/A.apt,B.comp/B.apt)+
-    row("Não foram votar",A.abst,B.abst,A.abst/A.apt,B.abst/B.apt)+
+    row("Foram votar",A.comp,B.comp,A.comp/A.ai,B.comp/B.ai)+
+    row("Não foram votar",A.abst,B.abst,A.abst/A.ai,B.abst/B.ai)+
     row("Votaram em branco",A.br,B.br,A.br/A.comp,B.br/B.comp)+
     row("Anularam o voto",A.nu,B.nu,A.nu/A.comp,B.nu/B.comp)+
     row("Votos válidos (em candidatos)",A.val,B.val,undefined,undefined,"sum")+
@@ -909,6 +910,8 @@ function cmpTable(uf){
     row(`<span class="c-f">Flávio Bolsonaro (22)</span>`,a.F,b.F,a.F/A.val,b.F/B.val)+
     row("Outros 10 candidatos",a.O,null,a.O/A.val);
   $("t-cmp").querySelector("thead th").textContent=uf==="BR"?"Brasil":NAMES[uf];
+  const ni=B.apt-B.ai;
+  $("cmp-ni").textContent=ni>0?`${fmt(ni)} eleitores estavam em seções do exterior que não foram instaladas. Como faz o TSE, “foram votar” e “não foram votar” são calculados sobre os ${fmt(B.ai)} eleitores das seções instaladas.`:"";
   $("cmp-verify").innerHTML=`<b>Confira no TSE</b>${ext(ufURL(1,uf),"Arquivo oficial, 1º turno")}${ext(ufURL(2,uf),"Arquivo oficial, 2º turno")}`;
 }
 
