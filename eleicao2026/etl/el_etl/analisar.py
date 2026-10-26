@@ -17,7 +17,7 @@ CORTES = [FECHA, FECHA + 5, FECHA + 10, FECHA + 15, FECHA + 30, FECHA + 60, FECH
 FUSO = {'AC': -2, 'AM': -1, 'RO': -1, 'RR': -1, 'MT': -1, 'MS': -1}
 CABECALHO = ['UF', 'Municipio', 'Cod_municipio_TSE', 'Zona', 'Secao', 'Abertura_hora_local', 'Encerramento_hora_local',
              'Encerramento_horario_Brasilia', 'Eleitores_aptos', 'Comparecimento', 'Votos_13_Lula', 'Votos_22_Flavio',
-             'Brancos', 'Nulos']
+             'Brancos', 'Nulos', 'Votos_depois_17h']
 
 
 def minutos(ts):
@@ -122,7 +122,8 @@ def analisar(secs, validos):
 def linha_csv(d):
     return [d['uf'], d['nm'], d['mun'], d['z'], d['s'], relogio(d.get('ab')), relogio(d.get('en')),
             hms(d['enb']) if d['uf'] != 'ZZ' else hms(d['enb']) + ' (local)',
-            d.get('apt'), d.get('comp'), d['v'].get('13', 0), d['v'].get('22', 0), d['v'].get('95', 0), d['v'].get('96', 0)]
+            d.get('apt'), d.get('comp'), d['v'].get('13', 0), d['v'].get('22', 0), d['v'].get('95', 0), d['v'].get('96', 0),
+            d.get('d17', '')]
 
 
 def gravar_planilhas(turno, urnas, pasta):
@@ -152,7 +153,8 @@ def gravar_lista_site(turno, urnas, validos, pasta):
             P['cod'].append(str(d['mun']).zfill(5))
         P['r'].append([idx[d['uf']][d['nm']], int(d['z']), int(d['s']), int(round(d['enb'] * 60)), d.get('apt', 0),
                        d.get('comp', 0), d['v'].get('13', 0), d['v'].get('22', 0),
-                       sum(x for k, x in d['v'].items() if k in validos)])
+                       sum(x for k, x in d['v'].items() if k in validos), d.get('d17', -1),
+                       int(round(d['ult'] * 60)) if d.get('ult') is not None else -1])  # -1: registro não lido
     for uf, P in por.items():
         P['r'].sort(key=lambda r: -r[3])
         with open(os.path.join(pasta, f'{turno}_{uf}.json'), 'w', encoding='utf-8') as f:

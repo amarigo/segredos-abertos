@@ -13,7 +13,7 @@ import shutil
 import sys
 import tempfile
 
-from . import analisar, montar, noite, oficial, turno1, turno2, validar
+from . import analisar, depois17, montar, noite, oficial, turno1, turno2, validar
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 DADOS = os.path.normpath(os.path.join(AQUI, '..', '..', 'dados'))
@@ -32,7 +32,7 @@ def cmd_coletar(a):
 
 def cmd_montar(a, dados=DADOS):
     of = oficial.juntar(os.path.join(dados, 'tse'))
-    resumos, listas, noites, erros = {}, {}, {}, []
+    resumos, listas, noites, tardes, erros = {}, {}, {}, {}, []
     for t, e in oficial.ELEICOES.items():
         secs = analisar.ler_brutos(os.path.join(dados, 'brutos', f'{t}turno'))
         validos = set(of[e]['BR']['cand'])
@@ -41,15 +41,20 @@ def cmd_montar(a, dados=DADOS):
         resumos[t] = resumo
         listas[t] = (urnas, validos)
         noites[t] = noite.apuracao(secs, validos, noite.DIAS[t])
+        tardes[t] = depois17.resumo(secs, depois17.ler(os.path.join(dados, 'brutos', f'{t}turno_log')), validos)
+        erros += depois17.conferir(t, tardes[t])
         print(f'{t}º turno: {len(secs)} registros de seção, {len(urnas)} urnas com horário, '
               f'{resumo["cut"][analisar.FECHA + 15].get("BR", {}).get("n", 0)} fecharam depois das 17h15')
+        if tardes[t]:
+            br = tardes[t]['uf'].get('BR', [0] * 7)
+            print(f'   registros das urnas: {tardes[t]["conf"]}; {br[2]} votos depois das 17h em {br[1]} urnas')
     if erros:
         print('A CONFERÊNCIA FALHOU. Nada foi gravado.')
         for x in erros[:50]:
             print(' -', x)
         return 1
     tmp = tempfile.mkdtemp(prefix='eleicao2026-')
-    D = montar.dados_site(of, resumos, noites)
+    D = montar.dados_site(of, resumos, noites, tardes)
     montar.gravar(tmp, D, of)
     for t, (urnas, validos) in listas.items():
         analisar.gravar_planilhas(t, urnas, os.path.join(tmp, 'dados', 'urnas'))

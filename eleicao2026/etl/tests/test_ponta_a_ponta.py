@@ -18,6 +18,18 @@ def resultado_tse(e, votos, brancos, nulos, comp, secoes):
             's': {'ts': str(secoes), 'st': str(secoes), 'pst': '100,00'}}
 
 
+def registros(pasta, regs):
+    os.makedirs(os.path.join(pasta, 'brutos', '2turno_log'), exist_ok=True)
+    with gzip.open(os.path.join(pasta, 'brutos', '2turno_log', 'SP.jsonl.gz'), 'wt', encoding='utf-8') as f:
+        for r in regs:
+            f.write(json.dumps(r) + '\n')
+
+
+REGS = [{'uf': 'SP', 'mun': '71072', 'z': '0001', 's': '0001', 'n': 200, 'd17': 3, 'ult': 1020.9, 'pm': {'0': 3}},
+        {'uf': 'SP', 'mun': '71072', 'z': '0001', 's': '0002', 'n': 150, 'd17': 40, 'ult': 1144.5,
+         'pm': {'0': 10, '30': 20, '124': 10}}]
+
+
 def preparar(pasta, mexer=None):
     secs = [
         {'uf': 'SP', 'mun': '71072', 'nm': 'SÃO PAULO', 'z': '0001', 's': '0001', 'ab': '20261025T080000',
@@ -64,6 +76,40 @@ def test_site_completo(tmp_path):
     assert '1' not in D['noite']  # 1º turno sem hora de chegada: a página avisa
     assert (tmp_path / 'site' / 'fotos' / '13.jpeg').stat().st_size > 1000
     assert (tmp_path / 'site' / 'fotos' / '22.jpeg').stat().st_size > 1000
+    assert 'd17' not in D or '2' not in D['d17']  # sem registros das urnas: a página avisa
+
+
+def test_votos_depois_das_17h(tmp_path):
+    preparar(tmp_path / 'dados')
+    registros(tmp_path / 'dados', REGS)
+    assert montar(tmp_path / 'dados', tmp_path / 'site') == 0
+    D = json.loads((tmp_path / 'site' / 'dados' / 'numeros_do_site.json').read_text(encoding='utf-8'))
+    t = D['d17']['2']
+    # urnas lidas, com voto depois das 17h, votos depois das 17h, votos nas urnas lidas, Lula, Flávio, válidos
+    assert t['uf']['SP'] == [2, 2, 43, 350, 160, 170, 330] and t['uf']['BR'] == t['uf']['SP']
+    assert t['conf'] == {'urnas': 2, 'bate': 2} and t['ult'][:4] == ['SP', 'SÃO PAULO', 1, 2]
+    assert t['pm']['SP'] == [[0, 13], [30, 20], [124, 10]]
+    assert t['top']['SP'][0][4] == 40 and '1' not in D['d17']
+    planilha = (tmp_path / 'site' / 'dados' / 'urnas' / '2turno_SP.csv').read_text(encoding='utf-8').splitlines()
+    assert planilha[0].endswith(';Votos_depois_17h') and planilha[1].endswith(';40') and planilha[2].endswith(';3')
+    lista = json.loads((tmp_path / 'site' / 'urnas' / '2_SP.json').read_text(encoding='utf-8'))
+    assert lista['r'][0][9] == 40 and lista['r'][0][10] == round(1144.5 * 60)
+
+
+def test_registro_diferente_do_boletim_fica_de_fora(tmp_path):
+    preparar(tmp_path / 'dados')
+    registros(tmp_path / 'dados', [REGS[0], dict(REGS[1], n=149)])
+    assert montar(tmp_path / 'dados', tmp_path / 'site') == 0
+    t = json.loads((tmp_path / 'site' / 'dados' / 'numeros_do_site.json').read_text(encoding='utf-8'))['d17']['2']
+    assert t['conf'] == {'urnas': 2, 'bate': 1, 'diferente': 1} and t['uf']['SP'][:3] == [1, 1, 3]
+    assert t['dif'] == [['SP', 'SÃO PAULO', '0001', '0002', 149, 150]]
+
+
+def test_nao_publica_se_faltar_registro(tmp_path, capsys):
+    preparar(tmp_path / 'dados')
+    registros(tmp_path / 'dados', REGS[:1])
+    assert montar(tmp_path / 'dados', tmp_path / 'site') == 1
+    assert 'sem registro lido' in capsys.readouterr().out
 
 
 def test_nao_publica_se_nao_bater(tmp_path, capsys):
