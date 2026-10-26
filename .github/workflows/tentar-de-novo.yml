@@ -1,0 +1,62 @@
+name: Tentar de novo
+
+# Quando a coleta publicada saiu com aviso de site oficial fora do ar (por exemplo, "Emendas: o Portal da
+# Transparência não respondeu"), roda a coleta de novo a cada 2 horas, até todos os sites responderem.
+# A coleta guarda no cache o que já baixou, então a nova tentativa só busca de novo o que faltou.
+#
+# Para atualizar na hora, sem esperar: Actions > "Dados e site" > Run workflow.
+on:
+  schedule:
+    - cron: "30 */2 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write # para ver as coletas em andamento e disparar uma nova
+  contents: read
+
+concurrency:
+  group: tentar-de-novo
+  cancel-in-progress: false
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Nunca falha: um problema aqui só adia a tentativa para daqui a 2 horas (e aparece no resumo).
+      - name: Coletar de novo se faltou algum dado
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          META: https://amarigo.github.io/segredos-abertos/data/meta.json
+        run: |
+          resumo() { echo "$1"; echo "$1" >> "$GITHUB_STEP_SUMMARY"; }
+
+          if ! meta=$(curl -fsSL --retry 3 --max-time 60 "$META") || ! jq -e 'type == "object"' >/dev/null 2>&1 <<< "$meta"; then
+            resumo "Não consegui ler o meta.json publicado; fica para a próxima tentativa."
+            exit 0
+          fi
+          avisos=$(jq -r '(.avisos // [])[]' <<< "$meta")
+          if [ -z "$avisos" ]; then
+            resumo "A última coleta publicada está completa ($(jq -r '.atualizado_em // "?"' <<< "$meta")). Nada a fazer."
+            exit 0
+          fi
+
+          # Não atrapalha uma coleta que já está rodando (uma nova cancelaria a que está em andamento).
+          if ! rodando=$(gh run list --workflow dados-e-site.yml --branch main --limit 20 --json status \
+                           --jq '[.[] | select(.status != "completed")] | length'); then
+            resumo "Não consegui ver as coletas em andamento; fica para a próxima tentativa."
+            exit 0
+          fi
+          if [ "$rodando" != "0" ]; then
+            resumo "Já há uma coleta em andamento; ela vai tentar de novo os sites que falharam."
+            exit 0
+          fi
+
+          resumo "A última coleta publicada saiu com avisos:"
+          while IFS= read -r a; do resumo "- $a"; done <<< "$avisos"
+          if gh workflow run dados-e-site.yml --ref main; then
+            resumo "Nova coleta disparada."
+          else
+            resumo "Não consegui disparar a coleta; fica para a próxima tentativa."
+          fi

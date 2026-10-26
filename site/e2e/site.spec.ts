@@ -176,6 +176,7 @@ test.describe("caos no navegador", () => {
     await page.goto("./");
     await expect(page.getByRole("note").first()).toContainText("Dados incompletos");
     await expect(page.getByRole("note").first()).toContainText("03/2025");
+    await expect(page.getByRole("note").first()).toContainText("a cada 2 horas");
   });
 
   test("macaco do caos: falhas aleatórias em todos os dados", async ({ page }) => {

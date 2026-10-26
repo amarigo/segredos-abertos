@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .camara import normaliza_voto
 from .categorias import categoria_curta, grupo_de
-from .util import avisar, digits, get_json, norm_name, to_float, url_segura
+from .util import avisar, data_do_arquivo, digits, get_json, norm_name, to_float, url_segura
 
 log = logging.getLogger("sa_etl.senado")
 
@@ -150,7 +150,7 @@ def despesas(anos: list[int], ids: set[str], cache: Path | None = None) -> list[
                 avisar(f"Cota do Senado {ano}: a API oficial não respondeu; as despesas de senadores neste ano estão faltando")
                 continue
             log.warning("CEAPS %s indisponível (%s); usando a última cópia", ano, e)
-            avisar(f"Cota do Senado {ano}: a API oficial não respondeu; usamos a última cópia baixada")
+            avisar(f"Cota do Senado {ano}: a API oficial não respondeu; usamos a última cópia baixada, de {data_do_arquivo(f)}")
         got = parse_ceaps(rows, ids)
         log.info("Senado: %d despesas em %s", len(got), ano)
         out += got
