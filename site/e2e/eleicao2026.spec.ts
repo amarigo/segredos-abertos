@@ -144,3 +144,27 @@ test("comparecimento e abstenção usam a mesma base do TSE (exterior)", async (
   await expect(page.locator("#t-cmp")).toContainText(tse.e.pa + "%");
   await expect(page.locator("#cmp-ni")).toContainText("não foram instaladas");
 });
+
+test("apuração hora a hora: primeiro o mapa, depois o horário, depois o gráfico", async ({ page }) => {
+  await page.goto("./#noite");
+  const y = async (sel: string) => (await page.locator(sel).boundingBox())!.y;
+  expect(await y("#nmap")).toBeLessThan(await y("#n-t"));
+  expect(await y("#n-t")).toBeLessThan(await y("#nchart"));
+});
+
+test.describe("tema escuro", () => {
+  test.use({ colorScheme: "dark" });
+  test("botões vazados têm texto legível", async ({ page }) => {
+    await page.goto("./");
+    const cores = await page.locator("#zzbtn").evaluate((b) => {
+      const c = getComputedStyle(b).color;
+      let e: Element | null = b, bg = "rgba(0, 0, 0, 0)";
+      while (e && /rgba\(.*, 0\)|transparent/.test(bg)) { bg = getComputedStyle(e).backgroundColor; e = e.parentElement; }
+      return [c, bg];
+    });
+    expect(cores[0]).not.toBe(cores[1]);
+    const lum = (s: string) => { const [r, g, b] = (s.match(/[\d.]+/g) || []).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+    const [a, b] = cores.map(lum);
+    expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toBeGreaterThan(4.5);
+  });
+});

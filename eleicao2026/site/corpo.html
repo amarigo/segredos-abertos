@@ -273,6 +273,9 @@ header.top{border-bottom:0;padding-bottom:1.4rem;
 .toggle button[aria-pressed="true"],.radios button[aria-pressed="true"]{background:var(--br-ink);color:#fff}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn,:root:not([data-theme="light"]) .toggle button[aria-pressed="true"],:root:not([data-theme="light"]) .radios button[aria-pressed="true"]{color:#0E1611}}
 :root[data-theme="dark"] .btn,:root[data-theme="dark"] .toggle button[aria-pressed="true"],:root[data-theme="dark"] .radios button[aria-pressed="true"]{color:#0E1611}
+/* tema escuro: botões vazados (.alt) usam a cor de destaque no texto; o texto escuro acima é só para botões cheios */
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.alt{color:var(--br-ink)}}
+:root[data-theme="dark"] .btn.alt{color:var(--br-ink)}
 input[type=range]{accent-color:var(--br-green)}
 th{border-bottom-color:var(--br-ink)}
 .slhead{border-bottom-color:var(--br-ink)}
@@ -419,18 +422,22 @@ a.dlrow:hover{background:var(--soft)}
   </div>
   <div id="n-missing" class="notice" role="note" hidden></div>
   <div class="panel" id="n-panel">
-    <h3 id="n-h"></h3>
-    <div class="ckey"><span><i style="background:var(--lula)"></i>Lula (% dos votos válidos já apurados)</span><span><i style="background:var(--flavio)"></i>Flávio</span><span><i style="background:var(--apur)"></i>Urnas apuradas</span><span id="n-key-pause"><i style="background:var(--soft);border:1px solid var(--line)"></i>Divulgação pausada <span class="tag tag-nw">Notícia</span></span></div>
-    <div class="nchart"><svg id="nchart" role="img" aria-label="Gráfico: porcentagem de cada candidato e de urnas apuradas ao longo da noite"></svg></div>
-    <div class="field"><label for="n-t">Arraste para escolher o horário (Brasília): <b class="num" id="n-tv"></b></label><input type="range" id="n-t" min="0" max="1" step="1"></div>
+    <h3>Quanto de cada estado já tinha chegado</h3>
+    <p>Cor mais forte quer dizer mais urnas daquele estado já apuradas no horário escolhido logo abaixo. Toque em um estado para ver os números dele.</p>
+    <div class="mapwrap"><svg id="nmap" role="group" aria-label="Mapa: parte das urnas de cada estado já apurada no horário escolhido"></svg><div class="maplegend" id="nlegend"></div></div>
+    <div id="n-uf" aria-live="polite"></div>
+  </div>
+  <div class="panel" id="n-ctl">
+    <h3>Escolha o horário</h3>
+    <div class="field"><label for="n-t">Arraste para mudar o horário (Brasília): <b class="num" id="n-tv"></b></label><input type="range" id="n-t" min="0" max="1" step="1"></div>
     <div class="nplay"><button class="btn alt" type="button" id="n-play">▶ Ver a noite passando</button><button class="btn alt" type="button" id="n-viraBtn" hidden>Ir para a virada</button><button class="btn alt" type="button" id="n-end">Ir para o fim</button></div>
     <div id="n-now" aria-live="polite"></div>
   </div>
-  <div class="panel">
-    <h3>Quanto de cada estado já tinha chegado</h3>
-    <p>No horário escolhido acima. Cor mais forte quer dizer mais urnas daquele estado já apuradas. Toque em um estado.</p>
-    <div class="mapwrap"><svg id="nmap" role="group" aria-label="Mapa: parte das urnas de cada estado já apurada no horário escolhido"></svg><div class="maplegend" id="nlegend"></div></div>
-    <div id="n-uf" aria-live="polite"></div>
+  <div class="panel" id="n-graf">
+    <h3 id="n-h"></h3>
+    <div class="ckey"><span><i style="background:var(--lula)"></i>Lula (% dos votos válidos já apurados)</span><span><i style="background:var(--flavio)"></i>Flávio</span><span><i style="background:var(--apur)"></i>Urnas apuradas</span><span id="n-key-pause"><i style="background:var(--soft);border:1px solid var(--line)"></i>Divulgação pausada <span class="tag tag-nw">Notícia</span></span></div>
+    <div class="nchart"><svg id="nchart" role="img" aria-label="Gráfico: porcentagem de cada candidato e de urnas apuradas ao longo da noite. A linha vertical marca o horário escolhido."></svg></div>
+    <p class="small muted">A linha vertical marca o horário escolhido. Toque no gráfico para mudar o horário.</p>
   </div>
   <div class="panel">
     <h3>Por que a liderança muda durante a apuração</h3>
@@ -1030,7 +1037,7 @@ function nNotes(){
   $("n-sem").textContent=n.sem_hora?`${fmt(n.sem_hora)} seções não têm a hora de recebimento registrada. Os votos delas estão no total oficial, mas não neste gráfico.`:"Todas as urnas deste turno têm a hora de recebimento registrada.";
 }
 function nUpdate(){
-  const n=NG();$("n-missing").hidden=!!n;$("n-panel").hidden=!n;
+  const n=NG();$("n-missing").hidden=!!n;["n-panel","n-ctl","n-graf"].forEach(k=>$(k).hidden=!n);
   if(!n){$("n-missing").innerHTML="<strong>Dados deste turno ainda não disponíveis.</strong><p>A hora de chegada dos boletins deste turno ainda não foi processada.</p>";return}
   nChart();nNow();paintN();nUF();nWhy();
   const v=nV.find(v=>v.i<=nR[1]);$("n-viraBtn").hidden=!v;
