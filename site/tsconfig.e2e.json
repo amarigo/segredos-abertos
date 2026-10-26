@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "types": ["node"], "allowImportingTsExtensions": true },
-  "include": ["e2e", "tests", "playwright.config.ts", "playwright.mg.config.ts"]
+  "include": ["e2e", "tests", "playwright.config.ts", "playwright.mg.config.ts", "playwright.eleicao.config.ts"]
 }

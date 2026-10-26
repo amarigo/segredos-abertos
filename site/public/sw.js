@@ -12,8 +12,9 @@ self.addEventListener("activate", (e) => e.waitUntil(
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== location.origin) return;
-  // O nacional não responde pelas páginas do Minas Nossa: elas têm o próprio service worker
-  if (PREFIXO === "sa-" && url.pathname.startsWith(ESCOPO + "mg/")) return;
+  // O nacional não responde pelas páginas do Minas Nossa (têm o próprio service worker) nem pelas da Eleição 2026
+  // (página estática com planilhas grandes, que não devem ir para o cache do celular)
+  if (PREFIXO === "sa-" && (url.pathname.startsWith(ESCOPO + "mg/") || url.pathname.startsWith(ESCOPO + "eleicao2026/"))) return;
   e.respondWith(
     fetch(e.request)
       .then((r) => {

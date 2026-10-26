@@ -5,8 +5,10 @@ Quanto cada deputado federal e senador gasta da cota parlamentar, com quais empr
 ## Como funciona
 
 ```
-etl/   coletor em Python: baixa os dados oficiais e gera arquivos JSON
-site/  site e app (React + Vite, instalável no celular como PWA)
+etl/          coletor em Python: baixa os dados oficiais e gera arquivos JSON
+site/         site e app (React + Vite, instalável no celular como PWA)
+mg/           Minas Nossa, o recorte de Minas Gerais (/mg/)
+eleicao2026/  Eleição 2026 Aberta: presidente, 1º e 2º turno, urna por urna, com dados do TSE (/eleicao2026/)
 ```
 
 Um GitHub Action roda todo dia: baixa os dados, gera os JSON em `site/public/data/`, monta o site e publica no GitHub Pages.
