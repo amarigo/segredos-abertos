@@ -55,6 +55,14 @@ p { margin: 0; max-width: 68ch; }
 
 .wrap { max-width: 1100px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 
+/* Barra dos projetos (Brasil, Minas Nossa, Eleição 2026) */
+.projetos { background: #060b18; color: #aeb5c8; font-size: .82rem; }
+.projetos .wrap { display: flex; align-items: center; gap: 4px 14px; padding-block: 6px; overflow-x: auto; white-space: nowrap; }
+.projetos .wrap > * { flex-shrink: 0; }
+.projetos a { color: #d7dcea; text-decoration: none; padding: 4px 2px; }
+.projetos a:hover { color: #fff; text-decoration: underline; }
+.projetos a[aria-current="page"] { color: var(--gold); font-weight: 700; }
+
 /* Cabeçalho */
 .top { background: var(--navy); color: #fff; z-index: 20; }
 @media (min-width: 700px) { .top { position: sticky; top: env(safe-area-inset-top, 0px); } body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--navy); } }

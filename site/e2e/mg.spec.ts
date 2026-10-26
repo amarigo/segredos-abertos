@@ -253,6 +253,15 @@ test.describe("segurança", () => {
   });
 });
 
+test("barra dos projetos liga o Minas Nossa aos outros sites do Segredos Abertos", async ({ page }) => {
+  await page.goto("./");
+  const nav = page.getByRole("navigation", { name: "Projetos do Segredos Abertos" });
+  await expect(nav.getByRole("link", { name: "Brasil" })).toHaveAttribute("href", "../");
+  await expect(nav.getByRole("link", { name: "Minas Nossa" })).toHaveAttribute("href", "./");
+  await expect(nav.getByRole("link", { name: "Eleição 2026" })).toHaveAttribute("href", "../eleicao2026/");
+  await expect(nav.locator('a[aria-current="page"]')).toHaveText("Minas Nossa");
+});
+
 test.describe("caos no navegador", () => {
   test("arquivo da cidade que não carrega mostra aviso", async ({ page }) => {
     vigiar(page);
