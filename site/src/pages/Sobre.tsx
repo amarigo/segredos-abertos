@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { MG, SITE } from "../recorte";
 
 /* O que muda no Minas Nossa: o recorte de MG e as páginas das cidades */
@@ -40,6 +41,10 @@ export default function Sobre() {
         <li>Páginas oficiais de cada deputado (camara.leg.br/deputados) e de cada senador (Transparência do Senado): salário, verba de gabinete, equipe e benefícios.</li>
         <li>Receita Federal, base pública de CNPJ: dados das empresas e quadro de sócios. Consultada pelo espelho aberto <a href="https://minhareceita.org" target="_blank" rel="noreferrer">Minha Receita</a>.</li>
       </ul>
+      {!MG && <>
+        <h2>Incentivos: dinheiro público para empresas</h2>
+        <p>A página de <Link to="/incentivos">incentivos</Link> junta três fontes do <a href="https://portaldatransparencia.gov.br/download-de-dados" target="_blank" rel="noreferrer">Portal da Transparência</a>: os pagamentos diários do governo federal a empresas e entidades (compras, obras, serviços, convênios e subsídios, sem salários nem dívida pública), a renúncia fiscal por empresa (o imposto federal que deixou de ser cobrado, com dados da Receita Federal) e os pagamentos feitos com dinheiro de emendas, que são os únicos com o nome de um parlamentar. Pagamentos a órgãos e empresas públicas ficam de fora. Os arquivos diários são lidos aos poucos, do dia mais recente para o mais antigo, e a página diz quantos dias de cada ano já estão na conta.</p>
+      </>}
       <h2>O que é a cota parlamentar</h2>
       <p>É um valor mensal, além do salário, para pagar despesas do mandato: passagens, aluguel de escritório no estado, combustível, divulgação e outras. O parlamentar paga e pede reembolso com a nota fiscal. O valor muda conforme o estado, porque passagens para Brasília custam diferente.</p>
       <h2>Salário, equipe e benefícios</h2>

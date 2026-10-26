@@ -11,7 +11,8 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import autorias, camara, cnpj, emendas, ideologia, links_notas, pagamentos, passagens, recursos, senado, temas
+from . import (autorias, camara, cnpj, emendas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
+               renuncias, senado, temas)
 from .categorias import GRUPOS
 from . import util
 from .util import cnpj_valido, doc_kind, mask_cpf, write_json
@@ -216,6 +217,7 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
                 primeiro_pag[d["doc"]] = d["data"]
 
     emd = dados.get("emendas_empresas") or {}  # cnpj -> o que recebeu de emendas (pagamentos.por_empresa)
+    inc = dados.get("incentivos_empresas") or {}  # cnpj -> pagamentos do governo federal e renúncia fiscal (incentivos.py)
     socias = dados.get("empresas_socias") or {}
     todas_emps = {**socias, **emps}
     comuns = cnpj.socios_em_comum(emps, socias)
@@ -293,8 +295,8 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
 
     # ---------- Empresas ----------
     lista_emp = []
-    no_site = set(recebeu) | set(emd)
-    for doc in list(recebeu) + [c for c in emd if c not in recebeu]:
+    no_site = set(recebeu) | set(emd) | set(inc)
+    for doc in list(recebeu) + [c for c in emd if c not in recebeu] + [c for c in inc if c not in recebeu and c not in emd]:
         quem = recebeu.get(doc, {})
         total = round(sum(quem.values()), 2)
         de_emendas = emd.get(doc)
@@ -305,12 +307,12 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         resumo_e = {"cnpj": doc, "nome": (e or {}).get("razao_social") or nome_forn.get(doc, "") or (de_emendas or {}).get("nome", ""),
                     "total": total, "n_politicos": len(quem), "tem_socios": bool(e and e["socios"]),
                     "n_mesmo_endereco": len(vizinhas.get(doc, [])),
-                    **_emd(emd, doc)}
+                    **_emd(emd, doc), **_inc(inc, doc)}
         if quem:  # a lista de empresas é a da cota; as pagas só com emendas aparecem na página de emendas
             lista_emp.append(resumo_e)
         def outras_de(s: dict) -> list[dict]:
             return [{"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu.get(c, {}).values()), 2),
-                     **_emd(emd, c)}
+                     **_emd(emd, c), **_inc(inc, c)}
                     for c in socio_empresas.get(cnpj.chave_dono(s), []) if c != doc and c in no_site]
         socios = [{**s, "tipo": cnpj.tipo_socio(s), "outras_empresas": outras_de(s),
                    "doc": cnpj.cnpj_socio(s) if cnpj.tipo_socio(s) == "empresa" else s["doc"]}
@@ -337,10 +339,11 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
             **resumo_e, "empresa": {k: v for k, v in (e or {}).items() if k != "socios"} or None,
             "socios": socios, "donos_finais": donos, "pagadores": pagadores,
             "mesmo_endereco": [{"cnpj": c, "nome": emps[c]["razao_social"], "total": round(sum(recebeu.get(c, {}).values()), 2),
-                                **_emd(emd, c),
+                                **_emd(emd, c), **_inc(inc, c),
                                 "mesmos_socios": bool(cnpj.chaves_de_dono(c, todas_emps) & cnpj.chaves_de_dono(doc, todas_emps))}
                                for c in vizinhas.get(doc, []) if c in no_site],
             "emendas": {k: v for k, v in de_emendas.items() if k != "nome"} if de_emendas else None,
+            "governo": (inc.get(doc) or {}).get("governo"), "renuncia": (inc.get(doc) or {}).get("renuncia"),
             "alertas": alertas(e, total, primeiro) + alertas_donos(donos) + ([
                 f"Há outras {len(vizinhas[doc])} empresas fornecedoras registradas no mesmo endereço. Isso pode indicar o mesmo dono."
                 if len(vizinhas[doc]) > 1 else
@@ -508,6 +511,12 @@ def _emd(emd: dict, c: str) -> dict:
     return {"emendas": v} if v else {}
 
 
+def _inc(inc: dict, c: str) -> dict:
+    """{"governo": total, "renuncia": total} se a empresa recebeu pagamentos do governo federal ou teve renúncia fiscal."""
+    x = inc.get(c) or {}
+    return {k: x[k]["total"] for k in ("governo", "renuncia") if x.get(k) and x[k]["total"]}
+
+
 def alertas_donos(donos: list[dict]) -> list[str]:
     fins = {d["fim"] for d in donos}
     out = []
@@ -554,13 +563,35 @@ def main() -> None:
     ap.add_argument("--sem-emendas", action="store_true", help="não baixa as emendas parlamentares (Portal da Transparência)")
     ap.add_argument("--minutos-pagamentos", type=float, default=45,
                     help="tempo máximo, por execução, para ler os arquivos diários de pagamentos das emendas")
+    ap.add_argument("--sem-incentivos", action="store_true",
+                    help="não monta a página de incentivos (pagamentos a empresas e renúncia fiscal)")
+    ap.add_argument("--minutos-pagamentos-gerais", type=float, default=40,
+                    help="tempo máximo, por execução, para completar os dias antigos dos pagamentos a empresas")
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    pag = None if a.sem_emendas else pagamentos_emendas(a.anos, a.cache, a.minutos_pagamentos)
-    dados = coletar(a.anos, a.cache, a.max_empresas, not a.sem_recursos, cnpjs_emendas=pagamentos.cnpjs_empresas(pag))
-    if not a.sem_emendas:  # antes de montar(), para os avisos das emendas entrarem no meta.json
-        juntar_emendas(dados, a.anos, a.cache, a.saida, pag)
-    montar(dados, a.saida, a.anos)
+    executar(a.anos, a.cache, a.saida, max_empresas=a.max_empresas, com_recursos=not a.sem_recursos,
+             com_emendas=not a.sem_emendas, com_incentivos=not a.sem_incentivos,
+             minutos_pagamentos=a.minutos_pagamentos, minutos_gerais=a.minutos_pagamentos_gerais)
+
+
+def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500, com_recursos: bool = True,
+             com_emendas: bool = True, com_incentivos: bool = True, minutos_pagamentos: float = 45,
+             minutos_gerais: float = 40) -> None:
+    """A coleta inteira, na ordem certa (usada também pelos testes)."""
+    pag = pagamentos_emendas(anos, cache, minutos_pagamentos) if com_emendas else None
+    inc = coletar_incentivos(anos, cache, minutos_gerais) if com_incentivos else None
+    avisos = list(util.AVISOS)  # coletar() recomeça a lista de avisos
+    dados = coletar(anos, cache, max_empresas, com_recursos,
+                    cnpjs_emendas=pagamentos.cnpjs_empresas(pag) + incentivos.cnpjs_para_receita(*(inc or (None, None))))
+    for x in avisos:
+        util.avisar(x)
+    if com_emendas:  # antes de montar(), para os avisos das emendas entrarem no meta.json
+        juntar_emendas(dados, anos, cache, saida, pag)
+    if inc:
+        juntar_incentivos(dados, inc)
+    montar(dados, saida, anos)
+    if inc:
+        gravar_incentivos(dados, saida, anos, inc, pag)
 
 
 def pagamentos_emendas(anos: list[int], cache: Path, minutos: float) -> dict | None:
@@ -570,6 +601,42 @@ def pagamentos_emendas(anos: list[int], cache: Path, minutos: float) -> dict | N
     except Exception:  # noqa: BLE001
         log.exception("Pagamentos de emendas: erro; a página de emendas fica sem os documentos de pagamento")
         return None
+
+
+def coletar_incentivos(anos: list[int], cache: Path, minutos: float) -> tuple[dict | None, dict | None]:
+    """(pagamentos a empresas e entidades, renúncia fiscal). Se uma parte falhar, o resto do site segue."""
+    try:
+        arqs = pagamentos.coletar_geral(anos, cache / "pagamentos", minutos)
+        geral = pagamentos.resumir_geral(arqs, anos)
+    except Exception:  # noqa: BLE001
+        log.exception("Incentivos: erro nos pagamentos a empresas")
+        util.avisar("Incentivos: os pagamentos do governo federal a empresas não foram atualizados")
+        geral = None
+    try:
+        ren = renuncias.coletar(cache / "renuncias", max(anos))
+    except Exception:  # noqa: BLE001
+        log.exception("Incentivos: erro na renúncia fiscal")
+        util.avisar("Incentivos: a renúncia fiscal não foi atualizada")
+        ren = None
+    return geral, ren
+
+
+def juntar_incentivos(dados: dict, inc: tuple[dict | None, dict | None]) -> None:
+    """Põe em dados["incentivos_empresas"] o que cada empresa recebeu do governo e deixou de pagar, para as páginas."""
+    geral, ren = inc
+    docs = incentivos.paginas_de(geral, ren, dados["empresas"])
+    dados["incentivos_empresas"] = incentivos.por_empresa(geral, ren, docs)
+
+
+def gravar_incentivos(dados: dict, saida: Path, anos: list[int], inc: tuple[dict | None, dict | None], pag: dict | None) -> None:
+    """Depois de montar(): já sabemos quais empresas têm página e quais têm donos em comum."""
+    try:
+        emps, socias = dados["empresas"], dados.get("empresas_socias") or {}
+        paginas = {f.stem for f in (saida / "e").glob("*.json")}
+        rec = incentivos.Receita(emps, cnpj.socios_em_comum(emps, socias))
+        incentivos.gravar(saida, anos, inc[0], inc[1], pag, dados.get("emendas_autores") or {}, rec, paginas)
+    except Exception:  # noqa: BLE001
+        log.exception("Incentivos: erro ao gravar a página")
 
 
 def juntar_emendas(dados: dict, anos: list[int], cache: Path, saida: Path, pag: dict | None) -> None:
@@ -582,7 +649,8 @@ def juntar_emendas(dados: dict, anos: list[int], cache: Path, saida: Path, pag: 
         emps.pop(c, None)
     paginas = set(alvo) - publicas
     r = emendas.coletar(dados["politicos"], anos, cache / emendas.PASTA_CACHE, saida, pag, emps, paginas)
-    dados["emendas_empresas"] = pagamentos.por_empresa(pag, (r or {}).get("autores") or {}, paginas)
+    dados["emendas_autores"] = (r or {}).get("autores") or {}
+    dados["emendas_empresas"] = pagamentos.por_empresa(pag, dados["emendas_autores"], paginas)
 
 
 if __name__ == "__main__":

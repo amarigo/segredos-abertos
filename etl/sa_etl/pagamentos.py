@@ -164,6 +164,7 @@ def coletar(anos: list[int], cache: Path, minutos: float = 30, hoje: dt.date | N
             ok = _baixar_dia(nome, tmp)
             if ok:
                 d = ler_dia(tmp, empenhos_emenda)
+                _gravar_geral(cache, nome, tmp)  # o mesmo arquivo serve para os pagamentos a empresas (incentivos.py)
             elif ok is None:
                 d = {"empenhos": [], "pagamentos": [], "sem_arquivo": True}
             else:
@@ -321,3 +322,179 @@ def documento(i: dict) -> dict:
     return {"data": i["data"], "codigo": i["pag"], "tipo": i["tipo"], "orgao": i["orgao"], "ug": i["ug"],
             "favorecido": i["fav"], "cnpj": i["doc"], "valor": round(i["valor"], 2), "empenho": i["emp"],
             "emenda": i["emenda"], "descricao": i["desc"], "url": url_documento(i["pag"]), "url_empenho": url_documento(i["emp"])}
+
+
+# ---------------------------------------------------------------- todos os pagamentos a empresas e entidades
+#
+# Além das emendas, os mesmos arquivos diários trazem todo pagamento do governo federal. Para a página de
+# incentivos guardamos, por dia, quanto cada empresa ou entidade (CNPJ que não é órgão público) recebeu, para quê
+# (pela natureza da despesa do empenho) e de qual órgão. Pessoal e dívida pública ficam de fora.
+
+VERSAO_GERAL = 1
+CATEGORIAS_GERAL = {
+    "contrato": "Compras, obras e serviços contratados",
+    "repasse": "Repasses a entidades (convênios, auxílios e subvenções sociais)",
+    "subsidio": "Subsídios (subvenções econômicas)",
+    "outro": "Outros pagamentos (indenizações, decisões judiciais, despesas de anos anteriores...)",
+}
+CONTRATO = {"30", "31", "32", "33", "35", "37", "39", "40", "51", "52"}
+REPASSE = {"41", "42", "43"}
+
+# Empresas públicas e de economia mista que a regra de nomes de eh_publico não pega. Pagamento a elas é dinheiro que
+# fica dentro do próprio governo. As demais são reconhecidas depois pela natureza jurídica na Receita.
+PUBLICO_EXTRA = re.compile(r"\b(SERVICO FEDERAL DE PROCESSAMENTO|SERPRO|DATAPREV|CORREIOS E TELEGRAFOS|EMPRESA BRASIL DE COMUNICACAO|"
+                           r"EMPRESA BRASILEIRA DE PESQUISA|COMPANHIA NACIONAL DE ABASTECIMENTO|IMPRENSA NACIONAL|CASA DA MOEDA|"
+                           r"BANCO NACIONAL DE DESENVOLVIMENTO|FINANCIADORA DE ESTUDOS E PROJETOS|PETROLEO BRASILEIRO|"
+                           r"UNIVERSIDADE ESTADUAL|CONSELHO (FEDERAL|REGIONAL)|INSTITUTO NACIONAL DO SEGURO SOCIAL|"
+                           r"AGENCIA NACIONAL|BANCO CENTRAL)\b")
+
+
+def eh_publico_geral(nome: str) -> bool:
+    n = norm_name(nome)
+    return bool(PUBLICO.search(n) or PUBLICO_EXTRA.search(n))
+
+
+def categoria_despesa(natureza: str) -> str | None:
+    """Pela natureza da despesa (ex.: 33903900 = custeio, aplicação direta, serviços de pessoa jurídica).
+    None: pessoal e dívida pública, que não entram na conta."""
+    d = digits(natureza)
+    if len(d) < 6:
+        return "outro"
+    grupo, modalidade, elemento = d[1], d[2:4], d[4:6]
+    if grupo in ("1", "2", "6"):  # pessoal e encargos, juros e amortização da dívida
+        return None
+    if elemento == "45":
+        return "subsidio"
+    if elemento in REPASSE or modalidade in ("50", "60"):
+        return "repasse"
+    if elemento in CONTRATO:
+        return "contrato"
+    return "outro"
+
+
+def ler_geral(zip_path: Path) -> dict:
+    """Um dia: {"f": {cnpj: [nome, {categoria: valor}, n pagamentos, {índice do órgão: valor}]}, "o": [órgãos]}."""
+    valores: dict[str, dict[str, float]] = {}
+    favs: dict[str, list] = {}
+    orgaos: dict[str, int] = {}
+    with zipfile.ZipFile(zip_path) as z:
+        for r in _tabela(z, "_Despesas_Pagamento_EmpenhosImpactados.csv"):
+            v = to_float(r.get("Valor Pago (R$)")) + to_float(r.get("Valor Restos a Pagar Pagos (R$)"))
+            if not v:
+                continue
+            cat = categoria_despesa(r.get("Código Natureza Despesa Completa", ""))
+            if cat is None:
+                continue
+            d = valores.setdefault(r.get("Código Pagamento", ""), {})
+            d[cat] = d.get(cat, 0.0) + v
+        if valores:
+            for r in _tabela(z, "_Despesas_Pagamento.csv"):
+                cats = valores.get(r.get("Código Pagamento", ""))
+                doc = digits(r.get("Código Favorecido"))
+                nome = (r.get("Favorecido") or "").strip()
+                if not cats or len(doc) != 14 or eh_publico_geral(nome):
+                    continue
+                o = orgaos.setdefault((r.get("Órgão Superior") or "").strip() or "Não informado", len(orgaos))
+                f = favs.setdefault(doc, [nome, {}, 0, {}])
+                f[2] += 1
+                for c, v in cats.items():
+                    f[1][c] = round(f[1].get(c, 0.0) + v, 2)
+                    f[3][o] = round(f[3].get(o, 0.0) + v, 2)
+    return {"f": favs, "o": sorted(orgaos, key=orgaos.get)}
+
+
+def _arquivo_geral(cache: Path, dia: str) -> Path:
+    return cache / f"{dia}-geral-v{VERSAO_GERAL}.json.gz"
+
+
+def _gravar_geral(cache: Path, dia: str, zip_path: Path | None) -> None:
+    try:
+        d = ler_geral(zip_path) if zip_path else {"f": {}, "o": [], "sem_arquivo": True}
+    except Exception as e:  # noqa: BLE001 - um dia com defeito não derruba as emendas
+        log.warning("Pagamentos gerais: não foi possível ler %s (%s)", dia, e)
+        return
+    _arquivo_geral(cache, dia).write_bytes(gzip.compress(json.dumps(d, ensure_ascii=False, separators=(",", ":")).encode()))
+
+
+def coletar_geral(anos: list[int], cache: Path, minutos: float = 40, hoje: dt.date | None = None) -> list[Path]:
+    """Lê os dias dos anos do site que ainda não têm o resumo geral, do mais recente para o mais antigo, até o
+    limite de tempo. Os dias novos já vêm de coletar() (emendas), que lê o mesmo arquivo; aqui completamos o resto
+    aos poucos, a cada execução."""
+    hoje = hoje or dt.date.today()
+    cache.mkdir(parents=True, exist_ok=True)
+    inicio, novos, falhas = time.time(), 0, 0
+    tmp = cache / "dia-geral.zip"
+    dia = min(hoje - dt.timedelta(days=1), dt.date(max(anos), 12, 31))
+    primeiro = dt.date(min(anos), 1, 1)
+    while dia >= primeiro:
+        nome = dia.strftime("%Y%m%d")
+        if not _arquivo_geral(cache, nome).exists():
+            if time.time() - inicio > minutos * 60:
+                break
+            ok = _baixar_dia(nome, tmp)
+            if ok:
+                _gravar_geral(cache, nome, tmp)
+                novos += 1
+                falhas = 0
+            elif ok is None:
+                if (hoje - dia).days > 5:  # dia recente sem arquivo ainda pode aparecer depois
+                    _gravar_geral(cache, nome, None)
+                falhas = 0
+            else:
+                falhas += 1
+                if falhas >= 5:
+                    log.warning("Pagamentos gerais: Portal falhou em %d dias seguidos; para em %s", falhas, nome)
+                    break
+        dia -= dt.timedelta(days=1)
+    tmp.unlink(missing_ok=True)
+    lidos = sorted(cache.glob(f"*-geral-v{VERSAO_GERAL}.json.gz"))
+    log.info("Pagamentos gerais: %d dias lidos agora, %d no total", novos, len(lidos))
+    return lidos
+
+
+def resumir_geral(arquivos: list[Path], anos: list[int], hoje: dt.date | None = None) -> dict:
+    """Soma, por ano do pagamento, o que cada empresa ou entidade recebeu. Diz também quantos dias de cada ano
+    já foram lidos (a leitura completa leva várias execuções).
+
+    {"anos": {ano: {cnpj: {"nome", "valor", "n", "cats": {...}, "orgaos": {...}}}}, "cobertura": {ano: {...}}}"""
+    hoje = hoje or dt.date.today()
+    anos_set = set(anos)
+    out: dict[int, dict[str, dict]] = {a: {} for a in anos}
+    dias: dict[int, list[str]] = {a: [] for a in anos}
+    for f in sorted(arquivos):
+        dia = f.name[:8]
+        if not dia.isdigit() or int(dia[:4]) not in anos_set:
+            continue
+        ano = int(dia[:4])
+        try:
+            d = json.loads(gzip.decompress(f.read_bytes()))
+        except (OSError, ValueError) as e:
+            log.warning("Pagamentos gerais: arquivo com defeito %s (%s)", f.name, e)
+            continue
+        dias[ano].append(dia)
+        orgs = d.get("o") or []
+        for doc, (nome, cats, n, por_org) in (d.get("f") or {}).items():
+            e = out[ano].get(doc)
+            if e is None:
+                e = out[ano][doc] = {"nome": nome, "valor": 0.0, "n": 0, "cats": {}, "orgaos": {}}
+            e["n"] += n
+            for c, v in cats.items():
+                e["cats"][c] = e["cats"].get(c, 0.0) + v
+                e["valor"] += v
+            for i, v in por_org.items():
+                o = orgs[int(i)] if int(i) < len(orgs) else "Não informado"
+                e["orgaos"][o] = e["orgaos"].get(o, 0.0) + v
+    cobertura = {}
+    for ano in anos:
+        fim = min(dt.date(ano, 12, 31), hoje - dt.timedelta(days=1))
+        total = max(0, (fim - dt.date(ano, 1, 1)).days + 1)
+        ds = sorted(dias[ano])
+        cobertura[ano] = {"dias": len(ds), "dias_ano": total, "de": _iso(ds[0]) if ds else "", "ate": _iso(ds[-1]) if ds else "",
+                          "completo": total > 0 and len(ds) >= total - 5}
+    log.info("Pagamentos gerais: %s", ", ".join(f"{a}: {len(out[a])} recebedores, {cobertura[a]['dias']}/{cobertura[a]['dias_ano']} dias"
+                                                for a in anos))
+    return {"anos": out, "cobertura": cobertura}
+
+
+def _iso(dia: str) -> str:
+    return f"{dia[:4]}-{dia[4:6]}-{dia[6:8]}"

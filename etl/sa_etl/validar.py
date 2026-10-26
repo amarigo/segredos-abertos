@@ -188,6 +188,9 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
     # ---------------- emendas
     _conferir_emendas(saida, r)
 
+    # ---------------- incentivos (pagamentos a empresas e renúncia fiscal)
+    _conferir_incentivos(saida, r)
+
     # ---------------- privacidade e links (em todos os arquivos)
     for f in sorted(saida.rglob("*.json")):
         x = _ler(f, r)
@@ -269,6 +272,10 @@ def _conferir_empresa(saida: Path, f: Path, por_id: dict, r: Resultado) -> None:
                 break
     if e.get("n_notas") is not None and (n_notas != e["n_notas"] or not _perto(soma_notas, e["total"], n_notas)):
         r.erro(f"Empresa {c}: as notas (R$ {soma_notas:.2f}, {n_notas}) não batem com o total (R$ {e['total']})")
+    for k in ("governo", "renuncia"):
+        x = e.get(k)
+        if x and not _perto(x["total"], sum((x.get("por_ano") or {}).values()), len(x.get("por_ano") or {})):
+            r.erro(f"Empresa {c}: total de {k} ({x['total']}) diferente da soma dos anos")
     for d in e.get("donos_finais") or []:
         cadeia = [x["cnpj"][:8] for x in d.get("cadeia") or []]
         if d.get("fim") not in FINS:
@@ -301,6 +308,44 @@ def _conferir_emendas(saida: Path, r: Resultado) -> None:
             cats = fav.get("por_categoria") or []
             if not _perto(fav["total"], sum(x["valor"] for x in cats), len(cats)):
                 r.erro(f"Emendas {ano}: total dos favorecidos diferente da soma por categoria")
+
+
+def _conferir_incentivos(saida: Path, r: Resultado) -> None:
+    pasta = saida / "incentivos"
+    if not (pasta / "indice.json").exists():
+        r.alerta("Sem dados da página de incentivos (incentivos/indice.json)")
+        return
+    idx = _ler(pasta / "indice.json", r) or {}
+    for ano in idx.get("anos", []):
+        d = _ler(pasta / f"{ano}.json", r) or {}
+        p = d.get("pagamentos")
+        if p:
+            cats = p.get("por_categoria") or []
+            if not _perto(p["total"], sum(x["valor"] for x in cats), len(cats)):
+                r.erro(f"Incentivos {ano}: total dos pagamentos diferente da soma por categoria")
+            top = [x["valor"] for x in p.get("top") or []]
+            if top != sorted(top, reverse=True) or (top and top[0] > p["total"] + 0.01):
+                r.erro(f"Incentivos {ano}: lista dos que mais receberam fora de ordem ou maior que o total")
+        em = d.get("emendas")
+        if em:
+            soma = sum(x["valor"] for x in em.get("politicos") or []) + sum(x["valor"] for x in em.get("coletivos") or [])
+            if em.get("n_politicos", 0) <= len(em.get("politicos") or []) and len(em.get("coletivos") or []) < 40 \
+                    and not _perto(em["total"], soma, len(em.get("politicos") or []) + 1):
+                r.erro(f"Incentivos {ano}: total das emendas a empresas diferente da soma por parlamentar")
+            ps = em.get("partidos") or []
+            if sum(x["valor"] for x in ps) > em["total"] + 0.01 * max(len(ps), 1):
+                r.erro(f"Incentivos {ano}: soma dos partidos maior que o total das emendas a empresas")
+    for x in idx.get("anos_renuncia", []):
+        d = _ler(pasta / f"renuncia-{x['ano']}.json", r) or {}
+        if not d:
+            continue
+        for nome, lista in (("estado", [[u, v] for u, v, *_ in d.get("por_uf") or []]),
+                            ("setor", [[s["setor"], s["valor"]] for s in d.get("por_setor") or []])):
+            if not _perto(d["total"], sum(v for _, v in lista), len(lista)):
+                r.erro(f"Renúncia {x['ano']}: soma por {nome} diferente do total")
+        top = [e["valor"] for e in d.get("top") or []]
+        if top != sorted(top, reverse=True):
+            r.erro(f"Renúncia {x['ano']}: lista das empresas fora de ordem")
 
 
 def _comparar_anterior(meta: dict, ant: dict, r: Resultado, ignorar: bool) -> None:

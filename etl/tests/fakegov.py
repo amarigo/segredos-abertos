@@ -87,6 +87,15 @@ class FakeGov:
                                                               [pessoa("OUTRA DONA", "***200000**")], {"cep": "03003000"})
         self.receita["46395000000139"] = {**self._empresa("46395000000139", "MUNICIPIO DE SAO PAULO", [], {}),
                                           "natureza_juridica": "Município"}
+        # incentivos: empresa contratada pelo governo (mesmo dono de fornecedoras da cota), entidade sem fins lucrativos,
+        # empresa pública (não entra) e empresa com renúncia fiscal que não está na Receita
+        r3 = random.Random(seed + 3)
+        self.incentivo_empresas = [_cnpj(r3) for _ in range(4)]
+        ce, assoc, publica, _sem = self.incentivo_empresas
+        self.receita[ce] = self._empresa(ce, "CONTRATADA FICTICIA LTDA", [pessoa("DONO FICTICIO 3", "***100003**")], {"cep": "04004000"})
+        self.receita[assoc] = {**self._empresa(assoc, "ASSOCIACAO FICTICIA DE APOIO", [pessoa("PRESIDENTE FICTICIA", "***300000**")],
+                                               {"cep": "05005000"}), "natureza_juridica": "Associação Privada", "uf": "BA"}
+        self.receita[publica] = {**self._empresa(publica, "ESTATAL FICTICIA SA", [], {}), "natureza_juridica": "Empresa Pública"}
         self.receita[h1] = self._empresa(h1, "HOLDING UM SA", [empresa(h2, "HOLDING DOIS")], {})
         self.receita[h2] = self._empresa(h2, "HOLDING DOIS SA", [pessoa("DONA FINAL", "***777777**")], {})
         self.receita[h3] = self._empresa(h3, "HOLDING TRES SA", [empresa(h4, "HOLDING QUATRO")], {})
@@ -311,6 +320,11 @@ class FakeGov:
         if "emendas-parlamentares" in url or "EmendasParlamentares.zip" in url:
             return 200, self._emendas_zip(), "application/zip"
 
+        m = re.search(r"/renuncias/(\d{4})_RenunciasFiscais\.zip$", path)
+        if m:
+            z = self._renuncias_zip(int(m.group(1)))
+            return (200, z, "application/zip") if z else (403, b"<Error>AccessDenied</Error>", "application/xml")
+
         if "/download-de-dados/despesas/" in url:  # arquivos diários de despesas (pagamentos das emendas)
             dia = path.rstrip("/").rsplit("/", 1)[-1]
             z = self._despesas_dia(dia)
@@ -375,12 +389,51 @@ class FakeGov:
                 imp.append([f"11111111111{ano}OB000099", f"11111111111{ano}NE000099", "33903900", "39", "999,00", "0,00"])
                 pag.append([f"11111111111{ano}OB000099", f"20/04/{ano}", "Ordem Bancária", "Ministério da Saúde", "Fundo Nacional de Saúde",
                             ug, favs[0][0], favs[0][1], "OUTRA COISA", "999,00"])
+                # pagamentos sem emenda (página de incentivos): contrato, convênio com entidade, estatal e folha (não entram as duas últimas)
+                ce, assoc, publica, _ = self.incentivo_empresas
+                for k, (doc, nome, natureza, valor, org) in enumerate([
+                        (ce, "CONTRATADA FICTICIA LTDA", "33903900", "100000,00", "Ministério da Defesa"),
+                        (ce, "CONTRATADA FICTICIA LTDA", "44905100", "50000,00", "Ministério dos Transportes"),
+                        (assoc, "ASSOCIACAO FICTICIA DE APOIO", "33504100", "20000,00", "Ministério da Cultura"),
+                        (publica, "ESTATAL FICTICIA SA", "33903900", "70000,00", "Ministério da Defesa"),
+                        (ce, "CONTRATADA FICTICIA LTDA", "31901100", "999,00", "Ministério da Defesa")]):
+                    cod = f"22222222222{ano}OB00000{k}"
+                    imp.append([cod, f"22222222222{ano}NE00000{k}", natureza, "00", valor, "0,00"])
+                    pag.append([cod, f"20/04/{ano}", "Ordem Bancária", org, org, "UG FICTICIA", doc, nome, "CONTRATO", valor])
                 z.writestr(f"{dia}_Despesas_Pagamento_EmpenhosImpactados.csv", _csv(
                     ["Código Pagamento", "Código Empenho", "Código Natureza Despesa Completa", "Subitem", "Valor Pago (R$)",
                      "Valor Restos a Pagar Pagos (R$)"], imp).encode("latin-1"))
                 z.writestr(f"{dia}_Despesas_Pagamento.csv", _csv(
                     ["Código Pagamento", "Data Emissão", "Tipo Documento", "Órgão Superior", "Órgão", "Unidade Gestora",
                      "Código Favorecido", "Favorecido", "Observação", "Valor do Pagamento Convertido pra R$"], pag).encode("latin-1"))
+        return buf.getvalue()
+
+
+    def _renuncias_zip(self, ano: int) -> bytes | None:
+        """Renúncia fiscal do ano do site e do anterior (o mais recente pela metade, como na Receita)."""
+        if ano not in self.anos and ano + 1 not in self.anos:
+            return None
+        ce, _, _, sem = self.incentivo_empresas
+        f = 1 if ano + 1 in self.anos else 0.5
+        empresas = [(ce, "CONTRATADA FICTICIA LTDA", "41204", "Construção de edifícios", "SAO PAULO", "SP", 500000 * f),
+                    (self.fornecedoras[0], "FORNECEDORA FICTICIA 00 LTDA", "49302", "Transporte rodoviário de carga", "SAO PAULO", "SP", 200000 * f),
+                    (sem, "INDUSTRIA SEM CADASTRO SA", "10996", "Fabricação de alimentos", "MANAUS", "AM", 300000 * f),
+                    ("-3", "Inválido", "", "", "", "", 1000)]
+        num = lambda v: f"{v:.2f}".replace(".", ",")  # noqa: E731
+        ben = [[str(ano), c, n, "", cod, cnae, mun, uf, num(v)] for c, n, cod, cnae, mun, uf, v in empresas]
+        det = []
+        for c, n, cod, cnae, mun, uf, v in empresas:
+            det.append([str(ano), c, n, "", cod, cnae, mun, uf, "Tributo Federal", "Zona Franca de Manaus" if uf == "AM" else "Sudene",
+                        "Lei 0000/00", "Descrição", "IRPJ", "Lucro Real", num(v * 0.75)])
+            det.append([str(ano), c, n, "", cod, cnae, mun, uf, "Tributo Federal", "Desoneração da folha", "Lei 0001/00", "Descrição",
+                        "Contribuição Previdenciária", "Lucro Real", num(v * 0.25)])
+        cab = ["Ano-calendário", "CNPJ", "Razão Social", "Nome Fantasia", "Código CNAE", "CNAE", "Município", "UF"]
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr(f"{ano}_RenúnciasFiscaisPorBeneficiário.csv", _csv(cab + ["Valor Renúncia Fiscal (R$)"], ben).encode("latin-1"))
+            z.writestr(f"{ano}_RenúnciasFiscais.csv", _csv(cab + ["Tipo Renúncia", "Benefício Fiscal", "Fundamento Legal", "Descrição Benefício",
+                                                                   "Tributo", "Forma Tributação", "Valor Renúncia Fiscal (R$)"], det).encode("latin-1"))
+            z.writestr(f"{ano}_EmpresasHabilitadas.csv", _csv(["CNPJ"], [[ce]]).encode("latin-1"))
         return buf.getvalue()
 
 

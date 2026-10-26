@@ -1,0 +1,7 @@
+/* Página de incentivos (dinheiro público para empresas) */
+.inc-abas { justify-self: start; flex-wrap: wrap; max-width: 100%; }
+.inc-abas button { white-space: nowrap; }
+.inc-sub { margin: 8px 0 4px; }
+.inc-donos { margin-top: 2px; overflow-wrap: anywhere; }
+.inc-tabela td:first-child { width: 2.5em; }
+@media (max-width: 520px) { .inc-tabela th:first-child, .inc-tabela td:first-child { display: none; } }

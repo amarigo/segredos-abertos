@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from fakegov import FakeGov, instalar
-from sa_etl import build, pagamentos, util
+from sa_etl import build, util
 from sa_etl.validar import validar
 
 MINIMOS_TESTE = {"camara": 1, "senado": 1, "votacoes": 1}
@@ -25,17 +25,14 @@ class Coleta:
         self.gov = instalar(self.monkeypatch, gov)
         return gov
 
-    def rodar(self, anos=(2025,), com_emendas=True) -> Path:
+    def rodar(self, anos=(2025,), com_emendas=True, com_incentivos=True) -> Path:
         assert self.gov, "chame usar(FakeGov(...)) antes"
         self.n += 1
         util.reiniciar_quedas()  # cada coleta é um processo novo no GitHub Actions
         saida = self.tmp / f"saida{self.n}"
         anos = list(anos)
-        pag = build.pagamentos_emendas(anos, self.cache, 5) if com_emendas else None
-        dados = build.coletar(anos, self.cache, max_empresas=200, com_recursos=False, cnpjs_emendas=pagamentos.cnpjs_empresas(pag))
-        if com_emendas:
-            build.juntar_emendas(dados, anos, self.cache, saida, pag)
-        build.montar(dados, saida, anos)
+        build.executar(anos, self.cache, saida, max_empresas=200, com_recursos=False, com_emendas=com_emendas,
+                       com_incentivos=com_incentivos, minutos_pagamentos=5, minutos_gerais=5)
         return saida
 
     @staticmethod

@@ -72,9 +72,38 @@ test.describe("jornada", () => {
     expect(erros).toEqual([]);
   });
 
+  test("incentivos: quem recebeu mais, donos e quem deu mais batem com os arquivos", async ({ page }) => {
+    const erros = vigiar(page);
+    const inc = dados(`incentivos/${ANO}.json`);
+    const maior = inc.pagamentos.top[0];
+    await page.goto("./#/incentivos");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Quem ganha com o dinheiro público");
+    const tabela = page.locator(".inc-tabela");
+    await expect(tabela.locator("tbody tr").first()).toContainText(maior.nome);
+    await expect(tabela.locator("tbody tr").first()).toContainText(sp(brl(maior.valor)));
+    await expect(tabela.locator("tbody tr").first()).toContainText(maior.donos[0]);
+    // renúncia fiscal: o ano padrão é o último completo
+    const idx = dados("incentivos/indice.json");
+    const anoR = idx.anos_renuncia.filter((a: { parcial: boolean }) => !a.parcial).pop().ano;
+    const ren = dados(`incentivos/renuncia-${anoR}.json`);
+    await page.getByRole("group", { name: "De onde vem o dinheiro" }).first().getByRole("button", { name: "Deixou de pagar imposto" }).click();
+    await expect(tabela.locator("tbody tr").first()).toContainText(ren.top[0].nome);
+    await expect(tabela.locator("tbody tr").first()).toContainText(sp(brl(ren.top[0].valor)));
+    // quem deu mais: partidos das emendas
+    for (const p of inc.emendas.partidos) await expect(page.locator("main")).toContainText(p.sigla);
+    await expect(page.locator(".emd-autor").first()).toContainText(inc.emendas.politicos[0].nome);
+    // a empresa abre com os donos e o que recebeu do governo
+    await page.getByRole("button", { name: "Recebeu do governo" }).first().click();
+    await tabela.locator("tbody tr").first().getByRole("link", { name: maior.nome }).click();
+    await expect(page).toHaveURL(new RegExp(`#/e/${maior.cnpj}`));
+    await expect(page.locator("main")).toContainText("Pagamentos do governo federal");
+    await expect(page.locator("main")).toContainText(maior.donos[0]);
+    expect(erros).toEqual([]);
+  });
+
   test("todas as páginas do menu abrem sem erro", async ({ page }) => {
     const erros = vigiar(page);
-    for (const rota of ["politicos", "empresas", "votacoes", "partidos", "emendas", "sobre"]) {
+    for (const rota of ["politicos", "empresas", "votacoes", "partidos", "emendas", "incentivos", "sobre"]) {
       await page.goto(`./#/${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();
       await expect(page.locator("main")).not.toContainText("Não foi possível");
@@ -85,7 +114,7 @@ test.describe("jornada", () => {
   test("sem rolagem lateral no celular", async ({ page }, info) => {
     test.skip(info.project.name !== "celular");
     vigiar(page);
-    for (const rota of ["", `#/p/${pols[0].id}`, "#/votacoes", "#/empresas"]) {
+    for (const rota of ["", `#/p/${pols[0].id}`, "#/votacoes", "#/empresas", "#/incentivos"]) {
       await page.goto(`./${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();
       const largura = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

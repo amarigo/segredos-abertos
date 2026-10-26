@@ -10,6 +10,7 @@ import VotacaoPage from "./pages/Votacao";
 import Sobre from "./pages/Sobre";
 import Partidos from "./pages/Partidos";
 import Emendas from "./pages/Emendas";
+import Incentivos from "./pages/Incentivos";
 import Cidades from "./pages/Cidades";
 import CidadePage from "./pages/Cidade";
 import Assembleia from "./pages/Assembleia";
@@ -69,6 +70,7 @@ export default function App() {
             <NavLink to="/votacoes">Votações</NavLink>
             <NavLink to="/partidos">Partidos</NavLink>
             {!MG && <NavLink to="/emendas">Emendas</NavLink>}
+            {!MG && <NavLink to="/incentivos">Incentivos</NavLink>}
             <NavLink to="/sobre">Como funciona</NavLink>
           </nav>
           <AnoSeletor />
@@ -86,6 +88,7 @@ export default function App() {
           <Route path="/v/:id" element={<VotacaoPage />} />
           <Route path="/partidos" element={<Partidos />} />
           {!MG && <Route path="/emendas" element={<Emendas />} />}
+          {!MG && <Route path="/incentivos" element={<Incentivos />} />}
           {MG && <Route path="/cidades" element={<Cidades />} />}
           {MG && <Route path="/cidade/:id" element={<CidadePage />} />}
           {MG && <Route path="/governo" element={<GovernoPage />} />}

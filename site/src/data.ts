@@ -109,10 +109,10 @@ export interface DonoFinal {
   fim: "pessoa" | "estrangeiro" | "sem_socios" | "sem_dados" | "limite" | "ciclo";
   outras_empresas: OutraEmpresa[];
 }
-/** Outra empresa do mesmo dono: total recebido da cota e, se houver, de emendas */
-export interface OutraEmpresa { cnpj: string; nome: string; total: number; emendas?: number }
-export interface EmpresaResumo { cnpj: string; nome: string; total: number; n_politicos: number; tem_socios: boolean; n_mesmo_endereco?: number; tem_holding?: boolean; emendas?: number }
-export interface Empresa extends Omit<EmpresaResumo, "emendas"> {
+/** Outra empresa do mesmo dono: total recebido da cota e, se houver, de emendas, do governo federal e renúncia fiscal */
+export interface OutraEmpresa { cnpj: string; nome: string; total: number; emendas?: number; governo?: number; renuncia?: number }
+export interface EmpresaResumo { cnpj: string; nome: string; total: number; n_politicos: number; tem_socios: boolean; n_mesmo_endereco?: number; tem_holding?: boolean; emendas?: number; governo?: number; renuncia?: number }
+export interface Empresa extends Omit<EmpresaResumo, "emendas" | "governo" | "renuncia"> {
   empresa: null | { razao_social: string; nome_fantasia: string; situacao: string; abertura: string; atividade: string; municipio: string; uf: string; capital_social: number; porte: string; natureza: string;
     endereco?: { logradouro: string; numero: string; complemento: string; bairro: string; cep: string } };
   socios: Socio[];
@@ -120,6 +120,10 @@ export interface Empresa extends Omit<EmpresaResumo, "emendas"> {
   /** O que recebeu de emendas parlamentares (pagamentos do governo federal) */
   emendas?: null | { total: number; por_ano: Record<string, number>; orgaos: [string, number][];
     autores: { nome: string; politico: string | null; partido: string; valor: number }[]; docs: DocPagamento[] };
+  /** Pagamentos do governo federal (compras, obras, serviços, convênios, subsídios), pelo ano do pagamento */
+  governo?: null | { total: number; por_ano: Record<string, number>; cats: [string, number][]; orgaos: [string, number][] };
+  /** Renúncia fiscal: imposto federal que deixou de pagar, pelo ano-calendário */
+  renuncia?: null | { total: number; por_ano: Record<string, number>; beneficios: [string, number][]; fonte: string };
   n_notas?: number; notas_por_ano?: Record<string, number>;
   por_mes?: { politico: string; nome: string; ano: number; mes: number; valor: number }[];
   mesmo_endereco?: (OutraEmpresa & { mesmos_socios: boolean })[]; pagadores: { politico: string; nome: string; partido: string; uf: string; valor: number }[]; alertas: string[];
