@@ -220,3 +220,12 @@ def test_api_relida_todo_mes_sem_tirar_os_dados_do_site(tmp_path, monkeypatch):
     est.write_text(json.dumps(e))
     assert api.coletar(0)  # a releitura começou e não terminou: o site continua com a leitura anterior
     assert sorted(api.anos(4)) == [2024, 2025]
+
+
+def test_com_chave_a_api_vem_primeiro(coleta, monkeypatch):
+    """Regra do projeto: a API oficial é a primeira opção; os arquivos só entram se ela não der."""
+    monkeypatch.setenv("PORTAL_TRANSPARENCIA_CHAVE", "chave-de-teste")
+    gov = coleta.usar(FakeGov())
+    saida = coleta.rodar()
+    assert not any("RenunciasFiscais.zip" in c or "/download-de-dados/renuncias/" in c for c in gov.chamadas)
+    assert coleta.ler(saida, "incentivos/renuncia-2024.json")["url"] == renuncias.CONSULTA
