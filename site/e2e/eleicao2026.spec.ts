@@ -134,3 +134,13 @@ test.describe("celular pequeno (320 px)", () => {
     await expect(page.locator("nav.menu")).toBeInViewport();
   });
 });
+
+test("comparecimento e abstenção usam a mesma base do TSE (exterior)", async ({ page }) => {
+  // O TSE divide pelos aptos das seções instaladas; no exterior há seções não instaladas.
+  const tse = JSON.parse(readFileSync(new URL("../../eleicao2026/dados/tse/zz-6258.json", import.meta.url), "utf-8"));
+  await page.goto("./#diferencas");
+  await page.selectOption("#cmp-uf", "ZZ");
+  await expect(page.locator("#t-cmp")).toContainText(tse.e.pc + "%");
+  await expect(page.locator("#t-cmp")).toContainText(tse.e.pa + "%");
+  await expect(page.locator("#cmp-ni")).toContainText("não foram instaladas");
+});

@@ -35,7 +35,8 @@ def dados_site(oficial, resumos, noites=None):
     for e, r in (('6257', '1'), ('6258', '2')):
         D['r'][r] = {}
         for uf, rec in oficial[e].items():
-            D['r'][r][uf] = {'v': {k: c['v'] for k, c in rec['cand'].items()}, 'apt': rec['aptos'], 'comp': rec['comp'],
+            D['r'][r][uf] = {'v': {k: c['v'] for k, c in rec['cand'].items()}, 'apt': rec['aptos'],
+                             'ai': rec['aptos_inst'], 'comp': rec['comp'],
                              'abst': rec['abst'], 'br': rec['brancos'], 'nu': rec['nulos'], 'val': rec['validos'],
                              'sec': rec['secoes'], 'atual': rec['atual']}
             for k, c in rec['cand'].items():

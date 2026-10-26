@@ -47,7 +47,9 @@ def ler(d):
             for c in p['cand']:
                 cand[c['n']] = {'nm': c['nmu'], 'sg': p['sg'], 'v': int(c['vap'])}
     return {
-        'cand': cand, 'aptos': int(d['e']['te']), 'comp': int(d['e']['c']), 'abst': int(d['e']['a']),
+        'cand': cand, 'aptos': int(d['e']['te']),
+        # o TSE calcula comparecimento e abstenção sobre os aptos das seções instaladas (esi)
+        'aptos_inst': int(d['e'].get('esi', d['e']['te'])), 'comp': int(d['e']['c']), 'abst': int(d['e']['a']),
         'brancos': int(d['v']['vb']), 'nulos': int(d['v']['tvn']), 'validos': int(d['v']['vv']),
         'secoes': int(d['s']['ts']), 'sec_tot': int(d['s']['st']), 'pst': d['s']['pst'],
         'atual': d['dg'] + ' ' + d['hg'],
