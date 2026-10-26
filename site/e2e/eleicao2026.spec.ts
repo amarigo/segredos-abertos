@@ -145,11 +145,41 @@ test("comparecimento e abstenção usam a mesma base do TSE (exterior)", async (
   await expect(page.locator("#cmp-ni")).toContainText("não foram instaladas");
 });
 
-test("apuração hora a hora: primeiro o mapa, depois o horário, depois o gráfico", async ({ page }) => {
+test("apuração hora a hora: mapa ao lado do gráfico no computador, empilhado no celular", async ({ page }) => {
   await page.goto("./#noite");
-  const y = async (sel: string) => (await page.locator(sel).boundingBox())!.y;
-  expect(await y("#nmap")).toBeLessThan(await y("#n-t"));
-  expect(await y("#n-t")).toBeLessThan(await y("#nchart"));
+  await expect(page.locator("#nchart path.ln")).toHaveCount(2);
+  const box = async (sel: string) => (await page.locator(sel).boundingBox())!;
+  const mapa = await box("#nmap"), graf = await box("#nchart"), hora = await box("#n-t");
+  if (page.viewportSize()!.width > 860) {
+    // lado a lado: o gráfico fica à direita do mapa, na mesma altura da tela
+    expect(graf.x).toBeGreaterThanOrEqual(mapa.x + mapa.width);
+    expect(Math.abs(graf.y - mapa.y)).toBeLessThan(200);
+    // o controle de horário fica logo abaixo do gráfico
+    expect(hora.y).toBeGreaterThan(graf.y + graf.height);
+  } else {
+    // celular: primeiro o mapa, depois o horário, depois o gráfico
+    expect(mapa.y).toBeLessThan(hora.y);
+    expect(hora.y).toBeLessThan(graf.y);
+  }
+});
+
+test("apuração hora a hora: a velocidade da animação pode ser ajustada", async ({ page }) => {
+  await page.goto("./#noite");
+  await expect(page.locator("#nchart path.ln")).toHaveCount(2);
+  await expect(page.locator("[data-nvel='200']")).toHaveAttribute("aria-pressed", "true");
+  const passos = async (vel: string) => {
+    await page.locator(`[data-nvel='${vel}']`).click();
+    await expect(page.locator(`[data-nvel='${vel}']`)).toHaveAttribute("aria-pressed", "true");
+    await page.locator("#n-t").evaluate((e: HTMLInputElement) => { e.value = e.min; e.dispatchEvent(new Event("input")); });
+    const v0 = Number(await page.locator("#n-t").inputValue());
+    await page.locator("#n-play").click();
+    await page.waitForTimeout(1500);
+    await page.locator("#n-play").click();
+    return Number(await page.locator("#n-t").inputValue()) - v0;
+  };
+  const devagar = await passos("500"), rapido = await passos("70");
+  expect(devagar).toBeGreaterThan(0);
+  expect(rapido).toBeGreaterThan(devagar * 2);
 });
 
 test.describe("tema escuro", () => {
