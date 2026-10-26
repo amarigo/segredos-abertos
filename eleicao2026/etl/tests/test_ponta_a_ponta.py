@@ -31,7 +31,9 @@ def preparar(pasta, mexer=None):
     for t, e in (('1', '6257'), ('2', '6258')):
         os.makedirs(os.path.join(pasta, 'brutos', f'{t}turno'))
         with gzip.open(os.path.join(pasta, 'brutos', f'{t}turno', 'SP.jsonl.gz'), 'wt', encoding='utf-8') as f:
-            for s in secs:
+            for i, s in enumerate(secs):
+                if t == '2':  # hora em que o TSE recebeu o boletim
+                    s = dict(s, rec=f'2026-10-25 {18 + i}:00:00')
                 f.write(json.dumps(s, ensure_ascii=False) + '\n')
         for uf in ('br', 'sp'):
             with open(os.path.join(pasta, 'tse', f'{uf}-{e}.json'), 'w', encoding='utf-8') as f:
@@ -55,6 +57,13 @@ def test_site_completo(tmp_path):
     assert planilha[1].startswith('SP;SÃO PAULO;71072;0001;0002;08:00:00;19:05:00;19:05:00;300;150;60;80;3;7')
     lista = json.loads((tmp_path / 'site' / 'urnas' / '2_SP.json').read_text(encoding='utf-8'))
     assert lista['cod'] == ['71072'] and lista['r'][0][3] == 19 * 3600 + 5 * 60
+    n = D['noite']['2']
+    i18, i19 = n['t'].index(18 * 60), n['t'].index(19 * 60)
+    assert (n['n'][i18], n['13'][i18], n['22'][i18]) == (1, 100, 90)
+    assert (n['n'][i19], n['13'][i19], n['22'][i19]) == (2, 160, 170)  # virada: Flávio passa à frente
+    assert '1' not in D['noite']  # 1º turno sem hora de chegada: a página avisa
+    assert (tmp_path / 'site' / 'fotos' / '13.jpeg').stat().st_size > 1000
+    assert (tmp_path / 'site' / 'fotos' / '22.jpeg').stat().st_size > 1000
 
 
 def test_nao_publica_se_nao_bater(tmp_path, capsys):

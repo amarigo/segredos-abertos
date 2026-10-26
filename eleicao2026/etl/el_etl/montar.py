@@ -29,9 +29,9 @@ def titulo(n):
     return ' '.join(w.capitalize() if w not in pequenas else w.lower() for w in n.split())
 
 
-def dados_site(oficial, resumos):
-    """O objeto D usado pela página (mesmo formato de sempre)."""
-    D = {'cand': {}, 'r': {}, 'h': {}}
+def dados_site(oficial, resumos, noites=None):
+    """O objeto D usado pela página. `noites`: a apuração ao longo da noite, por turno (noite.apuracao)."""
+    D = {'cand': {}, 'r': {}, 'h': {}, 'noite': {r: n for r, n in (noites or {}).items() if n}}
     for e, r in (('6257', '1'), ('6258', '2')):
         D['r'][r] = {}
         for uf, rec in oficial[e].items():
@@ -77,3 +77,4 @@ def gravar(saida, D, oficial):
     with open(os.path.join(saida, 'dados', 'urnas', 'LEIA-ME.txt'), 'w', encoding='utf-8') as f:
         f.write(LEIA_ME_PLANILHAS)
     shutil.copy(os.path.join(SITE, 'icone.svg'), os.path.join(saida, 'icone.svg'))
+    shutil.copytree(os.path.join(SITE, 'fotos'), os.path.join(saida, 'fotos'), dirs_exist_ok=True)

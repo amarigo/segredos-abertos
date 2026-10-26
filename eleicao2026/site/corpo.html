@@ -98,17 +98,17 @@ a.ext::after{content:" ↗";font-weight:400}
 /* ===== Tema editorial: papel, tinta, réguas finas. Fica por último para valer sobre o resto. ===== */
 :root{
   --bg:#FAF8F4; --panel:#FAF8F4; --fg:#17171B; --muted:#55555E; --line:#D9D5CC; --soft:#EFEBE3;
-  --lula:#B23A0A; --flavio:#1F4FC4; --neutral:#8A877F; --focus:#E8A800; --warnc:#B86E00;
+  --lula:#B23A0A; --flavio:#1F4FC4; --neutral:#8A877F; --focus:#E8A800; --warnc:#B86E00; --apur:#1B7A43;
   --warn-bg:transparent; --warn-fg:var(--fg);
   --f-body:"Atkinson Hyperlegible", Verdana, sans-serif;
   --f-head:"Source Serif 4", Georgia, serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#131315; --panel:#131315; --fg:#EDEBE6; --muted:#A7A5A0; --line:#34343A; --soft:#1E1E22;
-  --lula:#FF8A4C; --flavio:#86AEFF; --neutral:#77757F; --warnc:#FFB547; color-scheme:dark}}
+  --lula:#FF8A4C; --flavio:#86AEFF; --neutral:#77757F; --warnc:#FFB547; --apur:#4CC38A; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#131315; --panel:#131315; --fg:#EDEBE6; --muted:#A7A5A0; --line:#34343A; --soft:#1E1E22;
-  --lula:#FF8A4C; --flavio:#86AEFF; --neutral:#77757F; --warnc:#FFB547; color-scheme:dark}
+  --lula:#FF8A4C; --flavio:#86AEFF; --neutral:#77757F; --warnc:#FFB547; --apur:#4CC38A; color-scheme:dark}
 
 body{background:var(--bg);-webkit-font-smoothing:antialiased}
 .wrap{max-width:64rem}
@@ -158,6 +158,21 @@ input[type=range]{accent-color:var(--fg)}
 .tag.hyp{background:transparent;color:var(--warnc)}
 details{border-top:1px solid var(--line)}
 
+/* apuração hora a hora */
+.nchart{width:100%;overflow:hidden;touch-action:pan-y;margin-top:.6rem}
+#nchart{display:block;width:100%;height:auto;cursor:crosshair}
+#nchart text{font-family:var(--f-body);font-size:13px;fill:var(--muted)}
+#nchart text.nl{font-size:14px;font-weight:700}
+#nchart .ln{fill:none;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+#nmap{width:100%;height:auto;display:block;max-height:34rem;max-width:36rem;margin-inline:auto}
+.nplay{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.4rem}
+.cmpt td,.cmpt th{text-align:right;white-space:nowrap}
+.cmpt td:first-child,.cmpt th:first-child{text-align:left;white-space:normal}
+.cmpt .pp{display:block;font-size:.8rem;color:var(--muted)}
+.cmpt tr.sum td{font-weight:700}
+@media (max-width:640px){.cmpt thead{display:none}.cmpt,.cmpt tbody{display:block}.cmpt tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.2rem 1rem;padding:.5rem 0;border-bottom:1px solid var(--line)}
+.cmpt td{border:0;padding:.1rem 0;text-align:left!important;white-space:normal}.cmpt td:first-child{grid-column:1/-1;font-weight:700}
+.cmpt td[data-l="Diferença"]{grid-column:1/-1}.cmpt tr td[data-l="Diferença"]::before{content:"Diferença: ";margin-right:.3rem;display:inline!important;font-size:inherit!important;text-transform:none!important;letter-spacing:0!important}.cmpt td[data-l]::before{content:attr(data-l);display:block;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}}
 /* tabelas */
 th{font-size:.78rem;letter-spacing:.05em;text-transform:uppercase;font-weight:700;border-bottom:1.5px solid var(--fg)}
 td{border-bottom:1px solid var(--line)}
@@ -165,6 +180,14 @@ td{border-bottom:1px solid var(--line)}
 /* painel principal */
 .dash-top{border-top:0;padding-top:0}
 .avatar{border-radius:6px;font-family:var(--f-head);font-size:1.4rem}
+.avatar.ph{position:relative;width:4.6rem;height:6.4rem;overflow:hidden;background:var(--soft);border:2px solid var(--line)}
+.who.l .avatar.ph{border-color:var(--lula)} .who.f .avatar.ph{border-color:var(--flavio)}
+.avatar.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.avatar.ph b{position:absolute;left:0;right:0;bottom:0;font-size:.95rem;line-height:1.5;text-align:center;color:#fff}
+.who.l .avatar.ph b{background:var(--lula)} .who.f .avatar.ph b{background:var(--flavio)}
+:root[data-theme="dark"] .avatar.ph b{color:#0D141C}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .avatar.ph b{color:#0D141C}}
+@media (max-width:640px){.avatar.ph{width:3.8rem;height:5.2rem}}
 .who .wn{font-size:clamp(1.3rem,3vw,1.9rem);letter-spacing:-.01em}
 .headline{font-family:var(--f-head);font-weight:600;font-size:1.15rem}
 .bigbar{border:0;border-radius:4px;height:3.6rem}
@@ -280,16 +303,17 @@ a.dlrow:hover{background:var(--soft)}
 <nav class="menu" aria-label="Seções">
   <ul>
     <li><button type="button" data-go="resultado">1. Mapa e resultado</button></li>
-    <li><button type="button" data-go="diferencas">2. Onde mudou</button></li>
-    <li><button type="button" data-go="simulador">3. Simulador</button></li>
-    <li><button type="button" data-go="horario">4. Urnas e horário</button></li>
-    <li><button type="button" data-go="fontes">5. Dados abertos</button></li>
+    <li><button type="button" data-go="noite">2. Apuração hora a hora</button></li>
+    <li><button type="button" data-go="diferencas">3. Onde mudou</button></li>
+    <li><button type="button" data-go="simulador">4. Simulador</button></li>
+    <li><button type="button" data-go="horario">5. Urnas e horário</button></li>
+    <li><button type="button" data-go="fontes">6. Dados abertos</button></li>
   </ul>
 </nav>
 
 <main class="wrap">
 <div class="ok" role="note" id="srcnote" style="margin-top:1rem">
-  <p><b>Todos os números desta página são oficiais, do TSE.</b> Os dois turnos estão 100% apurados (<span class="num" id="n-sec"></span> seções). Resultados e boletins de urna do 2º turno baixados de resultados.tse.jus.br; boletins de urna do 1º turno do Portal de Dados Abertos do TSE. Veja a seção 5.</p>
+  <p><b>Todos os números desta página são oficiais, do TSE.</b> Os dois turnos estão 100% apurados (<span class="num" id="n-sec"></span> seções). Resultados e boletins de urna do 2º turno baixados de resultados.tse.jus.br; boletins de urna do 1º turno do Portal de Dados Abertos do TSE. Veja a seção 6.</p>
   <p class="verify" style="margin-top:.4rem"><b>Confira no TSE</b><a class="ext" href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener">Site oficial de resultados</a><a class="ext" href="https://dadosabertos.tse.jus.br/dataset/resultados-2026" target="_blank" rel="noopener">Dados abertos de 2026</a></p>
 </div>
 
@@ -304,13 +328,13 @@ a.dlrow:hover{background:var(--soft)}
   <div class="panel dash-top">
     <div class="duo">
       <div class="who l">
-        <span class="avatar" aria-hidden="true">13</span>
+        <span class="avatar ph"><img src="fotos/13.jpeg" alt="Foto oficial de Lula, do TSE" width="161" height="225"><b aria-hidden="true">13</b></span>
         <span><span class="wn">Lula</span><span class="wp">PT · número 13</span></span>
       </div>
       <p class="headline" id="headline"></p>
       <div class="who f">
         <span><span class="wn">Flávio Bolsonaro</span><span class="wp">PL · número 22</span></span>
-        <span class="avatar" aria-hidden="true">22</span>
+        <span class="avatar ph"><img src="fotos/22.jpeg" alt="Foto oficial de Flávio Bolsonaro, do TSE" width="161" height="225"><b aria-hidden="true">22</b></span>
       </div>
     </div>
     <div class="half" style="margin-top:1.2rem"><div class="bigbar" id="bigbar" aria-hidden="true"></div><div class="midline"></div></div>
@@ -349,7 +373,48 @@ a.dlrow:hover{background:var(--soft)}
     <div class="tablewrap"><table id="t-r1"><thead><tr><th>Candidato (nome na urna)</th><th>Votos</th><th>% dos válidos</th></tr></thead><tbody></tbody></table></div>
   </details>
   <div class="facts" id="facts"></div>
-  <div class="next"><button class="btn" data-go="diferencas">Entender o que mudou do 1º para o 2º turno →</button><button class="btn alt" data-go="horario">Ver urnas que fecharam depois das 17h →</button></div>
+  <div class="next"><button class="btn" data-go="noite">Ver como a apuração aconteceu, hora a hora →</button><button class="btn alt" data-go="diferencas">Entender o que mudou do 1º para o 2º turno →</button><button class="btn alt" data-go="horario">Ver urnas que fecharam depois das 17h →</button></div>
+</section>
+
+<!-- 2. APURAÇÃO HORA A HORA -->
+<section class="view" id="noite" aria-labelledby="h-noi" hidden>
+  <h2 id="h-noi">A apuração, hora a hora</h2>
+  <p class="lead">Como o resultado foi aparecendo ao longo da noite. Quando uma urna é apurada, o boletim dela é enviado ao TSE, que registra a hora em que o recebeu. Somando os boletins na ordem em que chegaram, refazemos a parcial de cada momento. Os estados não terminam de apurar ao mesmo tempo. Por isso, quem está na frente pode mudar durante a noite.</p>
+  <div class="toggle" role="group" aria-label="Escolha o turno">
+    <button type="button" data-nround="2" aria-pressed="true">2º turno (25/10)</button>
+    <button type="button" data-nround="1" aria-pressed="false">1º turno (4/10)</button>
+  </div>
+  <div id="n-missing" class="notice" role="note" hidden></div>
+  <div class="panel" id="n-panel">
+    <h3 id="n-h"></h3>
+    <div class="ckey"><span><i style="background:var(--lula)"></i>Lula (% dos votos válidos já apurados)</span><span><i style="background:var(--flavio)"></i>Flávio</span><span><i style="background:var(--apur)"></i>Urnas apuradas</span><span id="n-key-pause"><i style="background:var(--soft);border:1px solid var(--line)"></i>Divulgação pausada <span class="tag tag-nw">Notícia</span></span></div>
+    <div class="nchart"><svg id="nchart" role="img" aria-label="Gráfico: porcentagem de cada candidato e de urnas apuradas ao longo da noite"></svg></div>
+    <div class="field"><label for="n-t">Arraste para escolher o horário (Brasília): <b class="num" id="n-tv"></b></label><input type="range" id="n-t" min="0" max="1" step="1"></div>
+    <div class="nplay"><button class="btn alt" type="button" id="n-play">▶ Ver a noite passando</button><button class="btn alt" type="button" id="n-viraBtn" hidden>Ir para a virada</button><button class="btn alt" type="button" id="n-end">Ir para o fim</button></div>
+    <div id="n-now" aria-live="polite"></div>
+  </div>
+  <div class="panel">
+    <h3>Quanto de cada estado já tinha chegado</h3>
+    <p>No horário escolhido acima. Cor mais forte quer dizer mais urnas daquele estado já apuradas. Toque em um estado.</p>
+    <div class="mapwrap"><svg id="nmap" role="group" aria-label="Mapa: parte das urnas de cada estado já apurada no horário escolhido"></svg><div class="maplegend" id="nlegend"></div></div>
+    <div id="n-uf" aria-live="polite"></div>
+  </div>
+  <div class="panel">
+    <h3>Por que a liderança muda durante a apuração</h3>
+    <div id="n-why"></div>
+  </div>
+  <div class="panel">
+    <h3>De onde vem este gráfico</h3>
+    <ul class="steps">
+      <li><span class="tag tag-of">Oficial</span> A hora de cada urna é a hora em que o TSE recebeu o boletim dela. No 1º turno, ela está no arquivo “Boletim de Urna” do Portal de Dados Abertos do TSE. No 2º turno, no registro oficial de cada urna no site de resultados do TSE (o mesmo do link “arquivos” da seção 5).</li>
+      <li><span class="tag tag-of">Oficial</span> Os votos são os do próprio boletim de cada urna. <span id="n-check"></span></li>
+      <li>Esta é uma reconstrução nossa, feita depois, com os horários oficiais. A parcial que o TSE mostrava ao vivo podia aparecer alguns minutos depois da chegada dos boletins.</li>
+      <li>Antes de 1% das urnas chegar, a parcial muda muito com poucas urnas. Por isso o gráfico começa quando 1% das urnas já tinha chegado. Ele termina quando 99,5% tinham chegado. <span id="n-tail"></span></li>
+      <li id="n-pause"><span class="tag tag-nw">Notícia</span> No 2º turno, segundo a imprensa, o TSE pausou a divulgação da apuração até as 19h, por causa da prorrogação da votação (veja o quadro “Notícia” na seção 5). <span id="n-pause2"></span></li>
+      <li id="n-sem"></li>
+    </ul>
+  </div>
+  <div class="next"><button class="btn" data-go="diferencas">Entender o que mudou do 1º para o 2º turno →</button></div>
 </section>
 
 <!-- 3. DIFERENÇAS -->
@@ -362,6 +427,14 @@ a.dlrow:hover{background:var(--soft)}
       <div class="fact"><span class="muted small">Flávio ganhou</span><b class="num c-f" id="d-gf"></b><span class="small" id="d-gf2"></span></div>
     </div>
     <p id="d-txt"></p>
+  </div>
+  <div class="panel" id="cmp12">
+    <h3>1º turno × 2º turno, lado a lado</h3>
+    <p>Os números oficiais dos dois turnos. A última coluna mostra quanto mudou do 1º para o 2º turno.</p>
+    <div class="field"><label for="cmp-uf">Escolha o lugar</label><select id="cmp-uf"></select></div>
+    <div class="tablewrap"><table class="cmpt" id="t-cmp"><thead><tr><th>No total</th><th>1º turno</th><th>2º turno</th><th>Diferença</th></tr></thead><tbody></tbody></table></div>
+    <p class="small muted">Porcentagens: quem foi votar e quem não foi, sobre os eleitores aptos; brancos e nulos, sobre quem foi votar; candidatos, sobre os votos válidos (votos em candidatos). No 1º turno, o TSE conta como nulo o voto no número 28 (candidatura que não valeu). Fonte: TSE, 100% das seções apuradas.</p>
+    <p class="verify" id="cmp-verify"></p>
   </div>
   <div class="panel">
     <h3>Quanto cada estado somou para a vitória</h3>
@@ -534,7 +607,7 @@ a.dlrow:hover{background:var(--soft)}
     <ul class="steps">
       <li>A soma das urnas é igual ao total oficial do TSE, voto por voto, nos dois turnos.</li>
       <li>Uma segunda checagem refez tudo do zero. Leu de novo os 517.179 registros de seção do 2º turno e as 499.206 urnas do 1º turno. Não achou nenhuma diferença na hora, nos votos, nos brancos, nos nulos nem no comparecimento.</li>
-      <li>Cada urna da lista da seção 4 tem um link “arquivos” para a página oficial dela no TSE. Assim dá para conferir qualquer linha.</li>
+      <li>Cada urna da lista da seção 5 tem um link “arquivos” para a página oficial dela no TSE. Assim dá para conferir qualquer linha.</li>
     </ul>
   </div>
   <div class="panel">
@@ -551,9 +624,11 @@ a.dlrow:hover{background:var(--soft)}
       <li><b>Resultados por estado e do Brasil, 1º e 2º turno:</b> arquivos oficiais de resultado do <a href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener">site de resultados do TSE</a>, com 100% das seções apuradas. Última atualização: 1º turno <span id="src-1"></span>; 2º turno <span id="src-2"></span>.</li>
       <li><b>Urna por urna, 1º turno:</b> <a href="https://dadosabertos.tse.jus.br/dataset/resultados-2026-boletim-de-urna" target="_blank" rel="noopener">Boletim de Urna, Portal de Dados Abertos do TSE</a>.</li>
       <li><b>Urna por urna, 2º turno:</b> boletins de urna digitais de cada seção, publicados pelo TSE em resultados.tse.jus.br.</li>
+      <li><b>Hora de chegada de cada boletim (seção 2):</b> no 1º turno, do arquivo “Boletim de Urna” do Portal de Dados Abertos; no 2º turno, do registro oficial de cada urna no site de resultados do TSE.</li>
+      <li><b>Fotos dos candidatos:</b> fotos oficiais publicadas pelo TSE no <a href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener">site de resultados</a>.</li>
       <li><b>Links oficiais:</b> <a class="ext" href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener">Site de resultados do TSE</a> · <a class="ext" href="https://dadosabertos.tse.jus.br/dataset/resultados-2026" target="_blank" rel="noopener">Resultados 2026 (dados abertos)</a> · <a class="ext" href="https://dadosabertos.tse.jus.br/dataset/resultados-2026-boletim-de-urna" target="_blank" rel="noopener">Boletins de urna 2026</a> · <a class="ext" href="https://resultados.tse.jus.br/oficial/ele2026/6258/dados/br/br-c0001-e006258-u.json" target="_blank" rel="noopener">Arquivo do Brasil, 2º turno</a> · <a class="ext" href="https://resultados.tse.jus.br/oficial/ele2026/6257/dados/br/br-c0001-e006257-u.json" target="_blank" rel="noopener">Arquivo do Brasil, 1º turno</a> · <a class="ext" href="https://www.tse.jus.br/" target="_blank" rel="noopener">Portal do TSE</a></li>
-      <li><b>Arquivos de cada urna:</b> na lista da seção 4, o link “arquivos” abre a página oficial da urna no TSE, com o boletim, o registro (log) e os demais arquivos dela.</li>
-      <li><b>Única exceção:</b> o quadro sobre a prorrogação no 2º turno (seção 4) traz fatos relatados pela imprensa. Cada frase ali está marcada como “Oficial” ou “Notícia”. Usamos veículos de perfis diferentes (agência pública, imprensa jurídica, um veículo visto como mais à esquerda e outro visto como mais à direita) e só os fatos em que eles concordam. O site não traz opiniões.</li>
+      <li><b>Arquivos de cada urna:</b> na lista da seção 5, o link “arquivos” abre a página oficial da urna no TSE, com o boletim, o registro (log) e os demais arquivos dela.</li>
+      <li><b>Única exceção:</b> o quadro sobre a prorrogação no 2º turno (seção 5) traz fatos relatados pela imprensa. Cada frase ali está marcada como “Oficial” ou “Notícia”. Usamos veículos de perfis diferentes (agência pública, imprensa jurídica, um veículo visto como mais à esquerda e outro visto como mais à direita) e só os fatos em que eles concordam. O site não traz opiniões.</li>
     </ul>
   </div>
   <div class="panel">
@@ -576,6 +651,7 @@ a.dlrow:hover{background:var(--soft)}
         <li>26/10: simulador com mapa; gráfico comparando a hora de fechamento no 1º e no 2º turno; links para os arquivos oficiais de cada urna.</li>
         <li>26/10: porcentagens com duas casas; fontes de notícia marcadas como “Notícia” e escolhidas de perfis diferentes; cores do Brasil.</li>
         <li>26/10: checagem completa de todas as urnas, sem nenhuma diferença; seção de dados abertos com planilhas e código para baixar.</li>
+        <li>26/10: fotos oficiais dos candidatos; seção “Apuração hora a hora”; tabela 1º turno × 2º turno; texto sobre a origem dos votos corrigido (o voto é secreto, então não dá para saber quem votou em quem).</li>
       </ul>
     </details>
   </div>
@@ -609,13 +685,14 @@ const leader=o=>o.L>o.F?"Lula":"Flávio";
 const cls=o=>o.L>o.F?"c-l":"c-f";
 
 /* ---------- navegação ---------- */
-const VIEWS=["resultado","diferencas","simulador","horario","fontes"];
+const VIEWS=["resultado","noite","diferencas","simulador","horario","fontes"];
 function go(id,scroll=true){
   if(!VIEWS.includes(id))id="resultado";
   VIEWS.forEach(v=>$(v).hidden=v!==id);
   document.querySelectorAll(".menu button").forEach(b=>b.setAttribute("aria-current",b.dataset.go===id?"page":"false"));
   $("srcnote").hidden=id!=="resultado";
   if(id==="horario")initH();
+  if(id==="noite"){initN();if($("nmap").firstChild&&!$("nmap").dataset.lab)buildMap($("nmap"),uf=>{nSel=uf;paintN();nUF()});nChart()}
   if(id==="simulador"&&!$("smap").dataset.lab)buildMap($("smap"),uf=>{$("sa-uf").value=uf;resetA()});
   if(id==="resultado"&&!$("brmap").dataset.lab)buildMap($("brmap"),uf=>selectUF(uf,window.innerWidth<860));
   if(id==="horario"&&$("hmap").firstChild&&!$("hmap").dataset.lab)buildMap($("hmap"),uf=>{$("c-uf").value=uf;$("l-uf").value=uf;drawCut();loadList()});
@@ -690,7 +767,7 @@ function paintMain(){
     $("legend").innerHTML=`<span class="small"><b>Urnas que fecharam depois das 17h15</b></span>`+L.map((l,i)=>`<span><i style="background:color-mix(in srgb, var(--warnc) ${[8,30,52,76,100][i]}%, var(--panel))"></i>${l}</span>`).join("");
   }
 }
-function paintMaps(){paintMain();if(typeof paintH==="function")paintH()}
+function paintMaps(){paintMain();if(typeof paintH==="function")paintH();if(typeof paintN==="function")paintN()}
 
 function drawTop(){
   const o=res("BR"),O=o.o;
@@ -756,7 +833,11 @@ document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{mode=b.datase
   $("d-gl").textContent="+"+fmt(b.L-a.L);$("d-gl2").textContent=`de ${mil(a.L)} para ${mil(b.L)}`;
   $("d-gf").textContent="+"+fmt(b.F-a.F);$("d-gf2").textContent=`de ${mil(a.F)} para ${mil(b.F)}`;
   $("d-m").textContent=fmt(b.L-b.F);
-  $("d-txt").innerHTML=`De onde vieram esses votos novos? Principalmente de quem votou nos outros 10 candidatos no 1º turno (<b class="num">${fmt(a.O)}</b> votos) e de quem não tinha ido votar no 1º turno (a abstenção caiu de ${pc(a.o.abst/a.o.apt)} para ${pc(b.o.abst/b.o.apt)}). Como o voto é secreto, não dá para saber exatamente quem mudou para quem. Só vemos os totais.`;
+  const sobe=(x,y)=>y>x?"subiu":y<x?"caiu":"ficou igual";
+  $("d-txt").innerHTML=`<b>De onde vieram esses votos?</b> Ninguém sabe ao certo, porque o voto é secreto. Os números oficiais mostram só os totais: no 1º turno, os outros 10 candidatos tiveram <b class="num">${fmt(a.O)}</b> votos; a abstenção ${sobe(a.o.abst/a.o.apt,b.o.abst/b.o.apt)}, de ${pc(a.o.abst/a.o.apt)} para ${pc(b.o.abst/b.o.apt)} dos eleitores; brancos e nulos foram de ${fmt(a.o.br+a.o.nu)} para ${fmt(b.o.br+b.o.nu)}. Os votos novos de Lula e de Flávio podem ter vindo de vários grupos ao mesmo tempo: de quem votou em outro candidato, de quem não foi votar ou votou em branco ou nulo no 1º turno, e até de quem trocou entre os dois. E parte de quem votou nos outros candidatos pode ter votado em branco, anulado ou não ter ido votar no 2º turno. Por isso não dá para dizer que os votos de um candidato “foram” para outro. Compare os números na tabela abaixo.`;
+  $("cmp-uf").innerHTML=`<option value="BR">Brasil inteiro</option>`+UFS.map(u=>`<option value="${u}">${NAMES[u]}</option>`).join("")+`<option value="ZZ">Exterior</option>`;
+  $("cmp-uf").onchange=()=>cmpTable($("cmp-uf").value);
+  cmpTable("BR");
   const rows=UFS.concat(["ZZ"]).map(uf=>{const o=r2(uf);return{uf,m:o.L-o.F}}).sort((x,y)=>y.m-x.m);
   const max=Math.max(...rows.map(r=>Math.abs(r.m)));
   const lab=v=>(Math.abs(v)/1e6).toLocaleString("pt-BR",{maximumFractionDigits:2})+" mi";
@@ -765,6 +846,160 @@ document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{mode=b.datase
   const flips=UFS.filter(uf=>leader(r1(uf))!==leader(r2(uf)));
   $("flips").innerHTML=flips.length?`<p>Nestes lugares, quem estava na frente no 1º turno perdeu no 2º turno:</p><ul class="steps">${flips.map(uf=>{const x=r1(uf),y=r2(uf);return `<li><b>${NAMES[uf]}</b>: no 1º turno, ${leader(x)} tinha ${pc(Math.max(x.L,x.F)/x.T)}; no 2º turno, <span class="${cls(y)}">${leader(y)} venceu com ${pc(Math.max(y.L,y.F)/y.T)}</span>.</li>`}).join("")}</ul><p class="small muted">Lembre: no 1º turno a porcentagem inclui os outros candidatos, por isso ninguém chega perto de 100%.</p>`:"<p>Nenhum estado mudou de lado.</p>";
 })();
+
+function cmpTable(uf){
+  const a=r1(uf),b=r2(uf),A=a.o,B=b.o;
+  const dif=(x,y)=>y===null?"—":(y-x>0?"+":y-x<0?"−":"")+fmt(Math.abs(y-x));
+  const cel=(x,p,l)=>x===null?`<td data-l="${l}">não estavam</td>`:`<td data-l="${l}">${fmt(x)}${p===undefined?"":`<span class="pp">${pc(p)}</span>`}</td>`;
+  const row=(lab,x,y,px,py,k="")=>`<tr class="${k}"><td>${lab}</td>${cel(x,px,"1º turno")}${cel(y,py,"2º turno")}<td data-l="Diferença">${dif(x,y)}</td></tr>`;
+  $("t-cmp").querySelector("tbody").innerHTML=
+    row("Eleitores aptos",A.apt,B.apt)+
+    row("Foram votar",A.comp,B.comp,A.comp/A.apt,B.comp/B.apt)+
+    row("Não foram votar",A.abst,B.abst,A.abst/A.apt,B.abst/B.apt)+
+    row("Votaram em branco",A.br,B.br,A.br/A.comp,B.br/B.comp)+
+    row("Anularam o voto",A.nu,B.nu,A.nu/A.comp,B.nu/B.comp)+
+    row("Votos válidos (em candidatos)",A.val,B.val,undefined,undefined,"sum")+
+    row(`<span class="c-l">Lula (13)</span>`,a.L,b.L,a.L/A.val,b.L/B.val)+
+    row(`<span class="c-f">Flávio Bolsonaro (22)</span>`,a.F,b.F,a.F/A.val,b.F/B.val)+
+    row("Outros 10 candidatos",a.O,null,a.O/A.val);
+  $("t-cmp").querySelector("thead th").textContent=uf==="BR"?"Brasil":NAMES[uf];
+  $("cmp-verify").innerHTML=`<b>Confira no TSE</b>${ext(ufURL(1,uf),"Arquivo oficial, 1º turno")}${ext(ufURL(2,uf),"Arquivo oficial, 2º turno")}`;
+}
+
+/* ---------- 2. apuração hora a hora ---------- */
+let NR="2",NI=0,nInit=false,nTimer=null,nSel=null,nR=[0,0],nV=[];
+const NM={L:"Lula",F:"Flávio"},NC={L:"c-l",F:"c-f"};
+const nh=m=>hm(m%1440);
+function NG(){return D.noite&&D.noite[NR]}
+function nLead(n,i){return n["13"][i]>n["22"][i]?"L":n["13"][i]<n["22"][i]?"F":"="}
+function nWin(uf){const o=NR==="2"?r2(uf):r1(uf);return o.L>o.F?"L":"F"}
+const nVW=()=>NR==="2"?"venceu":"ficou na frente";
+function nPrep(){
+  const n=NG();if(!n)return;
+  const fim=n.n[n.n.length-1];let a=0,b=n.n.length-1;
+  while(a<b&&n.n[a]<fim*.01)a++;
+  for(let i=a;i<n.n.length;i++)if(n.n[i]>=fim*.995){b=i;break}
+  nV=[];let p="=";
+  for(let i=a;i<n.n.length;i++){const l=nLead(n,i);if(l==="=")continue;if(p!=="="&&l!==p)nV.push({i,l,de:p});p=l}
+  if(nV.length)b=Math.max(b,nV[nV.length-1].i);
+  nR=[a,b];NI=b;
+  const s=$("n-t");s.min=a;s.max=b;
+}
+function nGroups(n,i){const g={L:[0,0],F:[0,0]};for(const uf in n.tot_uf){const w=nWin(uf);g[w][0]+=(n.uf[uf]||[])[i]||0;g[w][1]+=n.tot_uf[uf]}return g}
+function nRest(n,i,k){return Object.keys(n.tot_uf).map(uf=>({uf,r:n.tot_uf[uf]-((n.uf[uf]||[])[i]||0)})).sort((x,y)=>y.r-x.r).slice(0,k)}
+function nChart(){
+  const n=NG(),svg=$("nchart");if(!n){svg.innerHTML="";return}
+  const [a,b]=nR;
+  const W=Math.max(300,Math.round(svg.parentNode.clientWidth||700)),H=Math.round(Math.min(470,Math.max(360,W*.6)));
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);svg.setAttribute("width",W);svg.setAttribute("height",H);
+  const ml=W<560?40:52,mr=W<560?62:104,top=24,gap=40,bot=26;
+  const h1=Math.round((H-top-gap-bot)*.68),y1b=top+h1,y2t=y1b+gap,y2b=H-bot;
+  const t0=n.t[a],t1=n.t[b]===t0?t0+1:n.t[b];
+  const X=t=>ml+(t-t0)/(t1-t0)*(W-ml-mr);
+  const pL=i=>n["13"][i]/n.val[i]*100,pF=i=>n["22"][i]/n.val[i]*100;
+  let mn=50,mx=50;for(let i=a;i<=b;i++){mn=Math.min(mn,pL(i),pF(i));mx=Math.max(mx,pL(i),pF(i))}
+  const lo=Math.floor((mn-1)/5)*5,hi=Math.ceil((mx+1)/5)*5;
+  const Y=p=>y1b-(p-lo)/(hi-lo)*h1,Y2=q=>y2b-q/100*(y2b-y2t);
+  let g="";
+  if(NR==="2"&&1140>t0){const xa=X(Math.max(t0,1020)),xb=X(Math.min(1140,t1));g+=`<rect x="${xa}" y="${top-14}" width="${Math.max(0,xb-xa)}" height="${y2b-top+14}" fill="var(--soft)"/><text x="${xa+4}" y="${top-2}" font-size="12">divulgação pausada</text>`}
+  for(let p=lo;p<=hi;p+=5){g+=`<line x1="${ml}" x2="${W-mr}" y1="${Y(p)}" y2="${Y(p)}" stroke="var(--line)"/><text x="${ml-6}" y="${Y(p)+4}" text-anchor="end">${p}%</text>`}
+  g+=`<line x1="${ml}" x2="${W-mr}" y1="${Y(50)}" y2="${Y(50)}" stroke="var(--fg)" stroke-dasharray="5 4" opacity=".7"/><text x="${W-mr+6}" y="${Y(50)+4}" font-size="12">metade</text>`;
+  for(const q of [0,50,100])g+=`<line x1="${ml}" x2="${W-mr}" y1="${Y2(q)}" y2="${Y2(q)}" stroke="var(--line)"/><text x="${ml-6}" y="${Y2(q)+4}" text-anchor="end">${q}%</text>`;
+  g+=`<text x="${ml}" y="${y2t-8}" font-size="12">Urnas apuradas</text>`;
+  const step=(t1-t0)>360?120:60;
+  for(let t=Math.ceil(t0/step)*step;t<=t1;t+=step)g+=`<line x1="${X(t)}" x2="${X(t)}" y1="${y2b}" y2="${y2b+5}" stroke="var(--muted)"/><text x="${X(t)}" y="${H-6}" text-anchor="middle">${(t/60%24)}h</text>`;
+  for(const v of nV)if(v.i>=a&&v.i<=b){const x=X(n.t[v.i]);g+=`<line x1="${x}" x2="${x}" y1="${top}" y2="${y1b}" stroke="var(--fg)" stroke-dasharray="2 3"/><text x="${x+4}" y="${top+10}" font-size="12" fill="var(--fg)">virada</text>`}
+  const pts=f=>{let d="";for(let i=a;i<=b;i++)d+=(d?"L":"M")+X(n.t[i]).toFixed(1)+","+f(i).toFixed(1);return d};
+  let area=`M${X(n.t[a])},${y2b}`;for(let i=a;i<=b;i++)area+=`L${X(n.t[i]).toFixed(1)},${Y2(n.n[i]/n.tot*100).toFixed(1)}`;area+=`L${X(n.t[b])},${y2b}Z`;
+  g+=`<path d="${area}" fill="color-mix(in srgb, var(--apur) 30%, transparent)" stroke="var(--apur)" stroke-width="2"/>`;
+  g+=`<path class="ln" d="${pts(i=>Y(pL(i)))}" stroke="var(--lula)"/><path class="ln" d="${pts(i=>Y(pF(i)))}" stroke="var(--flavio)"/>`;
+  const yl=Y(pL(b)),yf=Y(pF(b)),sep=Math.abs(yl-yf)<18?(yl<yf?-9:9):0;
+  g+=`<text class="nl" x="${W-mr+6}" y="${yl+4+sep}" style="fill:var(--lula)">Lula</text><text class="nl" x="${W-mr+6}" y="${yf+4-sep}" style="fill:var(--flavio)">Flávio</text>`;
+  const i=NI,x=X(n.t[i]);
+  g+=`<line x1="${x}" x2="${x}" y1="${top-14}" y2="${y2b}" stroke="var(--fg)" stroke-width="1.5"/><circle cx="${x}" cy="${Y(pL(i))}" r="5.5" fill="var(--lula)" stroke="var(--bg)" stroke-width="2"/><circle cx="${x}" cy="${Y(pF(i))}" r="5.5" fill="var(--flavio)" stroke="var(--bg)" stroke-width="2"/><circle cx="${x}" cy="${Y2(n.n[i]/n.tot*100)}" r="5" fill="var(--apur)" stroke="var(--bg)" stroke-width="2"/>`;
+  svg.innerHTML=g;
+  svg.dataset.ml=ml;svg.dataset.mr=mr;
+}
+function nPick(e){
+  const n=NG(),svg=$("nchart");if(!n)return;const r=svg.getBoundingClientRect(),W=r.width,ml=+svg.dataset.ml,mr=+svg.dataset.mr;
+  const [a,b]=nR,f=Math.min(1,Math.max(0,(e.clientX-r.left-ml)/(W-ml-mr)));const t=n.t[a]+f*(n.t[b]-n.t[a]);
+  let best=a;for(let i=a;i<=b;i++)if(Math.abs(n.t[i]-t)<Math.abs(n.t[best]-t))best=i;
+  nStop();NI=best;nUpdate();
+}
+function nNow(){
+  const n=NG(),i=NI,t=n.t[i],L=n["13"][i],F=n["22"][i],V=n.val[i],l=nLead(n,i);
+  $("n-tv").textContent=nh(t)+(t>=1440?" (madrugada)":"");
+  $("n-t").value=i;$("n-t").setAttribute("aria-valuetext",nh(t));
+  $("n-now").innerHTML=`<p style="margin-top:.8rem">Às <b>${nh(t)}</b>${t>=1440?" (já de madrugada)":""}, horário de Brasília. Porcentagem dos votos válidos que já tinham sido apurados:</p>
+  <div class="facts">
+   <div class="fact"><span class="muted small">Urnas apuradas</span><b class="num">${pc(n.n[i]/n.tot)}</b><span class="small">${fmt(n.n[i])} de ${fmt(n.tot)}</span></div>
+   <div class="fact"><span class="muted small">Lula</span><b class="num c-l">${pc(L/V)}</b><span class="small">${fmt(L)} votos</span></div>
+   <div class="fact"><span class="muted small">Flávio</span><b class="num c-f">${pc(F/V)}</b><span class="small">${fmt(F)} votos</span></div>
+   <div class="fact"><span class="muted small">Na frente nesse momento</span><b class="${NC[l]||""}">${NM[l]||"empate"}</b><span class="small">${l==="="?"":"por "+fmt(Math.abs(L-F))+" votos"}</span></div>
+  </div>`;
+}
+function nHead(){
+  const n=NG(),[a,b]=nR,last=n.n.length-1,lf=nLead(n,last);
+  const vs=nV.filter(v=>v.i<=b);
+  if(!vs.length){$("n-h").innerHTML=`<span class="${NC[lf]}">${NM[lf]}</span> ficou na frente a noite toda`;return}
+  const first=nLead(n,a);
+  $("n-h").innerHTML=`<span class="${NC[first]}">${NM[first]}</span> começou na frente. `+vs.map((v,k)=>`${k===0?"Por volta das":"Depois, por volta das"} ${nh(n.t[v.i])}, com ${pc(n.n[v.i]/n.tot)} das urnas apuradas, <span class="${NC[v.l]}">${NM[v.l]}</span> passou à frente`).join(". ")+(vs[vs.length-1].l===lf?" e não perdeu mais a liderança.":".");
+}
+function nWhy(){
+  const n=NG(),[a,b]=nR,last=n.n.length-1,vw=nVW();
+  const grp=(i)=>{const g=nGroups(n,i);return `tinham chegado <b>${pc(g.L[0]/(g.L[1]||1))}</b> das urnas dos estados onde <span class="c-l">Lula ${vw}</span> e <b>${pc(g.F[0]/(g.F[1]||1))}</b> das urnas dos estados onde <span class="c-f">Flávio ${vw}</span>`};
+  const rest=i=>nRest(n,i,4).map(x=>`${NAMES[x.uf]} (${fmt(x.r)} urnas; <span class="${NC[nWin(x.uf)]}">${NM[nWin(x.uf)]} ${vw}</span> lá)`).join(", ");
+  let h=`<p>Cada estado termina de apurar num ritmo diferente. Se as primeiras urnas a chegar são de estados onde um candidato vai melhor, ele aparece na frente. Quando chegam as urnas dos outros estados, a parcial muda. Os estados abaixo estão agrupados por quem ${vw} neles no resultado final do ${NR}º turno.</p>`;
+  h+=`<p><b>No horário escolhido (${nh(n.t[NI])})</b>, ${grp(NI)}.</p>`;
+  const vs=nV.filter(v=>v.i<=b);
+  if(vs.length){h+=vs.map(v=>`<p><b>Na virada de ${nh(n.t[v.i])}</b> (<span class="${NC[v.l]}">${NM[v.l]}</span> passou à frente), ${grp(v.i)}. As urnas que mais faltavam chegar eram de: ${rest(v.i)}.</p>`).join("")}
+  else{let m=a;while(m<last&&n.n[m]<n.tot*.5)m++;h+=`<p><b>Quando metade das urnas tinha chegado (${nh(n.t[m])})</b>, ${grp(m)}. As urnas que mais faltavam chegar eram de: ${rest(m)}.</p>`}
+  h+=`<p>A ordem de chegada não muda o resultado: no fim, todas as urnas são somadas.</p>`;
+  $("n-why").innerHTML=h;
+}
+const NB=[0,.25,.5,.75,.95],NS=[10,30,52,76,100];
+function paintN(){
+  const svg=$("nmap"),n=NG();if(!svg||!svg.firstChild||!n)return;
+  svg.querySelectorAll("path").forEach(p=>{const uf=p.dataset.uf,s=((n.uf[uf]||[])[NI]||0)/(n.tot_uf[uf]||1);let k=0;for(let j=NB.length-1;j>=0;j--)if(s>=NB[j]){k=j;break}
+    p.style.fill=`color-mix(in srgb, var(--apur) ${NS[k]}%, var(--panel))`;p.classList.toggle("sel",uf===nSel);if(uf===nSel)p.parentNode.appendChild(p);
+    const tip=`${NAMES[uf]}: ${pc(s)} das urnas apuradas às ${nh(n.t[NI])}`;p.querySelector("title").textContent=tip;p.setAttribute("aria-label",tip);
+    const t=svg.querySelector(`text[data-uf="${uf}"]`);if(t){t.style.fill=k>=3?"#fff":"var(--fg)";t.style.stroke=k>=3?"rgba(0,0,0,.35)":"var(--panel)";const sp=t.querySelector("tspan");if(sp)sp.textContent=pc(s,0)}});
+  const L=["menos de 25%","25 a 50%","50 a 75%","75 a 95%","95% ou mais"];
+  $("nlegend").innerHTML=`<span class="small"><b>Urnas apuradas às ${nh(n.t[NI])}</b></span>`+L.map((l,i)=>`<span><i style="background:color-mix(in srgb, var(--apur) ${NS[i]}%, var(--panel))"></i>${l}</span>`).join("");
+}
+function nUF(){
+  const n=NG();if(!nSel||!n){$("n-uf").innerHTML=`<p class="small muted">Toque em um estado para ver os números dele.</p>`;return}
+  const c=(n.uf[nSel]||[])[NI]||0,tot=n.tot_uf[nSel]||0,w=nWin(nSel),o=NR==="2"?r2(nSel):r1(nSel);
+  $("n-uf").innerHTML=`<p><b>${NAMES[nSel]}</b>: às ${nh(n.t[NI])}, tinham chegado <b class="num">${fmt(c)}</b> de ${fmt(tot)} urnas (${pc(c/(tot||1))}). No resultado final do ${NR}º turno, <span class="${NC[w]}">${NM[w]} ${nVW()}</span> aqui, com ${pc((w==="L"?o.L:o.F)/o.T)} dos votos válidos.</p>`;
+}
+function nNotes(){
+  const n=NG(),last=n.n.length-1,O=D.r[NR].BR.v,[a,b]=nR;
+  $("n-check").textContent=n["13"][last]===O["13"]&&n["22"][last]===O["22"]?`No fim da noite, a soma das urnas do gráfico é igual ao total oficial do TSE: Lula ${fmt(O["13"])}, Flávio ${fmt(O["22"])}.`:`No fim da noite, o gráfico soma Lula ${fmt(n["13"][last])} e Flávio ${fmt(n["22"][last])}. O total oficial é Lula ${fmt(O["13"])} e Flávio ${fmt(O["22"])}. A diferença são as seções sem hora de recebimento.`;
+  $("n-tail").textContent=b<last?`As últimas ${fmt(n.n[last]-n.n[b])} urnas chegaram até ${nh(n.t[last])}${n.t[last]>=1440?" (de madrugada)":""}.`:"";
+  $("n-pause").hidden=NR!=="2";$("n-key-pause").hidden=!(NR==="2"&&n.t[a]<1140);
+  if(NR==="2"){const k=n.t.indexOf(1140);$("n-pause2").textContent=k<0?"":`Nos registros oficiais, só ${pc(n.n[k]/n.tot)} das urnas (${fmt(n.n[k])}) aparecem como recebidas pelo TSE até as 19h.${n.t[a]<1140?" No gráfico, a faixa até as 19h fica sombreada.":""}`}
+  $("n-sem").textContent=n.sem_hora?`${fmt(n.sem_hora)} seções não têm a hora de recebimento registrada. Os votos delas estão no total oficial, mas não neste gráfico.`:"Todas as urnas deste turno têm a hora de recebimento registrada.";
+}
+function nUpdate(){
+  const n=NG();$("n-missing").hidden=!!n;$("n-panel").hidden=!n;
+  if(!n){$("n-missing").innerHTML="<strong>Dados deste turno ainda não disponíveis.</strong><p>A hora de chegada dos boletins deste turno ainda não foi processada.</p>";return}
+  nChart();nNow();paintN();nUF();nWhy();
+  const v=nV.find(v=>v.i<=nR[1]);$("n-viraBtn").hidden=!v;
+}
+function nStop(){if(nTimer){clearInterval(nTimer);nTimer=null;$("n-play").textContent="▶ Ver a noite passando"}}
+function nRound(){nStop();nPrep();if(NG()){nHead();nNotes()}nUpdate()}
+function initN(){
+  if(nInit)return;nInit=true;
+  $("n-t").oninput=()=>{nStop();NI=+$("n-t").value;nUpdate()};
+  $("n-end").onclick=()=>{nStop();NI=nR[1];nUpdate()};
+  $("n-viraBtn").onclick=()=>{nStop();const v=nV.find(v=>v.i<=nR[1]);if(v){NI=v.i;nUpdate()}};
+  $("n-play").onclick=()=>{if(nTimer){nStop();return}if(NI>=nR[1])NI=nR[0];$("n-play").textContent="⏸ Pausar";nTimer=setInterval(()=>{if(NI>=nR[1]){nStop();return}NI++;nUpdate()},150)};
+  const svg=$("nchart");svg.addEventListener("pointerdown",e=>{nPick(e);svg.setPointerCapture&&svg.setPointerCapture(e.pointerId)});svg.addEventListener("pointermove",e=>{if(e.buttons)nPick(e)});
+  document.querySelectorAll("[data-nround]").forEach(b=>b.onclick=()=>{NR=b.dataset.nround;document.querySelectorAll("[data-nround]").forEach(x=>x.setAttribute("aria-pressed",x===b));nRound()});
+  let rt=null;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{if(!$("noite").hidden&&NG())nChart()},150)});
+  buildMap($("nmap"),uf=>{nSel=uf;paintN();nUF()});
+  nRound();
+}
 
 /* ---------- 4. simulador ---------- */
 const optsA=UFS.map(uf=>`<option value="${uf}">${NAMES[uf]}</option>`).join("");
