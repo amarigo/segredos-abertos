@@ -418,41 +418,44 @@ class ApiRenuncia:
 
 
 def coletar(cache: Path, ano_atual: int, n_anos: int = N_ANOS, chave: str | None = None, minutos_api: float = 20) -> dict:
-    """Os anos-calendário mais recentes que o Portal tiver. {"anos": {ano: resumo}, "empresas": {cnpj: {ano: {...}}}}"""
+    """Os anos-calendário mais recentes que o Portal tiver. {"anos": {ano: resumo}, "empresas": {cnpj: {ano: {...}}}}
+
+    A API de dados do Portal vem primeiro (pede uma chave, cadastro grátis por e-mail). Enquanto a primeira leitura
+    pela API não termina, ou se ela falhar, usamos os arquivos de download."""
     cache.mkdir(parents=True, exist_ok=True)
     anos: dict[int, dict] = {}
     _falhas.clear()
     por_emp: dict[str, dict] = defaultdict(dict)
-    for ano in range(ano_atual, ano_atual - n_anos - 3, -1):
-        if len(anos) >= n_anos:
-            break
-        z = baixar(ano, cache)
-        if not z:
-            continue
-        try:
-            r = ler_ano(z, ano)
-        except (zipfile.BadZipFile, OSError, ValueError) as e:
-            log.warning("Renúncias %d: arquivo com problema (%s)", ano, e)
-            r = None
-        if not r:
-            continue
-        anos[ano], emps = r
-        for doc, x in emps.items():
-            por_emp[doc][ano] = x
     chave = chave if chave is not None else os.environ.get("PORTAL_TRANSPARENCIA_CHAVE", "").strip()
-    if not anos and chave:
-        # Os arquivos não vieram: tenta a API de dados do Portal, que pede uma chave (cadastro grátis por e-mail)
+    api_motivo = ""
+    if chave:
         api = ApiRenuncia(cache, chave)
-        completa = api.coletar(minutos_api)
-        if completa:
+        if api.coletar(minutos_api):
             for ano, (r, emps) in api.anos(n_anos).items():
                 anos[ano] = r
                 for doc, x in emps.items():
                     por_emp[doc][ano] = x
         if not anos:
-            _falhas[0] = f"API: {api.motivo}" if api.motivo else "API: leitura em andamento, continua na próxima execução"
+            api_motivo = f"API: {api.motivo}" if api.motivo else "API: leitura em andamento, continua na próxima execução"
+            log.info("Renúncias: %s; tentando os arquivos de download", api_motivo)
     if not anos:
-        api_motivo = _falhas.pop(0, "")
+        for ano in range(ano_atual, ano_atual - n_anos - 3, -1):
+            if len(anos) >= n_anos:
+                break
+            z = baixar(ano, cache)
+            if not z:
+                continue
+            try:
+                r = ler_ano(z, ano)
+            except (zipfile.BadZipFile, OSError, ValueError) as e:
+                log.warning("Renúncias %d: arquivo com problema (%s)", ano, e)
+                r = None
+            if not r:
+                continue
+            anos[ano], emps = r
+            for doc, x in emps.items():
+                por_emp[doc][ano] = x
+    if not anos:
         motivos = "; ".join([f"{a}: {m}" for a, m in sorted(_falhas.items(), reverse=True)[:3]] + ([api_motivo] if api_motivo else []))
         dica = "" if chave else f"; para usar a API, cadastre uma chave em {API_CADASTRO} e guarde no secret PORTAL_TRANSPARENCIA_CHAVE"
         avisar("Renúncia fiscal: o Portal da Transparência não respondeu; a parte de renúncias da página de incentivos "

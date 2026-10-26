@@ -195,7 +195,7 @@ function QuemRecebeu({ pag, ren, emd, ano, anosR, anoR, setAnoR }: {
         </table>
       </div>
       {filtradas.length > n && <button className="link" onClick={() => setN(n + 40)}>Mostrar mais ({filtradas.length - n} restantes)</button>}
-      {fonte === "renuncia" && ren && <p className="small muted">Valores declarados pelas próprias empresas à Receita. <a href={linkSeguro(ren.url)} target="_blank" rel="noreferrer">Arquivo oficial de {ren.ano} ↗</a>{ren.sem_cnpj > 0 && <> · {reais(ren.sem_cnpj)} estão no total sem um CNPJ válido no arquivo.</>}</p>}
+      {fonte === "renuncia" && ren && <p className="small muted">Valores declarados pelas próprias empresas à Receita. <a href={linkSeguro(ren.url)} target="_blank" rel="noreferrer">{ren.url.endsWith(".zip") ? "Arquivo" : "Consulta"} oficial de {ren.ano} ↗</a>{ren.sem_cnpj > 0 && <> · {reais(ren.sem_cnpj)} estão no total sem um CNPJ válido no arquivo.</>}</p>}
     </section>
   );
 }

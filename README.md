@@ -29,7 +29,7 @@ clique em **Run workflow** e confirme com o branch `main`. Em cerca de 30 a 60 m
 | Empresas e sócios | Base CNPJ da Receita Federal, via [Minha Receita](https://minhareceita.org) |
 | Emendas parlamentares (quem fez, área, quem recebeu) | [Portal da Transparência](https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares), arquivo completo |
 | Pagamentos do governo federal a empresas e entidades (página de incentivos) | [Portal da Transparência](https://portaldatransparencia.gov.br/download-de-dados/despesas), arquivos diários de despesas |
-| Renúncia fiscal por empresa (página de incentivos) | [Portal da Transparência](https://portaldatransparencia.gov.br/download-de-dados/renuncias), com dados da Receita Federal. Se o download dos arquivos falhar, a coleta usa a [API de dados](https://portaldatransparencia.gov.br/api-de-dados) (consulta `renuncias-valor`), com a chave no secret `PORTAL_TRANSPARENCIA_CHAVE` |
+| Renúncia fiscal por empresa (página de incentivos) | [Portal da Transparência](https://portaldatransparencia.gov.br/download-de-dados/renuncias), com dados da Receita Federal. Primeiro pela [API de dados](https://portaldatransparencia.gov.br/api-de-dados) (consulta `renuncias-valor`, chave no secret `PORTAL_TRANSPARENCIA_CHAVE`); os arquivos de download ficam como reserva |
 
 ## Rodar localmente
 
