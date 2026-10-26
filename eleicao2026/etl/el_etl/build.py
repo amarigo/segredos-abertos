@@ -13,7 +13,7 @@ import shutil
 import sys
 import tempfile
 
-from . import analisar, montar, oficial, turno1, turno2, validar
+from . import analisar, montar, noite, oficial, turno1, turno2, validar
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 DADOS = os.path.normpath(os.path.join(AQUI, '..', '..', 'dados'))
@@ -32,7 +32,7 @@ def cmd_coletar(a):
 
 def cmd_montar(a, dados=DADOS):
     of = oficial.juntar(os.path.join(dados, 'tse'))
-    resumos, listas, erros = {}, {}, []
+    resumos, listas, noites, erros = {}, {}, {}, []
     for t, e in oficial.ELEICOES.items():
         secs = analisar.ler_brutos(os.path.join(dados, 'brutos', f'{t}turno'))
         validos = set(of[e]['BR']['cand'])
@@ -40,6 +40,7 @@ def cmd_montar(a, dados=DADOS):
         erros += validar.conferir(t, secs, of[e], resumo)
         resumos[t] = resumo
         listas[t] = (urnas, validos)
+        noites[t] = noite.apuracao(secs, validos, noite.DIAS[t])
         print(f'{t}º turno: {len(secs)} registros de seção, {len(urnas)} urnas com horário, '
               f'{resumo["cut"][analisar.FECHA + 15].get("BR", {}).get("n", 0)} fecharam depois das 17h15')
     if erros:
@@ -48,7 +49,7 @@ def cmd_montar(a, dados=DADOS):
             print(' -', x)
         return 1
     tmp = tempfile.mkdtemp(prefix='eleicao2026-')
-    D = montar.dados_site(of, resumos)
+    D = montar.dados_site(of, resumos, noites)
     montar.gravar(tmp, D, of)
     for t, (urnas, validos) in listas.items():
         analisar.gravar_planilhas(t, urnas, os.path.join(tmp, 'dados', 'urnas'))

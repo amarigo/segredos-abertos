@@ -105,6 +105,9 @@ def secao(cli, uf, mun, nm, z, s):
     h = h or (hs[-1] if hs else None)
     if h:
         rec['hst'] = h.get('st')
+        if h.get('dr') and h.get('hr'):  # hora em que o TSE recebeu o boletim (Brasília), igual ao DT_BU_RECEBIDO do bweb
+            dr = h['dr']
+            rec['rec'] = f'{dr[6:10]}-{dr[3:5]}-{dr[0:2]} {h["hr"]}'
         nomes = [a['nm'] for a in h['arq'] if a['tp'] in ('bu', 'busa')]
         rec['arq'] = [a['tp'] for a in h['arq']]
         if nomes:
