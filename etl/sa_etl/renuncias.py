@@ -88,6 +88,12 @@ NAVEGADOR = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gec
 _falhas: dict[int, str] = {}  # ano -> o que o Portal respondeu (vai para o aviso da coleta)
 
 
+def _servidor(r) -> str:
+    """Quem respondeu (o servidor ou o firewall na frente dele): ajuda a saber se é bloqueio."""
+    s = r.headers.get("server") or r.headers.get("via") or ""
+    return f", {s[:40]}" if s else ""
+
+
 def _baixar_url(url: str, dest: Path) -> str | None:
     """None se baixou; senão, o motivo. Pede um .zip (a sessão padrão pede JSON) e tenta também com cara de
     navegador, como nas emendas: o servidor de arquivos da CGU recusa alguns pedidos que não parecem de navegador."""
@@ -98,7 +104,7 @@ def _baixar_url(url: str, dest: Path) -> str | None:
                 r = _session.get(url, timeout=600, stream=True, allow_redirects=True,
                                  headers={"Accept": "application/zip,application/octet-stream,*/*", "User-Agent": ua})
                 if r.status_code != 200:
-                    motivo = f"HTTP {r.status_code}"
+                    motivo = f"HTTP {r.status_code}{_servidor(r)}"
                     if r.status_code >= 500 or r.status_code == 429:
                         time.sleep(2 ** (tentativa + 1))
                         continue

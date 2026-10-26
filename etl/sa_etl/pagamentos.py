@@ -126,7 +126,7 @@ def _baixar_dia(dia: str, dest: Path) -> bool | None:
             if r.status_code == 404:
                 return None
             if r.status_code != 200:
-                raise RuntimeError(f"HTTP {r.status_code}")
+                raise RuntimeError(f"HTTP {r.status_code}" + (f", {r.headers.get('server')[:40]}" if r.headers.get("server") else ""))
             with dest.open("wb") as f:
                 for b in r.iter_content(1 << 20):
                     f.write(b)

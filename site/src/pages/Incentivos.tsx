@@ -50,9 +50,13 @@ type Fonte = "pagamentos" | "renuncia" | "emendas";
 const FONTE_NOME: Record<Fonte, string> = { pagamentos: "Recebeu do governo", renuncia: "Deixou de pagar imposto", emendas: "Recebeu de emendas" };
 
 export default function Incentivos() {
-  const { ano } = useAno();
+  const { ano: anoSite } = useAno();
   const { data: idx, error: erroIdx } = useData<Indice>("incentivos/indice.json");
-  const tem = !!idx?.anos.map(String).includes(ano);
+  // Sem dados do ano escolhido no menu: mostra o ano mais recente que já temos (e avisa)
+  const anosComDados = (idx?.anos || []).map(String);
+  const ano = anosComDados.includes(anoSite) ? anoSite : (anosComDados[anosComDados.length - 1] || anoSite);
+  const outroAno = ano !== anoSite;
+  const tem = anosComDados.includes(ano);
   const { data, error } = useData<Ano>(tem ? `incentivos/${ano}.json` : null);
   const anosR = idx?.anos_renuncia || [];
   const padraoR = (anosR.filter((a) => !a.parcial).pop() || anosR[anosR.length - 1])?.ano;
@@ -78,11 +82,12 @@ export default function Incentivos() {
           deixa de <strong>cobrar imposto</strong> de quem tem um benefício fiscal (a renúncia fiscal); e deputados e senadores <strong>indicam emendas</strong> que pagam empresas e entidades.
           Aqui você vê quem mais recebe, quem são os donos e de quais parlamentares, partidos e estados veio o dinheiro das emendas. Tudo com dados oficiais e link para o original.
         </Explain>
+        {outroAno && <p className="aviso-ano small">Ainda não temos os pagamentos de {anoSite}: o Portal da Transparência libera os arquivos diários aos poucos, e a leitura avança a cada atualização. Por enquanto, os pagamentos e as emendas abaixo são de {ano}.</p>}
         <div className="grid">
           <div className="card stat"><span className="label">Pago a empresas e entidades em {ano}</span><span className="value">{pag ? reaisCurto(pag.total) : "—"}</span>
             <span className="hint">{pag ? <>{plural(pag.n, "recebedor", "recebedores")}{!pag.cobertura.completo && <> · dados de {dataBR(pag.cobertura.de)} a {dataBR(pag.cobertura.ate)}</>}</> : `Ainda sem dados de ${ano}`}</span></div>
           <div className="card stat"><span className="label">Imposto que deixou de ser cobrado em {anoR ?? "—"}</span><span className="value">{ren ? reaisCurto(ren.total) : "—"}</span>
-            <span className="hint">{ren ? `${plural(ren.n, "empresa", "empresas")} com benefício fiscal${ren.parcial ? " · ano ainda incompleto" : ""}` : "Renúncia fiscal federal"}</span></div>
+            <span className="hint">{ren ? `${plural(ren.n, "empresa", "empresas")} com benefício fiscal${ren.parcial ? " · ano ainda incompleto" : ""}` : anosR.length ? "Renúncia fiscal federal" : "O arquivo ainda não foi baixado do Portal da Transparência"}</span></div>
           <div className="card stat"><span className="label">Emendas pagas a empresas e entidades em {ano}</span><span className="value">{emd ? reaisCurto(emd.total) : "—"}</span>
             <span className="hint">{emd ? `por indicação de ${plural(emd.n_politicos, "parlamentar", "parlamentares")}` : "Ainda sem dados"}</span></div>
         </div>
