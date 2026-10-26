@@ -222,6 +222,11 @@ jobs:
         if: always()
         continue-on-error: true
         run: python mg/etl/resumo_mg.py site/public-mg/data | tee -a "$GITHUB_STEP_SUMMARY"
+      # No fim do registro, para achar rápido o que aconteceu com os downloads da página de incentivos
+      - name: Incentivos no registro da coleta
+        if: always()
+        continue-on-error: true
+        run: grep -E "Renúncias|Pagamentos gerais|Incentivos" etl/coleta.log | cut -c1-300 | tail -n 40 || true
 
   publicar:
     needs: coletar

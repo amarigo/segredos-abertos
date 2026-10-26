@@ -26,7 +26,7 @@ import zipfile
 from pathlib import Path
 
 from .emendas import _chave, nome_autor
-from .util import _session, digits, norm_name, to_float
+from .util import _session, avisar, digits, norm_name, to_float
 
 log = logging.getLogger("sa_etl.pagamentos")
 
@@ -114,6 +114,9 @@ def _data(s: str | None) -> str:
     return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else (s or "")[:10]
 
 
+ULTIMA_FALHA = ""  # o motivo da última falha ao baixar um dia (vai para o aviso da coleta)
+
+
 def _baixar_dia(dia: str, dest: Path) -> bool | None:
     """True: baixou. None: o Portal não tem arquivo para o dia (fim de semana, feriado). False: falhou."""
     for tentativa in range(3):
@@ -131,6 +134,8 @@ def _baixar_dia(dia: str, dest: Path) -> bool | None:
                 return True
             return None  # página de erro em vez de arquivo: o dia não existe
         except Exception as e:  # noqa: BLE001
+            global ULTIMA_FALHA
+            ULTIMA_FALHA = str(e)[:120]
             log.debug("Pagamentos: falha em %s (%s)", dia, e)
             time.sleep(2 ** (tentativa + 1))
     return False
@@ -443,7 +448,9 @@ def coletar_geral(anos: list[int], cache: Path, minutos: float = 40, hoje: dt.da
             else:
                 falhas += 1
                 if falhas >= 5:
-                    log.warning("Pagamentos gerais: Portal falhou em %d dias seguidos; para em %s", falhas, nome)
+                    log.warning("Pagamentos gerais: Portal falhou em %d dias seguidos; para em %s (%s)", falhas, nome, ULTIMA_FALHA)
+                    avisar(f"Pagamentos a empresas: o Portal da Transparência falhou em {falhas} dias seguidos "
+                           f"({ULTIMA_FALHA}); a leitura continua na próxima execução")
                     break
         dia -= dt.timedelta(days=1)
     tmp.unlink(missing_ok=True)

@@ -17,12 +17,13 @@ from __future__ import annotations
 import csv
 import io
 import logging
+import time
 import zipfile
 from collections import defaultdict
 from pathlib import Path
 
 from .emendas import SIGLAS, achar_colunas, bonito
-from .util import avisar, digits, download, eh_zip, to_float
+from .util import SiteForaDoAr, _session, avisar, data_do_arquivo, digits, to_float
 
 log = logging.getLogger("sa_etl.renuncias")
 
@@ -83,13 +84,63 @@ def cnpj_de(v: str) -> str:
     return d if len(d) == 14 else ""
 
 
-def baixar(ano: int, cache: Path) -> Path | None:
+NAVEGADOR = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+_falhas: dict[int, str] = {}  # ano -> o que o Portal respondeu (vai para o aviso da coleta)
+
+
+def _baixar_url(url: str, dest: Path) -> str | None:
+    """None se baixou; senão, o motivo. Pede um .zip (a sessão padrão pede JSON) e tenta também com cara de
+    navegador, como nas emendas: o servidor de arquivos da CGU recusa alguns pedidos que não parecem de navegador."""
+    motivo = "sem resposta"
+    for ua in (_session.headers["User-Agent"], NAVEGADOR):
+        for tentativa in range(3):
+            try:
+                r = _session.get(url, timeout=600, stream=True, allow_redirects=True,
+                                 headers={"Accept": "application/zip,application/octet-stream,*/*", "User-Agent": ua})
+                if r.status_code != 200:
+                    motivo = f"HTTP {r.status_code}"
+                    if r.status_code >= 500 or r.status_code == 429:
+                        time.sleep(2 ** (tentativa + 1))
+                        continue
+                    break  # 403/404: ano que ainda não existe, ou pedido recusado; tenta o outro agente
+                tmp = dest.with_suffix(".part")
+                with tmp.open("wb") as f:
+                    for bloco in r.iter_content(1 << 20):
+                        f.write(bloco)
+                if not zipfile.is_zipfile(tmp):
+                    motivo = f"não devolveu um .zip ({r.headers.get('content-type')})"
+                    tmp.unlink(missing_ok=True)
+                    break
+                tmp.replace(dest)
+                log.info("Renúncias: baixado %s (%.1f MB)", r.url, dest.stat().st_size / 1e6)
+                return None
+            except SiteForaDoAr as e:
+                return str(e)[:120]
+            except Exception as e:  # noqa: BLE001
+                motivo = str(e)[:120]
+                time.sleep(2 ** (tentativa + 1))
+    return motivo
+
+
+def baixar(ano: int, cache: Path, max_horas: float = 24 * 7) -> Path | None:
     dest = cache / f"{ano}_RenunciasFiscais.zip"
+    if dest.exists() and dest.stat().st_size > 0 and (time.time() - dest.stat().st_mtime) / 3600 < max_horas:
+        return dest
+    cache.mkdir(parents=True, exist_ok=True)
+    motivos = []
     for url in URLS:
-        try:
-            return download(url.format(ano=ano), dest, max_horas=24 * 7, validar=eh_zip)
-        except Exception as e:  # noqa: BLE001 - ano que ainda não existe responde 403 ou 404
-            log.info("Renúncias %d: %s indisponível (%s)", ano, url.format(ano=ano), str(e)[:120])
+        u = url.format(ano=ano)
+        motivo = _baixar_url(u, dest)
+        if motivo is None:
+            _falhas.pop(ano, None)
+            return dest
+        log.warning("Renúncias %d: %s indisponível (%s)", ano, u, motivo)
+        motivos.append(motivo)
+    _falhas[ano] = "; ".join(dict.fromkeys(motivos))
+    if dest.exists() and dest.stat().st_size > 0:  # o Portal falhou: fica a cópia antiga
+        avisar(f"Renúncia fiscal {ano}: o Portal da Transparência não respondeu; usamos a última cópia baixada, "
+               f"de {data_do_arquivo(dest)}")
+        return dest
     return None
 
 
@@ -182,6 +233,7 @@ def coletar(cache: Path, ano_atual: int, n_anos: int = N_ANOS) -> dict:
     """Os anos-calendário mais recentes que o Portal tiver. {"anos": {ano: resumo}, "empresas": {cnpj: {ano: {...}}}}"""
     cache.mkdir(parents=True, exist_ok=True)
     anos: dict[int, dict] = {}
+    _falhas.clear()
     por_emp: dict[str, dict] = defaultdict(dict)
     for ano in range(ano_atual, ano_atual - n_anos - 3, -1):
         if len(anos) >= n_anos:
@@ -200,7 +252,9 @@ def coletar(cache: Path, ano_atual: int, n_anos: int = N_ANOS) -> dict:
         for doc, x in emps.items():
             por_emp[doc][ano] = x
     if not anos:
-        avisar("Renúncia fiscal: o Portal da Transparência não respondeu; a parte de renúncias da página de incentivos não foi atualizada")
+        motivos = "; ".join(f"{a}: {m}" for a, m in sorted(_falhas.items(), reverse=True)[:3])
+        avisar("Renúncia fiscal: o Portal da Transparência não respondeu; a parte de renúncias da página de incentivos "
+               f"não foi atualizada ({motivos or 'sem resposta'})")
     # Ano incompleto: a Receita ainda não processou todas as declarações (fica bem abaixo do ano anterior)
     for ano, r in anos.items():
         ant = anos.get(ano - 1)
