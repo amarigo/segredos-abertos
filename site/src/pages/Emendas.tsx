@@ -9,10 +9,12 @@ import "./emendas.css";
 /* Formato de data/emendas/{ano}.json (gerado por etl/sa_etl/emendas.py) */
 interface Valores { empenhado: number; pago: number }
 type Par = [string, number];
-/** [quem recebeu, valor, CNPJ, códigos das emendas] */
-type Recebedor = [string, number, string?, string[]?];
+/** [quem recebeu, valor, CNPJ, códigos das emendas, motivo do maior pagamento, link da nota de empenho] */
+type Recebedor = [string, number, string?, string[]?, string?, string?];
 interface Autor extends Valores {
-  nome: string; n: number; areas: Par[]; recebedores: Recebedor[]; pix: number;
+  nome: string; n: number; areas: Par[]; acoes?: Par[]; recebedores: Recebedor[]; pix: number;
+  /** emendas Pix: [código, destino, valor] */
+  pix_emendas?: [string, string, number][];
   politico: string | null; partido: string; uf: string; casa: Casa | "";
   pagamentos?: { valor: number; arquivo: string };
 }
@@ -224,7 +226,13 @@ function Autores({ data, medida }: { data: EmendasAno; medida: Medida }) {
             <div className="emd-det">
               <div>
                 <h4>Para quê</h4>
-                <ul>{a.areas.map(([k, x], j) => <li key={j}><span>{k}</span><span className="num">{reaisCurto(x)}</span></li>)}</ul>
+                <ul>{a.areas.map(([k, x], j) => k === SEM_AREA_PIX && a.pix_emendas?.length
+                  ? <li key={j} className="emd-pix-li"><EmendasPix k={k} x={x} lista={a.pix_emendas} /></li>
+                  : <li key={j}><span>{k}</span><span className="num">{reaisCurto(x)}</span></li>)}</ul>
+                {a.acoes && a.acoes.length > 0 && <>
+                  <h4 style={{ marginTop: 10 }}>Em detalhe (ação do Orçamento)</h4>
+                  <ul>{a.acoes.map(([k, x], j) => <li key={j}><span>{k}</span><span className="num">{reaisCurto(x)}</span></li>)}</ul>
+                </>}
               </div>
               <div>
                 <h4>Quem recebeu (pagamentos de {data.ano})</h4>
@@ -419,18 +427,41 @@ function EmpresasPagas({ p, ano }: { p: Pagamentos; ano: string }) {
 }
 
 const PORTAL = "https://portaldatransparencia.gov.br";
+const SEM_AREA_PIX = "Sem finalidade definida (emenda Pix)";
+const TRANSFEREGOV = "https://especiais.transferegov.sistema.gov.br/transferencia-especial/plano-acao/consulta";
+const urlEmenda = (c: string) => `${PORTAL}/emendas/detalhe?codigoEmenda=${encodeURIComponent(c)}${/^\d{4}/.test(c) ? `&ano=${c.slice(0, 4)}` : ""}`;
+
+/** Emenda Pix: o dinheiro vai direto para a prefeitura ou o estado, que depois registra no Transferegov um plano de ação dizendo em que vai gastar. */
+function EmendasPix({ k, x, lista }: { k: string; x: number; lista: [string, string, number][] }) {
+  return (
+    <details className="emd-pix">
+      <summary><span>{k} <span className="small link-like">ver as {lista.length} emendas</span></span><span className="num">{reaisCurto(x)}</span></summary>
+      <p className="small muted">Na emenda Pix o dinheiro cai direto no caixa da prefeitura ou do estado, sem um objeto definido no Orçamento. Quem recebe precisa registrar no Transferegov um <b>plano de ação</b> dizendo em que vai gastar (obra, compra de equipamento etc.). Para ver, abra o Transferegov e busque pelo número da emenda.</p>
+      <ul>{lista.map(([c, local, val]) => (
+        <li key={c} className="emd-pix-item">
+          <span><strong>{local || "Destino não informado"}</strong> <span className="small muted num">nº {c}</span><br />
+            <span className="small emd-doc-links">
+              <a href={urlEmenda(c)} target="_blank" rel="noreferrer">Emenda no Portal ↗</a>
+              <a href={TRANSFEREGOV} target="_blank" rel="noreferrer">Plano de ação no Transferegov ↗</a>
+            </span></span>
+          <span className="num">{reaisCurto(val)}</span>
+        </li>))}</ul>
+    </details>
+  );
+}
 const NOTA_FISCAL = "E as notas fiscais? Quando a emenda vai para uma prefeitura, um fundo de saúde ou um estado, quem compra é a prefeitura ou o estado, e as notas fiscais ficam no portal da transparência dela e no Tribunal de Contas do estado. O governo federal não publica essas notas. Por isso, os links levam ao que é oficial no Portal da Transparência: a emenda, tudo o que o recebedor ganhou do governo federal e cada pagamento com sua nota de empenho.";
 
 /** Um recebedor na ficha do parlamentar, com os links oficiais (emenda e o que o recebedor ganhou do governo federal). */
 function ItemRecebedor({ r }: { r: Recebedor }) {
-  const [nome, valor, doc, codigos] = r;
+  const [nome, valor, doc, codigos, motivo, urlEmpenho] = r;
   return (
     <li className="emd-rec">
       <span>{nome}
+        {motivo && <span className="emd-motivo small"><b>Para quê:</b> {motivo}{urlEmpenho && <> <a href={linkSeguro(urlEmpenho)} target="_blank" rel="noreferrer">nota de empenho ↗</a></>}</span>}
         <span className="emd-rec-links small">
           {doc && <a href={`${PORTAL}/pessoa-juridica/${doc}`} target="_blank" rel="noreferrer">Pagamentos recebidos ↗</a>}
           {(codigos || []).map((c) => (
-            <a key={c} href={`${PORTAL}/emendas/detalhe?codigoEmenda=${encodeURIComponent(c)}${/^\d{4}/.test(c) ? `&ano=${c.slice(0, 4)}` : ""}`} target="_blank" rel="noreferrer">Emenda {c} ↗</a>
+            <a key={c} href={urlEmenda(c)} target="_blank" rel="noreferrer">Emenda {c} ↗</a>
           ))}
         </span>
       </span>

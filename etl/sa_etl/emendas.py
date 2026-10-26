@@ -157,6 +157,7 @@ REGRAS = {
     "uf": [["uf"]],
     "funcao": [["nome", "funcao"], ["funcao"]],
     "subfuncao": [["nome", "subfuncao"], ["subfuncao"]],
+    "acao": [["nome", "acao"]],
     "empenhado": [["valor", "empenhado"]],
     "liquidado": [["valor", "liquidado"]],
     "pago": [["valor", "pago"]],
@@ -340,10 +341,19 @@ def resumir(rows, anos: list[int], politicos: list[dict], extras: list[dict] | N
         s["total"][0] += emp; s["total"][1] += pago; s["total"][2] += 1
         t = s["tipo"][tipo]; t[0] += emp; t[1] += pago; t[2] += 1
         a = s["area"][area]; a[0] += emp; a[1] += pago
-        au = s["autor"].setdefault(autor, {"emp": 0.0, "pago": 0.0, "n": set(), "tipos": Counter(), "area": defaultdict(float)})
+        au = s["autor"].setdefault(autor, {"emp": 0.0, "pago": 0.0, "n": set(), "tipos": Counter(), "area": defaultdict(float),
+                                                  "acao": defaultdict(float), "pix_cod": {}})
         au["emp"] += emp; au["pago"] += pago; au["tipos"][tipo] += pago or emp
         au["n"].add(cod if cod and cod.isdigit() else len(au["n"]))
         au["area"][area] += pago or emp
+        acao = bonito((r.get(col["acao"]) or "").strip()) if col.get("acao") else ""
+        if acao and tipo != "pix":  # na Pix a ação é só "Transferências Especiais"
+            au["acao"][acao] += pago or emp
+        if tipo == "pix" and cod:  # cada emenda Pix, para a pessoa abrir o plano de ação dela
+            local = (r.get(col["local"]) or "").strip() if col["local"] else ""
+            local = re.sub(r"- (\w\w)$", lambda m: "- " + m.group(1).upper(), bonito(local))
+            x = au["pix_cod"].setdefault(cod, [local, 0.0])
+            x[1] += pago or emp
 
     out = {}
     for ano, s in soma.items():
@@ -356,7 +366,9 @@ def resumir(rows, anos: list[int], politicos: list[dict], extras: list[dict] | N
             p = None if coletivo else idx.get(_chave(busca))
             item = {"nome": mostra if (not p or busca != nome) else p["nome"], "chave": _chave(nome),
                     "empenhado": round(au["emp"], 2), "pago": round(au["pago"], 2), "n": len(au["n"]),
-                    "areas": _top(au["area"], 4), "pix": round(au["tipos"].get("pix", 0), 2)}
+                    "areas": _top(au["area"], 4), "acoes": _top(au["acao"], 5),
+                    "pix_emendas": [[c, l, round(v, 2)] for c, (l, v) in sorted(au["pix_cod"].items(), key=lambda kv: -kv[1][1])[:30] if v],
+                    "pix": round(au["tipos"].get("pix", 0), 2)}
             if coletivo:
                 coletivos.append({**item, "tipo": coletivo})
             else:
@@ -541,7 +553,7 @@ def coletar(politicos: list[dict], anos: list[int], cache: Path, saida: Path, pa
         pg = ((pagos or {}).get("anos") or {}).get(ano)
         for a in d["autores"] + d["coletivos"]:
             chave = a.pop("chave")
-            a["recebedores"] = por_autor.get(chave, [])
+            a["recebedores"] = com_motivo(por_autor.get(chave, []), (pg or {}).get("autores", {}).get(chave))
             if pg and chave in pg["autores"]:
                 a["pagamentos"] = {"valor": round(pg["autores"][chave]["valor"], 2), "arquivo": arquivo_docs(chave)}
         d["favorecidos"] = f
@@ -555,6 +567,22 @@ def coletar(politicos: list[dict], anos: list[int], cache: Path, saida: Path, pa
     indice = {"anos": sorted(res), "totais": {str(a): d["total"] for a, d in res.items()}}
     write_json(saida / "emendas" / "anos.json", indice)
     return {**indice, "autores": nomes}
+
+
+def com_motivo(recebedores: list, pag_autor: dict | None) -> list:
+    """Junta a cada recebedor o motivo do maior pagamento a ele (a descrição da nota de empenho) e o link da nota."""
+    if not pag_autor:
+        return recebedores
+    from .pagamentos import url_documento
+    maior: dict[str, dict] = {}
+    for d in pag_autor["docs"]:
+        if d["doc"] and d["desc"] and (d["doc"] not in maior or d["valor"] > maior[d["doc"]]["valor"]):
+            maior[d["doc"]] = d
+    out = []
+    for r in recebedores:
+        d = maior.get(r[2]) if len(r) > 2 else None
+        out.append(r + [d["desc"], url_documento(d["emp"])] if d else r)
+    return out
 
 
 def arquivo_docs(chave: str) -> str:
