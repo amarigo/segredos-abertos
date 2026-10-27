@@ -333,41 +333,42 @@ nav.projetos{font-size:.75rem;padding-block:.6rem .2rem}
 nav.projetos .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:.2rem .8rem;color:var(--muted)}
 nav.projetos a{color:var(--fg);text-underline-offset:3px;padding-block:.3rem}
 nav.projetos a[aria-current="page"]{font-weight:700;text-decoration:none}
-/* ===== Visual do Segredos Abertos (igual nos três sites): faixa roxa no topo, títulos em caixa alta e estreitos,
-   destaque rosa, botões e abas em pílula. Fica por último para valer sobre o resto. Candidatos mantêm suas cores. ===== */
+/* ===== Visual do Segredos Abertos (igual nos três sites), no padrão de site público brasileiro (gov.br): faixa azul-escura
+   no topo com fio verde e amarelo, azul gov.br nos links, verde nos sobretítulos, botões e abas em pílula, letra Raleway.
+   Fica por último para valer sobre o resto. Candidatos mantêm suas cores. ===== */
 :root{
-  --bg:#FBF8F4; --panel:#FBF8F4; --fg:#1C1433; --muted:#544C6A; --line:#E6E0EA; --soft:#F4EFFA;
-  --br-green:#D81E5B; --br-ink:#24104A; --br-gold:#FFC93C; --br-blue:#24104A; --focus:#FFC93C;
-  --sa-link:#5A2BC2; --sa-hot:#D81E5B; --sa-hot-vivo:#FF5C8A; --sa-faixa:#24104A; --sa-faixa-2:#170A33;
-  --f-body:"Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --f-head:"Archivo", "Arial Narrow", system-ui, sans-serif;
+  --bg:#F8F8F8; --panel:#F8F8F8; --fg:#1B2533; --muted:#4F5B6B; --line:#DCDFE5; --soft:#EDF5FF;
+  --br-green:#168821; --br-ink:#071D41; --br-gold:#FFCD07; --br-blue:#1351B4; --focus:#FFCD07;
+  --sa-link:#1351B4; --sa-hot:#168821; --sa-hot-vivo:#FFCD07; --sa-faixa:#071D41; --sa-faixa-2:#04132E;
+  --f-body:"Raleway", "Rawline", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-head:"Raleway", "Rawline", system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#120C1F; --panel:#120C1F; --fg:#F3EFF8; --muted:#B5ABC9; --line:#30274A; --soft:#231A3A;
-  --br-green:#FF6E98; --br-ink:#B9A0FF; --br-gold:#FFC93C; --br-blue:#B9A0FF; --focus:#FFC93C;
-  --sa-link:#B9A0FF; --sa-hot:#FF6E98; --sa-hot-vivo:#FF6E98; --sa-faixa:#1D0C3D; --sa-faixa-2:#0E0622}}
+  --bg:#0B1220; --panel:#0B1220; --fg:#EEF2F8; --muted:#A9B4C6; --line:#26324A; --soft:#16233B;
+  --br-green:#36C35A; --br-ink:#7FB0FF; --br-gold:#FFCD07; --br-blue:#7FB0FF; --focus:#FFCD07;
+  --sa-link:#7FB0FF; --sa-hot:#36C35A; --sa-hot-vivo:#FFCD07; --sa-faixa:#04112A; --sa-faixa-2:#020A1A}}
 :root[data-theme="dark"]{
-  --bg:#120C1F; --panel:#120C1F; --fg:#F3EFF8; --muted:#B5ABC9; --line:#30274A; --soft:#231A3A;
-  --br-green:#FF6E98; --br-ink:#B9A0FF; --br-gold:#FFC93C; --br-blue:#B9A0FF; --focus:#FFC93C;
-  --sa-link:#B9A0FF; --sa-hot:#FF6E98; --sa-hot-vivo:#FF6E98; --sa-faixa:#1D0C3D; --sa-faixa-2:#0E0622}
+  --bg:#0B1220; --panel:#0B1220; --fg:#EEF2F8; --muted:#A9B4C6; --line:#26324A; --soft:#16233B;
+  --br-green:#36C35A; --br-ink:#7FB0FF; --br-gold:#FFCD07; --br-blue:#7FB0FF; --focus:#FFCD07;
+  --sa-link:#7FB0FF; --sa-hot:#36C35A; --sa-hot-vivo:#FFCD07; --sa-faixa:#04112A; --sa-faixa-2:#020A1A}
 body{margin:0}
 a{color:var(--sa-link)}
-h1,h2{font-stretch:75%;text-transform:uppercase;font-weight:800;letter-spacing:0;line-height:1.02}
-h1{font-size:clamp(2.2rem,6.5vw,3.8rem);font-weight:900}
-h2::before{content:"";display:block;width:2.2rem;height:.25rem;border-radius:3px;background:var(--sa-hot);margin-bottom:.6rem}
-.winner .big,.outbig,.kpi,.who .wn,.concl{font-stretch:75%}
+h1,h2{font-weight:800;letter-spacing:-.01em;line-height:1.1}
+h1{font-size:clamp(2rem,5.5vw,3.2rem);font-weight:900}
+h2::before{content:"";display:block;width:2.2rem;height:.25rem;border-radius:3px;background:linear-gradient(90deg,var(--br-green) 0 62%,var(--br-gold) 62% 100%);margin-bottom:.6rem}
+html{font-feature-settings:"lnum" 1}
 .eyebrow{color:var(--sa-hot);letter-spacing:.1em}
 /* barra dos projetos e cabeçalho: faixas de ponta a ponta */
 nav.projetos{background:var(--sa-faixa-2);border-image:conic-gradient(var(--sa-faixa-2) 0 0) fill 0//0 100vmax;padding-block:.45rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
-nav.projetos .wrap{color:#B5ABCF}
-nav.projetos a{color:#E6E0F5;text-decoration:none}
+nav.projetos .wrap{color:#B7C3D9}
+nav.projetos a{color:#E3E9F4;text-decoration:none}
 nav.projetos a:hover{color:#fff;text-decoration:underline}
 nav.projetos a[aria-current="page"]{color:var(--sa-hot-vivo)}
-header.top{background:var(--sa-faixa);border-image:conic-gradient(var(--sa-faixa) 0 0) fill 0//0 100vmax;color:#fff;padding-block:1.6rem 1.6rem;border-bottom:0}
+header.top{background:var(--sa-faixa);border-image:conic-gradient(var(--sa-faixa) 0 0) fill 0//0 100vmax;color:#fff;padding-block:1.6rem 1.9rem;border-bottom:0;box-shadow:inset 0 -.2rem 0 var(--br-gold),inset 0 -.4rem 0 var(--br-green)}
 header.top .eyebrow{color:var(--sa-hot-vivo)}
 header.top .sa-link{color:#fff}
-header.top .lead{color:#D9D1EC}
-header.top .size span{color:#D9D1EC}
+header.top .lead{color:#D3DCEB}
+header.top .size span{color:#D3DCEB}
 header.top .size button{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.45);border-radius:999px}
 header.top .size button:hover{border-color:#fff}
 /* menu de seções: pílulas */
@@ -376,22 +377,22 @@ nav.menu{border-bottom:1px solid var(--line);padding-block:.5rem}
 .menu button{border:0;border-radius:999px;min-height:2.8rem;padding:.35rem 1.1rem;color:var(--muted)}
 .menu button:hover{color:var(--fg);background:var(--soft)}
 .menu button[aria-current="page"]{background:var(--sa-faixa);color:#fff;border:0}
-:root[data-theme="dark"] .menu button[aria-current="page"]{background:var(--br-ink);color:#120C1F}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .menu button[aria-current="page"]{background:var(--br-ink);color:#120C1F}}
+:root[data-theme="dark"] .menu button[aria-current="page"]{background:var(--br-ink);color:#0B1220}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .menu button[aria-current="page"]{background:var(--br-ink);color:#0B1220}}
 /* blocos, botões e controles */
 .panel{border-top:0;padding-top:.4rem}
-.ok{border-left:5px solid var(--sa-hot);background:var(--soft);border-radius:0 14px 14px 0;padding:.9rem 1.1rem}
-.notice{border-left:5px solid var(--br-gold);background:var(--soft);border-radius:0 14px 14px 0;padding:.9rem 1.1rem}
-.btn{border-radius:999px;text-transform:uppercase;letter-spacing:.05em;font-size:.88rem;font-weight:800;padding:.6rem 1.4rem}
+.ok{border-left:5px solid var(--br-blue);background:var(--soft);border-radius:0 8px 8px 0;padding:.9rem 1.1rem}
+.notice{border-left:5px solid var(--br-gold);background:var(--soft);border-radius:0 8px 8px 0;padding:.9rem 1.1rem}
+.btn{border-radius:999px;font-weight:700;padding:.6rem 1.4rem}
 .toggle,.radios{border:0;border-radius:999px;background:var(--soft);padding:.25rem;gap:.25rem}
 .toggle button,.radios button{border:0!important;border-radius:999px;min-height:2.8rem;margin:0;color:var(--muted)}
 .toggle button[aria-pressed="true"],.radios button[aria-pressed="true"]{background:var(--sa-faixa);color:#fff}
-:root[data-theme="dark"] .toggle button[aria-pressed="true"],:root[data-theme="dark"] .radios button[aria-pressed="true"]{background:var(--br-ink);color:#120C1F}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .toggle button[aria-pressed="true"],:root:not([data-theme="light"]) .radios button[aria-pressed="true"]{background:var(--br-ink);color:#120C1F}}
+:root[data-theme="dark"] .toggle button[aria-pressed="true"],:root[data-theme="dark"] .radios button[aria-pressed="true"]{background:var(--br-ink);color:#0B1220}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .toggle button[aria-pressed="true"],:root:not([data-theme="light"]) .radios button[aria-pressed="true"]{background:var(--br-ink);color:#0B1220}}
 .radios{border-radius:22px}
 select,input[type=number]{border-radius:999px;padding-inline:1rem}
 .tag{border-radius:999px;padding:.08rem .6rem;font-weight:800}
-.wwo .fact{border-radius:14px}
+.wwo .fact{border-radius:8px}
 .wwo .fact:first-child{border-color:var(--sa-hot)}
 .concl{border-left-color:var(--sa-hot)}
 .bigbar,.rbar{border-radius:999px}

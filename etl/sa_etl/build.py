@@ -304,8 +304,14 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         pagadores = sorted(({"politico": pid, "nome": por_id[pid]["nome"], "partido": por_id[pid]["partido"],
                              "uf": por_id[pid]["uf"], "valor": round(v, 2)} for pid, v in quem.items()),
                            key=lambda x: -x["valor"])
+        # Cota recebida em cada ano, para as listas mostrarem o ano escolhido no site (o total de todos os anos fica em segundo plano)
+        cota_ano = defaultdict(lambda: [0.0, set()])
+        for n in notas_emp[doc]:
+            cota_ano[str(n["ano"])][0] += n["valor"]
+            cota_ano[str(n["ano"])][1].add(n["politico"])
         resumo_e = {"cnpj": doc, "nome": (e or {}).get("razao_social") or nome_forn.get(doc, "") or (de_emendas or {}).get("nome", ""),
                     "total": total, "n_politicos": len(quem), "tem_socios": bool(e and e["socios"]),
+                    "por_ano": {a: {"valor": round(v, 2), "n_politicos": len(ps)} for a, (v, ps) in sorted(cota_ano.items())},
                     "n_mesmo_endereco": len(vizinhas.get(doc, [])),
                     **_emd(emd, doc), **_inc(inc, doc)}
         if quem:  # a lista de empresas é a da cota; as pagas só com emendas aparecem na página de emendas
