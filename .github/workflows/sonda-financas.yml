@@ -1,0 +1,20 @@
+name: Sonda finanças
+on:
+  push:
+    branches: [claude/project-thread-21d8ud]
+    paths: [".github/sonda/**", ".github/workflows/sonda-financas.yml"]
+permissions:
+  contents: read
+jobs:
+  sondar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r etl/requirements.txt
+      - run: python .github/sonda/sondar.py
+        env:
+          PORTAL_TRANSPARENCIA_CHAVE: ${{ secrets.PORTAL_TRANSPARENCIA_CHAVE }}
