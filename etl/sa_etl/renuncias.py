@@ -24,6 +24,7 @@ import shutil
 import time
 import zipfile
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Iterator
 
@@ -254,6 +255,7 @@ def resumir(ano: int, ben, det, n_top: int = N_TOP) -> tuple[dict, dict[str, dic
 API = "https://api.portaldatransparencia.gov.br/api-de-dados/renuncias-valor"
 API_TESTE = "https://api.portaldatransparencia.gov.br/api-de-dados/orgaos-siafi"  # consulta simples, para testar a chave
 API_CADASTRO = "https://portaldatransparencia.gov.br/api-de-dados/cadastrar-email"
+API_EM_PARALELO = 6  # pedidos ao mesmo tempo (a API leva uns 5 segundos por página)
 API_POR_MINUTO = 300  # o limite do Portal é 400 por minuto (700 de madrugada); acima disso a chave fica suspensa por 8 horas
 API_REFAZER_DIAS = 30  # a Receita atualiza a renúncia uma ou duas vezes por ano; relemos tudo uma vez por mês
 REGRAS_API = {**REGRAS_DET, **{k: v for k, v in REGRAS_BEN.items() if k not in REGRAS_DET},
@@ -319,35 +321,32 @@ class ApiRenuncia:
             e = {"filtros": [{}], "i": 0, "pagina": 1, "fim": False, "paginas": 0}
         return e
 
-    def _pedir(self, filtro: dict, pagina: int) -> list | None:
+    def _pedir(self, filtro: dict, pagina: int) -> tuple[list | None, str]:
+        """(linhas, motivo da falha). Roda em paralelo: não mexe em self, só devolve."""
+        motivo = ""
         for tentativa in range(4):
             try:
                 r = _session.get(API, params={**filtro, "pagina": pagina}, timeout=120,
                                  headers={"chave-api-dados": self.chave, "Accept": "application/json"})
             except SiteForaDoAr as e:
-                self.motivo = str(e)[:120]
-                return None
+                return None, str(e)[:120]
             except Exception as e:  # noqa: BLE001
-                self.motivo = str(e)[:120]
+                motivo = str(e)[:120]
                 time.sleep(2 ** (tentativa + 1))
                 continue
             if r.status_code == 200:
                 try:
                     d = r.json()
                 except ValueError:
-                    self.motivo = f"resposta não é JSON ({r.headers.get('content-type')})"
-                    return None
-                return d if isinstance(d, list) else None
+                    return None, f"resposta não é JSON ({r.headers.get('content-type')})"
+                return (d, "") if isinstance(d, list) else (None, "resposta não é uma lista")
             corpo = re.sub(r"\s+", " ", (r.text or "")[:160]).strip()
-            self.motivo = f"HTTP {r.status_code}{_servidor(r)}" + (f": {corpo}" if corpo else "")
-            if r.status_code in (401, 403) and not getattr(self, "_testou_chave", False):
-                self._testou_chave = True
-                self.motivo += f" ({self._testar_chave()})"
+            motivo = f"HTTP {r.status_code}{_servidor(r)}" + (f": {corpo}" if corpo else "")
             if r.status_code in (429,) or r.status_code >= 500:
                 time.sleep(2 ** (tentativa + 2))
                 continue
-            return None
-        return None
+            return None, motivo
+        return None, motivo
 
     def _testar_chave(self) -> str:
         """A recusa é da chave ou só desta consulta? Pergunta uma consulta simples da mesma API."""
@@ -365,31 +364,17 @@ class ApiRenuncia:
         if feita and time.time() - feita < API_REFAZER_DIAS * 86400:
             return True
         e = self._estado()
-        inicio, pausa = time.time(), 60 / API_POR_MINUTO
-        while not e["fim"] and time.time() - inicio < minutos * 60:
-            filtro = e["filtros"][e["i"]]
-            linhas = self._pedir(filtro, e["pagina"])
-            if linhas is None:
-                if e["paginas"] == 0 and not filtro and self.motivo.startswith("HTTP 400"):
-                    # a consulta sem filtro não é aceita: lê estado por estado
-                    log.info("Renúncias (API): consulta sem filtro recusada (%s); lendo por UF", self.motivo)
-                    e.update(filtros=[{"nomeSiglaUF": uf} for uf in sorted(SIGLAS)], i=0, pagina=1)
-                    continue
-                log.warning("Renúncias (API): parou em %s, página %d (%s)", filtro or "sem filtro", e["pagina"], self.motivo)
-                break
-            if linhas:
-                f = self.lendo / f"p{e['paginas']:06d}.json.gz"
-                f.write_bytes(gzip.compress(json.dumps([_achatar(x) for x in linhas if isinstance(x, dict)],
-                                                       ensure_ascii=False).encode()))
-                e["paginas"] += 1
-                e["pagina"] += 1
-            else:  # página vazia: acabou este filtro
-                e["i"] += 1
-                e["pagina"] = 1
-                if e["i"] >= len(e["filtros"]):
-                    e.update(fim=True, fim_em=time.time())
-            self.estado_f.write_text(json.dumps(e))
-            time.sleep(pausa)
+        inicio = time.time()
+        # Cada resposta da API demora alguns segundos; por isso pedimos API_EM_PARALELO páginas de uma vez,
+        # sem passar de API_POR_MINUTO pedidos por minuto
+        with ThreadPoolExecutor(API_EM_PARALELO) as pool:
+            while not e["fim"] and time.time() - inicio < minutos * 60:
+                t0, filtro = time.time(), e["filtros"][e["i"]]
+                lote = list(pool.map(self._pedir, [filtro] * API_EM_PARALELO, range(e["pagina"], e["pagina"] + API_EM_PARALELO)))
+                if not self._guardar_lote(e, filtro, lote):
+                    break
+                self.estado_f.write_text(json.dumps(e))
+                time.sleep(max(0.0, API_EM_PARALELO * 60 / API_POR_MINUTO - (time.time() - t0)))
         self.estado_f.write_text(json.dumps(e))
         if e["fim"]:
             shutil.rmtree(self.pasta, ignore_errors=True)
@@ -397,6 +382,33 @@ class ApiRenuncia:
         log.info("Renúncias (API): %d páginas lidas%s", e["paginas"], ", completa" if e["fim"] else
                  f", leitura continua na próxima execução (filtro {e['i'] + 1} de {len(e['filtros'])}, página {e['pagina']})")
         return e["fim"] or bool(feita)
+
+    def _guardar_lote(self, e: dict, filtro: dict, lote: list[tuple[list | None, str]]) -> bool:
+        """Guarda as páginas do lote em ordem, até a primeira vazia (fim do filtro). False: parar a leitura."""
+        for linhas, motivo in lote:
+            if linhas is None:
+                self.motivo = motivo
+                if motivo.startswith(("HTTP 401", "HTTP 403")):
+                    self.motivo += f" ({self._testar_chave()})"
+                if e["paginas"] == 0 and not filtro and motivo.startswith("HTTP 400"):
+                    # a consulta sem filtro não é aceita: lê estado por estado
+                    log.info("Renúncias (API): consulta sem filtro recusada (%s); lendo por UF", motivo)
+                    e.update(filtros=[{"nomeSiglaUF": uf} for uf in sorted(SIGLAS)], i=0, pagina=1)
+                    return True
+                log.warning("Renúncias (API): parou em %s, página %d (%s)", filtro or "sem filtro", e["pagina"], self.motivo)
+                return False
+            if not linhas:  # página vazia: acabou este filtro
+                e["i"] += 1
+                e["pagina"] = 1
+                if e["i"] >= len(e["filtros"]):
+                    e.update(fim=True, fim_em=time.time())
+                return True
+            f = self.lendo / f"p{e['paginas']:06d}.json.gz"
+            f.write_bytes(gzip.compress(json.dumps([_achatar(x) for x in linhas if isinstance(x, dict)],
+                                                   ensure_ascii=False).encode()))
+            e["paginas"] += 1
+            e["pagina"] += 1
+        return True
 
     def anos(self, n_anos: int) -> dict[int, tuple[dict, dict]]:
         """Os resumos por ano, do mesmo jeito que os do arquivo .zip."""
