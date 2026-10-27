@@ -332,3 +332,34 @@ def test_verba_fora_do_ar_para_depois_de_5_falhas(estado, nacional, tmp_path):
     estado.falhar("verbas_indenizatorias", "500")
     _montar(nacional, tmp_path)
     assert sum("verbas_indenizatorias" in u for u in estado.chamadas) <= 5 * 3, "não insiste com a ALMG fora do ar"
+
+
+# ---------------------------------------------------------------- projetos em andamento na ALMG
+
+def test_almg_em_andamento_so_projetos_vivos_e_recentes():
+    from fakeestado import PROP_COLS
+    import csv as _csv, io as _io
+    aut = json.dumps([{"id": 20001, "nome": "Fulano Estadual 01", "partido": "PT"}])
+    linhas = [
+        {"SiglaTipoProposicao": "PL", "Numero": "10", "Ano": "2026", "Ementa": "Dispõe sobre feiras.", "Situacao": "Aguardando parecer",
+         "DataPublicacao": "20/10/2026", "NomeFaseAtual": "1º turno", "Local": "Comissão de Constituição e Justiça", "Autores": aut},
+        {"SiglaTipoProposicao": "PL", "Numero": "11", "Ano": "2026", "Ementa": "Antigo.", "Situacao": "Pronto para ordem do dia",
+         "DataPublicacao": "01/02/2026", "DataUltimaAcao": "05/10/2026", "Local": "Plenário", "Autores": aut},
+        {"SiglaTipoProposicao": "PL", "Numero": "12", "Ano": "2026", "Ementa": "Virou lei.", "Situacao": "Transformado em norma jurídica",
+         "DataPublicacao": "20/10/2026", "Autores": aut},
+        {"SiglaTipoProposicao": "PL", "Numero": "13", "Ano": "2025", "Ementa": "Parado.", "Situacao": "Aguardando parecer",
+         "DataPublicacao": "01/02/2025", "DataUltimaAcao": "01/03/2025", "Autores": aut},
+        {"SiglaTipoProposicao": "RQN", "Numero": "14", "Ano": "2026", "Ementa": "Requerimento.", "Situacao": "Recebido",
+         "DataPublicacao": "20/10/2026", "Autores": aut},
+    ]
+    buf = _io.StringIO()
+    w = _csv.DictWriter(buf, PROP_COLS, delimiter=";")
+    w.writeheader()
+    w.writerows(linhas)
+    d = almg.em_andamento({2026: buf.getvalue()}, HOJE)
+    por = {i["nome"]: i for i in d["itens"]}
+    assert set(por) == {"PL 10/2026", "PL 11/2026"}
+    assert por["PL 10/2026"]["grupos"] == ["nova"] and por["PL 10/2026"]["etapa"] == 1
+    assert por["PL 11/2026"]["grupos"] == ["andamento"] and por["PL 11/2026"]["etapa"] == 2
+    assert por["PL 10/2026"]["autores"][0]["nome"] == "Fulano Estadual 01"
+    assert por["PL 10/2026"]["url"].startswith("https://www.almg.gov.br/")

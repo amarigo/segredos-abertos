@@ -47,7 +47,7 @@ test.describe("jornada", () => {
 
   test("todas as páginas do menu abrem sem erro", async ({ page }) => {
     const erros = vigiar(page);
-    for (const rota of ["politicos", "cidades", "empresas", "votacoes", "partidos", "sobre", "governo", "assembleia", "emendas-estaduais",
+    for (const rota of ["politicos", "cidades", "empresas", "votacoes", "votacoes/em-andamento", "votacoes/em-andamento?aba=almg", "partidos", "sobre", "governo", "assembleia", "emendas-estaduais",
       "deputado-estadual/20003", "deputado-estadual/20003?aba=atuacao", "deputado-estadual/20003?aba=emendas",
       ...cidades.map((c) => `cidade/${c.id}`), ...cidades.map((c) => `cidade/${c.id}?aba=dinheiro`)]) {
       await page.goto(`./#/${rota}`);
@@ -121,7 +121,7 @@ test.describe("jornada", () => {
   test("sem rolagem lateral no celular", async ({ page }, info) => {
     test.skip(info.project.name !== "celular");
     vigiar(page);
-    for (const rota of ["", "#/cidades", "#/cidade/itajuba", "#/cidade/paraisopolis", "#/votacoes", `#/v/${vots[0].id}`, "#/governo",
+    for (const rota of ["", "#/cidades", "#/cidade/itajuba", "#/cidade/paraisopolis", "#/votacoes", "#/votacoes/em-andamento", `#/v/${vots[0].id}`, "#/governo",
       "#/assembleia", "#/deputado-estadual/20003", "#/emendas-estaduais", "#/cidade/itajuba?aba=dinheiro"]) {
       await page.goto(`./${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();

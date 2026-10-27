@@ -48,9 +48,21 @@ def recortar(nacional: Path, saida: Path, uf: str = UF) -> dict:
     vots = _votacoes(nacional, saida, ids)
     emps = _empresas(nacional, saida, ids)
     write_json(saida / "partidos.json", partidos(pols, anos))
+    _tramitacao(nacional, saida, uf)
     write_json(saida / "meta.json", meta(meta_nac, pols, anos, len(vots), emps))
     log.info("Recorte %s: %d políticos, %d votações, %d empresas", uf, len(pols), len(vots), len(emps))
     return {"politicos": len(pols), "votacoes": len(vots), "empresas": len(emps)}
+
+
+def _tramitacao(nacional: Path, saida: Path, uf: str) -> None:
+    """Projetos em andamento no Congresso: a lista inteira, com as propostas de autores do estado marcadas."""
+    f = nacional / "tramitacao.json"
+    if not f.exists():
+        return
+    d = _ler(f)
+    for it in d.get("itens", []):
+        it["do_estado"] = any((a.get("uf") or "").upper() == uf for a in it.get("autores", []))
+    write_json(saida / "tramitacao.json", d)
 
 
 def _copiar(de: Path, para: Path) -> None:

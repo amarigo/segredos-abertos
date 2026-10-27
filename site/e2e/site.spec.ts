@@ -150,7 +150,7 @@ test.describe("jornada", () => {
 
   test("todas as páginas do menu abrem sem erro", async ({ page }) => {
     const erros = vigiar(page);
-    for (const rota of ["dinheiro", "politicos", "empresas", "votacoes", "partidos", "emendas", "incentivos", "sobre"]) {
+    for (const rota of ["dinheiro", "politicos", "empresas", "votacoes", "votacoes/em-andamento", "partidos", "emendas", "incentivos", "sobre"]) {
       await page.goto(`./#/${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();
       await expect(page.locator("main")).not.toContainText("Não foi possível");
@@ -161,13 +161,38 @@ test.describe("jornada", () => {
   test("sem rolagem lateral no celular", async ({ page }, info) => {
     test.skip(info.project.name !== "celular");
     vigiar(page);
-    for (const rota of ["", `#/p/${pols[0].id}`, "#/votacoes", "#/empresas", "#/incentivos", "#/dinheiro"]) {
+    for (const rota of ["", `#/p/${pols[0].id}`, "#/votacoes", "#/votacoes/em-andamento", "#/votacoes/em-andamento?aba=nova", "#/empresas", "#/incentivos", "#/dinheiro"]) {
       await page.goto(`./${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();
       const largura = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(largura, rota).toBeLessThanOrEqual(1);
     }
   });
+});
+
+test("projetos em andamento: pauta, autor, próximo passo e link oficial", async ({ page }) => {
+  const erros = vigiar(page);
+  const tra: { itens: { nome: string; grupos: string[]; url: string; autores: { id: string }[] }[] } = dados("tramitacao.json");
+  await page.goto("./#/votacoes");
+  await page.getByRole("link", { name: "Projetos em andamento" }).first().click();
+  await expect(page.locator("h1")).toHaveText("Projetos em andamento");
+  const naPauta = tra.itens.filter((i) => i.grupos.includes("pauta"));
+  await expect(page.getByRole("tab", { name: `Na pauta (${naPauta.length})` })).toHaveAttribute("aria-selected", "true");
+  const pl = tra.itens.find((i) => i.nome === "PL 101/2025")!;
+  const cartao = page.locator("article.proj", { hasText: "PL 101/2025" });
+  await expect(cartao).toContainText("Muda o Código de Trânsito");
+  await expect(cartao).toContainText("Próximo passo:");
+  await expect(cartao.locator(`a[href="${pl.url}"]`)).toBeVisible();
+  await expect(cartao.locator(".proj-etapas")).toHaveAttribute("aria-label", "Etapa atual: Plenário");
+  await cartao.getByRole("link", { name: /Deputado Ficticio 00/ }).click();
+  await expect(page).toHaveURL(new RegExp(`/p/${pl.autores[0].id}`));
+  // Medidas provisórias: prazo oficial; recém-apresentadas: busca
+  await page.goto("./#/votacoes/em-andamento?aba=mpv");
+  await expect(page.locator("article.proj", { hasText: "MPV 1400/2026" })).toContainText("Prazo:");
+  await page.goto("./#/votacoes/em-andamento?aba=nova");
+  await page.locator("#busca-projeto").fill("PEC 7");
+  await expect(page.locator("article.proj")).toHaveCount(1);
+  expect(erros).toEqual([]);
 });
 
 test("barra dos projetos liga o nacional aos outros sites do Segredos Abertos", async ({ page }) => {
@@ -278,7 +303,7 @@ test.describe("caos no navegador", () => {
       return r.continue();
     });
     const rotas = ["", "#/politicos", `#/p/${pols[0].id}`, `#/p/${pols[2].id}?aba=votos`, "#/empresas", `#/e/${empresas[0].cnpj}`,
-      "#/votacoes", `#/v/${vots[0].id}`, "#/partidos", "#/emendas"];
+      "#/votacoes", "#/votacoes/em-andamento", `#/v/${vots[0].id}`, "#/partidos", "#/emendas"];
     for (const rota of rotas) {
       await page.goto(`./${rota}`);
       await page.waitForTimeout(600);

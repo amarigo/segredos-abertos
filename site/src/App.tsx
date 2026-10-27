@@ -7,6 +7,7 @@ import Empresas from "./pages/Empresas";
 import EmpresaPage from "./pages/Empresa";
 import Votacoes from "./pages/Votacoes";
 import VotacaoPage from "./pages/Votacao";
+import TramitacaoPage from "./pages/Tramitacao";
 import Sobre from "./pages/Sobre";
 import Partidos from "./pages/Partidos";
 import Emendas from "./pages/Emendas";
@@ -87,6 +88,7 @@ export default function App() {
           <Route path="/empresas" element={<Empresas />} />
           <Route path="/e/:cnpj" element={<EmpresaPage />} />
           <Route path="/votacoes" element={<Votacoes />} />
+          <Route path="/votacoes/em-andamento" element={<TramitacaoPage />} />
           <Route path="/v/:id" element={<VotacaoPage />} />
           <Route path="/partidos" element={<Partidos />} />
           {!MG && <Route path="/dinheiro" element={<Financas />} />}

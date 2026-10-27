@@ -26,6 +26,7 @@ clique em **Run workflow** e confirme com o branch `main`. Em cerca de 30 a 60 m
 | --- | --- |
 | Deputados, cota (CEAP), votações | [Dados Abertos da Câmara](https://dadosabertos.camara.leg.br) |
 | Senadores, cota (CEAPS), votações | [Dados Abertos do Senado](https://www12.senado.leg.br/dados-abertos) |
+| Projetos em andamento (pauta dos próximos 14 dias, recém-apresentados, medidas provisórias e prazos) | [API da Câmara](https://dadosabertos.camara.leg.br/swagger/api.html) (`/eventos`, `/eventos/{id}/pauta`, `/proposicoes`) e [API do Senado](https://legis.senado.leg.br/dadosabertos/docs/) (`/plenario/agenda`, `/comissao/agenda`, `/processo`); no Minas Nossa, o arquivo de proposições da [ALMG](https://dadosabertos.almg.gov.br/) |
 | Empresas e sócios | Base CNPJ da Receita Federal, via [Minha Receita](https://minhareceita.org) |
 | Emendas parlamentares (quem fez, área, quem recebeu) | [Portal da Transparência](https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares), arquivo completo |
 | Pagamentos do governo federal a empresas e entidades (página de incentivos) | [Portal da Transparência](https://portaldatransparencia.gov.br/download-de-dados/despesas), arquivos diários de despesas |
