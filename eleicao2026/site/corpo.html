@@ -373,12 +373,15 @@ header.top .size button{background:transparent;color:#fff;border:1.5px solid rgb
 header.top .size button:hover{border-color:#fff}
 /* menu de seções: pílulas */
 nav.menu{border-bottom:1px solid var(--line);padding-block:.5rem}
-.menu ul{gap:.35rem}
+.menu ul{gap:.35rem;flex-wrap:wrap;overflow-x:visible} /* todas as abas sempre à vista: se não couberem numa linha, passam para a de baixo */
 .menu button{border:0;border-radius:999px;min-height:2.8rem;padding:.35rem 1.1rem;color:var(--muted)}
 .menu button:hover{color:var(--fg);background:var(--soft)}
 .menu button[aria-current="page"]{background:var(--sa-faixa);color:#fff;border:0}
 :root[data-theme="dark"] .menu button[aria-current="page"]{background:var(--br-ink);color:#0B1220}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .menu button[aria-current="page"]{background:var(--br-ink);color:#0B1220}}
+#sa-zz[aria-pressed="true"]{background:var(--sa-faixa);color:#fff;border-color:var(--sa-faixa)}
+:root[data-theme="dark"] #sa-zz[aria-pressed="true"]{background:var(--br-ink);color:#0B1220}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) #sa-zz[aria-pressed="true"]{background:var(--br-ink);color:#0B1220}}
 /* blocos, botões e controles */
 .panel{border-top:0;padding-top:.4rem}
 .ok{border-left:5px solid var(--br-blue);background:var(--soft);border-radius:0 8px 8px 0;padding:.9rem 1.1rem}
@@ -397,6 +400,8 @@ select,input[type=number]{border-radius:999px;padding-inline:1rem}
 .concl{border-left-color:var(--sa-hot)}
 .bigbar,.rbar{border-radius:999px}
 .tomenu{background:var(--sa-faixa)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tomenu{color:#fff}}
+:root[data-theme="dark"] .tomenu{color:#fff}
 </style>
 
 <nav class="projetos" aria-label="Projetos do Segredos Abertos">
@@ -591,13 +596,13 @@ select,input[type=number]{border-radius:999px;padding-inline:1rem}
 
   <div class="panel">
     <h3>E se um estado tivesse votado diferente no 2º turno?</h3>
-    <p><b>1. Toque em um estado no mapa</b> (ou escolha na lista). Ele fica com borda preta.</p>
-    <div class="simgrid"><div class="mapwrap"><svg id="smap" role="group" aria-label="Mapa do simulador: toque em um estado para escolher"></svg><div class="maplegend two" id="slegend"></div></div>
+    <p><b>1. Toque em um estado no mapa</b> (ou escolha na lista). Ele fica com borda preta. Para os votos de quem mora fora do Brasil, toque em “Exterior”.</p>
+    <div class="simgrid"><div class="mapwrap"><svg id="smap" role="group" aria-label="Mapa do simulador: toque em um estado para escolher"></svg><div class="maplegend two" id="slegend"></div><button class="btn alt" type="button" id="sa-zz" aria-pressed="false" style="margin-top:.6rem">Exterior (votos fora do Brasil)</button></div>
     <div class="simctl">
-    <div class="field"><label for="sa-uf">Estado escolhido</label><select id="sa-uf"></select></div>
-    <div class="field"><label for="sa-p">2. Arraste: quanto Lula teria tido nesse estado? <span class="num" id="sa-pv"></span></label>
+    <div class="field"><label for="sa-uf">Lugar escolhido</label><select id="sa-uf"></select></div>
+    <div class="field"><label for="sa-p">2. Arraste: quanto Lula teria tido nesse lugar? <span class="num" id="sa-pv"></span></label>
       <input type="range" id="sa-p" min="0" max="100" step="0.1"></div>
-    <div class="next"><button class="btn alt" type="button" id="sa-reset">Voltar ao número real</button><button class="btn alt" type="button" id="sa-zero">E se esse estado não tivesse votado?</button></div>
+    <div class="next"><button class="btn alt" type="button" id="sa-reset">Voltar ao número real</button><button class="btn alt" type="button" id="sa-zero">E se esse lugar não tivesse votado?</button></div>
     <div class="out" id="sa-out" aria-live="polite"></div>
     </div></div>
     <p class="small muted">No mapa, os outros estados mostram o resultado real. Só o estado escolhido muda com a simulação.</p>
@@ -1241,7 +1246,8 @@ function initN(){
 
 /* ---------- 4. simulador ---------- */
 const optsA=UFS.map(uf=>`<option value="${uf}">${NAMES[uf]}</option>`).join("");
-$("sa-uf").innerHTML=optsA;
+$("sa-uf").innerHTML=optsA+`<option value="ZZ">Exterior</option>`;
+const sEm=uf=>uf==="ZZ"?"no exterior":"em "+NAMES[uf],sDe=uf=>uf==="ZZ"?"do exterior":"de "+NAMES[uf];
 $("sa-uf").value="MG";
 let SIM=null;
 function bandIdx2(s){const B=BANDS[2];for(let i=B.length-1;i>=0;i--)if(s>=B[i][0])return i;return 0}
@@ -1259,15 +1265,15 @@ function simA(zero,exact){
   const uf=$("sa-uf").value,o=r2(uf),N=r2("BR");const p=exact?o.L/o.T:+$("sa-p").value/100;
   $("sa-pv").textContent=pc(p);
   let nl,nf,txt;
-  if(zero){nl=N.L-o.L;nf=N.F-o.F;SIM={L:0,F:0};txt=`Sem nenhum voto de ${NAMES[uf]}`}
-  else{nl=N.L-o.L+p*o.T;nf=N.F-o.F+(1-p)*o.T;SIM={L:p*o.T,F:(1-p)*o.T};txt=`Com Lula tendo ${pc(p)} em ${NAMES[uf]} (o real foi ${pc(o.L/o.T)})`}
+  if(zero){nl=N.L-o.L;nf=N.F-o.F;SIM={L:0,F:0};txt=`Sem nenhum voto ${sDe(uf)}`}
+  else{nl=N.L-o.L+p*o.T;nf=N.F-o.F+(1-p)*o.T;SIM={L:p*o.T,F:(1-p)*o.T};txt=`Com Lula tendo ${pc(p)} ${sEm(uf)} (o real foi ${pc(o.L/o.T)})`}
   const win=nl>nf?"Lula":"Flávio",c=nl>nf?"c-l":"c-f";
   const M=N.L-N.F,m=o.L-o.F,th=(1-(M-m)/o.T)/2;
-  const need=th<=0?`Mesmo se ninguém em ${NAMES[uf]} tivesse votado em Lula, ele ainda venceria no Brasil. Um só lugar não mudaria o resultado.`:`Para Flávio vencer no Brasil, Lula precisaria ter menos de ${pc(th,1)} em ${NAMES[uf]}.`;
+  const need=th<=0?`Mesmo se ninguém ${sEm(uf)} tivesse votado em Lula, ele ainda venceria no Brasil. Um só lugar não mudaria o resultado.`:`Para Flávio vencer no Brasil, Lula precisaria ter menos de ${pc(th)} ${sEm(uf)}.`;
   $("sa-out").innerHTML=`<p>${txt}:</p><p class="outbig ${c}">${win} venceria no Brasil</p><p class="num"><span class="c-l">Lula ${pc(nl/(nl+nf))}</span> · <span class="c-f">Flávio ${pc(nf/(nl+nf))}</span> · diferença de ${fmt(Math.abs(nl-nf))} votos</p><p>${need}</p>`;
-  paintS();
+  paintS();$("sa-zz").setAttribute("aria-pressed",uf==="ZZ");
 }
-$("sa-uf").onchange=resetA;$("sa-p").oninput=()=>simA();$("sa-reset").onclick=resetA;$("sa-zero").onclick=()=>simA(true);
+$("sa-uf").onchange=resetA;$("sa-p").oninput=()=>simA();$("sa-reset").onclick=resetA;$("sa-zero").onclick=()=>simA(true);$("sa-zz").onclick=()=>{$("sa-uf").value="ZZ";resetA()};
 resetA();
 
 
