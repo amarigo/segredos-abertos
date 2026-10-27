@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Barras, Explain, Loading, useData, useTip } from "../components/ui";
 import { linkSeguro, reais } from "../data";
 import "./financas.css";
+import Selo from "../components/Selo";
 
 /* Formato de data/financas/ (gerado por etl/sa_etl/financas.py) */
 type Nivel = "verde" | "amarelo" | "vermelho" | "sem_dados";
@@ -109,6 +110,7 @@ export default function Financas() {
       <section className="hero">
         <span className="eyebrow">Brasil · arrecadação e gastos do governo federal · {d.ano}</span>
         <h1>De onde vem e para onde vai o dinheiro</h1>
+        <Selo secao="financas" />
         <div className="row fin-anos" role="group" aria-label="Ano">
           {anos.slice().reverse().map((a) => (
             <button key={a} className="fin-ano" aria-pressed={a === ano} onClick={() => setEscolhido(a)}>{a}</button>

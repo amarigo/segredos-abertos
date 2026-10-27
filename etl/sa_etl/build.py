@@ -330,9 +330,12 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         primeiro = primeiro_pag.get(doc, "")
         ns = sorted(notas_emp[doc], key=lambda n: (n["data"], n["valor"]), reverse=True)
         mensal = defaultdict(float)  # (politico, ano, mes) -> valor
+        mensal_fora = defaultdict(float)  # parte que veio da lista oficial de passagens, não dos dados abertos
         por_ano_notas = defaultdict(list)
         for n in ns:
             mensal[(n["politico"], n["ano"], n["mes"])] += n["valor"]
+            if n.get("fonte_lista") or n.get("sem_nota"):
+                mensal_fora[(n["politico"], n["ano"], n["mes"])] += n["valor"]
             por_ano_notas[n["ano"]].append([n["data"], n["politico"], n["categoria"], n["valor"], n["url"],
                                             n.get("link") or ("nota" if n["url"] else ""), n.get("detalhe", "")])
         for a, lista in por_ano_notas.items():  # todas as notas, num arquivo por ano (carregado só quando aberto)
@@ -340,7 +343,8 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         write_json(saida / "e" / f"{doc}.json", {
             "n_notas": len(ns),
             "notas_por_ano": {str(a): sum(1 for n in ns if n["ano"] == a) for a in sorted({n["ano"] for n in ns})},
-            "por_mes": [{"politico": pid, "nome": por_id[pid]["nome"], "ano": a, "mes": m, "valor": round(v, 2)}
+            "por_mes": [{"politico": pid, "nome": por_id[pid]["nome"], "ano": a, "mes": m, "valor": round(v, 2),
+                         **({"fora_dados_abertos": round(mensal_fora[(pid, a, m)], 2)} if abs(mensal_fora[(pid, a, m)]) >= 0.005 else {})}
                         for (pid, a, m), v in sorted(mensal.items(), key=lambda kv: (kv[0][1], kv[0][2], -kv[1]))],
             **resumo_e, "empresa": {k: v for k, v in (e or {}).items() if k != "socios"} or None,
             "socios": socios, "donos_finais": donos, "pagadores": pagadores,
@@ -373,9 +377,15 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         r["proposicao"] = v.get("proposicao")
         r["temas"] = v["temas"]
         r["sim"], r["nao"] = cont.get("Sim", 0), cont.get("Não", 0)
+        # Placar oficial da Casa inteira. Os votos listados são só de quem está no mandato hoje, então "sim" e "nao"
+        # podem ser menores que o placar oficial (deputados e senadores que saíram do cargo depois da votação).
+        po = v.get("placar_oficial")
+        if po:
+            r["placar_casa"] = {"sim": po["sim"], "nao": po["nao"]}
         lista_v.append(r)
         write_json(saida / "v" / f"{v['id']}.json", {
-            **v, "sim": r["sim"], "nao": r["nao"], "contagem": dict(cont),
+            **{k: x for k, x in v.items() if k != "placar_oficial"}, "sim": r["sim"], "nao": r["nao"], "contagem": dict(cont),
+            **({"placar_casa": r["placar_casa"]} if po else {}),
             "por_partido": {k: dict(c) for k, c in sorted(por_partido.items())},
             "por_lado": {k: dict(c) for k, c in por_lado.items()},
             "votos": sorted(({"politico": x["politico"], "nome": por_id[x["politico"]]["nome"], "partido": x["partido"],
@@ -427,12 +437,15 @@ def gastos_do_ano(ds: list[dict], emps: dict) -> dict:
     grupos = {g: 0.0 for g in GRUPOS}
     cat = defaultdict(lambda: [0.0, ""])
     mes = defaultdict(float)
+    fora_api = defaultdict(float)  # valor do mês que não está nos dados abertos (veio da página oficial)
     forn = defaultdict(lambda: {"valor": 0.0, "n": 0, "nome": ""})
     for d in ds:
         grupos[d["grupo"]] += d["valor"]
         cat[d["categoria"]][0] += d["valor"]
         cat[d["categoria"]][1] = d["grupo"]
         mes[d["mes"]] += d["valor"]
+        if d.get("sem_nota") or d.get("fonte_lista"):
+            fora_api[d["mes"]] += d["valor"]
         f = forn[d["doc"] or d["fornecedor"]]
         f["valor"] += d["valor"]
         f["n"] += 1
@@ -454,7 +467,10 @@ def gastos_do_ano(ds: list[dict], emps: dict) -> dict:
         "grupos": {g: round(v, 2) for g, v in grupos.items()},
         "categorias": sorted(({"categoria": k, "grupo": g, "valor": round(v, 2)} for k, (v, g) in cat.items()),
                              key=lambda x: -x["valor"]),
-        "meses": [{"mes": m, "valor": round(v, 2)} for m, v in sorted(mes.items())],
+        # fora_dados_abertos: parte do mês que veio da página oficial, e não dos dados abertos (a verificação
+        # independente compara só o resto com a API da Câmara)
+        "meses": [{"mes": m, "valor": round(v, 2), **({"fora_dados_abertos": round(fora_api[m], 2)} if abs(fora_api[m]) >= 0.005 else {})}
+                  for m, v in sorted(mes.items())],
         "fornecedores": fornecedores,
         "sem_nota_meses": sem_nota,
         "passagens_da_lista": {"n": len(passagens_lista), "valor": round(sum(d["valor"] for d in passagens_lista), 2)},

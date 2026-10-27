@@ -89,7 +89,8 @@ export interface Politico extends Resumo {
   votos: { votacao: string; voto: string; partido: string }[];
 }
 export interface Proposicao { sigla: string; numero: string; ano: string; ementa: string; titulo: string; url: string }
-/** No Minas Nossa, sim e não são os votos da bancada de MG; placar_casa é o placar da Casa inteira. */
+/** sim e não: votos listados (no site nacional, de quem está no mandato hoje; no Minas Nossa, da bancada de MG).
+    placar_casa: placar oficial da Casa inteira, inclusive quem já saiu do cargo. */
 export interface VotacaoResumo { id: string; casa: Casa; data: string; descricao: string; aprovada: boolean; proposicao: Proposicao | null; sim: number; nao: number; temas?: string[]; placar_casa?: { sim: number; nao: number } }
 export const TEMAS = ["Mulheres", "Micro e pequenas empresas", "Saúde", "Educação", "Segurança pública", "Armas", "Meio ambiente",
   "Impostos e contas públicas", "Trabalho e aposentadoria", "Agropecuária", "Crianças e adolescentes", "Indígenas e minorias",
@@ -159,6 +160,24 @@ export interface Cidade {
     mandatos: number; camaras: number; coligacao_do_prefeito_com_maioria: number };
 }
 export interface CidadeResumo { id: string; nome: string; uf: string; prefeito: PessoaEleita | null; desde: number | null; vereadores: number | null }
+
+/* Verificação independente (etl/sa_etl/verificar.py, arquivo verificacao.json) */
+export type StatusVerificacao = "conferido" | "parcial" | "divergente" | "nao_conferido" | "sem_segunda_fonte";
+export interface ItemVerificado { o_que: string; site: number | string; oficial: number | string; fonte: string }
+export interface Checagem {
+  id: string; secao: string; titulo: string; como: string; fonte: string; status: "conferido" | "divergente" | "nao_conferido";
+  conferidos: number; divergentes: number; nao_conferidos: number; completados?: number; motivo: string;
+  divergencias: ItemVerificado[]; exemplos: ItemVerificado[];
+}
+export interface SecaoVerificada {
+  titulo: string; status: StatusVerificacao; checagens: string[]; motivo?: string;
+  hoje: { conferidos: number; divergentes: number };
+  acumulado: { conferidos: number; divergentes: number; desde: string | null; dias: number; certos_min: number | null };
+}
+export interface Verificacao {
+  gerado_em: string; data: string; confianca: number; dias_mes_fechado: number; dias_historico: number; para_99_99: number;
+  secoes: Record<string, SecaoVerificada>; checagens: Checagem[];
+}
 
 export interface Meta {
   /** Problemas da última coleta (fonte oficial fora do ar, cópia antiga em uso...), para avisar quem lê */

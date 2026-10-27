@@ -82,6 +82,29 @@ A coleta diária só publica se `python -m sa_etl.validar` não achar erro. Ela 
 Se algo falhar, o site no ar continua com a versão anterior, e o resumo do GitHub Actions mostra o motivo.
 Problemas que não bloqueiam (uma fonte fora do ar, cópia antiga em uso) aparecem para quem lê o site, no topo da página inicial.
 
+### Verificação independente (segunda fonte oficial)
+
+A conferência acima vê se os arquivos batem entre si. Depois dela, `python -m sa_etl.verificar` sorteia números do site e
+pergunta de novo a uma fonte oficial diferente. Não bloqueia a publicação: o resultado aparece no site (selo em cada
+seção e a página `/verificacao`) e no resumo do GitHub Actions.
+
+| Seção | Número do site (fonte da coleta) | Conferido com |
+|---|---|---|
+| Cota | total do mês de cada deputado (arquivo anual) | API da Câmara, `/deputados/{id}/despesas` |
+| Cota | quanto cada empresa recebeu de cada deputado no mês | API da Câmara, `/deputados/{id}/despesas` |
+| Cota | total do mês de cada deputado (todos) | página oficial do deputado (só meses que o site não completou com ela) |
+| Cota | total do ano de cada senador (soma nota por nota da CEAPS) | API do Senado, `recursos-utilizados` |
+| Votações | voto de cada deputado (CSV) e placar oficial | API da Câmara, `/votacoes/{id}/votos` |
+| Votações | voto de cada senador e placar | API do Senado de novo, e a ata da sessão (Secretaria de Atas) |
+| Empresas | razão social e sócios (Minha Receita) | outra cópia da base da Receita (BrasilAPI) |
+| Emendas | empenhado e pago por autor (arquivo do Portal) | API de dados do Portal da Transparência |
+| Arrecadação e gastos | juros da dívida (orçamento do Portal) | RREO do Tesouro (SICONFI) |
+
+Regras: fonte fora do ar ou API respondendo vazio vira "não conferido", nunca "conferido"; a cota só é conferida em
+meses fechados há mais de 60 dias; a página de incentivos aparece como "sem segunda fonte" até haver uma.
+Testes: `etl/tests/test_verificar.py` (fontes simuladas: tudo batendo, divergência, API vazia, fonte fora do ar, sem
+chave, histórico) e `site/e2e/site.spec.ts` (selos no navegador; sem arquivo, nenhum selo).
+
 ## 5. Segurança
 
 - Links: coletor (`url_segura`) e site (`linkSeguro`) só aceitam http(s).

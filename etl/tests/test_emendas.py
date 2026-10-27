@@ -88,4 +88,5 @@ def test_coletar_grava_arquivos(tmp_path, monkeypatch):
     d = json.loads((tmp_path / "out" / "emendas" / "2025.json").read_text())
     assert d["favorecidos"]["lista"][0]["valor"] == 600.0 and "_por_autor" not in d["favorecidos"]
     fulano = next(a for a in d["autores"] if a["politico"] == "dep-1")
-    assert fulano["recebedores"][1] == ["Hospital X (Contagem-MG)", 500.0, "12345678000195", ["2"]] and "chave" not in fulano
+    assert fulano["recebedores"][1] == ["Hospital X (Contagem-MG)", 500.0, "12345678000195", ["2"]]
+    assert fulano["chave"]  # a verificação independente procura o autor por ela na API do Portal

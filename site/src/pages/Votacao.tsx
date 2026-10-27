@@ -4,6 +4,7 @@ import { Explain, Loading, ResultadoChip, VotoBarra, VotoChip, VotoLegenda, useD
 import { casaNome, dataBR, descricaoCurta, linkSeguro, proposicaoNome, tipoVotacao, type Votacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 import { MG } from "../recorte";
+import Selo from "../components/Selo";
 
 const LADOS = ["Esquerda", "Centro-esquerda", "Centro", "Centro-direita", "Direita"];
 
@@ -29,12 +30,17 @@ export default function VotacaoPage() {
         {v.proposicao?.ementa && <p className="muted"><strong>Sobre a proposta:</strong> {v.proposicao.ementa}</p>}
         <div className="row">
           <ResultadoChip aprovada={v.aprovada} />
-          {v.placar_casa
+          {v.placar_casa && MG
             ? <><span className="chip">{casaNome(v.casa)}: Sim {v.placar_casa.sim} · Não {v.placar_casa.nao}</span><span className="chip">Bancada de MG: Sim {v.sim} · Não {v.nao}</span></>
-            : <span className="chip">Sim {v.sim} · Não {v.nao}</span>}
+            : v.placar_casa
+              ? <span className="chip">Placar oficial: Sim {v.placar_casa.sim} · Não {v.placar_casa.nao}</span>
+              : <span className="chip">Sim {v.sim} · Não {v.nao}</span>}
           {linkSeguro(v.proposicao?.url) && <a className="chip" href={linkSeguro(v.proposicao?.url)} target="_blank" rel="noreferrer">Ver a proposta e as votações no site {v.casa === "camara" ? "da Câmara" : "do Senado"} ↗</a>}
           {v.temas?.map((t) => <Link key={t} className="chip" to={`/votacoes?tema=${encodeURIComponent(t)}`}>{t}</Link>)}
         </div>
+        {!MG && v.placar_casa && (v.placar_casa.sim !== v.sim || v.placar_casa.nao !== v.nao) &&
+          <p className="small muted">A lista de votos abaixo mostra só quem está no mandato hoje (Sim {v.sim} · Não {v.nao}). A diferença para o placar oficial são votos de {v.casa === "camara" ? "deputados" : "senadores"} que saíram do cargo depois desta votação.</p>}
+        <Selo secao="votacoes" />
       </section>
 
       {irmas.length > 1 && (

@@ -33,6 +33,10 @@ export default function Sobre() {
     <section style={{ maxWidth: 720 }}>
       <h1>Como funciona</h1>
       {MG && <SobreMG />}
+      {!MG && <>
+        <h2>Como conferimos os números</h2>
+        <p>Além de conferir se as somas batem, todo dia sorteamos números do site e conferimos cada um com uma <strong>segunda fonte oficial</strong>, diferente da que usamos para montar o site. Cada seção mostra um selo com o resultado, e as diferenças encontradas aparecem com o link para você conferir. <Link to="/verificacao">Veja a verificação de hoje</Link>.</p>
+      </>}
       <h2>De onde vêm os dados</h2>
       <p>Tudo vem de fontes oficiais e públicas, baixadas automaticamente todos os dias:</p>
       <ul>

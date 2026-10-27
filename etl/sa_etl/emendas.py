@@ -552,7 +552,7 @@ def coletar(politicos: list[dict], anos: list[int], cache: Path, saida: Path, pa
         por_autor = (f or {}).pop("_por_autor", {})
         pg = ((pagos or {}).get("anos") or {}).get(ano)
         for a in d["autores"] + d["coletivos"]:
-            chave = a.pop("chave")
+            chave = a["chave"]  # fica no arquivo: a verificação independente procura o autor por ela na API do Portal
             a["recebedores"] = com_motivo(por_autor.get(chave, []), (pg or {}).get("autores", {}).get(chave))
             if pg and chave in pg["autores"]:
                 a["pagamentos"] = {"valor": round(pg["autores"][chave]["valor"], 2), "arquivo": arquivo_docs(chave)}

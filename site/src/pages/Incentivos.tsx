@@ -6,6 +6,7 @@ import { LADOS, ladoPelosVotos } from "../partidos";
 import { Pizza } from "./Partidos";
 import "./emendas.css";
 import "./incentivos.css";
+import Selo from "../components/Selo";
 
 /* Formato de data/incentivos/ (gerado por etl/sa_etl/incentivos.py) */
 type Par = [string, number];
@@ -85,6 +86,7 @@ export default function Incentivos() {
       <section className="hero">
         <span className="eyebrow">Incentivos e dinheiro público para empresas · {ano}</span>
         <h1>Quem ganha com o dinheiro público</h1>
+        <Selo secao="incentivos" />
         <Explain>
           O dinheiro público chega às empresas, ONGs e outras entidades de três jeitos: o governo federal <strong>paga</strong> por compras, obras, serviços, convênios e subsídios;
           deixa de <strong>cobrar imposto</strong> de quem tem um benefício fiscal (a renúncia fiscal); e deputados e senadores <strong>indicam emendas</strong> que pagam empresas e entidades.
