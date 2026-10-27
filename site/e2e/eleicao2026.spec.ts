@@ -267,3 +267,21 @@ test.describe("tema escuro", () => {
     expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toBeGreaterThan(4.5);
   });
 });
+
+test("troca para inglês e espanhol; os números continuam os oficiais", async ({ page }) => {
+  const erros = semErros(page);
+  await page.goto("./?lang=en");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  const nav = page.getByRole("navigation", { name: "Segredos Abertos projects" });
+  await expect(nav).toContainText("Election 2026");
+  // Em inglês o número usa vírgula de milhar
+  const br = oficial["6258"].BR.cand;
+  await expect(page.locator("body")).toContainText(br["13"].v.toLocaleString("en-US"));
+  await page.locator(".linguas").getByRole("link", { name: "ES", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "es");
+  await expect(page.getByRole("navigation", { name: "Proyectos de Segredos Abertos" })).toContainText("Elección 2026");
+  await expect(page.locator("body")).toContainText(fmt(br["13"].v));
+  await page.locator(".linguas").getByRole("link", { name: "PT", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR");
+  expect(erros).toEqual([]);
+});

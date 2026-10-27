@@ -14,3 +14,6 @@ site/public-mg/icon.svg
 site/public-mg/sw.js
 mg/etl/.cache/
 site/playwright-report-mg/
+site/public-mg/i18n/
+site/public/i18n/faltando.json
+eleicao2026/site/i18n/faltando.json

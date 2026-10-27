@@ -62,7 +62,8 @@ jobs:
         working-directory: site
       - run: npm test
         working-directory: site
-      - run: npm run build && npm run build:mg
+      # paginas: uma página HTML simples por político, empresa e votação (PT/EN/ES), sitemap e llms.txt, para buscadores e IAs
+      - run: npm run build && npm run paginas && npm run build:mg && npm run paginas:mg
         working-directory: site
       - run: npx playwright install --with-deps chromium
         working-directory: site
@@ -201,13 +202,14 @@ jobs:
             echo "ok=0" >> "$GITHUB_OUTPUT"
             echo "### Minas Nossa: sem dados novos nem versão anterior; fica fora desta publicação" >> "$GITHUB_STEP_SUMMARY"
           fi
-      - run: npm ci && npm run build
+      - run: npm ci && npm run build && npm run paginas
         working-directory: site
       - name: "Minas Nossa: montar o site em /mg/"
         if: steps.mg_dados.outputs.ok == '1'
         working-directory: site
         run: |
           npm run build:mg
+          npm run paginas:mg
           (cd public-mg/data && zip -qr ../../dist/mg/dados-mg.zip .)
       # Eleição 2026 (/eleicao2026/): boletins de urna do TSE guardados em eleicao2026/dados. Só entra no site se a soma
       # das urnas bater com o resultado oficial, voto por voto. Uma falha aqui não trava o site nacional.
