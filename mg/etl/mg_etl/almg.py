@@ -298,6 +298,69 @@ def proposicoes(textos: dict[int, str], ids: set[str]) -> dict[str, dict[int, di
     return out
 
 
+FINAL = re.compile(r"TRANSFORMAD|SANCIONAD|PROMULGAD|NORMA JUR|ARQUIVAD|RETIRAD|REJEITAD|PREJUDICAD|VETAD|DEVOLVID|ANEXAD|LEI \d", re.I)
+DIAS_ANDAMENTO = 30  # projetos com algum passo nos últimos N dias
+DIAS_NOVAS = 14
+
+
+def _etapa_almg(r: dict) -> int:
+    """Mesmas etapas do Congresso, sem a "outra Casa" (a ALMG é uma Casa só): 0 apresentado, 1 comissões,
+    2 Plenário, 4 sanção."""
+    s = " ".join((r.get(k) or "") for k in ("Situacao", "NomeFaseAtual", "Local")).lower()
+    if re.search(r"san[çc][ãa]o|governador", s):
+        return 4
+    # "1º turno" é a fase inteira (comissões e Plenário); o lugar (Local) diz onde o projeto está agora
+    if re.search(r"comiss|parecer|relator", s):
+        return 1
+    if re.search(r"plen[áa]rio|ordem do dia", s):
+        return 2
+    return 0
+
+
+def em_andamento(textos: dict[int, str], hoje: dt.date) -> dict:
+    """Projetos da ALMG que ainda não viraram lei nem foram arquivados e que andaram nos últimos dias.
+
+    Vem do mesmo arquivo de proposições usado na atuação dos deputados (opção 2 da regra do projeto): ele traz
+    todos os projetos do ano, com situação e autores, de uma vez, enquanto a API de proposições da ALMG pede uma
+    consulta por projeto. O arquivo não traz a pauta das reuniões, então aqui não há data de votação, só a
+    situação oficial e o link da página do projeto. A pauta da ALMG ainda não foi ligada (a API de reuniões não
+    pôde ser conferida no ambiente em que isto foi escrito).
+    """
+    limite = (hoje - dt.timedelta(days=DIAS_ANDAMENTO)).isoformat()
+    novas = (hoje - dt.timedelta(days=DIAS_NOVAS)).isoformat()
+    itens = []
+    for ano, texto in textos.items():
+        for r in fontes.ler_csv(texto, COL_PROPOSICOES):
+            sigla = r["SiglaTipoProposicao"].strip().upper()
+            num = r["Numero"].strip()
+            if sigla not in PROJETOS or not num.isdigit() or FINAL.search(r.get("Situacao") or ""):
+                continue
+            apres = _data_iso(r.get("DataPublicacao") or "")
+            ultima = _data_iso(r.get("DataUltimaAcao") or r.get("DataAtualizacao") or "") or apres
+            if max(apres, ultima) < limite:
+                continue
+            try:
+                autores = [{"nome": str(a.get("nome") or "").strip(), "partido": str(a.get("partido") or "").strip(),
+                            "id": str(a.get("id") or "")} for a in json.loads(r.get("Autores") or "[]") if isinstance(a, dict)]
+            except ValueError:
+                autores = []
+            a = r["Ano"].strip() or str(ano)
+            p = {"sigla": sigla, "numero": num, "ano": a}
+            itens.append({
+                "id": f"mg-{sigla}-{num}-{a}", "casa": "almg", "sigla": sigla, "numero": num, "ano": a,
+                "nome": f"{sigla} {num}/{a}", "ementa": fontes.sem_cpf(r.get("Ementa") or "").strip()[:600],
+                "resumo_oficial": fontes.sem_cpf(r.get("Resumo") or "").strip()[:600],
+                "situacao": (r.get("Situacao") or "").strip(), "fase": (r.get("NomeFaseAtual") or "").strip(),
+                "onde": (r.get("Local") or "").strip(), "regime": (r.get("Regime") or "").strip(),
+                "apresentada": apres, "atualizada": ultima, "etapa": _etapa_almg(r),
+                "autores": [x for x in autores if x["nome"]][:6], "n_autores": len(autores),
+                "grupos": ["nova"] if apres >= novas else ["andamento"], "url": link_proposicao(p),
+            })
+    itens.sort(key=lambda i: (i["atualizada"], i["apresentada"]), reverse=True)
+    return {"atualizado_em": hoje.isoformat(), "dias_andamento": DIAS_ANDAMENTO, "dias_novas": DIAS_NOVAS,
+            "itens": itens[:400], "fonte": BASE}
+
+
 def link_proposicao(p: dict) -> str:
     return PAGINA_PROPOSICAO.format(sigla=p["sigla"], numero=p["numero"], ano=p["ano"])
 
@@ -327,6 +390,7 @@ def coletar(saida: Path, cache: Path, deps: list[dict], emendas: dict | None, ho
         if t:
             textos[ano] = t
     props = proposicoes(textos, ids)
+    write_json(saida / "almg" / "tramitacao.json", em_andamento(textos, hoje))
     em = (emendas or {}).get("por_deputado", {})
     resumo = []
     for d in sorted(deps, key=lambda x: fontes.chave_nome(x["nome"])):

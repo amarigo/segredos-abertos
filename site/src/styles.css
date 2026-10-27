@@ -452,3 +452,25 @@ tr.atual td { background: color-mix(in srgb, var(--gold) 12%, transparent); }
 /* Títulos de seção com um traço rosa curto em cima, como nos painéis de acompanhamento */
 main > section > h2:first-of-type::before { content: ""; display: block; width: 44px; height: 5px; border-radius: 3px; background: linear-gradient(90deg, var(--verde) 0 62%, var(--amarelo) 62% 100%); margin-bottom: 12px; }
 details > summary { cursor: pointer; font-weight: 700; }
+
+/* Abas da seção de votações (links, não botões) */
+.tabs a { font: 700 .95rem var(--body); padding: 9px 18px; color: var(--ink-2); border-radius: 999px; white-space: nowrap; text-decoration: none; }
+.tabs a:hover { color: var(--ink); }
+.tabs a.ativa { color: #fff; background: var(--navy); }
+
+/* Projetos em andamento */
+.proj { gap: 10px; }
+.proj-titulo { font-size: 1.08rem; line-height: 1.35; margin: 0; }
+.proj-prox { background: var(--tint); border-radius: var(--raio); padding: 10px 14px; margin: 0; }
+.proj-pauta { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.proj-como { display: grid; gap: 6px; padding-left: 20px; }
+.proj details summary, details.card summary { cursor: pointer; color: var(--accent); }
+.proj-etapas { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; padding: 0; margin: 0; counter-reset: etapa; }
+.proj-etapas li { counter-increment: etapa; display: grid; gap: 4px; font-size: .74rem; color: var(--muted); text-align: center; min-width: 0; }
+.proj-etapas li::before { content: counter(etapa); display: block; height: 8px; border-radius: 999px; background: var(--grid); font-size: 0; }
+.proj-etapas li.feita::before { background: var(--verde); }
+.proj-etapas li.atual::before { background: var(--hot); }
+.proj-etapas li.atual { color: var(--ink); font-weight: 800; }
+.proj-etapas span { overflow-wrap: anywhere; }
+.proj-col { display: grid; gap: 12px; }
+@media (max-width: 599px) { .proj-etapas span { display: none; } .proj-etapas { gap: 3px; } }

@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from .cnpj import MAX_NIVEL
+from .util import id_seguro
 
 FINS = {"pessoa", "estrangeiro", "sem_socios", "sem_dados", "limite", "ciclo"}
 CHAVES_LINK = {"url", "foto", "fonte"}
@@ -197,6 +198,9 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
     # ---------------- arrecadação e gastos (primeira aba)
     _conferir_financas(saida, r)
 
+    # ---------------- projetos em andamento (aba de votações)
+    _conferir_tramitacao(saida, r)
+
     # ---------------- privacidade e links (em todos os arquivos)
     for f in sorted(saida.rglob("*.json")):
         x = _ler(f, r)
@@ -359,6 +363,30 @@ def _conferir_incentivos(saida: Path, r: Resultado) -> None:
         top = [e["valor"] for e in d.get("top") or []]
         if top != sorted(top, reverse=True):
             r.erro(f"Renúncia {x['ano']}: lista das empresas fora de ordem")
+
+
+def _conferir_tramitacao(saida: Path, r: Resultado) -> None:
+    """Cada proposta tem link oficial e id seguro, sem repetição; a agenda só aponta para propostas da lista."""
+    f = saida / "tramitacao.json"
+    if not f.exists():
+        r.alerta("Sem a lista de projetos em andamento (tramitacao.json)")
+        return
+    d = _ler(f, r) or {}
+    ids = Counter(i.get("id") for i in d.get("itens", []))
+    for i, n in ids.items():
+        if n > 1:
+            r.erro(f"Projeto em andamento repetido: {i} ({n} vezes)")
+    for i in d.get("itens", []):
+        if not id_seguro(i.get("id")):
+            r.erro(f"Projeto em andamento com id inválido: {i.get('id')!r}")
+        if not str(i.get("url") or "").startswith(("https://www.camara.leg.br/", "https://www25.senado.leg.br/")):
+            r.erro(f"Projeto em andamento sem link oficial: {i.get('id')}")
+        if not i.get("grupos"):
+            r.erro(f"Projeto em andamento sem motivo para estar na lista: {i.get('id')}")
+    for ev in d.get("agenda", []):
+        fora = [x for x in ev.get("itens", []) if x not in ids]
+        if fora:
+            r.erro(f"Agenda {ev.get('id')} aponta para propostas que não estão na lista: {fora[:3]}")
 
 
 def _conferir_financas(saida: Path, r: Resultado) -> None:
