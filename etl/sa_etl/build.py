@@ -581,6 +581,10 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
     # A renúncia vem antes dos arquivos diários: o Portal passa a recusar downloads (HTTP 405) depois de muitos
     # pedidos seguidos, e os arquivos de renúncia são poucos (e ficam uma semana no cache)
     ren = coletar_renuncia(anos, cache) if com_incentivos else None
+    # Depois, os dias mais recentes dos pagamentos a empresas (2026 primeiro), com um limite por execução para sobrar
+    # downloads para os pagamentos das emendas, que precisam ser lidos em ordem, do mais antigo para o mais novo
+    if com_incentivos:
+        coletar_incentivos(anos, cache, minutos_gerais, max_dias=DIAS_RECENTES_POR_EXECUCAO)
     pag = pagamentos_emendas(anos, cache, minutos_pagamentos) if com_emendas else None
     inc = (coletar_incentivos(anos, cache, minutos_gerais), ren) if com_incentivos else None
     avisos = list(util.AVISOS)  # coletar() recomeça a lista de avisos
@@ -615,10 +619,15 @@ def coletar_renuncia(anos: list[int], cache: Path) -> dict | None:
         return None
 
 
-def coletar_incentivos(anos: list[int], cache: Path, minutos: float) -> dict | None:
+DIAS_RECENTES_POR_EXECUCAO = 20
+
+
+def coletar_incentivos(anos: list[int], cache: Path, minutos: float, max_dias: int | None = None) -> dict | None:
     """Pagamentos a empresas e entidades. Se falhar, o resto do site segue."""
     try:
-        arqs = pagamentos.coletar_geral(anos, cache / "pagamentos", minutos)
+        arqs = pagamentos.coletar_geral(anos, cache / "pagamentos", minutos, max_dias=max_dias)
+        if max_dias is not None:
+            return None
         geral = pagamentos.resumir_geral(arqs, anos)
         for ano, c in sorted(geral["cobertura"].items()):
             log.info("Pagamentos gerais %s: %s de %s dias lidos (%s a %s)", ano, c["dias"], c["dias_ano"], c["de"], c["ate"])

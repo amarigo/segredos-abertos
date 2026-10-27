@@ -22,6 +22,14 @@ interface Pagamentos {
   por_categoria: { cat: string; rotulo: string; valor: number; n: number }[];
   orgaos: Par[]; por_tipo: { tipo: Tipo; valor: number; n: number }[]; por_uf: [string, number, number][];
   top: (Dono & { cnpj: string; nome: string; tipo: Tipo; uf: string; valor: number; n: number; cats: Par[]; orgaos: Par[] })[];
+  destino?: Destino;
+}
+type Cobertura = Pagamentos["cobertura"];
+interface Destino {
+  privado: { total: number; n: number };
+  publico: { total: number; n: number; cobertura: Cobertura | Record<string, never>;
+    por_esfera: { esfera: string; rotulo: string; valor: number; n: number }[];
+    top: { cnpj: string; nome: string; esfera: string; valor: number; cats: Par[]; orgaos: Par[] }[] };
 }
 interface PoliticoDeu { nome: string; valor: number; n: number; recebedores: [string, string, number, boolean][]; politico?: string | null; partido?: string; uf?: string; casa?: Casa | "" }
 interface Emendas {
@@ -93,6 +101,7 @@ export default function Incentivos() {
         </div>
       </section>
 
+      {pag?.destino && <ParaOnde d={pag.destino} cob={pag.cobertura} ano={ano} />}
       <QuemRecebeu pag={pag} ren={ren} emd={emd} ano={ano} anosR={anosR} anoR={anoR} setAnoR={setAnoR} />
       {emd && <QuemDeu emd={emd} ano={ano} />}
       <PorEstado pag={pag} ren={ren} emd={emd} ano={ano} />
@@ -101,13 +110,63 @@ export default function Incentivos() {
       <section>
         <h2>De onde vêm estes dados</h2>
         <ul className="small muted emd-notas">
-          <li><strong>Pagamentos:</strong> arquivos diários de despesas do governo federal no <a href={linkSeguro(idx.fontes.pagamentos)} target="_blank" rel="noreferrer">Portal da Transparência ↗</a> (CGU). Contamos o que foi pago no ano a cada CNPJ que não é órgão público, pela natureza da despesa de cada empenho: compras, obras e serviços; repasses a entidades (convênios, auxílios e subvenções sociais); subsídios (subvenções econômicas); e outros. Salários, aposentadorias e a dívida pública ficam de fora. Pagamentos a empresas estatais também ficam de fora, porque o dinheiro continua dentro do governo{pag ? ` (${reaisCurto(pag.fora_publicos)} em ${ano})` : ""}.{pag && !pag.cobertura.completo && <> Os arquivos de {ano} ainda estão sendo lidos: por enquanto temos {pag.cobertura.dias} de {pag.cobertura.dias_ano} dias, de {dataBR(pag.cobertura.de)} a {dataBR(pag.cobertura.ate)}. A leitura avança a cada atualização diária.</>}</li>
+          <li><strong>Pagamentos:</strong> arquivos diários de despesas do governo federal no <a href={linkSeguro(idx.fontes.pagamentos)} target="_blank" rel="noreferrer">Portal da Transparência ↗</a> (CGU). Contamos o que foi pago no ano a cada CNPJ que não é órgão público, pela natureza da despesa de cada empenho: compras, obras e serviços; repasses a entidades (convênios, auxílios e subvenções sociais); subsídios (subvenções econômicas); e outros. Salários, aposentadorias e a dívida pública ficam de fora. Pagamentos a órgãos públicos, estados, municípios e estatais ficam de fora das listas de empresas, porque o dinheiro continua dentro do setor público{pag ? ` (${reaisCurto(pag.fora_publicos)} a estatais identificadas pela Receita em ${ano})` : ""}: eles aparecem em "Para onde vai o dinheiro".{pag && !pag.cobertura.completo && <> Os arquivos de {ano} ainda estão sendo lidos: por enquanto temos {pag.cobertura.dias} de {pag.cobertura.dias_ano} dias, de {dataBR(pag.cobertura.de)} a {dataBR(pag.cobertura.ate)}. A leitura avança a cada atualização diária.</>}</li>
           <li><strong>Renúncia fiscal:</strong> <a href={linkSeguro(idx.fontes.renuncias)} target="_blank" rel="noreferrer">dados abertos de renúncias fiscais ↗</a> do Portal da Transparência, com dados da Receita Federal: o imposto federal que cada empresa deixou de pagar por causa de um benefício (Zona Franca, Sudene, Sudam, regimes de importação, desoneração e outros). A Receita publica com atraso, e o ano mais recente costuma vir incompleto. Não inclui ICMS e ISS, que são estaduais e municipais, nem o Simples Nacional.</li>
           <li><strong>Emendas:</strong> pagamentos feitos com dinheiro de <Link to="/emendas">emendas parlamentares</Link>, ligados à emenda pela nota de empenho, nos mesmos arquivos diários{idx.ate_emendas && ` (dados até ${dataBR(idx.ate_emendas)})`}. É o único caso em que o pagamento tem o nome de um parlamentar. Por isso os gráficos por partido e por parlamentar usam só as emendas.</li>
           <li><strong>Donos:</strong> base de CNPJ da Receita Federal, via <a href={linkSeguro(idx.fontes.receita)} target="_blank" rel="noreferrer">Minha Receita ↗</a>. Buscamos as empresas e entidades que mais receberam. Em cada uma você vê os sócios, quem está por trás das empresas sócias e as outras empresas dos mesmos donos que aparecem no site.</li>
         </ul>
       </section>
     </>
+  );
+}
+
+/* ------------------------------------------------------------------ privado ou público */
+
+const ESFERA_COR: Record<string, string> = { municipal: "var(--s3)", estadual: "var(--c7)", estatal: "var(--c4)", federal: "var(--s2)" };
+
+function ParaOnde({ d, cob, ano }: { d: Destino; cob: Cobertura; ano: string }) {
+  const cp = d.publico.cobertura as Cobertura;
+  const temPub = !!cp?.dias;
+  const mesmoPeriodo = temPub && cp.de === cob.de && cp.ate === cob.ate && cp.dias === cob.dias;
+  const total = d.privado.total + d.publico.total;
+  const partes = [
+    { k: "privado", nome: "Setor privado: empresas, ONGs e outras entidades", valor: d.privado.total, n: d.privado.n, cor: "var(--s1)" },
+    { k: "publico", nome: "Setor público: órgãos, estados, municípios e estatais", valor: d.publico.total, n: d.publico.n, cor: "var(--c-outros)" },
+  ];
+  return (
+    <section>
+      <h2>Para onde vai o dinheiro em {ano}: setor privado ou setor público</h2>
+      <Explain>
+        Tudo o que o governo federal pagou em {ano} a quem tem CNPJ, separado entre o setor privado (empresas, ONGs, associações) e o próprio setor público
+        (prefeituras, governos estaduais, órgãos federais e empresas estatais). Salários, aposentadorias e a dívida pública não entram.
+      </Explain>
+      {!temPub ? <div className="empty">Os pagamentos ao setor público de {ano} começaram a ser guardados agora. Eles aparecem aqui depois das próximas atualizações.</div> : <>
+        <div className="destino-barra" role="img" aria-label={partes.map((p) => `${p.nome}: ${reais(p.valor)}`).join("; ")}>
+          {partes.map((p) => p.valor > 0 && <div key={p.k} style={{ flexGrow: p.valor, background: p.cor }} title={`${p.nome}: ${reais(p.valor)} (${pctDe(p.valor, total)})`} />)}
+        </div>
+        <div className="grid">
+          {partes.map((p) => (
+            <div className="card stat" key={p.k}><span className="label"><i className="destino-cor" style={{ background: p.cor }} />{p.nome}</span>
+              <span className="value">{reaisCurto(p.valor)}</span><span className="hint">{pctDe(p.valor, total)} · {plural(p.n, "recebedor", "recebedores")}</span></div>
+          ))}
+        </div>
+        {!mesmoPeriodo && <p className="aviso-ano small">Atenção: os dois lados ainda cobrem períodos diferentes. Setor privado: {cob.dias} dias ({dataBR(cob.de)} a {dataBR(cob.ate)}). Setor público: {cp.dias} dias ({dataBR(cp.de)} a {dataBR(cp.ate)}). Compare as proporções com cuidado até a leitura do ano terminar.</p>}
+        <div className="two">
+          <div>
+            <h3>Setor público, por esfera</h3>
+            <Barras itens={d.publico.por_esfera.map((x) => ({ label: x.rotulo, valor: x.valor, nota: plural(x.n, "recebedor", "recebedores"), cor: ESFERA_COR[x.esfera] }))} />
+            <p className="muted small">A esfera vem do nome do recebedor no arquivo do Portal (por exemplo, "Município de…", "Fundo Estadual de…", "Banco…"). O que não se encaixa conta como órgão federal.</p>
+          </div>
+          <div>
+            <h3>Quem mais recebeu no setor público</h3>
+            <Barras itens={d.publico.top.slice(0, 10).map((x) => ({
+              label: <a href={`${PORTAL_PJ}${x.cnpj}`} target="_blank" rel="noreferrer">{x.nome} ↗</a>, valor: x.valor,
+              nota: x.orgaos.length ? `Pago por ${x.orgaos.map(([o]) => o).join(", ")}` : undefined, cor: ESFERA_COR[x.esfera],
+            }))} />
+          </div>
+        </div>
+      </>}
+    </section>
   );
 }
 

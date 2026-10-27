@@ -326,6 +326,13 @@ def _conferir_incentivos(saida: Path, r: Resultado) -> None:
             top = [x["valor"] for x in p.get("top") or []]
             if top != sorted(top, reverse=True) or (top and top[0] > p["total"] + 0.01):
                 r.erro(f"Incentivos {ano}: lista dos que mais receberam fora de ordem ou maior que o total")
+            dest = p.get("destino")
+            if dest:
+                if not _perto(dest["privado"]["total"], p["total"], 1):
+                    r.erro(f"Incentivos {ano}: total privado do destino diferente do total dos pagamentos")
+                esf = dest["publico"].get("por_esfera") or []
+                if not _perto(dest["publico"]["total"], sum(x["valor"] for x in esf), len(esf)):
+                    r.erro(f"Incentivos {ano}: total público diferente da soma por esfera")
         em = d.get("emendas")
         if em:
             soma = sum(x["valor"] for x in em.get("politicos") or []) + sum(x["valor"] for x in em.get("coletivos") or [])

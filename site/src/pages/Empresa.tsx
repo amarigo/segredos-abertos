@@ -1,8 +1,9 @@
 import { Link, useParams } from "react-router-dom";
 import { useMemo, useState } from "react";
-import { Barras, Explain, LinkNota, Loading, useAno, useData } from "../components/ui";
+import { Barras, Explain, LinkNota, Loading, useAno, useData, useTip } from "../components/ui";
 import { MESES, cnpjFmt, dataBR, linkSeguro, reais, type DonoFinal, type Empresa, type NotaEmpresa, type OutraEmpresa, type Resumo } from "../data";
 import { ListaDocumentos } from "../components/DocsEmendas";
+import "./incentivos.css";
 
 /** "R$ X da cota + R$ Y de emendas + R$ Z do governo federal · R$ W de renúncia fiscal" */
 function recebeuTexto(o: OutraEmpresa) {
@@ -66,6 +67,8 @@ export default function EmpresaPage() {
         </section>
       )}
 
+      <PorAno e={e} />
+
       {e.governo && <Governo g={e.governo} cnpj={e.cnpj} />}
       {e.renuncia && <Renuncia r={e.renuncia} />}
       {e.emendas && <Emendas em={e.emendas} />}
@@ -81,11 +84,102 @@ export default function EmpresaPage() {
   );
 }
 
+/* As fontes de dinheiro público mostradas ano a ano, sempre na mesma ordem e com a mesma cor */
+const SERIES = [
+  { k: "governo", nome: "Pagamentos do governo federal", cor: "var(--s1)" },
+  { k: "emendas", nome: "Desses, com dinheiro de emendas", cor: "var(--s3)" },
+  { k: "cota", nome: "Cota de parlamentares", cor: "var(--s2)" },
+  { k: "renuncia", nome: "Renúncia fiscal (imposto que deixou de pagar)", cor: "var(--c4)" },
+] as const;
+type Serie = (typeof SERIES)[number]["k"];
+
+const lista = (xs: [string, number][]) => xs.map(([n, v]) => `${n} (${reais(v)})`).join(", ");
+
+/** Quanto a empresa recebeu (ou deixou de pagar) em cada ano, com o que explica cada valor. O ano mais recente vem primeiro. */
+function PorAno({ e }: { e: Empresa }) {
+  const tip = useTip();
+  const { anos: anos_site, setAno } = useAno();
+  const cota: Record<string, number> = {};
+  (e.por_mes || []).forEach((x) => { cota[x.ano] = (cota[x.ano] || 0) + x.valor; });
+  const valor = (a: string, k: Serie): number => k === "governo" ? e.governo?.por_ano[a] || 0 : k === "emendas" ? e.emendas?.por_ano[a] || 0
+    : k === "cota" ? cota[a] || 0 : e.renuncia?.por_ano[a] || 0;
+  const anos = [...new Set([...Object.keys(e.governo?.por_ano || {}), ...Object.keys(e.emendas?.por_ano || {}), ...Object.keys(cota),
+    ...Object.keys(e.renuncia?.por_ano || {})])].sort().reverse();
+  const series = SERIES.filter((s) => anos.some((a) => valor(a, s.k) > 0));
+  if (!anos.length) return null;
+  const max = Math.max(1, ...anos.flatMap((a) => series.map((s) => valor(a, s.k))));
+  return (
+    <section>
+      <h2>Dinheiro público por ano</h2>
+      <Explain>
+        Cada ano em separado: quanto esta empresa ou entidade recebeu e quanto deixou de pagar de impostos, e o que explica cada valor.
+        As barras usam a mesma escala em todos os anos. Os pagamentos com dinheiro de emendas já fazem parte dos pagamentos do governo federal:
+        aparecem à parte para mostrar qual parlamentar indicou o dinheiro. A renúncia fiscal não é um pagamento: é imposto que o governo deixou de cobrar.
+      </Explain>
+      <div className="legenda-anos small" aria-hidden="true">
+        {series.map((s) => <span key={s.k}><i style={{ background: s.cor }} />{s.nome}</span>)}
+      </div>
+      {anos.map((a) => {
+        const g = e.governo?.anos?.[a], em = e.emendas?.anos?.[a], r = e.renuncia?.anos?.[a];
+        const pagadores = (e.por_mes || []).filter((x) => String(x.ano) === a);
+        const porPol = new Map<string, { nome: string; valor: number }>();
+        pagadores.forEach((x) => { const p = porPol.get(x.politico) || { nome: x.nome, valor: 0 }; p.valor += x.valor; porPol.set(x.politico, p); });
+        const topPol = [...porPol.entries()].sort((x, y) => y[1].valor - x[1].valor).slice(0, 3);
+        return (
+          <div className="ano-bloco" key={a}>
+            <h3>{a}</h3>
+            <div className="ano-barras">
+              {series.map((s) => {
+                const v = valor(a, s.k);
+                return (
+                  <div className="ano-barra" key={s.k}>
+                    <span className="small">{s.nome}</span>
+                    <span className="num small">{v ? reais(v) : "–"}</span>
+                    <div className="track" onMouseMove={(ev) => tip.show(ev, `${a} · ${s.nome}: ${reais(v)}`)} onMouseLeave={tip.hide}>
+                      <div className="fill" style={{ width: `${(v / max) * 100}%`, background: s.cor }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <ul className="ano-explica small">
+              {g && g.cats.length > 0 && <li><strong>Pelo que o governo pagou:</strong> {lista(g.cats)}{g.orgaos.length > 0 && <>. Quem pagou: {lista(g.orgaos)}</>}.</li>}
+              {em && em.autores.length > 0 && <li><strong>Emendas de:</strong> {em.autores.map((x, k) => (
+                <span key={k}>{k > 0 && ", "}{x.politico ? <Link to={`/p/${x.politico}`}>{x.nome}</Link> : x.nome}{x.partido && ` (${x.partido})`} {reais(x.valor)}</span>
+              ))}. <Link to="/emendas" onClick={() => anos_site.includes(a) && setAno(a)}>Ver as emendas de {a}</Link>.</li>}
+              {topPol.length > 0 && <li><strong>Cota paga por:</strong> {topPol.map(([pid, p], k) => (
+                <span key={pid}>{k > 0 && ", "}<Link to={`/p/${pid}`}>{p.nome}</Link> {reais(p.valor)}</span>
+              ))}{porPol.size > 3 && ` e mais ${porPol.size - 3}`}.</li>}
+              {r && r.beneficios.length > 0 && <li><strong>Benefícios fiscais:</strong> {lista(r.beneficios)}.</li>}
+            </ul>
+          </div>
+        );
+      })}
+      {tip.el}
+      <details className="small">
+        <summary>Ver os valores numa tabela</summary>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Ano</th>{series.map((s) => <th key={s.k} className="r">{s.nome}</th>)}</tr></thead>
+            <tbody>{anos.map((a) => <tr key={a}><td>{a}</td>{series.map((s) => <td key={s.k} className="r num">{reais(valor(a, s.k), true)}</td>)}</tr>)}</tbody>
+          </table>
+        </div>
+      </details>
+      <p className="small muted">
+        Fontes: <a href={`https://portaldatransparencia.gov.br/pessoa-juridica/${e.cnpj}`} target="_blank" rel="noreferrer">pagamentos e emendas no Portal da Transparência ↗</a>
+        {e.renuncia && <> · <a href={linkSeguro(e.renuncia.fonte)} target="_blank" rel="noreferrer">renúncia fiscal (Receita Federal, pelo Portal) ↗</a></>}
+        {e.total > 0 && <> · cota parlamentar: notas oficiais da Câmara e do Senado, listadas abaixo</>}.
+        Os pagamentos do governo de um ano podem estar incompletos enquanto a leitura dos arquivos diários do Portal não termina; a página de <Link to="/incentivos">incentivos</Link> mostra quantos dias de cada ano já foram lidos.
+      </p>
+    </section>
+  );
+}
+
 function Governo({ g, cnpj }: { g: NonNullable<Empresa["governo"]>; cnpj: string }) {
   const anos = Object.entries(g.por_ano).sort();
   return (
     <section>
-      <h2>Pagamentos do governo federal</h2>
+      <h2>Pagamentos do governo federal: todos os anos somados</h2>
       <Explain>
         O que o governo federal pagou a esta empresa ou entidade por compras, obras, serviços, convênios e subsídios (salários e dívida pública não entram).
         Por ano: {anos.map(([a, v]) => `${a}: ${reais(v)}`).join(" · ")}. <Link to="/incentivos">Comparar com as outras</Link>.
@@ -103,7 +197,7 @@ function Renuncia({ r }: { r: NonNullable<Empresa["renuncia"]> }) {
   const anos = Object.entries(r.por_ano).sort();
   return (
     <section>
-      <h2>Renúncia fiscal: imposto que deixou de pagar</h2>
+      <h2>Renúncia fiscal: todos os anos somados</h2>
       <Explain>
         Por causa de benefícios fiscais, esta empresa deixou de pagar impostos federais, segundo a Receita Federal. É dinheiro que o governo deixa de arrecadar.
         Por ano-calendário: {anos.map(([a, v]) => `${a}: ${reais(v)}`).join(" · ")}.
@@ -119,7 +213,7 @@ function Emendas({ em }: { em: NonNullable<Empresa["emendas"]> }) {
   const anos = Object.entries(em.por_ano).sort();
   return (
     <section>
-      <h2>Dinheiro de emendas parlamentares</h2>
+      <h2>Emendas parlamentares: todos os anos somados</h2>
       <Explain>
         Esta empresa recebeu pagamentos do governo federal feitos com dinheiro de emendas: o parlamentar indica a emenda e um ministério ou órgão faz a compra ou a contratação.
         {anos.length > 0 && <> Por ano: {anos.map(([a, v]) => `${a}: ${reais(v)}`).join(" · ")}.</>}

@@ -119,11 +119,15 @@ export interface Empresa extends Omit<EmpresaResumo, "emendas" | "governo" | "re
   donos_finais?: DonoFinal[];
   /** O que recebeu de emendas parlamentares (pagamentos do governo federal) */
   emendas?: null | { total: number; por_ano: Record<string, number>; orgaos: [string, number][];
-    autores: { nome: string; politico: string | null; partido: string; valor: number }[]; docs: DocPagamento[] };
+    autores: { nome: string; politico: string | null; partido: string; valor: number }[]; docs: DocPagamento[];
+    /** Detalhe de cada ano: de quem eram as emendas e quem pagou */
+    anos?: Record<string, { valor: number; autores: { nome: string; politico: string | null; partido: string; valor: number }[]; orgaos: [string, number][] }> };
   /** Pagamentos do governo federal (compras, obras, serviços, convênios, subsídios), pelo ano do pagamento */
-  governo?: null | { total: number; por_ano: Record<string, number>; cats: [string, number][]; orgaos: [string, number][] };
+  governo?: null | { total: number; por_ano: Record<string, number>; cats: [string, number][]; orgaos: [string, number][];
+    anos?: Record<string, { valor: number; n: number; cats: [string, number][]; orgaos: [string, number][] }> };
   /** Renúncia fiscal: imposto federal que deixou de pagar, pelo ano-calendário */
-  renuncia?: null | { total: number; por_ano: Record<string, number>; beneficios: [string, number][]; fonte: string };
+  renuncia?: null | { total: number; por_ano: Record<string, number>; beneficios: [string, number][]; fonte: string;
+    anos?: Record<string, { valor: number; beneficios: [string, number][] }> };
   n_notas?: number; notas_por_ano?: Record<string, number>;
   por_mes?: { politico: string; nome: string; ano: number; mes: number; valor: number }[];
   mesmo_endereco?: (OutraEmpresa & { mesmos_socios: boolean })[]; pagadores: { politico: string; nome: string; partido: string; uf: string; valor: number }[]; alertas: string[];

@@ -45,6 +45,8 @@ def test_ler_geral_um_dia(tmp_path):
     assert nome == "EMPRESA X LTDA" and cats == {"contrato": 1000.0, "subsidio": 500.0} and n == 1  # folha fora
     assert {d["o"][int(i)]: v for i, v in orgs.items()} == {"Ministério A": 1500.0}
     assert d["f"]["11222333000181"][1] == {"repasse": 300.0}
+    # a estatal fica guardada à parte, para mostrar quanto vai ao próprio setor público
+    assert set(d["p"]) == {"33683111000280"} and d["p"]["33683111000280"][1] == {"contrato": 700.0}
 
 
 def test_coletar_geral_do_mais_recente_e_resumir(tmp_path, monkeypatch):
@@ -70,6 +72,41 @@ def test_coletar_geral_do_mais_recente_e_resumir(tmp_path, monkeypatch):
     cob = r["cobertura"][2025]
     assert cob["dias"] == 14 and cob["dias_ano"] == 19 and cob["completo"] and cob["ate"] == "2025-01-14"
     assert pagamentos.coletar_geral([2025], tmp_path / "novo", minutos=0, hoje=hoje) == []
+    assert r["publicos"][2025]["33683111000280"]["valor"] == 700.0 and r["cobertura_publicos"][2025]["dias"] == 14
+
+
+def test_resumo_antigo_sem_publicos_nao_conta_na_cobertura_publica(tmp_path):
+    novo = tmp_path / "20250102.json.gz"
+    novo.write_bytes(gzip.compress(json.dumps({"f": {}, "p": {"33683111000280": ["SERPRO", {"contrato": 5.0}, 1, {"0": 5.0}]},
+                                               "o": ["Ministério A"]}).encode()))
+    velho = tmp_path / "20250103.json.gz"
+    velho.write_bytes(gzip.compress(json.dumps({"f": {}, "o": []}).encode()))
+    r = pagamentos.resumir_geral([novo, velho], [2025], hoje=dt.date(2025, 1, 4))
+    assert r["cobertura"][2025]["dias"] == 2 and r["cobertura_publicos"][2025]["dias"] == 1
+    assert r["publicos"][2025]["33683111000280"]["orgaos"] == {"Ministério A": 5.0}
+
+
+def test_coleta_curta_le_so_os_dias_mais_recentes(tmp_path, monkeypatch):
+    chamadas = []
+    monkeypatch.setattr(pagamentos, "_baixar_dia", lambda dia, dest: chamadas.append(dia))
+    pagamentos.coletar_geral([2025, 2026], tmp_path, hoje=dt.date(2026, 3, 1), max_dias=3)
+    assert chamadas == ["20260228", "20260227", "20260226"]
+
+
+def test_esfera_e_destino():
+    from sa_etl import incentivos
+    assert incentivos.esfera("MUNICIPIO DE CAMPINAS") == "municipal"
+    assert incentivos.esfera("FUNDO MUNICIPAL DE SAUDE DE X") == "municipal"
+    assert incentivos.esfera("ESTADO DE SAO PAULO") == "estadual"
+    assert incentivos.esfera("CAIXA ECONOMICA FEDERAL") == "estatal"
+    assert incentivos.esfera("UNIVERSIDADE FEDERAL DE MINAS GERAIS") == "federal"
+    e = lambda nome, v: {"nome": nome, "valor": v, "n": 1, "cats": {"repasse": v}, "orgaos": {"Ministério A": v}}
+    d = incentivos.montar_destino([("1", e("EMPRESA", 10.0))],
+                                  {"2": e("MUNICIPIO DE X", 30.0), "3": e("ESTADO DO PARA", 5.0), "4": e("MUNICIPIO DE Y", 1.0)}, {"dias": 1})
+    assert d["privado"] == {"total": 10.0, "n": 1}
+    pub = d["publico"]
+    assert pub["total"] == 36.0 and pub["por_esfera"][0] == {"esfera": "municipal", "rotulo": "Municípios", "valor": 31.0, "n": 2}
+    assert [x["cnpj"] for x in pub["top"]] == ["2", "3", "4"]
 
 
 def test_renuncia_ano_parcial_e_cnpj_invalido(tmp_path, monkeypatch):
@@ -109,6 +146,15 @@ def test_pagina_de_incentivos_na_coleta(coleta):
     # página da empresa: pagamentos, renúncia e as outras empresas do mesmo dono
     e = coleta.ler(saida, f"e/{ce}.json")
     assert e["governo"]["total"] == 150000.0 and e["renuncia"]["por_ano"] == {"2024": 500000.0, "2025": 250000.0}
+    assert e["governo"]["anos"]["2025"]["valor"] == 150000.0 and e["governo"]["anos"]["2025"]["cats"]
+    e1 = coleta.ler(saida, f"e/{gov.emenda_empresas[0]}.json")
+    ano_em = e1["emendas"]["anos"]["2025"]
+    assert ano_em["valor"] == e1["emendas"]["por_ano"]["2025"] and ano_em["autores"][0]["politico"]
+    assert e["renuncia"]["anos"]["2024"]["valor"] == 500000.0 and e["renuncia"]["anos"]["2024"]["beneficios"]
+    # para onde foi o dinheiro: privado e o próprio setor público (a estatal entra no público)
+    dest = p["destino"]
+    assert dest["privado"]["total"] == p["total"] and dest["publico"]["total"] >= 70000.0
+    assert publica in [x["cnpj"] for x in dest["publico"]["top"]]
     outras = {o["cnpj"]: o for o in e["socios"][0]["outras_empresas"]}
     assert gov.emenda_empresas[0] in outras and outras[gov.emenda_empresas[0]]["governo"] == 60999.0
     # e o caminho de volta: a construtora da emenda mostra a contratada como empresa do mesmo dono

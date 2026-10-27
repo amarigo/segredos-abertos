@@ -6,3 +6,19 @@
 .inc-tabela td:first-child { width: 2.5em; }
 @media (max-width: 520px) { .inc-tabela th:first-child, .inc-tabela td:first-child { display: none; } }
 .aviso-ano { background: var(--alert-bg); color: var(--alert-ink); padding: 10px 14px; border-radius: 8px; margin: 12px 0 0; max-width: 820px; }
+
+/* Página da empresa: dinheiro público por ano */
+.legenda-anos { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 0 12px; }
+.legenda-anos i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.ano-bloco { border-top: 1px solid var(--grid); padding: 12px 0; }
+.ano-bloco h3 { margin: 0 0 8px; }
+.ano-barras { display: grid; gap: 6px; }
+.ano-barra { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; }
+.ano-barra .track { grid-column: 1 / -1; height: 12px; background: var(--grid); border-radius: 4px; overflow: hidden; }
+.ano-barra .fill { height: 100%; border-radius: 0 4px 4px 0; }
+.ano-explica { margin: 10px 0 0; padding-left: 18px; }
+.ano-explica li { margin: 4px 0; }
+
+/* Para onde vai o dinheiro: privado × público */
+.destino-barra { display: flex; gap: 2px; height: 18px; margin: 12px 0; border-radius: 4px; overflow: hidden; }
+.destino-cor { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
