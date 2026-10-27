@@ -126,9 +126,31 @@ test.describe("jornada", () => {
     expect(erros).toEqual([]);
   });
 
+  test("arrecadação e gastos: primeira aba, abre no ano mais recente e os sinais batem com o arquivo", async ({ page }) => {
+    const erros = vigiar(page);
+    const idx = dados("financas/indice.json");
+    const ultimo = String(Math.max(...idx.anos));
+    const fin = dados(`financas/${ultimo}.json`);
+    await page.goto("./");
+    await expect(page.locator("nav.nav a").first()).toHaveText("Arrecadação e gastos");
+    await page.locator("nav.nav a").first().click();
+    await expect(page.locator(".fin-ano[aria-pressed=true]")).toHaveText(ultimo);
+    await expect(page.locator("[data-testid=kpi]")).toHaveCount(fin.kpis.length);
+    const vermelhos = fin.kpis.filter((k: { nivel: string }) => k.nivel === "vermelho").length;
+    await expect(page.locator("#sinais")).toContainText(`Vermelho (${vermelhos})`);
+    await expect(page.locator("#destino")).toContainText(fin.funcoes.funcoes[0].nome);
+    await expect(page.locator("#cargos")).toContainText("Comissionados sem concurso");
+    await expect(page.locator("#poderes a[href^='https://apidatalake.tesouro.gov.br/']").first()).toBeVisible();
+    // Outro ano: troca os números, sem somar os anos
+    const antes = String(Number(ultimo) - 1);
+    await page.locator(".fin-ano", { hasText: antes }).click();
+    await expect(page.locator(".hero .eyebrow")).toContainText(antes);
+    expect(erros).toEqual([]);
+  });
+
   test("todas as páginas do menu abrem sem erro", async ({ page }) => {
     const erros = vigiar(page);
-    for (const rota of ["politicos", "empresas", "votacoes", "partidos", "emendas", "incentivos", "sobre"]) {
+    for (const rota of ["dinheiro", "politicos", "empresas", "votacoes", "partidos", "emendas", "incentivos", "sobre"]) {
       await page.goto(`./#/${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();
       await expect(page.locator("main")).not.toContainText("Não foi possível");
@@ -139,7 +161,7 @@ test.describe("jornada", () => {
   test("sem rolagem lateral no celular", async ({ page }, info) => {
     test.skip(info.project.name !== "celular");
     vigiar(page);
-    for (const rota of ["", `#/p/${pols[0].id}`, "#/votacoes", "#/empresas", "#/incentivos"]) {
+    for (const rota of ["", `#/p/${pols[0].id}`, "#/votacoes", "#/empresas", "#/incentivos", "#/dinheiro"]) {
       await page.goto(`./${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();
       const largura = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

@@ -1,0 +1,72 @@
+/* Página "Arrecadação e gastos" (primeira aba). Usa os tokens do redesenho
+   com valores reserva, para funcionar antes e depois dele. */
+.fin { --fg: var(--flag-g, #138a52); --fy: var(--flag-y, #b77900); --fr: var(--flag-r, #c62f2f);
+  --fg-bg: var(--flag-g-bg, #e3f5ea); --fy-bg: var(--flag-y-bg, #fff3d1); --fr-bg: var(--flag-r-bg, #fde4e1); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fin { --fg-bg: var(--flag-g-bg, #11301f); --fy-bg: var(--flag-y-bg, #3a2e10); --fr-bg: var(--flag-r-bg, #3d1716); --fg: var(--flag-g, #3fcf86); --fy: var(--flag-y, #f0b43c); --fr: var(--flag-r, #ff7b72); } }
+:root[data-theme="dark"] .fin { --fg-bg: var(--flag-g-bg, #11301f); --fy-bg: var(--flag-y-bg, #3a2e10); --fr-bg: var(--flag-r-bg, #3d1716); --fg: var(--flag-g, #3fcf86); --fy: var(--flag-y, #f0b43c); --fr: var(--flag-r, #ff7b72); }
+
+.fin section { scroll-margin-top: 80px; }
+.fin > section + section { margin-top: 32px; }
+.fin-anos { flex-wrap: wrap; gap: 6px; }
+.fin-ano { font: 600 .95rem var(--mono); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.fin-ano[aria-pressed="true"] { background: var(--hot, var(--navy)); border-color: var(--hot, var(--navy)); color: #fff; }
+.fin-indice { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .9rem; }
+.fin-indice a { text-decoration: none; font-weight: 600; }
+.fin-sub { margin: 14px 0 6px; font-size: 1.1rem; }
+
+/* Sinais verde / amarelo / vermelho */
+.fin-sinal { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; text-transform: uppercase; letter-spacing: .04em; }
+.fin-sinal::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.fin-sinal.verde { color: var(--fg); background: var(--fg-bg); }
+.fin-sinal.amarelo { color: var(--fy); background: var(--fy-bg); }
+.fin-sinal.vermelho { color: var(--fr); background: var(--fr-bg); }
+.fin-sinal.sem_dados { color: var(--muted); background: var(--line); }
+
+.fin-kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.fin-kpi { border-top: 4px solid var(--line); }
+.fin-kpi.verde { border-top-color: var(--fg); }
+.fin-kpi.amarelo { border-top-color: var(--fy); }
+.fin-kpi.vermelho { border-top-color: var(--fr); }
+.fin-kpi h3 { font-size: 1.05rem; }
+.fin-kpi-topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fin-kpi-valor { font-size: 1.4rem; font-weight: 700; }
+.fin-kpi-det { margin: 0; padding-left: 18px; }
+
+/* Barra de uso com marcas de alerta (90%) e prudencial (95%) */
+.fin-barra { position: relative; height: 10px; border-radius: 5px; background: var(--grid); }
+.fin-barra > span { display: block; height: 100%; border-radius: 5px; background: var(--s1); }
+.fin-kpi.verde .fin-barra > span { background: var(--fg); }
+.fin-kpi.amarelo .fin-barra > span { background: var(--fy); }
+.fin-kpi.vermelho .fin-barra > span { background: var(--fr); }
+.fin-barra > i { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink-2); }
+.fin-barra-fina { height: 4px; margin-top: 4px; max-width: 200px; }
+
+.fin-linha { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.fin-linha .track { grid-column: 1 / -1; }
+.fin-abrir { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: var(--accent); text-align: left; }
+.fin-detalhe { padding: 6px 0 6px 14px; border-left: 3px solid var(--line); margin: 4px 0 8px; display: grid; gap: 4px; }
+.fin-mais { margin-top: 6px; }
+.fin-tabela td.r, .fin-tabela th.r { text-align: right; }
+.fin-tabela .fin-destaque td { background: var(--fy-bg); }
+.fin-sobe { color: var(--fr); font-weight: 600; }
+.fin-desce { color: var(--fg); font-weight: 600; }
+.fin-acao td { background: var(--bg); font-size: .9rem; }
+
+.fin-poderes, .fin-casas { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.fin-grande { font-family: var(--display); font-size: 1.6rem; font-weight: 700; }
+
+/* Colunas ano a ano */
+.fin-colunas { display: flex; align-items: flex-end; gap: 8px; height: 220px; padding: 8px 0 0; overflow-x: auto; }
+.fin-coluna { flex: 1 0 44px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.fin-coluna-barra { width: 70%; min-height: 2px; border-radius: 4px 4px 0 0; }
+.fin-coluna-valor { font-size: .72rem; color: var(--ink-2); white-space: nowrap; }
+.fin-coluna-ano { font: 600 .8rem var(--mono); text-align: center; line-height: 1.1; }
+.fin-coluna-ano small { display: block; font-weight: 400; color: var(--muted); }
+.fin-tabela-anos td, .fin-tabela-anos th { white-space: nowrap; }
+
+.fin-link { text-decoration: none; color: inherit; transition: border-color .15s; }
+.fin-link:hover { border-color: var(--hot, var(--accent)); }
+.fin-fontes { overflow-wrap: anywhere; }
+@media (max-width: 520px) { .fin-kpis, .fin-poderes, .fin-casas { grid-template-columns: 1fr; } .fin-colunas { height: 180px; } }
+.fin-escolha { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.fin-escolha select { max-width: 100%; min-width: 0; }

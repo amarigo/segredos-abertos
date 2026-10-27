@@ -27,6 +27,8 @@ import requests
 
 from sa_etl.cnpj import cnpj_matriz
 
+import fakegov_financas  # noqa: E402  (mesma pasta dos testes)
+
 PARTIDOS_DEP = ["PL", "PL", "NOVO", "PT", "PT", "PSOL", "MDB", "PSD"]
 PARTIDOS_SEN = ["PL", "PT", "MDB", "PSD", "NOVO"]
 DIREITA = {"PL", "NOVO"}
@@ -258,6 +260,9 @@ class FakeGov:
         u = urlparse(url)
         path = u.path
         q = {**{k: v[0] for k, v in parse_qs(u.query).items()}, **{k: str(v) for k, v in params.items()}}
+        fin = fakegov_financas.rota(u.netloc, path, q)  # aba de arrecadação e gastos
+        if fin is not None:
+            return fin
 
         if u.netloc == "dadosabertos.camara.leg.br" and path == "/api/v2/deputados":
             if "idLegislatura" in q:  # emendas: deputados da legislatura
