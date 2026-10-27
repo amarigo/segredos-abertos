@@ -217,6 +217,40 @@ test("votos depois das 17h: números do registro das urnas, conferidos com o bol
   expect(erros).toEqual([]);
 });
 
+test("simulador: dá para escolher o exterior, e o número real devolve o resultado oficial", async ({ page }) => {
+  const erros = semErros(page);
+  const br = oficial["6258"].BR.cand, zz = oficial["6258"].ZZ.cand;
+  await page.goto("./#simulador");
+  await page.locator("#sa-zz").click();
+  await expect(page.locator("#sa-uf")).toHaveValue("ZZ");
+  await expect(page.locator("#sa-zz")).toHaveAttribute("aria-pressed", "true");
+  // com o número real do exterior, a diferença é a oficial
+  await expect(page.locator("#sa-out")).toContainText("no exterior");
+  await expect(page.locator("#sa-out")).toContainText((br["13"].v - br["22"].v).toLocaleString("pt-BR") + " votos");
+  // sem os votos do exterior: tira exatamente os votos do exterior
+  await page.locator("#sa-zero").click();
+  await expect(page.locator("#sa-out")).toContainText("Sem nenhum voto do exterior");
+  const semZZ = br["13"].v - zz["13"].v - (br["22"].v - zz["22"].v);
+  await expect(page.locator("#sa-out")).toContainText(Math.abs(semZZ).toLocaleString("pt-BR") + " votos");
+  expect(erros).toEqual([]);
+});
+
+for (const largura of [1366, 1024, 800]) {
+  test(`menu: todas as abas aparecem inteiras (${largura} px)`, async ({ page }) => {
+    await page.setViewportSize({ width: largura, height: 800 });
+    await page.goto("./");
+    const abas = page.locator("nav.menu button");
+    expect(await abas.count()).toBe(7);
+    for (const b of await abas.all()) {
+      const r = (await b.boundingBox())!;
+      expect(r.x).toBeGreaterThanOrEqual(0);
+      expect(r.x + r.width).toBeLessThanOrEqual(largura);
+      // o texto cabe no botão (não está cortado)
+      expect(await b.evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+    }
+  });
+}
+
 test.describe("tema escuro", () => {
   test.use({ colorScheme: "dark" });
   test("botões vazados têm texto legível", async ({ page }) => {
