@@ -206,7 +206,7 @@ def test_chave_errada_diz_o_motivo(coleta, monkeypatch):
     gov.falhar("RenunciasFiscais.zip", "404").falhar("/download-de-dados/renuncias/", "404")
     saida = coleta.rodar()
     aviso = next(a for a in coleta.ler(saida, "meta.json")["avisos"] if "Renúncia fiscal" in a)
-    assert "API: HTTP 401" in aviso
+    assert "API: HTTP 401" in aviso and "orgaos-siafi: HTTP 401; chave com 5 caracteres" in aviso
 
 
 def test_api_relida_todo_mes_sem_tirar_os_dados_do_site(tmp_path, monkeypatch):
