@@ -182,6 +182,9 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
             r.erro(f"Empresa repetida em empresas.json: {c}")
     if [e["total"] for e in emps] != sorted((e["total"] for e in emps), reverse=True):
         r.erro("empresas.json fora de ordem (deveria estar do maior para o menor total)")
+    for e in emps:  # a soma dos anos tem que bater com o total (as listas do site mostram o ano escolhido)
+        if "por_ano" in e and abs(sum(x["valor"] for x in e["por_ano"].values()) - e["total"]) > 0.05:
+            r.erro(f"Empresa {e['cnpj']}: soma dos anos diferente do total em empresas.json")
     for f in sorted((saida / "e").glob("*.json")) if (saida / "e").exists() else []:
         _conferir_empresa(saida, f, por_id, r)
 

@@ -111,7 +111,7 @@ export interface DonoFinal {
 }
 /** Outra empresa do mesmo dono: total recebido da cota e, se houver, de emendas, do governo federal e renúncia fiscal */
 export interface OutraEmpresa { cnpj: string; nome: string; total: number; emendas?: number; governo?: number; renuncia?: number }
-export interface EmpresaResumo { cnpj: string; nome: string; total: number; n_politicos: number; tem_socios: boolean; n_mesmo_endereco?: number; tem_holding?: boolean; emendas?: number; governo?: number; renuncia?: number }
+export interface EmpresaResumo { cnpj: string; nome: string; total: number; n_politicos: number; por_ano?: Record<string, { valor: number; n_politicos: number }>; tem_socios: boolean; n_mesmo_endereco?: number; tem_holding?: boolean; emendas?: number; governo?: number; renuncia?: number }
 export interface Empresa extends Omit<EmpresaResumo, "emendas" | "governo" | "renuncia"> {
   empresa: null | { razao_social: string; nome_fantasia: string; situacao: string; abertura: string; atividade: string; municipio: string; uf: string; capital_social: number; porte: string; natureza: string;
     endereco?: { logradouro: string; numero: string; complemento: string; bairro: string; cep: string } };
@@ -312,4 +312,10 @@ export interface DinheiroCidade {
     autores: { nome: string; politico: string | null; partido: string; valor: number; n: number }[] } | null;
   contas: { cod_ibge: number; fonte: string; api: string; anos: { ano: number; instituicao: string; total_empenhado: number; total_liquidado: number; total_pago: number;
     funcoes: { codigo: string; funcao: string; empenhado: number; liquidado: number; pago: number; principais: { nome: string; valor: number }[] }[] }[] } | null;
+}
+
+/** Cota que a empresa recebeu no ano escolhido. Sem o detalhe por ano (dados antigos), devolve null e a tela usa o total. */
+export function cotaNoAno(e: { por_ano?: Record<string, { valor: number; n_politicos: number }> }, ano: string): { valor: number; n_politicos: number } | null {
+  if (!e.por_ano) return null;
+  return e.por_ano[ano] || { valor: 0, n_politicos: 0 };
 }
