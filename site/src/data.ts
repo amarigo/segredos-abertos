@@ -112,7 +112,7 @@ export interface DonoFinal {
 }
 /** Outra empresa do mesmo dono: total recebido da cota e, se houver, de emendas, do governo federal e renúncia fiscal */
 export interface OutraEmpresa { cnpj: string; nome: string; total: number; emendas?: number; governo?: number; renuncia?: number }
-export interface EmpresaResumo { cnpj: string; nome: string; total: number; n_politicos: number; tem_socios: boolean; n_mesmo_endereco?: number; tem_holding?: boolean; emendas?: number; governo?: number; renuncia?: number }
+export interface EmpresaResumo { cnpj: string; nome: string; total: number; n_politicos: number; por_ano?: Record<string, { valor: number; n_politicos: number }>; tem_socios: boolean; n_mesmo_endereco?: number; tem_holding?: boolean; emendas?: number; governo?: number; renuncia?: number }
 export interface Empresa extends Omit<EmpresaResumo, "emendas" | "governo" | "renuncia"> {
   empresa: null | { razao_social: string; nome_fantasia: string; situacao: string; abertura: string; atividade: string; municipio: string; uf: string; capital_social: number; porte: string; natureza: string;
     endereco?: { logradouro: string; numero: string; complemento: string; bairro: string; cep: string } };
@@ -331,4 +331,47 @@ export interface DinheiroCidade {
     autores: { nome: string; politico: string | null; partido: string; valor: number; n: number }[] } | null;
   contas: { cod_ibge: number; fonte: string; api: string; anos: { ano: number; instituicao: string; total_empenhado: number; total_liquidado: number; total_pago: number;
     funcoes: { codigo: string; funcao: string; empenhado: number; liquidado: number; pago: number; principais: { nome: string; valor: number }[] }[] }[] } | null;
+}
+
+/** Cota que a empresa recebeu no ano escolhido. Sem o detalhe por ano (dados antigos), devolve null e a tela usa o total. */
+export function cotaNoAno(e: { por_ano?: Record<string, { valor: number; n_politicos: number }> }, ano: string): { valor: number; n_politicos: number } | null {
+  if (!e.por_ano) return null;
+  return e.por_ano[ano] || { valor: 0, n_politicos: 0 };
+}
+
+/* Projetos em andamento (tramitacao.json, gerado por etl/sa_etl/tramitacao.py; almg/tramitacao.json no Minas Nossa) */
+export interface AutorProjeto { nome: string; partido: string; uf: string; id: string }
+export interface PautaProjeto { data: string; onde: string; url: string; urgencia: boolean; regime: string; relator: string; parecer?: string; terminativo?: boolean }
+export type GrupoProjeto = "pauta" | "mpv" | "nova" | "andamento";
+export interface Projeto {
+  id: string; casa: Casa | "almg"; sigla: string; numero: string; ano: string; nome: string;
+  ementa: string; resumo?: string; resumo_oficial?: string; o_que_e?: string;
+  apresentada: string; atualizada: string; autores: AutorProjeto[]; n_autores: number;
+  situacao: string; fase?: string; onde: string; regime?: string; etapa: number; etapa_nome?: string;
+  url: string; texto?: string; passos?: { data: string; onde: string; texto: string }[];
+  pauta?: PautaProjeto[]; grupos: GrupoProjeto[]; temas?: string[]; proximo?: string;
+  prazo?: string; tranca_pauta?: string; suspenso?: boolean; veio_da_camara?: boolean; do_estado?: boolean;
+}
+export interface Tramitacao {
+  atualizado_em: string; dias_pauta: number; dias_novas: number; etapas: string[]; o_que_e: Record<string, string>;
+  situacao_fontes: Record<string, string>; itens: Projeto[];
+  agenda: { id: string; casa: Casa; data: string; onde: string; tipo: string; situacao: string; url: string; itens: string[] }[];
+}
+export interface TramitacaoAlmg { atualizado_em: string; dias_andamento: number; dias_novas: number; itens: Projeto[]; fonte: string }
+
+const DIAS_SEMANA = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+/** "2026-10-28T14:00" -> "quarta, 28/10, às 14h00" */
+export function dataHoraBR(s: string): string {
+  const [d, h] = (s || "").split("T");
+  const p = (d || "").split("-").map(Number);
+  if (p.length !== 3 || p.some(isNaN)) return s || "";
+  const dia = new Date(p[0], p[1] - 1, p[2]);
+  const txt = `${DIAS_SEMANA[dia.getDay()]}, ${String(p[2]).padStart(2, "0")}/${String(p[1]).padStart(2, "0")}`;
+  const hora = (h || "").slice(0, 5);
+  return hora && hora !== "00:00" ? `${txt}, às ${hora.replace(":", "h")}` : txt;
+}
+/** Partido e estado do autor, como "(PT-SP)". */
+export function autorSigla(a: AutorProjeto): string {
+  const x = [a.partido, a.uf].filter(Boolean).join("-");
+  return x ? ` (${x})` : "";
 }

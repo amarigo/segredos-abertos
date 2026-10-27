@@ -1,10 +1,20 @@
 import { useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, NavLink, useSearchParams } from "react-router-dom";
 import { Explain, Loading, ResultadoChip, useData } from "../components/ui";
 import { TEMAS, casaNome, dataBR, descricaoCurta, proposicaoNome, tipoVotacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 import { MG } from "../recorte";
 import Selo from "../components/Selo";
+
+/** As duas partes da seção de votações: o que já foi votado e o que está em andamento. */
+export function VotacoesAbas() {
+  return (
+    <nav className="tabs" aria-label="Votações">
+      <NavLink end to="/votacoes" className={({ isActive }) => (isActive ? "ativa" : "")}>Já votadas</NavLink>
+      <NavLink to="/votacoes/em-andamento" className={({ isActive }) => (isActive ? "ativa" : "")}>Projetos em andamento</NavLink>
+    </nav>
+  );
+}
 
 export default function Votacoes() {
   const { data, error } = useData<VotacaoResumo[]>("votacoes.json");
@@ -21,6 +31,7 @@ export default function Votacoes() {
   if (!data) return <Loading error={error} />;
   return (
     <section>
+      <VotacoesAbas />
       <h1>Votações</h1>
         <Selo secao="votacoes" />
       <Explain>Votações nominais do plenário, em que cada parlamentar registra o próprio voto.{MG ? " Sim e Não mostram o placar da Casa inteira; ao lado, como votou a bancada de Minas Gerais." : " Sim e Não mostram o placar oficial da Casa inteira."} PEC é proposta de emenda à Constituição, PL é projeto de lei, MPV é medida provisória e PLP é projeto de lei complementar.</Explain>
@@ -39,7 +50,7 @@ export default function Votacoes() {
           <button key={t} className={`chip ${tema === t ? "ok" : ""}`} aria-pressed={tema === t} onClick={() => setTema(tema === t ? "" : t)}>{t} ({contTema[t]})</button>
         ))}
       </div>
-      <p className="muted small">{lista.length} votações{tema ? ` sobre ${tema.toLowerCase()}` : ""}. Os temas são definidos por palavras da ementa. <Link to="/sobre">Entenda</Link>.</p>
+      <p className="muted small">{lista.length} votações{tema ? ` sobre ${tema.toLowerCase()}` : ""}. Os temas são definidos por palavras da ementa. <Link to="/sobre">Entenda</Link>. Para o que ainda vai ser votado, veja <Link to="/votacoes/em-andamento">projetos em andamento</Link>.</p>
       <div className="table-wrap">
         <table>
           <thead><tr><th>Data</th><th>Casa</th><th>O que foi votado</th><th className="r">Sim</th><th className="r">Não</th>{MG && <th>Bancada de MG</th>}<th>Resultado</th></tr></thead>

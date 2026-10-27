@@ -26,6 +26,7 @@ clique em **Run workflow** e confirme com o branch `main`. Em cerca de 30 a 60 m
 | --- | --- |
 | Deputados, cota (CEAP), votações | [Dados Abertos da Câmara](https://dadosabertos.camara.leg.br) |
 | Senadores, cota (CEAPS), votações | [Dados Abertos do Senado](https://www12.senado.leg.br/dados-abertos) |
+| Projetos em andamento (pauta dos próximos 14 dias, recém-apresentados, medidas provisórias e prazos) | [API da Câmara](https://dadosabertos.camara.leg.br/swagger/api.html) (`/eventos`, `/eventos/{id}/pauta`, `/proposicoes`) e [API do Senado](https://legis.senado.leg.br/dadosabertos/docs/) (`/plenario/agenda`, `/comissao/agenda`, `/processo`); no Minas Nossa, o arquivo de proposições da [ALMG](https://dadosabertos.almg.gov.br/) |
 | Empresas e sócios | Base CNPJ da Receita Federal, via [Minha Receita](https://minhareceita.org) |
 | Emendas parlamentares (quem fez, área, quem recebeu) | [Portal da Transparência](https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares), arquivo completo |
 | Pagamentos do governo federal a empresas e entidades (página de incentivos) | [Portal da Transparência](https://portaldatransparencia.gov.br/download-de-dados/despesas), arquivos diários de despesas |
@@ -51,6 +52,28 @@ cd ../site
 npm install
 npm run dev
 ```
+
+## Idiomas (português, inglês e espanhol)
+
+Os três sites (Brasil, Minas Nossa e Eleição 2026) têm os botões PT, EN e ES na barra dos projetos. Português é o
+padrão. A tradução é feita no navegador por `site/public/i18n/tradutor.js`, com dicionários escritos à mão
+(`site/public/i18n/en.json` e `es.json`; a Eleição 2026 tem os seus em `eleicao2026/site/i18n/`). Os dados oficiais
+não são traduzidos: nomes de pessoas, empresas, partidos, programas, leis e categorias de gasto ficam como na fonte.
+O link de cada idioma é o endereço com `?lang=en` ou `?lang=es`, e a escolha fica guardada no navegador.
+
+Para achar textos novos sem tradução, com o site servido localmente:
+`node scripts/textos.mjs http://localhost:4173/ public/i18n` (gera `faltando.json`).
+
+## Buscadores e IAs
+
+- `npm run paginas` e `npm run paginas:mg`, depois do build, geram uma página HTML simples (sem JavaScript) por
+  político, empresa e votação, em português, inglês e espanhol, com link para a fonte oficial. Também geram
+  `sitemap.xml` e `llms.txt` (um resumo do site e dos dados para assistentes de IA).
+- Cada página tem título, descrição, `hreflang`, Open Graph e dados estruturados (schema.org).
+- `robots.txt` libera buscadores e robôs de IA. Atenção: no GitHub Pages sem domínio próprio, os buscadores só leem
+  o `robots.txt` da raiz do domínio (`amarigo.github.io/robots.txt`), então o arquivo daqui só vale se o site
+  ganhar um domínio próprio. Para o Google achar todas as páginas logo, cadastre
+  `https://amarigo.github.io/segredos-abertos/sitemap.xml` no Google Search Console.
 
 ## Testes e qualidade
 

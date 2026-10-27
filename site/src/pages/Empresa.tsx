@@ -19,7 +19,20 @@ export default function EmpresaPage() {
   const { cnpj = "" } = useParams();
   const { data: e, error } = useData<Empresa>(`e/${cnpj}.json`);
   if (!e) return <Loading error={error && "Esta empresa não está entre as que recebem dinheiro da cota, de emendas ou do governo federal, nem entre as que mais têm renúncia fiscal no período."} />;
+  return <EmpresaAno e={e} />;
+}
+
+/** Soma de um "por_ano" e a lista dos anos, para o texto secundário dos cartões */
+const somaAnos = (pa: Record<string, number>) => `${reais(Object.values(pa).reduce((a, b) => a + b, 0))} somando ${Object.keys(pa).sort().join(", ")}`;
+
+function EmpresaAno({ e }: { e: Empresa }) {
+  const { ano } = useAno();
   const emp = e.empresa;
+  // O ano escolhido no topo é o número principal; o total de todos os anos aparece em segundo plano
+  const cotaAno = (e.por_mes || []).filter((x) => String(x.ano) === ano);
+  const cotaValor = cotaAno.reduce((a, x) => a + x.valor, 0);
+  const cotaPols = new Set(cotaAno.map((x) => x.politico)).size;
+  const ultimoRen = e.renuncia ? Object.keys(e.renuncia.por_ano).sort().pop() : undefined;
   return (
     <>
       <section>
@@ -30,10 +43,14 @@ export default function EmpresaPage() {
         {e.alertas.map((a) => <div className="alert" key={a} role="note"><strong>Ponto de atenção:</strong> {a}</div>)}
       </section>
       <section className="grid">
-        {e.total > 0 && <div className="card stat"><span className="label">Recebeu da cota de parlamentares (todos os anos)</span><span className="value">{reais(e.total)}</span><span className="hint">de {e.n_politicos} parlamentar{e.n_politicos > 1 ? "es" : ""}</span></div>}
-        {e.governo && <div className="card stat"><span className="label">Recebeu do governo federal</span><span className="value">{reais(e.governo.total)}</span><span className="hint">pagamentos por compras, obras, serviços, convênios e subsídios ({Object.keys(e.governo.por_ano).sort().join(", ")})</span></div>}
-        {e.renuncia && <div className="card stat"><span className="label">Deixou de pagar de impostos</span><span className="value">{reais(e.renuncia.total)}</span><span className="hint">renúncia fiscal federal, anos {Object.keys(e.renuncia.por_ano).sort().join(", ")}</span></div>}
-        {e.emendas && <div className="card stat"><span className="label">Recebeu de emendas parlamentares</span><span className="value">{reais(e.emendas.total)}</span><span className="hint">pagos pelo governo federal, por indicação de {e.emendas.autores.length} autor{e.emendas.autores.length > 1 ? "es" : ""}</span></div>}
+        {e.total > 0 && <div className="card stat"><span className="label">Recebeu da cota de parlamentares em {ano}</span><span className="value">{reais(cotaValor)}</span>
+          <span className="hint">{cotaPols ? `de ${cotaPols} parlamentar${cotaPols > 1 ? "es" : ""}` : `nada em ${ano}`}{e.total !== cotaValor && <> · {reais(e.total)} em todos os anos</>}</span></div>}
+        {e.governo && <div className="card stat"><span className="label">Recebeu do governo federal em {ano}</span><span className="value">{reais(e.governo.por_ano[ano] || 0)}</span>
+          <span className="hint">compras, obras, serviços, convênios e subsídios · {somaAnos(e.governo.por_ano)}</span></div>}
+        {e.renuncia && <div className="card stat"><span className="label">Deixou de pagar de impostos em {ano}</span><span className="value">{e.renuncia.por_ano[ano] != null ? reais(e.renuncia.por_ano[ano]) : "—"}</span>
+          <span className="hint">{e.renuncia.por_ano[ano] == null && ultimoRen ? `A Receita ainda não publicou ${ano}. Último ano com dado: ${ultimoRen}, ${reais(e.renuncia.por_ano[ultimoRen])}. ` : "renúncia fiscal federal · "}{somaAnos(e.renuncia.por_ano)}</span></div>}
+        {e.emendas && <div className="card stat"><span className="label">Recebeu de emendas parlamentares em {ano}</span><span className="value">{reais(e.emendas.por_ano[ano] || 0)}</span>
+          <span className="hint">pagos pelo governo federal · {somaAnos(e.emendas.por_ano)}</span></div>}
         {emp && <>
           <div className="card stat"><span className="label">Situação na Receita</span><span className="value" style={{ fontSize: "1.3rem" }}>{emp.situacao || "—"}</span><span className="hint">Aberta em {dataBR(emp.abertura)}</span></div>
           <div className="card stat"><span className="label">Atividade</span><span style={{ fontWeight: 600 }}>{emp.atividade || "—"}</span><span className="hint">{emp.municipio}{emp.uf ? `-${emp.uf}` : ""} · {emp.porte}</span></div>
@@ -71,14 +88,11 @@ export default function EmpresaPage() {
 
       <PorAno e={e} />
 
-      {e.governo && <Governo g={e.governo} cnpj={e.cnpj} />}
-      {e.renuncia && <Renuncia r={e.renuncia} />}
-      {e.emendas && <Emendas em={e.emendas} />}
+      {e.governo && <Governo g={e.governo} cnpj={e.cnpj} ano={ano} />}
+      {e.renuncia && <Renuncia r={e.renuncia} ano={ano} />}
+      {e.emendas && <Emendas em={e.emendas} ano={ano} />}
 
-      {e.pagadores.length > 0 && <section>
-        <h2>{e.emendas ? "Quem pagou com a cota (todos os anos)" : "Quem pagou (todos os anos)"}</h2>
-        <Barras itens={e.pagadores.slice(0, 30).map((p) => ({ label: <Link to={`/p/${p.politico}`}>{p.nome} <span className="muted small">({p.partido}-{p.uf})</span></Link>, valor: p.valor }))} />
-      </section>}
+      {e.pagadores.length > 0 && <Pagadores e={e} ano={ano} />}
 
       {e.total > 0 && <PorMes e={e} />}
       {e.total > 0 && <Notas e={e} />}
@@ -100,7 +114,7 @@ const lista = (xs: [string, number][]) => xs.map(([n, v]) => `${n} (${reais(v)})
 /** Quanto a empresa recebeu (ou deixou de pagar) em cada ano, com o que explica cada valor. O ano mais recente vem primeiro. */
 function PorAno({ e }: { e: Empresa }) {
   const tip = useTip();
-  const { anos: anos_site, setAno } = useAno();
+  const { ano, anos: anos_site, setAno } = useAno();
   const cota: Record<string, number> = {};
   (e.por_mes || []).forEach((x) => { cota[x.ano] = (cota[x.ano] || 0) + x.valor; });
   const valor = (a: string, k: Serie): number => k === "governo" ? e.governo?.por_ano[a] || 0 : k === "emendas" ? e.emendas?.por_ano[a] || 0
@@ -112,16 +126,20 @@ function PorAno({ e }: { e: Empresa }) {
   const max = Math.max(1, ...anos.flatMap((a) => series.map((s) => valor(a, s.k))));
   return (
     <section>
-      <h2>Dinheiro público por ano</h2>
+      <h2>Dinheiro público em {ano}</h2>
       <Explain>
-        Cada ano em separado: quanto esta empresa ou entidade recebeu e quanto deixou de pagar de impostos, e o que explica cada valor.
+        O ano escolhido no topo da página aparece primeiro; os outros anos ficam logo abaixo, cada um em separado: quanto esta empresa ou entidade recebeu e quanto deixou de pagar de impostos, e o que explica cada valor.
         As barras usam a mesma escala em todos os anos. Os pagamentos com dinheiro de emendas já fazem parte dos pagamentos do governo federal:
         aparecem à parte para mostrar qual parlamentar indicou o dinheiro. A renúncia fiscal não é um pagamento: é imposto que o governo deixou de cobrar.
       </Explain>
       <div className="legenda-anos small" aria-hidden="true">
         {series.map((s) => <span key={s.k}><i style={{ background: s.cor }} />{s.nome}</span>)}
       </div>
-      {anos.map((a) => {
+      {!anos.includes(ano) && <div className="empty">Nenhum dinheiro público registrado para esta empresa em {ano}. Os outros anos estão logo abaixo.</div>}
+      {[ano, "outros"].map((grupo) => {
+        const doGrupo = anos.filter((a) => (grupo === ano) === (a === ano));
+        if (!doGrupo.length) return null;
+        const blocos = doGrupo.map((a) => {
         const g = e.governo?.anos?.[a], em = e.emendas?.anos?.[a], r = e.renuncia?.anos?.[a];
         const pagadores = (e.por_mes || []).filter((x) => String(x.ano) === a);
         const porPol = new Map<string, { nome: string; valor: number }>();
@@ -156,14 +174,18 @@ function PorAno({ e }: { e: Empresa }) {
             </ul>
           </div>
         );
+        });
+        return grupo === ano ? <div key={grupo}>{blocos}</div>
+          : <details key={grupo} className="anos-outros"><summary>Ver os outros anos ({doGrupo.join(", ")})</summary>{blocos}</details>;
       })}
       {tip.el}
       <details className="small">
-        <summary>Ver os valores numa tabela</summary>
+        <summary>Ver todos os anos numa tabela, com o total</summary>
         <div className="table-wrap">
           <table>
             <thead><tr><th>Ano</th>{series.map((s) => <th key={s.k} className="r">{s.nome}</th>)}</tr></thead>
-            <tbody>{anos.map((a) => <tr key={a}><td>{a}</td>{series.map((s) => <td key={s.k} className="r num">{reais(valor(a, s.k), true)}</td>)}</tr>)}</tbody>
+            <tbody>{anos.map((a) => <tr key={a} className={a === ano ? "atual" : undefined}><td>{a}</td>{series.map((s) => <td key={s.k} className="r num">{reais(valor(a, s.k), true)}</td>)}</tr>)}
+              <tr><td><strong>Todos os anos</strong></td>{series.map((s) => <td key={s.k} className="r num"><strong>{reais(anos.reduce((t, a) => t + valor(a, s.k), 0), true)}</strong></td>)}</tr></tbody>
           </table>
         </div>
       </details>
@@ -177,62 +199,117 @@ function PorAno({ e }: { e: Empresa }) {
   );
 }
 
-function Governo({ g, cnpj }: { g: NonNullable<Empresa["governo"]>; cnpj: string }) {
-  const anos = Object.entries(g.por_ano).sort();
+/** Linha com os valores de cada ano, o escolhido em negrito, e a soma no fim (informação secundária) */
+function AnosLinha({ pa, ano }: { pa: Record<string, number>; ano: string }) {
+  const anos = Object.entries(pa).sort();
+  if (!anos.length) return null;
+  return (
+    <p className="small muted anos-linha">
+      Cada ano: {anos.map(([a, v], i) => <span key={a}>{i > 0 && " · "}{a === ano ? <strong>{a}: {reais(v)}</strong> : `${a}: ${reais(v)}`}</span>)}
+      {anos.length > 1 && <> · todos os anos somados: {reais(anos.reduce((t, [, v]) => t + v, 0))}</>}
+    </p>
+  );
+}
+
+/** O detalhe do ano escolhido; sem ele (dados antigos), o de todos os anos somados, dito no título */
+function TituloAno({ base, ano, temAno }: { base: string; ano: string; temAno: boolean }) {
+  return <h2>{base}{temAno ? ` em ${ano}` : ": todos os anos somados"}</h2>;
+}
+
+function Governo({ g, cnpj, ano }: { g: NonNullable<Empresa["governo"]>; cnpj: string; ano: string }) {
+  const d = g.anos?.[ano];
+  const temAno = !!g.anos;
+  const cats = temAno ? d?.cats || [] : g.cats, orgaos = temAno ? d?.orgaos || [] : g.orgaos;
   return (
     <section>
-      <h2>Pagamentos do governo federal: todos os anos somados</h2>
+      <TituloAno base="Pagamentos do governo federal" ano={ano} temAno={temAno} />
       <Explain>
-        O que o governo federal pagou a esta empresa ou entidade por compras, obras, serviços, convênios e subsídios (salários e dívida pública não entram).
-        Por ano: {anos.map(([a, v]) => `${a}: ${reais(v)}`).join(" · ")}. <Link to="/incentivos">Comparar com as outras</Link>.
+        O que o governo federal pagou a esta empresa ou entidade por compras, obras, serviços, convênios e subsídios (salários e dívida pública não entram). <Link to="/incentivos">Comparar com as outras</Link>.
       </Explain>
-      <div className="two">
-        <div><h3>Para quê</h3><Barras itens={g.cats.map(([c, v]) => ({ label: c, valor: v, cor: "var(--s1)" }))} /></div>
-        <div><h3>Quem pagou</h3><Barras itens={g.orgaos.map(([o, v]) => ({ label: o, valor: v, cor: "var(--s3)" }))} /></div>
-      </div>
+      <AnosLinha pa={g.por_ano} ano={ano} />
+      {temAno && !d ? <div className="empty">Nenhum pagamento do governo federal a esta empresa em {ano}.</div> : (
+        <div className="two">
+          <div><h3>Para quê</h3><Barras itens={cats.map(([c, v]) => ({ label: c, valor: v, cor: "var(--s1)" }))} /></div>
+          <div><h3>Quem pagou</h3><Barras itens={orgaos.map(([o, v]) => ({ label: o, valor: v, cor: "var(--s3)" }))} /></div>
+        </div>
+      )}
       <p className="small"><a href={`https://portaldatransparencia.gov.br/pessoa-juridica/${cnpj}`} target="_blank" rel="noreferrer">Todos os pagamentos, contratos e convênios no Portal da Transparência ↗</a></p>
     </section>
   );
 }
 
-function Renuncia({ r }: { r: NonNullable<Empresa["renuncia"]> }) {
-  const anos = Object.entries(r.por_ano).sort();
+function Renuncia({ r, ano }: { r: NonNullable<Empresa["renuncia"]>; ano: string }) {
+  const d = r.anos?.[ano];
+  const temAno = !!r.anos;
+  const ben = temAno ? d?.beneficios || [] : r.beneficios;
   return (
     <section>
-      <h2>Renúncia fiscal: todos os anos somados</h2>
+      <TituloAno base="Renúncia fiscal" ano={ano} temAno={temAno} />
       <Explain>
-        Por causa de benefícios fiscais, esta empresa deixou de pagar impostos federais, segundo a Receita Federal. É dinheiro que o governo deixa de arrecadar.
-        Por ano-calendário: {anos.map(([a, v]) => `${a}: ${reais(v)}`).join(" · ")}.
+        Por causa de benefícios fiscais, esta empresa deixou de pagar impostos federais, segundo a Receita Federal. É dinheiro que o governo deixa de arrecadar. Os anos são anos-calendário, e a Receita publica cada ano com atraso.
       </Explain>
-      <h3>Quais benefícios</h3>
-      <Barras itens={r.beneficios.map(([b, v]) => ({ label: b, valor: v, cor: "var(--c4)" }))} />
+      <AnosLinha pa={r.por_ano} ano={ano} />
+      {temAno && !d ? <div className="empty">A Receita não tem renúncia fiscal desta empresa em {ano} (ou ainda não publicou esse ano).</div> : <>
+        <h3>Quais benefícios</h3>
+        <Barras itens={ben.map(([b, v]) => ({ label: b, valor: v, cor: "var(--c4)" }))} />
+      </>}
       <p className="small"><a href={linkSeguro(r.fonte)} target="_blank" rel="noreferrer">Consultar a renúncia por empresa no Portal da Transparência ↗</a></p>
     </section>
   );
 }
 
-function Emendas({ em }: { em: NonNullable<Empresa["emendas"]> }) {
-  const anos = Object.entries(em.por_ano).sort();
+function Emendas({ em, ano }: { em: NonNullable<Empresa["emendas"]>; ano: string }) {
+  const d = em.anos?.[ano];
+  const temAno = !!em.anos;
+  const autores = temAno ? d?.autores || [] : em.autores, orgaos = temAno ? d?.orgaos || [] : em.orgaos;
+  const docsAno = em.docs.filter((x) => String(x.data || "").startsWith(ano));
   return (
     <section>
-      <h2>Emendas parlamentares: todos os anos somados</h2>
+      <TituloAno base="Emendas parlamentares" ano={ano} temAno={temAno} />
       <Explain>
         Esta empresa recebeu pagamentos do governo federal feitos com dinheiro de emendas: o parlamentar indica a emenda e um ministério ou órgão faz a compra ou a contratação.
-        {anos.length > 0 && <> Por ano: {anos.map(([a, v]) => `${a}: ${reais(v)}`).join(" · ")}.</>}
       </Explain>
-      <h3>De quem eram as emendas</h3>
-      <Barras itens={em.autores.slice(0, 20).map((a) => ({
-        label: a.politico ? <Link to={`/p/${a.politico}`}>{a.nome} {a.partido && <span className="muted small">({a.partido})</span>}</Link>
-          : <span>{a.nome} {a.partido && <span className="muted small">({a.partido})</span>}</span>,
-        valor: a.valor,
-      }))} />
-      {em.orgaos.length > 0 && <>
-        <h3>Quem pagou</h3>
-        <Barras itens={em.orgaos.slice(0, 8).map(([o, v]) => ({ label: o, valor: v, cor: "var(--s3)" }))} />
+      <AnosLinha pa={em.por_ano} ano={ano} />
+      {temAno && !d ? <div className="empty">Nenhum pagamento de emenda a esta empresa em {ano}.</div> : <>
+        <h3>De quem eram as emendas</h3>
+        <Barras itens={autores.slice(0, 20).map((a) => ({
+          label: a.politico ? <Link to={`/p/${a.politico}`}>{a.nome} {a.partido && <span className="muted small">({a.partido})</span>}</Link>
+            : <span>{a.nome} {a.partido && <span className="muted small">({a.partido})</span>}</span>,
+          valor: a.valor,
+        }))} />
+        {orgaos.length > 0 && <>
+          <h3>Quem pagou</h3>
+          <Barras itens={orgaos.slice(0, 8).map(([o, v]) => ({ label: o, valor: v, cor: "var(--s3)" }))} />
+        </>}
       </>}
-      <h3>Documentos de pagamento</h3>
-      <ListaDocumentos docs={em.docs} comFavorecido={false} />
+      <h3>Documentos de pagamento de {ano}</h3>
+      <ListaDocumentos docs={docsAno} comFavorecido={false} />
+      {docsAno.length < em.docs.length && <details className="small">
+        <summary>Ver os documentos dos outros anos ({(em.docs.length - docsAno.length).toLocaleString("pt-BR")})</summary>
+        <ListaDocumentos docs={em.docs.filter((x) => !String(x.data || "").startsWith(ano))} comFavorecido={false} />
+      </details>}
       <p className="muted small">Cada pagamento tem dois links oficiais do Portal da Transparência: o documento de pagamento e a nota de empenho, que é a reserva do dinheiro e diz de qual emenda ele saiu.</p>
+    </section>
+  );
+}
+
+/** Quem pagou com a cota no ano escolhido; o ranking de todos os anos fica num "ver mais" */
+function Pagadores({ e, ano }: { e: Empresa; ano: string }) {
+  const info = new Map(e.pagadores.map((p) => [p.politico, p]));
+  const porPol = new Map<string, number>();
+  (e.por_mes || []).filter((x) => String(x.ano) === ano).forEach((x) => porPol.set(x.politico, (porPol.get(x.politico) || 0) + x.valor));
+  const doAno = [...porPol.entries()].sort((a, b) => b[1] - a[1]);
+  const rotulo = (pid: string, nome: string) => { const p = info.get(pid); return <Link to={`/p/${pid}`}>{p?.nome || nome} {p && <span className="muted small">({p.partido}-{p.uf})</span>}</Link>; };
+  const nomeDe = (pid: string) => (e.por_mes || []).find((x) => x.politico === pid)?.nome || pid;
+  return (
+    <section>
+      <h2>{e.emendas ? `Quem pagou com a cota em ${ano}` : `Quem pagou em ${ano}`}</h2>
+      {!e.por_mes ? null : !doAno.length ? <div className="empty">Nenhum parlamentar pagou esta empresa com a cota em {ano}.</div>
+        : <Barras itens={doAno.slice(0, 30).map(([pid, v]) => ({ label: rotulo(pid, nomeDe(pid)), valor: v }))} />}
+      <details className="small">
+        <summary>{e.por_mes ? "Ver quem pagou somando todos os anos" : "Quem pagou (todos os anos)"}</summary>
+        <Barras itens={e.pagadores.slice(0, 30).map((p) => ({ label: rotulo(p.politico, p.nome), valor: p.valor }))} />
+      </details>
     </section>
   );
 }

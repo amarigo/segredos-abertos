@@ -7,6 +7,7 @@ import Empresas from "./pages/Empresas";
 import EmpresaPage from "./pages/Empresa";
 import Votacoes from "./pages/Votacoes";
 import VotacaoPage from "./pages/Votacao";
+import TramitacaoPage from "./pages/Tramitacao";
 import Sobre from "./pages/Sobre";
 import VerificacaoPage from "./pages/Verificacao";
 import Partidos from "./pages/Partidos";
@@ -31,6 +32,27 @@ const PROJETOS = [
   { id: "eleicao", nome: "Eleição 2026", href: MG ? "../eleicao2026/" : "eleicao2026/" },
 ];
 
+/* Seletor de língua. A tradução é feita por public/i18n/tradutor.js (carregado no index.html), que troca os textos
+   da página pelos do dicionário. Os links levam ao mesmo endereço com ?lang=en ou ?lang=es (o português fica sem). */
+const LINGUAS = [
+  { id: "pt", sigla: "PT", nome: "Português", lang: "pt-BR" },
+  { id: "en", sigla: "EN", nome: "English", lang: "en" },
+  { id: "es", sigla: "ES", nome: "Español", lang: "es" },
+];
+function Linguas() {
+  const i18n = window.SA_I18N;
+  const atual = i18n?.lingua || "pt";
+  return (
+    <span className="linguas" translate="no" role="group" aria-label={atual === "en" ? "Language" : "Idioma"}>
+      {LINGUAS.map((l) => (
+        <a key={l.id} href={i18n ? i18n.endereco(l.id) : "#"} lang={l.lang} hrefLang={l.lang} title={l.nome}
+          aria-current={l.id === atual ? "true" : undefined}
+          onClick={(e) => { if (i18n) { e.preventDefault(); i18n.trocar(l.id); } }}>{l.sigla}</a>
+      ))}
+    </span>
+  );
+}
+
 function Projetos() {
   const atual = MG ? "mg" : "brasil";
   return (
@@ -40,6 +62,7 @@ function Projetos() {
         {PROJETOS.map((p) => (
           <a key={p.id} href={p.href} aria-current={p.id === atual ? "page" : undefined}>{p.nome}</a>
         ))}
+        <Linguas />
       </div>
     </nav>
   );
@@ -88,6 +111,7 @@ export default function App() {
           <Route path="/empresas" element={<Empresas />} />
           <Route path="/e/:cnpj" element={<EmpresaPage />} />
           <Route path="/votacoes" element={<Votacoes />} />
+          <Route path="/votacoes/em-andamento" element={<TramitacaoPage />} />
           <Route path="/v/:id" element={<VotacaoPage />} />
           <Route path="/partidos" element={<Partidos />} />
           {!MG && <Route path="/dinheiro" element={<Financas />} />}

@@ -11,7 +11,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import (autorias, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
+from . import (autorias, tramitacao, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
                renuncias, senado, temas)
 from .categorias import GRUPOS
 from . import util
@@ -304,8 +304,14 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         pagadores = sorted(({"politico": pid, "nome": por_id[pid]["nome"], "partido": por_id[pid]["partido"],
                              "uf": por_id[pid]["uf"], "valor": round(v, 2)} for pid, v in quem.items()),
                            key=lambda x: -x["valor"])
+        # Cota recebida em cada ano, para as listas mostrarem o ano escolhido no site (o total de todos os anos fica em segundo plano)
+        cota_ano = defaultdict(lambda: [0.0, set()])
+        for n in notas_emp[doc]:
+            cota_ano[str(n["ano"])][0] += n["valor"]
+            cota_ano[str(n["ano"])][1].add(n["politico"])
         resumo_e = {"cnpj": doc, "nome": (e or {}).get("razao_social") or nome_forn.get(doc, "") or (de_emendas or {}).get("nome", ""),
                     "total": total, "n_politicos": len(quem), "tem_socios": bool(e and e["socios"]),
+                    "por_ano": {a: {"valor": round(v, 2), "n_politicos": len(ps)} for a, (v, ps) in sorted(cota_ano.items())},
                     "n_mesmo_endereco": len(vizinhas.get(doc, [])),
                     **_emd(emd, doc), **_inc(inc, doc)}
         if quem:  # a lista de empresas é a da cota; as pagas só com emendas aparecem na página de emendas
@@ -583,6 +589,8 @@ def main() -> None:
                     help="não monta a página de incentivos (pagamentos a empresas e renúncia fiscal)")
     ap.add_argument("--sem-financas", action="store_true",
                     help="não monta a aba de arrecadação e gastos do Brasil (Tesouro, Receita, Portal, IBGE)")
+    ap.add_argument("--sem-tramitacao", action="store_true",
+                    help="não monta a lista de projetos em andamento (pauta, novas e medidas provisórias)")
     ap.add_argument("--minutos-pagamentos-gerais", type=float, default=40,
                     help="tempo máximo, por execução, para completar os dias antigos dos pagamentos a empresas")
     a = ap.parse_args()
@@ -590,12 +598,12 @@ def main() -> None:
     executar(a.anos, a.cache, a.saida, max_empresas=a.max_empresas, com_recursos=not a.sem_recursos,
              com_emendas=not a.sem_emendas, com_incentivos=not a.sem_incentivos,
              minutos_pagamentos=a.minutos_pagamentos, minutos_gerais=a.minutos_pagamentos_gerais,
-             com_financas=not a.sem_financas)
+             com_financas=not a.sem_financas, com_tramitacao=not a.sem_tramitacao)
 
 
 def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500, com_recursos: bool = True,
              com_emendas: bool = True, com_incentivos: bool = True, minutos_pagamentos: float = 45,
-             minutos_gerais: float = 40, com_financas: bool = True) -> None:
+             minutos_gerais: float = 40, com_financas: bool = True, com_tramitacao: bool = True) -> None:
     """A coleta inteira, na ordem certa (usada também pelos testes)."""
     # A renúncia vem antes dos arquivos diários: o Portal passa a recusar downloads (HTTP 405) depois de muitos
     # pedidos seguidos, e os arquivos de renúncia são poucos (e ficam uma semana no cache)
@@ -615,11 +623,21 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
         juntar_emendas(dados, anos, cache, saida, pag)
     if inc:
         juntar_incentivos(dados, inc)
+    if com_tramitacao:  # antes de montar(), para os avisos entrarem no meta.json
+        coletar_tramitacao(saida, cache, dados["politicos"])
     montar(dados, saida, anos)
     if inc:
         gravar_incentivos(dados, saida, anos, inc, pag)
     if com_financas:  # depois de tudo: usa as emendas e a verba de gabinete já gravadas
         coletar_financas(saida, cache)
+
+
+def coletar_tramitacao(saida: Path, cache: Path, politicos: list[dict]) -> None:
+    """Projetos em andamento (pauta, novas, medidas provisórias). Se falhar, o resto do site segue."""
+    try:
+        tramitacao.coletar(saida, cache, politicos)
+    except Exception:  # noqa: BLE001
+        log.exception("Projetos em andamento: erro; a página não foi atualizada")
 
 
 def coletar_financas(saida: Path, cache: Path) -> None:

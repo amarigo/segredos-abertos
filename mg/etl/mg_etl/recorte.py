@@ -48,9 +48,21 @@ def recortar(nacional: Path, saida: Path, uf: str = UF) -> dict:
     vots = _votacoes(nacional, saida, ids)
     emps = _empresas(nacional, saida, ids)
     write_json(saida / "partidos.json", partidos(pols, anos))
+    _tramitacao(nacional, saida, uf)
     write_json(saida / "meta.json", meta(meta_nac, pols, anos, len(vots), emps))
     log.info("Recorte %s: %d políticos, %d votações, %d empresas", uf, len(pols), len(vots), len(emps))
     return {"politicos": len(pols), "votacoes": len(vots), "empresas": len(emps)}
+
+
+def _tramitacao(nacional: Path, saida: Path, uf: str) -> None:
+    """Projetos em andamento no Congresso: a lista inteira, com as propostas de autores do estado marcadas."""
+    f = nacional / "tramitacao.json"
+    if not f.exists():
+        return
+    d = _ler(f)
+    for it in d.get("itens", []):
+        it["do_estado"] = any((a.get("uf") or "").upper() == uf for a in it.get("autores", []))
+    write_json(saida / "tramitacao.json", d)
 
 
 def _copiar(de: Path, para: Path) -> None:
@@ -112,8 +124,14 @@ def _empresas(nacional: Path, saida: Path, ids: set[str]) -> list[dict]:
             "mesmo_endereco": [], "socios": [{**s, "outras_empresas": []} for s in d.get("socios") or []],
             "donos_finais": [{**x, "outras_empresas": []} for x in d.get("donos_finais") or []],
         })
+        por_ano: dict[str, list] = {}
+        for x in d["por_mes"]:
+            v = por_ano.setdefault(str(x["ano"]), [0.0, set()])
+            v[0] += x["valor"]
+            v[1].add(x["politico"])
+        d["por_ano"] = {a: {"valor": round(v, 2), "n_politicos": len(ps)} for a, (v, ps) in sorted(por_ano.items())}
         write_json(saida / "e" / f"{c}.json", d)
-        lista.append({**e, "total": total, "n_politicos": len(pag), "n_mesmo_endereco": 0})
+        lista.append({**e, "total": total, "n_politicos": len(pag), "n_mesmo_endereco": 0, "por_ano": d["por_ano"]})
     lista.sort(key=lambda x: -x["total"])
     write_json(saida / "empresas.json", lista)
     return lista

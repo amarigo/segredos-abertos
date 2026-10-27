@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Barras, COR_GRUPO, Explain, Loading, useAno, useData } from "../components/ui";
-import { corPartido, GRUPO_CURTO, GRUPO_EXPLICA, linkSeguro, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
+import { corPartido, cotaNoAno, GRUPO_CURTO, GRUPO_EXPLICA, linkSeguro, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
 import { GastoPartidos } from "./Partidos";
 import { LADOS, ladoPelosVotos } from "../partidos";
 import { MG, SITE } from "../recorte";
@@ -28,6 +28,10 @@ export default function Home() {
   const totalAno = (p: Resumo) => p.por_ano[ano]?.total || 0;
   const top = (pols || []).slice().sort((a, b) => totalAno(b) - totalAno(a)).slice(0, 8);
   const medias = meta.medias[ano] || { camara: 0, senado: 0 };
+  // Empresas do ano escolhido (dados antigos, sem detalhe por ano: total de todos os anos)
+  const empsAno = !!emps?.some((e) => e.por_ano);
+  const topEmps = (emps || []).map((e) => ({ e, v: cotaNoAno(e, ano) || { valor: e.total, n_politicos: e.n_politicos } }))
+    .filter((x) => x.v.valor > 0).sort((a, b) => b.v.valor - a.v.valor).slice(0, 8);
   const resultados = q.trim().length >= 2 && pols
     ? pols.filter((p) => norm(`${p.nome} ${p.partido} ${p.uf}`).includes(norm(q))).slice(0, 8) : [];
 
@@ -98,14 +102,15 @@ export default function Home() {
           <Link to="/politicos">Ver todos os políticos</Link>
         </section>
         <section>
-          <h2>Empresas que mais receberam ({meta.anos[0]} a {meta.anos[meta.anos.length - 1]})</h2>
+          <h2>{empsAno ? `Empresas que mais receberam em ${ano}` : `Empresas que mais receberam (${meta.anos[0]} a ${meta.anos[meta.anos.length - 1]})`}</h2>
           <div className="list">
-            {(emps || []).slice(0, 8).map((e) => (
+            {topEmps.map(({ e, v }) => (
               <Link key={e.cnpj} to={`/e/${e.cnpj}`} className="person" style={{ gridTemplateColumns: "1fr auto" }}>
-                <div style={{ minWidth: 0 }}><div className="pname">{e.nome}</div><div className="meta">paga por {e.n_politicos} parlamentar{e.n_politicos > 1 ? "es" : ""}</div></div>
-                <div className="num">{reaisCurto(e.total)}</div>
+                <div style={{ minWidth: 0 }}><div className="pname">{e.nome}</div><div className="meta">paga por {v.n_politicos} parlamentar{v.n_politicos > 1 ? "es" : ""}</div></div>
+                <div className="num">{reaisCurto(v.valor)}</div>
               </Link>
             ))}
+            {empsAno && emps && !topEmps.length && <div className="empty">Nenhuma empresa recebeu da cota em {ano} até agora.</div>}
           </div>
           <Link to="/empresas">Ver todas as empresas</Link>
         </section>

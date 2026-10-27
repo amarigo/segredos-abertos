@@ -217,6 +217,40 @@ test("votos depois das 17h: números do registro das urnas, conferidos com o bol
   expect(erros).toEqual([]);
 });
 
+test("simulador: dá para escolher o exterior, e o número real devolve o resultado oficial", async ({ page }) => {
+  const erros = semErros(page);
+  const br = oficial["6258"].BR.cand, zz = oficial["6258"].ZZ.cand;
+  await page.goto("./#simulador");
+  await page.locator("#sa-zz").click();
+  await expect(page.locator("#sa-uf")).toHaveValue("ZZ");
+  await expect(page.locator("#sa-zz")).toHaveAttribute("aria-pressed", "true");
+  // com o número real do exterior, a diferença é a oficial
+  await expect(page.locator("#sa-out")).toContainText("no exterior");
+  await expect(page.locator("#sa-out")).toContainText((br["13"].v - br["22"].v).toLocaleString("pt-BR") + " votos");
+  // sem os votos do exterior: tira exatamente os votos do exterior
+  await page.locator("#sa-zero").click();
+  await expect(page.locator("#sa-out")).toContainText("Sem nenhum voto do exterior");
+  const semZZ = br["13"].v - zz["13"].v - (br["22"].v - zz["22"].v);
+  await expect(page.locator("#sa-out")).toContainText(Math.abs(semZZ).toLocaleString("pt-BR") + " votos");
+  expect(erros).toEqual([]);
+});
+
+for (const largura of [1366, 1024, 800]) {
+  test(`menu: todas as abas aparecem inteiras (${largura} px)`, async ({ page }) => {
+    await page.setViewportSize({ width: largura, height: 800 });
+    await page.goto("./");
+    const abas = page.locator("nav.menu button");
+    expect(await abas.count()).toBe(7);
+    for (const b of await abas.all()) {
+      const r = (await b.boundingBox())!;
+      expect(r.x).toBeGreaterThanOrEqual(0);
+      expect(r.x + r.width).toBeLessThanOrEqual(largura);
+      // o texto cabe no botão (não está cortado)
+      expect(await b.evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+    }
+  });
+}
+
 test.describe("tema escuro", () => {
   test.use({ colorScheme: "dark" });
   test("botões vazados têm texto legível", async ({ page }) => {
@@ -232,4 +266,22 @@ test.describe("tema escuro", () => {
     const [a, b] = cores.map(lum);
     expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toBeGreaterThan(4.5);
   });
+});
+
+test("troca para inglês e espanhol; os números continuam os oficiais", async ({ page }) => {
+  const erros = semErros(page);
+  await page.goto("./?lang=en");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  const nav = page.getByRole("navigation", { name: "Segredos Abertos projects" });
+  await expect(nav).toContainText("Election 2026");
+  // Em inglês o número usa vírgula de milhar
+  const br = oficial["6258"].BR.cand;
+  await expect(page.locator("body")).toContainText(br["13"].v.toLocaleString("en-US"));
+  await page.locator(".linguas").getByRole("link", { name: "ES", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "es");
+  await expect(page.getByRole("navigation", { name: "Proyectos de Segredos Abertos" })).toContainText("Elección 2026");
+  await expect(page.locator("body")).toContainText(fmt(br["13"].v));
+  await page.locator(".linguas").getByRole("link", { name: "PT", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR");
+  expect(erros).toEqual([]);
 });

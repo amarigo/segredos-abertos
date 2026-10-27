@@ -33,7 +33,7 @@ test.describe("jornada", () => {
     const erros = vigiar(page);
     await page.goto("./");
     await expect(page.locator(".brand")).toContainText("Minas Nossa");
-    await expect(page).toHaveTitle("Minas Nossa");
+    await expect(page).toHaveTitle(/^Minas Nossa/);
     await expect(page.locator(".hero")).toContainText(`${meta.contagens.politicos} deputados federais e senadores de Minas Gerais`);
     const nav = page.getByRole("navigation", { name: "Principal" });
     await expect(nav.getByRole("link", { name: "Cidades" })).toBeVisible();
@@ -47,7 +47,7 @@ test.describe("jornada", () => {
 
   test("todas as páginas do menu abrem sem erro", async ({ page }) => {
     const erros = vigiar(page);
-    for (const rota of ["politicos", "cidades", "empresas", "votacoes", "partidos", "sobre", "governo", "assembleia", "emendas-estaduais",
+    for (const rota of ["politicos", "cidades", "empresas", "votacoes", "votacoes/em-andamento", "votacoes/em-andamento?aba=almg", "partidos", "sobre", "governo", "assembleia", "emendas-estaduais",
       "deputado-estadual/20003", "deputado-estadual/20003?aba=atuacao", "deputado-estadual/20003?aba=emendas",
       ...cidades.map((c) => `cidade/${c.id}`), ...cidades.map((c) => `cidade/${c.id}?aba=dinheiro`)]) {
       await page.goto(`./#/${rota}`);
@@ -121,7 +121,7 @@ test.describe("jornada", () => {
   test("sem rolagem lateral no celular", async ({ page }, info) => {
     test.skip(info.project.name !== "celular");
     vigiar(page);
-    for (const rota of ["", "#/cidades", "#/cidade/itajuba", "#/cidade/paraisopolis", "#/votacoes", `#/v/${vots[0].id}`, "#/governo",
+    for (const rota of ["", "#/cidades", "#/cidade/itajuba", "#/cidade/paraisopolis", "#/votacoes", "#/votacoes/em-andamento", `#/v/${vots[0].id}`, "#/governo",
       "#/assembleia", "#/deputado-estadual/20003", "#/emendas-estaduais", "#/cidade/itajuba?aba=dinheiro"]) {
       await page.goto(`./${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();
@@ -260,6 +260,17 @@ test("barra dos projetos liga o Minas Nossa aos outros sites do Segredos Abertos
   await expect(nav.getByRole("link", { name: "Minas Nossa" })).toHaveAttribute("href", "./");
   await expect(nav.getByRole("link", { name: "Eleição 2026" })).toHaveAttribute("href", "../eleicao2026/");
   await expect(nav.locator('a[aria-current="page"]')).toHaveText("Minas Nossa");
+});
+
+test("Minas Nossa troca para inglês e tem páginas simples para buscadores", async ({ page, request }) => {
+  await page.goto("./?lang=en");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.getByRole("navigation", { name: "Segredos Abertos projects" })).toContainText("Projects:");
+  await expect(page.locator('link[rel=alternate][hreflang="es"]')).toHaveAttribute("href", /\/mg\/\?lang=es/);
+  expect((await request.get("./i18n/en.json")).ok()).toBeTruthy();
+  expect(await (await request.get("./sitemap-paginas.xml")).text()).toContain("/mg/");
+  expect((await request.get("./indice.html")).ok()).toBeTruthy();
+  expect((await request.get("./en/indice.html")).ok()).toBeTruthy();
 });
 
 test.describe("caos no navegador", () => {
