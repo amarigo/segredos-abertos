@@ -72,7 +72,10 @@ def _votacoes(nacional: Path, saida: Path, ids: set[str]) -> list[dict]:
         por_partido = defaultdict(Counter)
         for x in meus:
             por_partido[x["partido"]][x["voto"]] += 1
-        placar_casa = {"sim": d.get("sim", 0), "nao": d.get("nao", 0), "contagem": d.get("contagem") or {}}
+        # O placar oficial da Casa, quando o nacional tem; se não, a contagem dos votos de quem está no mandato
+        oficial = d.get("placar_casa") or {}
+        placar_casa = {"sim": oficial.get("sim", d.get("sim", 0)), "nao": oficial.get("nao", d.get("nao", 0)),
+                       "contagem": d.get("contagem") or {}}
         d.update({"votos": meus, "sim": cont.get("Sim", 0), "nao": cont.get("Não", 0), "contagem": dict(cont),
                   "por_partido_mg": {k: dict(c) for k, c in sorted(por_partido.items())}, "placar_casa": placar_casa})
         write_json(saida / "v" / f"{v['id']}.json", d)

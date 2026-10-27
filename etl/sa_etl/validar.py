@@ -165,6 +165,10 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
         cont = Counter(x["voto"] for x in d.get("votos", []))
         if v["sim"] != cont.get("Sim", 0) or v["nao"] != cont.get("Não", 0) or dict(cont) != d.get("contagem"):
             r.erro(f"Votação {v['id']}: placar (sim {v['sim']}, não {v['nao']}) não bate com os votos")
+        pc = v.get("placar_casa")
+        if pc and (pc["sim"] < v["sim"] or pc["nao"] < v["nao"]):
+            r.alerta(f"Votação {v['id']}: placar oficial (sim {pc['sim']}, não {pc['nao']}) menor que os votos listados "
+                     f"(sim {v['sim']}, não {v['nao']})")
         fora = [k for k in quem if k not in por_id]
         if fora:
             r.erro(f"Votação {v['id']}: votos de parlamentares desconhecidos: {fora[:5]}")

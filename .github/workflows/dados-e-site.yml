@@ -150,6 +150,19 @@ jobs:
           set -o pipefail
           python -m sa_etl.validar ../site/public/data --anterior https://amarigo.github.io/segredos-abertos/data/meta.json $IGNORAR_QUEDA \
             | tee -a "$GITHUB_STEP_SUMMARY"
+      # Segunda fonte oficial: sorteia números do site e confere cada um numa fonte oficial diferente (etl/sa_etl/verificar.py).
+      # Não bloqueia a publicação: o resultado vai para o site (selo em cada seção e a página "Como conferimos os números")
+      # e para este resumo. Se a verificação falhar inteira, o site fica sem selo, nunca com um selo de "conferido" falso.
+      - name: Verificação independente (segunda fonte oficial)
+        continue-on-error: true
+        timeout-minutes: 30
+        working-directory: etl
+        env:
+          PORTAL_TRANSPARENCIA_CHAVE: ${{ secrets.PORTAL_TRANSPARENCIA_CHAVE }}
+        run: |
+          set -o pipefail
+          python -m sa_etl.verificar ../site/public/data --minutos 20 \
+            --anterior https://amarigo.github.io/segredos-abertos/data/verificacao.json | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/setup-node@v5
         with:
           node-version: 22

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Explain, Loading, useData } from "../components/ui";
 import { cnpjFmt, reais, type EmpresaResumo } from "../data";
 import { norm } from "./Home";
+import Selo from "../components/Selo";
 
 export default function Empresas() {
   const { data, error } = useData<EmpresaResumo[]>("empresas.json");
@@ -12,6 +13,7 @@ export default function Empresas() {
   return (
     <section>
       <h1>Empresas</h1>
+        <Selo secao="empresas" />
       <Explain>As empresas que mais receberam dinheiro da cota parlamentar. Em cada uma você vê quem são os donos (pela Receita Federal) e quais parlamentares pagaram.</Explain>
       <div className="search"><input id="busca-empresa" aria-label="Buscar empresa" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nome ou CNPJ" /></div>
       <div className="table-wrap">

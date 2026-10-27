@@ -446,3 +446,23 @@ tr.atual td { background: color-mix(in srgb, var(--gold) 12%, transparent); }
 /* Títulos de seção com um traço rosa curto em cima, como nos painéis de acompanhamento */
 main > section > h2:first-of-type::before { content: ""; display: block; width: 44px; height: 5px; border-radius: 3px; background: var(--hot); margin-bottom: 12px; }
 details > summary { cursor: pointer; font-weight: 700; }
+
+/* Selo de verificação (pages/Verificacao.tsx, components/Selo.tsx) */
+.selo { display: inline-flex; align-items: flex-start; gap: 8px; padding: 6px 12px; border-radius: 10px; font-size: .85rem; line-height: 1.35; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink-2); text-decoration: none; margin: 4px 0 8px; max-width: 100%; }
+.selo strong { color: var(--ink); }
+.selo-icone { font-weight: 800; }
+.selo-ver { color: var(--accent); text-decoration: underline; white-space: nowrap; }
+.selo-txt { color: var(--ink-2); }
+.selo-conferido { background: var(--flag-g-bg); border-color: color-mix(in srgb, var(--flag-g) 45%, transparent); }
+.selo-conferido .selo-icone { color: var(--flag-g); }
+.selo-parcial, .selo-nao_conferido, .selo-sem_segunda_fonte { background: var(--flag-y-bg); border-color: color-mix(in srgb, var(--flag-y) 45%, transparent); }
+.selo-parcial .selo-icone, .selo-nao_conferido .selo-icone, .selo-sem_segunda_fonte .selo-icone { color: var(--flag-y); }
+.selo-divergente { background: var(--flag-r-bg); border-color: color-mix(in srgb, var(--flag-r) 45%, transparent); }
+.selo-divergente .selo-icone { color: var(--flag-r); }
+.secao-verificada { scroll-margin-top: 80px; margin-top: 28px; }
+.checagem { margin: 12px 0; }
+.checagem h3 { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 6px; }
+.chip.st-conferido { color: var(--flag-g); border-color: currentColor; }
+.chip.st-divergente { color: var(--flag-r); border-color: currentColor; }
+.chip.st-nao_conferido { color: var(--flag-y); border-color: currentColor; }
+.selos { display: flex; flex-wrap: wrap; gap: 8px; }

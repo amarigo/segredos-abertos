@@ -6,6 +6,7 @@ import { GastoPartidos } from "./Partidos";
 import { LADOS, ladoPelosVotos } from "../partidos";
 import { MG, SITE } from "../recorte";
 import type { CidadeResumo } from "../data";
+import { SelosResumo } from "../components/Selo";
 
 export default function Home() {
   const { data: meta, error } = useData<Meta>("meta.json");
@@ -53,6 +54,8 @@ export default function Home() {
           <div className="list">{resultados.map((p) => <PessoaLinha key={p.id} p={p} />)}</div>
         )}
       </section>
+
+      {!MG && <SelosResumo />}
 
       {MG && (
         <section>

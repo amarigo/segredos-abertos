@@ -7,6 +7,7 @@ import {
   type Grupo, type Meta, type Politico, type Recursos, type Resumo, type VotacaoResumo,
   MESES_LONGOS, descricaoCurta, tipoVotacao, type AnoDetalhe,
 } from "../data";
+import Selo from "../components/Selo";
 
 export default function PoliticoPage() {
   const { id = "" } = useParams();
@@ -23,6 +24,7 @@ export default function PoliticoPage() {
         <div>
           <span className="eyebrow">{p.cargo} · {p.uf}</span>
           <h1>{p.nome}</h1>
+        <Selo secao="cota" />
           <div className="tags">
             <span className="chip">{p.partido}</span>
             {p.posicao != null && <span className="chip">{p.rotulo}</span>}

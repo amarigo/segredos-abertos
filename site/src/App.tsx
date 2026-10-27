@@ -8,6 +8,7 @@ import EmpresaPage from "./pages/Empresa";
 import Votacoes from "./pages/Votacoes";
 import VotacaoPage from "./pages/Votacao";
 import Sobre from "./pages/Sobre";
+import VerificacaoPage from "./pages/Verificacao";
 import Partidos from "./pages/Partidos";
 import Emendas from "./pages/Emendas";
 import Incentivos from "./pages/Incentivos";
@@ -99,6 +100,7 @@ export default function App() {
           {MG && <Route path="/deputado-estadual/:id" element={<DeputadoEstadualPage />} />}
           {MG && <Route path="/emendas-estaduais" element={<EmendasEstaduais />} />}
           <Route path="/sobre" element={<Sobre />} />
+          {!MG && <Route path="/verificacao" element={<VerificacaoPage />} />}
           <Route path="*" element={<div className="empty">Página não encontrada. <Link to="/">Voltar ao início</Link></div>} />
         </Routes>
         </ErroNaPagina>
@@ -107,6 +109,7 @@ export default function App() {
         <div className="wrap">
           <span>{SITE.fontes}{meta ? `, atualizados em ${dataBR(meta.atualizado_em)}` : ""}.</span>
           {MG && <span>O Minas Nossa é a parte de Minas Gerais do <a href={SITE.nacional}>Segredos Abertos Brasil</a>.</span>}
+          {!MG && <span><Link to="/verificacao">Como conferimos os números</Link>.</span>}
           <span>Projeto independente e sem fins lucrativos. Código aberto em <a href="https://github.com/amarigo/segredos-abertos">GitHub</a>.</span>
         </div>
       </footer>

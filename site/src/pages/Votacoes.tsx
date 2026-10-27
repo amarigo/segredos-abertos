@@ -4,6 +4,7 @@ import { Explain, Loading, ResultadoChip, useData } from "../components/ui";
 import { TEMAS, casaNome, dataBR, descricaoCurta, proposicaoNome, tipoVotacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 import { MG } from "../recorte";
+import Selo from "../components/Selo";
 
 export default function Votacoes() {
   const { data, error } = useData<VotacaoResumo[]>("votacoes.json");
@@ -21,7 +22,8 @@ export default function Votacoes() {
   return (
     <section>
       <h1>Votações</h1>
-      <Explain>Votações nominais do plenário, em que cada parlamentar registra o próprio voto.{MG && " Sim e Não mostram o placar da Casa inteira; ao lado, como votou a bancada de Minas Gerais."} PEC é proposta de emenda à Constituição, PL é projeto de lei, MPV é medida provisória e PLP é projeto de lei complementar.</Explain>
+        <Selo secao="votacoes" />
+      <Explain>Votações nominais do plenário, em que cada parlamentar registra o próprio voto.{MG ? " Sim e Não mostram o placar da Casa inteira; ao lado, como votou a bancada de Minas Gerais." : " Sim e Não mostram o placar oficial da Casa inteira."} PEC é proposta de emenda à Constituição, PL é projeto de lei, MPV é medida provisória e PLP é projeto de lei complementar.</Explain>
       <div className="search">
         <input id="busca-votacao" aria-label="Buscar votação" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Assunto ou número (ex.: PEC 45)" />
         <select id="filtro-casa-v" aria-label="Casa" value={casa} onChange={(e) => setCasa(e.target.value)}>

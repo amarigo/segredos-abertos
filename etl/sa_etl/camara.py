@@ -186,9 +186,12 @@ def parse_votacoes(votacoes_rows, votos_rows, orient_rows, prop_rows, ids: set[s
         vs = [v for v in votos_por[vid] if v["politico"] in ids]
         if not vs:
             continue
+        sim, nao = (r.get("votosSim") or "").strip(), (r.get("votosNao") or "").strip()
         votacoes.append({
             "id": f"cd-{vid}",
             "casa": "camara",
+            # placar oficial da Câmara (todos os deputados que votaram, inclusive os que já saíram do cargo)
+            **({"placar_oficial": {"sim": int(sim), "nao": int(nao)}} if sim.isdigit() and nao.isdigit() else {}),
             "data": (r.get("data") or r.get("dataHoraRegistro") or "")[:10],
             "descricao": (r.get("descricao") or "").strip(),
             "aprovada": (r.get("aprovacao") or "").strip() == "1",

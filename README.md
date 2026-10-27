@@ -58,6 +58,14 @@ Testes unitários e de propriedades, integração com os sites do governo simula
 navegador. A cada coleta, os dados só são publicados se passarem na conferência (`etl/sa_etl/validar.py`): somas,
 votos repetidos, CPFs, links e quedas bruscas. Veja [TESTES.md](TESTES.md).
 
+**Verificação independente** (`etl/sa_etl/verificar.py`): todo dia sorteamos números já prontos para o site e conferimos
+cada um numa **segunda fonte oficial**, diferente da usada na coleta (por exemplo, a cota dos deputados vem do arquivo
+anual da Câmara e é conferida na API da Câmara; o placar do Senado vem do painel e é conferido com a ata da sessão). Cada
+seção do site mostra um selo com o resultado, e a página "Como conferimos os números" lista as diferenças com o link
+para a fonte. As conferências se somam por 90 dias: com n números conferidos e nenhuma diferença, temos 95% de confiança
+de que pelo menos 1 − 0,05^(1/n) estão certos. Para afirmar 99,99% são precisos cerca de 30 mil números conferidos sem
+erro. Uma seção só aparece como conferida se todas as suas checagens rodaram e nenhuma achou diferença.
+
 ## Próximas etapas
 
 1. Salários da equipe do gabinete (verba de gabinete).

@@ -288,3 +288,47 @@ test.describe("caos no navegador", () => {
     expect(erros).toEqual([]);
   });
 });
+
+/* Selo de verificação: o site só diz "conferido" quando o verificacao.json diz, e mostra as diferenças com o link */
+test.describe("verificação independente", () => {
+  const secao = (status: string, conferidos: number, divergentes: number) => ({
+    titulo: "Seção", status, checagens: [], hoje: { conferidos, divergentes },
+    acumulado: { conferidos, divergentes, desde: "2026-10-27", dias: 1, certos_min: conferidos ? 0.9 : null },
+  });
+  const verif = {
+    gerado_em: "2026-10-27T10:00:00+00:00", data: "2026-10-27", confianca: 0.95, dias_mes_fechado: 60, dias_historico: 90,
+    para_99_99: 29956,
+    secoes: { cota: { ...secao("divergente", 30, 1), titulo: "Gastos da cota parlamentar" },
+              votacoes: { ...secao("conferido", 5000, 0), titulo: "Votações" },
+              empresas: { ...secao("nao_conferido", 0, 0), titulo: "Empresas e donos" } },
+    checagens: [{ id: "cota_senado_ano", secao: "cota", titulo: "Total do ano de cada senador", como: "Conferimos com o total oficial.",
+                  fonte: "https://adm.senado.gov.br/adm-dadosabertos/swagger-ui/index.html", status: "divergente", conferidos: 30,
+                  divergentes: 1, nao_conferidos: 0, motivo: "",
+                  divergencias: [{ o_que: "Senadora Exemplo, 2025", site: 554231.25, oficial: 553498.45,
+                                   fonte: "https://adm.senado.gov.br/adm-dadosabertos/api/v1/senadores/1/recursos-utilizados?ano=2025" }],
+                  exemplos: [] }],
+  };
+
+  test("cada seção mostra o selo certo e a página explica as diferenças", async ({ page }) => {
+    const erros = vigiar(page);
+    await page.route("**/data/verificacao.json", (r) => r.fulfill({ json: verif }));
+    await page.goto("./#/votacoes");
+    await expect(page.locator(".selo-conferido")).toContainText("Conferido com uma segunda fonte oficial");
+    await page.goto("./#/politicos");
+    await expect(page.locator(".selo-divergente")).toContainText("Diferença encontrada");
+    await page.goto("./#/empresas");
+    await expect(page.locator(".selo-nao_conferido")).toContainText("Não conferido");
+    await expect(page.locator(".selo-conferido")).toHaveCount(0);
+    await page.goto("./#/verificacao");
+    await expect(page.locator("main")).toContainText("Senadora Exemplo, 2025");
+    await expect(page.locator("main a[href*='recursos-utilizados']")).toHaveCount(1);
+    expect(erros).toEqual([]);
+  });
+
+  test("sem o arquivo de verificação, nenhum selo aparece (nunca 'conferido' por engano)", async ({ page }) => {
+    await page.route("**/data/verificacao.json", (r) => r.fulfill({ status: 404, body: "" }));
+    await page.goto("./#/votacoes");
+    await expect(page.locator("h1")).toBeVisible();
+    await expect(page.locator(".selo")).toHaveCount(0);
+  });
+});

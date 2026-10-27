@@ -184,9 +184,17 @@ def parse_votacoes(items: list[dict], ids: set[str]) -> tuple[list[dict], list[d
         if not vs:
             continue
         sigla, numero, ano = v.get("sigla") or "", v.get("numero") or "", v.get("ano") or ""
+        # O Senado só preenche totalVotosSim/Nao em algumas votações; nas outras, contamos todos os votos da resposta
+        todos = [normaliza_voto_senado(x.get("siglaVotoParlamentar") or "") for x in _as_list(v.get("votos"))]
+        sim, nao = v.get("totalVotosSim"), v.get("totalVotosNao")
+        if sim is None or nao is None:
+            sim, nao = todos.count("Sim"), todos.count("Não")
         votacoes.append({
             "id": vid,
             "casa": "senado",
+            # placar oficial do Senado (todos os senadores que votaram, inclusive os que já saíram do cargo)
+            **({"placar_oficial": {"sim": int(sim), "nao": int(nao)}}
+               if str(sim).strip().isdigit() and str(nao).strip().isdigit() else {}),
             "data": (v.get("dataSessao") or "")[:10],
             "descricao": (v.get("descricaoVotacao") or "").strip(),
             "aprovada": (v.get("resultadoVotacao") or "") == "A",
