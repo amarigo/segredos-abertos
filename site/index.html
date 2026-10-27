@@ -3,16 +3,71 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="description" content="Quanto cada deputado e senador gasta, com quem, e como vota. Dados oficiais, explicados de forma simples." />
+    <title>%VITE_TITULO%</title>
+    <meta name="description" content="%VITE_DESCRICAO%" />
     <meta name="theme-color" content="#24104a" />
+    <!-- Buscadores: endereço principal, versões em inglês e espanhol (?lang=) e cartão para redes sociais -->
+    <link rel="canonical" href="%VITE_URL%" />
+    <link rel="alternate" hreflang="pt-BR" href="%VITE_URL%" />
+    <link rel="alternate" hreflang="en" href="%VITE_URL%?lang=en" />
+    <link rel="alternate" hreflang="es" href="%VITE_URL%?lang=es" />
+    <link rel="alternate" hreflang="x-default" href="%VITE_URL%" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="%VITE_NOME%" />
+    <meta property="og:title" content="%VITE_TITULO%" />
+    <meta property="og:description" content="%VITE_DESCRICAO%" />
+    <meta property="og:url" content="%VITE_URL%" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:locale:alternate" content="es_ES" />
+    <meta name="twitter:card" content="summary" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "name": "%VITE_NOME%",
+            "url": "%VITE_URL%",
+            "description": "%VITE_DESCRICAO%",
+            "inLanguage": ["pt-BR", "en", "es"],
+            "publisher": { "@type": "Organization", "name": "Segredos Abertos", "url": "https://github.com/amarigo/segredos-abertos" }
+          },
+          {
+            "@type": "Dataset",
+            "name": "%VITE_NOME%: gastos da cota parlamentar, empresas, donos e votações",
+            "description": "%VITE_DESCRICAO% Gastos da cota parlamentar de deputados federais e senadores, fornecedores e seus sócios (Receita Federal), emendas parlamentares e votações nominais. Atualizado todo dia.",
+            "url": "%VITE_URL%",
+            "license": "https://github.com/amarigo/segredos-abertos",
+            "isAccessibleForFree": true,
+            "inLanguage": "pt-BR",
+            "spatialCoverage": { "@type": "Place", "name": "Brasil" },
+            "keywords": ["cota parlamentar", "CEAP", "deputados federais", "senadores", "emendas parlamentares", "transparência", "Brazil", "Congress spending"],
+            "creator": { "@type": "Organization", "name": "Segredos Abertos" },
+            "isBasedOn": ["https://dadosabertos.camara.leg.br", "https://www12.senado.leg.br/dados-abertos", "https://portaldatransparencia.gov.br"],
+            "distribution": [{ "@type": "DataDownload", "encodingFormat": "application/json", "contentUrl": "%VITE_URL%data/politicos.json" }]
+          }
+        ]
+      }
+    </script>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet" />
-    <title>Segredos Abertos Brasil</title>
+    <!-- Tradução (português, inglês e espanhol): roda antes do app, para a página não piscar em português -->
+    <script src="./i18n/tradutor.js"></script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <h1>%VITE_TITULO%</h1>
+      <p>%VITE_DESCRICAO%</p>
+      <p>Este site precisa de JavaScript. Sem ele, veja as páginas em texto simples:
+        <a href="./indice.html">índice em português</a> ·
+        <a href="./en/indice.html">index in English</a> ·
+        <a href="./es/indice.html">índice en español</a> ·
+        <a href="./llms.txt">llms.txt</a>.</p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

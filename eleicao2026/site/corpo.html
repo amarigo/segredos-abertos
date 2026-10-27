@@ -362,6 +362,9 @@ nav.projetos{background:var(--sa-faixa-2);border-image:conic-gradient(var(--sa-f
 nav.projetos .wrap{color:#B5ABCF}
 nav.projetos a{color:#E6E0F5;text-decoration:none}
 nav.projetos a:hover{color:#fff;text-decoration:underline}
+nav.projetos .linguas{margin-left:auto;display:inline-flex;gap:2px}
+nav.projetos .linguas a{padding:.2rem .45rem;border-radius:999px}
+nav.projetos .linguas a[aria-current="true"]{background:#fff;color:var(--sa-faixa-2)}
 nav.projetos a[aria-current="page"]{color:var(--sa-hot-vivo)}
 header.top{background:var(--sa-faixa);border-image:conic-gradient(var(--sa-faixa) 0 0) fill 0//0 100vmax;color:#fff;padding-block:1.6rem 1.6rem;border-bottom:0}
 header.top .eyebrow{color:var(--sa-hot-vivo)}
@@ -888,6 +891,8 @@ const fmt=n=>Math.round(n).toLocaleString("pt-BR");
 const pc=(x,d=2)=>(x*100).toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d})+"%";
 const mil=n=>{const a=Math.abs(n);return a>=1e6?(a/1e6).toLocaleString("pt-BR",{maximumFractionDigits:1})+" milhões":fmt(a)};
 const $=id=>document.getElementById(id);
+// Botões PT/EN/ES na barra dos projetos (i18n/tradutor.js)
+if(window.SA_I18N)SA_I18N.seletor(document.querySelector('nav.projetos .wrap'));
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 const hm=m=>{m=Math.floor(m);return String(Math.floor(m/60)).padStart(2,"0")+"h"+String(m%60).padStart(2,"0")};
 const hms=s=>String(Math.floor(s/3600)).padStart(2,"0")+":"+String(Math.floor(s/60)%60).padStart(2,"0")+":"+String(s%60).padStart(2,"0");

@@ -82,3 +82,8 @@ def gravar(saida, D, oficial):
         f.write(LEIA_ME_PLANILHAS)
     shutil.copy(os.path.join(SITE, 'icone.svg'), os.path.join(saida, 'icone.svg'))
     shutil.copytree(os.path.join(SITE, 'fotos'), os.path.join(saida, 'fotos'), dirs_exist_ok=True)
+    # Tradução (PT/EN/ES): o tradutor é o mesmo do site do Brasil; os dicionários são desta página
+    os.makedirs(os.path.join(saida, 'i18n'), exist_ok=True)
+    shutil.copy(os.path.join(SITE, '..', '..', 'site', 'public', 'i18n', 'tradutor.js'), os.path.join(saida, 'i18n'))
+    for lingua in ('en', 'es'):
+        shutil.copy(os.path.join(SITE, 'i18n', lingua + '.json'), os.path.join(saida, 'i18n'))

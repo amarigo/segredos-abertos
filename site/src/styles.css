@@ -79,6 +79,11 @@ strong, b { font-weight: 700; }
 .projetos a { color: #e6e0f5; text-decoration: none; padding: 4px 2px; }
 .projetos a:hover { color: #fff; text-decoration: underline; }
 .projetos a[aria-current="page"] { color: var(--hot-vivo); }
+/* Seletor de língua (PT, EN, ES), no fim da barra dos projetos */
+.linguas { margin-left: auto; display: inline-flex; gap: 2px; padding-left: 12px; }
+.linguas a { padding: 4px 7px; border-radius: 999px; }
+.linguas a[aria-current="true"] { background: #fff; color: var(--navy-2); }
+.linguas a[aria-current="true"]:hover { color: var(--navy-2); text-decoration: none; }
 
 /* Cabeçalho: faixa roxa, marca em caixa alta, menu em pílulas */
 .top { background: var(--navy); color: #fff; z-index: 20; }
