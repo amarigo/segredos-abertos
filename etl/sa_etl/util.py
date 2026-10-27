@@ -5,6 +5,7 @@ import csv
 import io
 import json
 import logging
+import os
 import re
 import time
 import unicodedata
@@ -155,6 +156,16 @@ _BRASILIA = timezone(timedelta(hours=-3))
 def data_do_arquivo(f: Path) -> str:
     """Dia em que a cópia do cache foi baixada (horário de Brasília), para o aviso dizer de quando é o dado."""
     return datetime.fromtimestamp(f.stat().st_mtime, _BRASILIA).strftime("%d/%m/%Y")
+
+
+def chave_portal() -> str:
+    """Chave da API de dados do Portal da Transparência (secret PORTAL_TRANSPARENCIA_CHAVE).
+
+    A chave do Portal tem 32 caracteres hexadecimais. Se o secret guardar a chave dentro de um texto maior (por
+    exemplo o JSON copiado do e-mail de cadastro), o Portal recusa o texto inteiro; aqui pegamos só a chave."""
+    bruto = os.environ.get("PORTAL_TRANSPARENCIA_CHAVE", "").strip()
+    achadas = re.findall(r"(?<![0-9a-fA-F])[0-9a-fA-F]{32}(?![0-9a-fA-F])", bruto)
+    return achadas[0] if achadas else bruto
 
 
 def avisar(msg: str) -> None:

@@ -191,6 +191,9 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
     # ---------------- incentivos (pagamentos a empresas e renúncia fiscal)
     _conferir_incentivos(saida, r)
 
+    # ---------------- arrecadação e gastos (primeira aba)
+    _conferir_financas(saida, r)
+
     # ---------------- privacidade e links (em todos os arquivos)
     for f in sorted(saida.rglob("*.json")):
         x = _ler(f, r)
@@ -353,6 +356,45 @@ def _conferir_incentivos(saida: Path, r: Resultado) -> None:
         top = [e["valor"] for e in d.get("top") or []]
         if top != sorted(top, reverse=True):
             r.erro(f"Renúncia {x['ano']}: lista das empresas fora de ordem")
+
+
+def _conferir_financas(saida: Path, r: Resultado) -> None:
+    """Partes somam o total (com folga de 0,01% para arredondamentos) e todo sinal tem um nível conhecido."""
+    pasta = saida / "financas"
+    if not (pasta / "indice.json").exists():
+        r.alerta("Sem dados da aba de arrecadação e gastos (financas/indice.json)")
+        return
+    idx = _ler(pasta / "indice.json", r) or {}
+
+    def igual(a: float, b: float) -> bool:
+        return abs((a or 0) - (b or 0)) <= max(1.0, 1e-4 * abs(a or 0))
+
+    for ano in idx.get("anos", []):
+        d = _ler(pasta / f"{ano}.json", r) or {}
+        if not d:
+            continue
+        if not (d.get("rreo") or {}).get("receitas"):
+            r.erro(f"Finanças {ano}: sem receitas do Tesouro (RREO)")
+        ex = d.get("executivo")
+        if ex and not igual(ex["total"], sum(c["realizado"] for c in ex.get("categorias") or [])):
+            r.erro(f"Finanças {ano}: gasto do Executivo diferente da soma das categorias")
+        fu = d.get("funcoes")
+        if fu and not fu.get("confere"):
+            r.alerta(f"Finanças {ano}: a soma das funções de governo não bate com o total do Tesouro")
+        a = d.get("arrecadacao")
+        if a:
+            if not igual(a["total"], sum(g["valor"] for g in a.get("grupos") or [])):
+                r.erro(f"Finanças {ano}: arrecadação diferente da soma por grupo de imposto")
+            if a.get("por_uf") and not igual(a["total"], sum(u[1] if isinstance(u, list) else u["valor"] for u in a["por_uf"])):
+                r.erro(f"Finanças {ano}: arrecadação diferente da soma por estado")
+        pe = d.get("pessoal_executivo")
+        if pe and pe["pessoas"] != sum(g["pessoas"] for g in pe.get("grupos") or []):
+            r.erro(f"Finanças {ano}: servidores do Executivo diferente da soma dos grupos")
+        for k in d.get("kpis") or []:
+            if k.get("nivel") not in ("verde", "amarelo", "vermelho", "sem_dados"):
+                r.erro(f"Finanças {ano}: sinal {k.get('id')} com nível desconhecido")
+            if k.get("nivel") != "sem_dados" and not isinstance(k.get("valor"), (int, float)):
+                r.erro(f"Finanças {ano}: sinal {k.get('id')} sem valor")
 
 
 def _comparar_anterior(meta: dict, ant: dict, r: Resultado, ignorar: bool) -> None:

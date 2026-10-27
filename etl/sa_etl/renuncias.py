@@ -19,7 +19,6 @@ import gzip
 import io
 import json
 import logging
-import os
 import re
 import shutil
 import time
@@ -29,7 +28,7 @@ from pathlib import Path
 from typing import Iterator
 
 from .emendas import SIGLAS, achar_colunas, bonito
-from .util import SiteForaDoAr, _session, avisar, data_do_arquivo, digits, to_float
+from .util import SiteForaDoAr, _session, avisar, chave_portal, data_do_arquivo, digits, to_float
 
 log = logging.getLogger("sa_etl.renuncias")
 
@@ -440,7 +439,7 @@ def coletar(cache: Path, ano_atual: int, n_anos: int = N_ANOS, chave: str | None
     anos: dict[int, dict] = {}
     _falhas.clear()
     por_emp: dict[str, dict] = defaultdict(dict)
-    chave = chave if chave is not None else os.environ.get("PORTAL_TRANSPARENCIA_CHAVE", "").strip()
+    chave = chave if chave is not None else chave_portal()
     api_motivo = ""
     if chave:
         api = ApiRenuncia(cache, chave)

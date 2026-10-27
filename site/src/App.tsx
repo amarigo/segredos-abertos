@@ -11,6 +11,7 @@ import Sobre from "./pages/Sobre";
 import Partidos from "./pages/Partidos";
 import Emendas from "./pages/Emendas";
 import Incentivos from "./pages/Incentivos";
+import Financas from "./pages/Financas";
 import Cidades from "./pages/Cidades";
 import CidadePage from "./pages/Cidade";
 import Assembleia from "./pages/Assembleia";
@@ -61,6 +62,7 @@ export default function App() {
         <div className="wrap">
           <Link to="/" className="brand"><img src="./icon.svg" alt="" /><span>{SITE.nome} <span style={{ color: "var(--gold)" }}>{SITE.destaque}</span></span></Link>
           <nav className="nav" aria-label="Principal">
+            {!MG && <NavLink to="/dinheiro">Arrecadação e gastos</NavLink>}
             {MG && <NavLink to="/governo">Governo</NavLink>}
             {MG && <NavLink to="/assembleia">Deputados estaduais</NavLink>}
             <NavLink to="/politicos">{MG ? "Federais" : "Políticos"}</NavLink>
@@ -87,6 +89,7 @@ export default function App() {
           <Route path="/votacoes" element={<Votacoes />} />
           <Route path="/v/:id" element={<VotacaoPage />} />
           <Route path="/partidos" element={<Partidos />} />
+          {!MG && <Route path="/dinheiro" element={<Financas />} />}
           {!MG && <Route path="/emendas" element={<Emendas />} />}
           {!MG && <Route path="/incentivos" element={<Incentivos />} />}
           {MG && <Route path="/cidades" element={<Cidades />} />}

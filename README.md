@@ -30,6 +30,12 @@ clique em **Run workflow** e confirme com o branch `main`. Em cerca de 30 a 60 m
 | Emendas parlamentares (quem fez, área, quem recebeu) | [Portal da Transparência](https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares), arquivo completo |
 | Pagamentos do governo federal a empresas e entidades (página de incentivos) | [Portal da Transparência](https://portaldatransparencia.gov.br/download-de-dados/despesas), arquivos diários de despesas |
 | Renúncia fiscal por empresa (página de incentivos) | [Portal da Transparência](https://portaldatransparencia.gov.br/download-de-dados/renuncias), com dados da Receita Federal. Primeiro pela [API de dados](https://portaldatransparencia.gov.br/api-de-dados) (consulta `renuncias-valor`, chave no secret `PORTAL_TRANSPARENCIA_CHAVE`); os arquivos de download ficam como reserva |
+| Arrecadação e gastos: receitas, despesas por grupo e por função, gasto com pessoal de cada Poder e limites da LRF | [API do Siconfi, Tesouro Nacional](https://apidatalake.tesouro.gov.br/docs/siconfi/) (RREO anexos 1 e 2, RGF anexo 1) |
+| Arrecadação por imposto, estado e setor da economia | [Receita Federal, dados de arrecadação](https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/dados-abertos/receitadata/arrecadacao) (arquivos CSV; a Receita não tem API para isso) |
+| Gasto do Executivo por órgão, programa, ação e tipo de despesa | [Portal da Transparência, orçamento da despesa](https://portaldatransparencia.gov.br/download-de-dados/orcamento-despesa) (arquivo anual; a API não cruza órgão com tipo de despesa) |
+| Servidores do Executivo: concursados, cargos de confiança e comissionados | [Portal da Transparência, servidores SIAPE](https://portaldatransparencia.gov.br/download-de-dados/servidores) (arquivo mensal; a API só consulta servidor por servidor) |
+| Funcionários da Câmara e do Senado por vínculo | [Arquivo de funcionários da Câmara](https://dadosabertos.camara.leg.br/arquivos/funcionarios/json/funcionarios.json) e [API de servidores do Senado](https://adm.senado.gov.br/adm-dadosabertos/api/v1/servidores/servidores) |
+| Inflação (IPCA) para comparar anos | [API do SIDRA, IBGE](https://sidra.ibge.gov.br/tabela/1737) |
 
 ## Rodar localmente
 
