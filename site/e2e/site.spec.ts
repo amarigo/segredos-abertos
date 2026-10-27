@@ -78,6 +78,11 @@ test.describe("jornada", () => {
     const maior = inc.pagamentos.top[0];
     await page.goto("./#/incentivos");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Quem ganha com o dinheiro público");
+    // para onde vai o dinheiro: setor privado e setor público, com o maior recebedor público
+    const destino = inc.pagamentos.destino;
+    const secDestino = page.locator("section", { has: page.getByRole("heading", { name: /setor privado ou setor público/ }) });
+    await expect(secDestino).toContainText(destino.publico.top[0].nome);
+    await expect(secDestino).toContainText(sp(brl(destino.publico.top[0].valor)));
     const tabela = page.locator(".inc-tabela");
     await expect(tabela.locator("tbody tr").first()).toContainText(maior.nome);
     await expect(tabela.locator("tbody tr").first()).toContainText(sp(brl(maior.valor)));
@@ -98,6 +103,11 @@ test.describe("jornada", () => {
     await expect(page).toHaveURL(new RegExp(`#/e/${maior.cnpj}`));
     await expect(page.locator("main")).toContainText("Pagamentos do governo federal");
     await expect(page.locator("main")).toContainText(maior.donos[0]);
+    // e o dinheiro de cada ano, com o que explica o valor
+    const emp = dados(`e/${maior.cnpj}.json`);
+    const bloco = page.locator(".ano-bloco", { has: page.getByRole("heading", { name: ANO, exact: true }) });
+    await expect(bloco).toContainText(sp(brl(emp.governo.anos[ANO].valor)));
+    await expect(bloco).toContainText(emp.governo.anos[ANO].cats[0][0]);
     expect(erros).toEqual([]);
   });
 

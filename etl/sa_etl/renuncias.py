@@ -253,6 +253,7 @@ def resumir(ano: int, ben, det, n_top: int = N_TOP) -> tuple[dict, dict[str, dic
 # ---------------------------------------------------------------- pela API de dados do Portal
 
 API = "https://api.portaldatransparencia.gov.br/api-de-dados/renuncias-valor"
+API_TESTE = "https://api.portaldatransparencia.gov.br/api-de-dados/orgaos-siafi"  # consulta simples, para testar a chave
 API_CADASTRO = "https://portaldatransparencia.gov.br/api-de-dados/cadastrar-email"
 API_POR_MINUTO = 300  # o limite do Portal é 400 por minuto (700 de madrugada); acima disso a chave fica suspensa por 8 horas
 API_REFAZER_DIAS = 30  # a Receita atualiza a renúncia uma ou duas vezes por ano; relemos tudo uma vez por mês
@@ -338,12 +339,25 @@ class ApiRenuncia:
                     self.motivo = f"resposta não é JSON ({r.headers.get('content-type')})"
                     return None
                 return d if isinstance(d, list) else None
-            self.motivo = f"HTTP {r.status_code}{_servidor(r)}"
+            corpo = re.sub(r"\s+", " ", (r.text or "")[:160]).strip()
+            self.motivo = f"HTTP {r.status_code}{_servidor(r)}" + (f": {corpo}" if corpo else "")
+            if r.status_code in (401, 403) and not getattr(self, "_testou_chave", False):
+                self._testou_chave = True
+                self.motivo += f" ({self._testar_chave()})"
             if r.status_code in (429,) or r.status_code >= 500:
                 time.sleep(2 ** (tentativa + 2))
                 continue
             return None
         return None
+
+    def _testar_chave(self) -> str:
+        """A recusa é da chave ou só desta consulta? Pergunta uma consulta simples da mesma API."""
+        try:
+            r = _session.get(API_TESTE, params={"pagina": 1}, timeout=60,
+                             headers={"chave-api-dados": self.chave, "Accept": "application/json"})
+            return f"a mesma chave em {API_TESTE.rsplit('/', 1)[-1]}: HTTP {r.status_code}; chave com {len(self.chave)} caracteres"
+        except Exception as e:  # noqa: BLE001
+            return f"teste da chave falhou: {str(e)[:80]}"
 
     def coletar(self, minutos: float) -> bool:
         """True quando há uma leitura completa para o site. Uma nova leitura começa a cada API_REFAZER_DIAS dias;

@@ -13,15 +13,17 @@ data/incentivos/renuncia-{ano}.json (pelo ano-calendário da Receita).
 from __future__ import annotations
 
 import logging
+import re
 from collections import defaultdict
 from pathlib import Path
 
 from . import emendas, pagamentos, renuncias
 from .cnpj import chave_dono
-from .util import write_json
+from .util import norm_name, write_json
 
 log = logging.getLogger("sa_etl.incentivos")
 
+N_TOP_PUBLICO = 30
 N_TOP = 300
 N_RECEITA_PAG = 400  # quantos dos que mais receberam buscamos na Receita (donos, natureza, UF)
 N_RECEITA_REN = 300
@@ -78,7 +80,48 @@ class Receita:
         return len((outras & no_site) - {doc})
 
 
-def montar_pagamentos(por: dict[str, dict], cob: dict, rec: Receita, paginas: set[str]) -> dict:
+ESFERAS = [
+    ("municipal", "Municípios", re.compile(r"\b(MUNICIPIO|PREFEITURA|FUNDO MUNICIPAL|CAMARA MUNICIPAL|SECRETARIA MUNICIPAL|"
+                                           r"CONSORCIO INTERMUNICIPAL)\b")),
+    ("estadual", "Estados e Distrito Federal", re.compile(r"\b(ESTADO D[OEA]|DISTRITO FEDERAL|FUNDO ESTADUAL|ASSEMBLEIA|"
+                                                           r"SECRETARIA (DE ESTADO|ESTADUAL)|UNIVERSIDADE ESTADUAL|POLICIA MILITAR|"
+                                                           r"TRIBUNAL DE JUSTICA|DEFENSORIA PUBLICA)\b")),
+    ("estatal", "Empresas estatais e bancos públicos", re.compile(r"\b(BANCO|CAIXA ECONOMICA|PETROLEO|CORREIOS|SERVICO FEDERAL DE "
+                                                                   r"PROCESSAMENTO|SERPRO|DATAPREV|COMPANHIA|EMPRESA|EBSERH|"
+                                                                   r"CODEVASF|CONAB|CASA DA MOEDA|IMPRENSA NACIONAL|FINANCIADORA)\b")),
+]
+ESFERA_FEDERAL = ("federal", "Órgãos federais, universidades e institutos")
+ROTULO_ESFERA = {k: r for k, r, _ in ESFERAS} | {ESFERA_FEDERAL[0]: ESFERA_FEDERAL[1]}
+
+
+def esfera(nome: str) -> str:
+    """Para que parte do setor público foi o pagamento, pelo nome do favorecido."""
+    n = norm_name(nome)
+    return next((k for k, _, rx in ESFERAS if rx.search(n)), ESFERA_FEDERAL[0])
+
+
+def montar_destino(privados: list[tuple[str, dict]], publicos: dict[str, dict], cob_pub: dict) -> dict:
+    """Para onde foi o dinheiro: entidades privadas (empresas, ONGs) ou o próprio setor público."""
+    esf: dict[str, list] = defaultdict(lambda: [0.0, 0])
+    for d, e in publicos.items():
+        k = esfera(e["nome"])
+        esf[k][0] += e["valor"]
+        esf[k][1] += 1
+    tot_priv = sum(e["valor"] for _, e in privados)
+    tot_pub = sum(e["valor"] for e in publicos.values())
+    ordem = sorted(publicos.items(), key=lambda kv: -kv[1]["valor"])
+    return {
+        "privado": {"total": round(tot_priv, 2), "n": len(privados)},
+        "publico": {"total": round(tot_pub, 2), "n": len(publicos), "cobertura": cob_pub,
+                    "por_esfera": [{"esfera": k, "rotulo": ROTULO_ESFERA[k], "valor": round(x[0], 2), "n": x[1]}
+                                   for k, x in sorted(esf.items(), key=lambda kv: -kv[1][0])],
+                    "top": [{"cnpj": d, "nome": emendas.bonito(e["nome"]), "esfera": esfera(e["nome"]), "valor": round(e["valor"], 2),
+                             "cats": _top(e["cats"], 3), "orgaos": _top(e["orgaos"], 3)} for d, e in ordem[:N_TOP_PUBLICO]]},
+    }
+
+
+def montar_pagamentos(por: dict[str, dict], cob: dict, rec: Receita, paginas: set[str],
+                      pub: dict[str, dict] | None = None, cob_pub: dict | None = None) -> dict:
     """Um ano de pagamentos a empresas e entidades. Ficam de fora os que a Receita diz serem órgãos ou empresas públicas."""
     publicos = {d for d in por if rec.tipo(d) == "publico"}
     itens = [(d, e) for d, e in por.items() if d not in publicos]
@@ -100,8 +143,11 @@ def montar_pagamentos(por: dict[str, dict], cob: dict, rec: Receita, paginas: se
         ufs[u][0] += e["valor"]
         ufs[u][1] += 1
     total = sum(e["valor"] for _, e in itens)
+    # Setor público: os que já vêm separados pelo nome no arquivo do dia, mais os que a Receita diz serem públicos
+    todos_pub = {**(pub or {}), **{d: por[d] for d in publicos}}
     return {
         "total": round(total, 2), "n": len(itens), "cobertura": cob,
+        "destino": montar_destino(itens, todos_pub, cob_pub or {}),
         "fora_publicos": round(sum(por[d]["valor"] for d in publicos), 2),
         "por_categoria": [{"cat": c, "rotulo": pagamentos.CATEGORIAS_GERAL[c], "valor": round(x[0], 2), "n": x[1]}
                           for c, x in sorted(cats.items(), key=lambda kv: -kv[1][0])],
@@ -191,6 +237,11 @@ def por_empresa(geral: dict | None, ren: dict | None, docs: set[str]) -> dict[st
             g = out.setdefault(d, {}).setdefault("governo", {"total": 0.0, "por_ano": {}, "cats": defaultdict(float), "orgaos": defaultdict(float)})
             g["total"] += e["valor"]
             g["por_ano"][str(ano)] = round(e["valor"], 2)
+            # O detalhe de cada ano: no que o governo gastou com a empresa e quais órgãos pagaram
+            g.setdefault("anos", {})[str(ano)] = {
+                "valor": round(e["valor"], 2), "n": e["n"],
+                "cats": [[pagamentos.CATEGORIAS_GERAL[c], round(v, 2)] for c, v in sorted(e["cats"].items(), key=lambda kv: -kv[1]) if v],
+                "orgaos": _top(e["orgaos"], 4)}
             for c, v in e["cats"].items():
                 g["cats"][c] += v
             for o, v in e["orgaos"].items():
@@ -204,6 +255,8 @@ def por_empresa(geral: dict | None, ren: dict | None, docs: set[str]) -> dict[st
                     bens[b] += v
             out.setdefault(d, {})["renuncia"] = {"total": round(sum(x["valor"] for x in por_ano.values()), 2),
                                                  "por_ano": {str(a): x["valor"] for a, x in sorted(por_ano.items())},
+                                                 "anos": {str(a): {"valor": x["valor"], "beneficios": [[b, round(v, 2)] for b, v in x["beneficios"][:5]]}
+                                                          for a, x in sorted(por_ano.items())},
                                                  "beneficios": _top(bens, 8), "fonte": renuncias.CONSULTA}
     for x in out.values():
         g = x.get("governo")
@@ -224,7 +277,9 @@ def gravar(saida: Path, anos: list[int], geral: dict | None, ren: dict | None, p
         if not por and not pg:
             continue
         d = {"ano": ano,
-             "pagamentos": montar_pagamentos(por, (geral or {}).get("cobertura", {}).get(ano, {}), rec, paginas) if por else None,
+             "pagamentos": montar_pagamentos(por, (geral or {}).get("cobertura", {}).get(ano, {}), rec, paginas,
+                                             ((geral or {}).get("publicos") or {}).get(ano),
+                                             ((geral or {}).get("cobertura_publicos") or {}).get(ano)) if por else None,
              "emendas": montar_emendas(pg, nomes, rec, paginas) if pg else None}
         write_json(pasta / f"{ano}.json", d)
         idx["anos"].append(ano)
