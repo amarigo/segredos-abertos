@@ -44,20 +44,40 @@
 
   function formatar(n, lingua) { return lingua === "en" && !n.fixo ? numeroIngles(n.v) : n.v; }
 
-  /* Chaves com {*} servem para frases com um nome no meio ("Foto de {*}"): o {*} pega qualquer texto e passa igual. */
+  /* Chaves com {*} servem para frases com um nome no meio ("Foto de {*}"): o {*} pega qualquer texto e passa igual
+     (ou traduzido, se o texto pego for uma chave do dicionário, como o nome de um mês). */
   var curingas = typeof WeakMap === "function" ? new WeakMap() : null;
+  var esc = function (p) { return p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); };
   function curinga(k, dic) {
     var lista = curingas && curingas.get(dic);
     if (!lista) {
       lista = Object.keys(dic).filter(function (x) { return x.indexOf("{*}") >= 0; }).map(function (x) {
-        var re = x.split("{*}").map(function (p) { return p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }).join("(.+?)");
-        return { re: new RegExp("^" + re + "$"), t: dic[x] };
+        // {*} pega qualquer texto; {n} pega qualquer número, porque um nome com número ("Coligação 4") muda a contagem
+        var partes = x.split(/(\{\*\}|\{\d+\})/), grupos = [], re = "";
+        partes.forEach(function (p) {
+          if (p === "{*}") { re += "(.+?)"; grupos.push("*"); }
+          else if (/^\{\d+\}$/.test(p)) { re += "\\{(\\d+)\\}"; grupos.push(p.slice(1, -1)); }
+          else re += esc(p);
+        });
+        return { re: new RegExp("^" + re + "$"), t: dic[x], grupos: grupos, fixo: x.replace(/\{\*\}/g, "").length };
       });
+      // A chave com mais texto fixo ganha: "Em {*}," antes de "{*},"
+      lista.sort(function (a, b) { return b.fixo - a.fixo; });
       if (curingas) curingas.set(dic, lista);
     }
     for (var i = 0; i < lista.length; i++) {
-      var m = lista[i].re.exec(k);
-      if (m) { var j = 1; return lista[i].t.replace(/\{\*\}/g, function () { return m[j++]; }); }
+      var c = lista[i], m = c.re.exec(k);
+      if (!m) continue;
+      var nomes = [], nums = {};
+      c.grupos.forEach(function (g, j) { if (g === "*") nomes.push(m[j + 1]); else nums[g] = m[j + 1]; });
+      var n = 0;
+      // O que o {*} pegou passa igual (nomes), a não ser que seja uma palavra do dicionário ("agosto", "Exterior").
+      // Cada {n} da tradução vira o número que estava naquela posição do texto.
+      return c.t.replace(/\{\*\}|\{(\d+)\}/g, function (t, d) {
+        if (d != null) return nums[d] != null ? "{" + nums[d] + "}" : t;
+        var x = nomes[n++];
+        return dic[x] != null && x.indexOf("{") < 0 ? dic[x] : x;
+      });
     }
     return null;
   }
@@ -69,8 +89,9 @@
     var t = dic[c.k];
     if (t == null) t = curinga(c.k, dic);
     if (t == null) {
-      // Só número ou valor em reais ("R$ 1.234", "45%"): no inglês, muda o formato do número
-      if (lingua === "en" && /^(R\$ )?\{\d+\}%?$/.test(c.k) && c.nums.length === 1) t = c.k;
+      // Só número ou valor em reais ("R$ 1.234", "45%"): no inglês, muda o formato do número,
+      // e qualquer texto só de números e sinais ("+10.376.694", "53,9 · 64,3", "1,5 p.p.")
+      if (lingua === "en" && c.nums.length && !/[A-Za-zÀ-ÿ]/.test(c.k.replace(/R\$|p\.p\./g, ""))) t = c.k;
       else return null;
     }
     var out = t.replace(/\{(\d+)\}/g, function (m, i) { var n = c.nums[+i]; return n ? formatar(n, lingua) : m; });

@@ -285,3 +285,13 @@ test("troca para inglês e espanhol; os números continuam os oficiais", async (
   await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR");
   expect(erros).toEqual([]);
 });
+
+test("em inglês, as frases montadas com números também são traduzidas (1º × 2º turno)", async ({ page }) => {
+  await page.goto("./?lang=en");
+  await page.locator(".menu button").nth(2).click();
+  const txt = page.locator("#d-txt");
+  await expect(txt).toContainText("abstention");
+  await expect(txt).not.toContainText("abstenção");
+  await expect(page.locator("body")).toContainText("million");
+  await expect(page.locator("body")).not.toContainText("milhões");
+});
