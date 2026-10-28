@@ -303,6 +303,24 @@ def test_busca_passagens_sem_repetir_e_completa_o_resto(tmp_path, monkeypatch):
     assert resto["sem_nota"] and resto["valor"] == 2686.27 and "sumarizado?nuDeputadoId=2227" in resto["url"]
 
 
+def test_mes_com_mais_passagens_devolvidas_fica_igual_ao_oficial(tmp_path, monkeypatch):
+    """A verificação achou: a página do deputado soma MENOS que as notas quando há mais devoluções de passagens
+    (SIGEPA) que compras no mês. Os dados abertos não trazem nenhuma das duas; a lista oficial traz."""
+    from sa_etl import build, passagens
+    monkeypatch.setattr(passagens, "_get_text", lambda url, **kw: LISTA_HTML)
+    pols = [{"id": "dep-1", "casa": "camara"}]
+    # a compra da LATAM já está nos dados abertos; a devolução da Gol não
+    desp = [{"politico": "dep-1", "ano": 2025, "mes": 11, "valor": 15000.0, "nu": "2227", "num": "1"},
+            {"politico": "dep-1", "ano": 2025, "mes": 10, "valor": 3019.06, "nu": "2227", "num": "9572255027892"}]
+    rec = {"dep-1": {2025: {"cota_meses": [{"mes": 11, "valor": 15000.0 - 2186.27}, {"mes": 10, "valor": 3019.06}]}}}
+    novas = build.buscar_passagens(desp, pols, rec, tmp_path / "a")
+    assert [(n["mes"], n["valor"]) for n in novas] == [(11, -2186.27)]
+    assert build.meses_faltando(desp + novas, pols, rec) == {}
+    # se a lista desceria abaixo do oficial, não é usada (a diferença fica para a verificação)
+    rec = {"dep-1": {2025: {"cota_meses": [{"mes": 11, "valor": 15000.0 - 100}]}}}
+    assert build.buscar_passagens(desp[:1], pols, rec, tmp_path / "b") == []
+
+
 def test_links_oficiais_das_notas():
     from sa_etl.camara import link_detalhe
     from sa_etl.senado import link_lista

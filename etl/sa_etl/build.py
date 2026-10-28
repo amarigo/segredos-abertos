@@ -65,6 +65,12 @@ SUMARIO_MES = ("https://www.camara.leg.br/cota-parlamentar/sumarizado?nuDeputado
 
 def meses_faltando(despesas: list[dict], politicos: list[dict], rec: dict) -> dict[tuple[str, int, int], float]:
     """(deputado, ano, mês) em que a página oficial da Câmara soma mais do que as notas que temos, e quanto falta."""
+    return {k: v for k, v in meses_diferentes(despesas, politicos, rec).items() if v > 1}
+
+
+def meses_diferentes(despesas: list[dict], politicos: list[dict], rec: dict) -> dict[tuple[str, int, int], float]:
+    """(deputado, ano, mês) em que a página oficial da Câmara soma um valor diferente das notas que temos, e a
+    diferença (oficial menos notas; negativa quando a página soma menos)."""
     soma = defaultdict(float)
     for d in despesas:
         soma[(d["politico"], d["ano"], d["mes"])] += d["valor"]
@@ -75,18 +81,21 @@ def meses_faltando(despesas: list[dict], politicos: list[dict], rec: dict) -> di
         for ano, r in (rec.get(p["id"]) or {}).items():
             for m in (r or {}).get("cota_meses") or []:
                 falta = round(m["valor"] - soma[(p["id"], int(ano), m["mes"])], 2)
-                if falta > 1:
+                if abs(falta) > 1:
                     out[(p["id"], int(ano), m["mes"])] = falta
     return out
 
 
 def buscar_passagens(despesas: list[dict], politicos: list[dict], rec: dict, cache: Path) -> list[dict]:
-    """Nos meses em que falta valor, busca as passagens na lista oficial da Câmara (ver passagens.py)."""
+    """Nos meses em que o total oficial é diferente das notas, busca as passagens na lista oficial da Câmara
+    (ver passagens.py). Também quando a página soma MENOS que as notas: são meses com mais passagens devolvidas
+    ou remarcadas (valores negativos na lista SIGEPA) do que compradas, e os dados abertos não trazem nenhuma das
+    duas (oficial.MOTIVOS["camara_sigepa"]). A verificação achou isso comparando com a página de cada deputado."""
     nu_de = {}
     for d in despesas:
         if d.get("nu"):
             nu_de.setdefault(d["politico"], d["nu"])
-    falta = meses_faltando(despesas, politicos, rec)
+    falta = meses_diferentes(despesas, politicos, rec)
     meses = [(pid, nu_de[pid], ano, mes) for (pid, ano, mes) in sorted(falta) if pid in nu_de]
     pids = {m[0] for m in meses}
     return passagens.coletar(meses, [d for d in despesas if d["politico"] in pids], falta, cache)

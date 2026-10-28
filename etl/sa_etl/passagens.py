@@ -75,7 +75,8 @@ def _num(n: str) -> str:
 
 def coletar(meses: list[tuple[str, str, int, int]], existentes: list[dict], falta: dict, cache: Path,
             workers: int = 6, minutos: float = 15) -> list[dict]:
-    """meses: (politico, nuDeputadoId, ano, mes) em que falta valor; falta: quanto falta em cada um.
+    """meses: (politico, nuDeputadoId, ano, mes) em que o total oficial difere das notas; falta: a diferença em cada
+    um (oficial menos notas; negativa quando há mais passagens devolvidas que compradas no mês).
 
     Devolve só os bilhetes que ainda não estão nos dados abertos. Um bilhete é considerado repetido se o
     mesmo número e valor já aparecem em qualquer mês do deputado. Se mesmo assim a soma do mês passar do
@@ -145,7 +146,8 @@ def coletar(meses: list[tuple[str, str, int, int]], existentes: list[dict], falt
                 cand = tira(cand, ja_num, lambda x: (pid, _num(x["numero"])))
             if sum(x["valor"] for x in cand) > limite:
                 cand = tira(cand, ja_valor, lambda x: (pid, x["doc"], round(x["valor"], 2)))
-            if sum(x["valor"] for x in cand) > limite:
+            # num mês com mais devoluções (falta negativa), a lista também não pode descer abaixo do total oficial
+            if sum(x["valor"] for x in cand) > limite or falta.get((pid, ano, mes), 0) < 0 and sum(x["valor"] for x in cand) < limite - 2:
                 cortados += 1
                 if len(exemplos) < 5:
                     exemplos.append(f"{pid} {mes:02d}/{ano}: lista R$ {sum(x['valor'] for x in cand):.2f}, falta R$ {limite - 1:.2f}")

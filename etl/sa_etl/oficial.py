@@ -58,6 +58,15 @@ MOTIVOS: dict[str, dict] = {
                    "cópias concordarem.",
         "corrigido": False,
     },
+    "camara_sigepa": {
+        "titulo": "Passagens compradas e devolvidas pelo sistema da Câmara",
+        "explica": "Desde agosto de 2025, os dados abertos da Câmara não trazem as passagens aéreas compradas pelo "
+                   "sistema da própria Câmara (SIGEPA), nem as devoluções e remarcações delas. A página oficial do "
+                   "deputado soma as duas. Num mês com mais devoluções que compras, a página mostra menos que as notas.",
+        "decisao": "O site busca cada bilhete, comprado ou devolvido, na lista oficial de despesas da Câmara e soma ao "
+                   "mês, com o link. Assim o total do mês fica igual ao da página oficial.",
+        "corrigido": True,
+    },
     "camara_fora_do_mandato": {
         "titulo": "Notas de meses fora do mandato",
         "explica": "A página oficial de cada deputado só soma os meses em que ele estava no cargo neste mandato. Notas de "
