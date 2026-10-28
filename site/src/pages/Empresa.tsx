@@ -13,7 +13,7 @@ function recebeuTexto(o: OutraEmpresa) {
   return [recebeu, o.renuncia ? `${reais(o.renuncia)} de renúncia fiscal` : ""].filter(Boolean).join(" · ") || reais(0);
 }
 import { norm } from "./Home";
-import Selo from "../components/Selo";
+import { AvisosFim, EmRevisao } from "../components/Selo";
 
 export default function EmpresaPage() {
   const { cnpj = "" } = useParams();
@@ -38,7 +38,6 @@ function EmpresaAno({ e }: { e: Empresa }) {
       <section>
         <span className="eyebrow">Empresa · CNPJ <span className="mono">{cnpjFmt(e.cnpj)}</span></span>
         <h1>{e.nome}</h1>
-        <Selo secao="empresas" />
         {emp?.nome_fantasia && <p className="muted">Nome fantasia: {emp.nome_fantasia}</p>}
         {e.alertas.map((a) => <div className="alert" key={a} role="note"><strong>Ponto de atenção:</strong> {a}</div>)}
       </section>
@@ -96,6 +95,7 @@ function EmpresaAno({ e }: { e: Empresa }) {
 
       {e.total > 0 && <PorMes e={e} />}
       {e.total > 0 && <Notas e={e} />}
+      <AvisosFim secao="empresas"><EmRevisao campo="cnpj" valor={e.cnpj} /></AvisosFim>
     </>
   );
 }

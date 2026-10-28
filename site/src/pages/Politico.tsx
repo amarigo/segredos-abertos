@@ -7,7 +7,7 @@ import {
   type Grupo, type Meta, type Politico, type Recursos, type Resumo, type VotacaoResumo,
   MESES_LONGOS, descricaoCurta, tipoVotacao, type AnoDetalhe,
 } from "../data";
-import Selo from "../components/Selo";
+import { AvisosFim, EmRevisao } from "../components/Selo";
 
 export default function PoliticoPage() {
   const { id = "" } = useParams();
@@ -24,7 +24,6 @@ export default function PoliticoPage() {
         <div>
           <span className="eyebrow">{p.cargo} · {p.uf}</span>
           <h1>{p.nome}</h1>
-        <Selo secao="cota" />
           <div className="tags">
             <span className="chip">{p.partido}</span>
             {p.posicao != null && <span className="chip">{p.rotulo}</span>}
@@ -39,6 +38,10 @@ export default function PoliticoPage() {
         <button role="tab" aria-selected={aba === "votos"} onClick={() => setAba("votos")}>Votos</button>
       </div>
       {aba === "gastos" ? <Gastos p={p} meta={meta} /> : aba === "atuacao" ? <AtuacaoPolitico p={p} /> : <Votos p={p} />}
+      <AvisosFim secao="cota">
+        {aba === "gastos" && <NotasCota p={p} />}
+        <EmRevisao campo="politico" valor={p.id} />
+      </AvisosFim>
     </>
   );
 }
@@ -57,10 +60,6 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
     { label: "Cota parlamentar", valor: d.total, nota: "Reembolsos com nota fiscal: viagens, escritório, divulgação.", cor: "var(--s2)" },
     { label: "Outros gastos do mandato", valor: d.outros_gastos || 0, nota: "Fora da cota: correios, diárias e passagens de viagens oficiais.", cor: "var(--gold)" },
   ].filter((x) => x.valor > 0);
-  const fora = d.fora_do_periodo || 0;
-  const diferenca = d.cota_oficial ? d.cota_oficial - (d.total - fora) : 0;
-  const nomesMeses = (d.meses_fora || []).map((m) => MESES_LONGOS[m - 1]).join(", ");
-  const semTipo = p.casa === "senado" ? d.categorias.find((c) => c.categoria === "Não informado")?.valor || 0 : 0;
   return (
     <>
       <section className="grid">
@@ -91,16 +90,6 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
         <h2>Cota parlamentar</h2>
         <Explain>Além do salário, cada parlamentar tem uma cota mensal para despesas do mandato. Ele paga e pede reembolso apresentando a nota fiscal.</Explain>
         <SemNota d={d} ano={ano} />
-        {fora !== 0 && d.cota_oficial != null && (
-          <p className="muted small" role="note">A página oficial mostra {reais(d.cota_oficial)} em {ano} porque conta só os meses em que {p.casa === "camara" ? "o deputado" : "o senador"} estava no cargo neste mandato. Aqui somamos também {reais(fora)} de {nomesMeses}: {ano === "2023" && d.meses_fora?.includes(1)
-            ? "janeiro de 2023 ainda era o mandato anterior, que a página de 2023 não inclui"
-            : fora < 0 ? "são devoluções de passagens creditadas em meses em que estava fora do cargo (por exemplo, licenciado para ser ministro)" : "são notas de meses em que estava fora do cargo"}. Esses valores foram pagos ou devolvidos de fato, por isso ficam na soma.</p>
-        )}
-        {Math.abs(diferenca) > Math.max(50, Math.abs(d.total - fora) * 0.005) && d.cota_oficial != null && (
-          <p className="alert" role="note">A página oficial mostra <strong>{reais(d.cota_oficial)}</strong> de cota em {ano}, e aqui somamos {reais(d.total - fora)}{fora !== 0 ? " nos mesmos meses" : ""}. {semTipo && Math.abs(semTipo + diferenca) < 1
-            ? `A diferença (${reais(semTipo)}) são reembolsos que o Senado publica sem tipo de despesa ("Não informado"). A página oficial não os soma; nós mostramos, porque foram pagos.`
-            : diferenca > 0 ? "A página oficial foi atualizada depois da nossa última coleta, ou há despesas ainda sem nota publicada." : "Há notas publicadas que a página oficial ainda não somou."} <Link to="/sobre">Entenda</Link>.</p>
-        )}
         <div className="grid">
           {(Object.keys(d.grupos) as Grupo[]).map((g) => (
             <div className="card stat" key={g}>
@@ -143,6 +132,8 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
         </div>
       </section>
 
+      <ForaDoTotal d={d} ano={ano} />
+
       <section>
         <h2>Maiores notas fiscais de {ano}</h2>
         <div className="table-wrap">
@@ -163,6 +154,59 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
         </div>
       </section>
     </>
+  );
+}
+
+/* Ressalvas da cota do ano escolhido (fim da página): meses fora do mandato e diferença com a página oficial */
+function NotasCota({ p }: { p: Politico }) {
+  const { ano } = useAno();
+  const d = p.anos[ano];
+  if (!d) return null;
+  const fora = d.fora_do_periodo || 0;
+  const diferenca = d.cota_oficial ? d.cota_oficial - (d.total - fora) : 0;
+  const nomesMeses = (d.meses_fora || []).map((m) => MESES_LONGOS[m - 1]).join(", ");
+  const ft = d.fora_do_total_oficial;
+  return (
+    <>
+      {fora !== 0 && d.cota_oficial != null && (
+        <p className="muted small" role="note">A página oficial mostra {reais(d.cota_oficial)} em {ano} porque conta só os meses em que {p.casa === "camara" ? "o deputado" : "o senador"} estava no cargo neste mandato. Aqui somamos também {reais(fora)} de {nomesMeses}: {ano === "2023" && d.meses_fora?.includes(1)
+          ? "janeiro de 2023 ainda era o mandato anterior, que a página de 2023 não inclui"
+          : fora < 0 ? "são devoluções de passagens creditadas em meses em que estava fora do cargo (por exemplo, licenciado para ser ministro)" : "são notas de meses em que estava fora do cargo"}. Esses valores foram pagos ou devolvidos de fato, por isso ficam na soma.</p>
+      )}
+      {Math.abs(diferenca) > Math.max(50, Math.abs(d.total - fora) * 0.005) && d.cota_oficial != null && (
+        <p className="alert" role="note">A página oficial mostra <strong>{reais(d.cota_oficial)}</strong> de cota em {ano}, e aqui somamos {reais(d.total - fora)}{fora !== 0 ? " nos mesmos meses" : ""}. {diferenca > 0 ? "A página oficial foi atualizada depois da nossa última coleta, ou há despesas ainda sem nota publicada." : "Há notas publicadas que a página oficial ainda não somou."} <Link to="/sobre">Entenda</Link>.</p>
+      )}
+      {ft && ft.valor !== 0 && (
+        <p className="muted small" role="note">O total de {reais(d.total)} é o total oficial do Senado. Ele não soma {reais(ft.valor)} em {ft.n} nota{ft.n > 1 ? "s" : ""} que o Senado publica sem tipo de despesa; elas estão listadas acima, à parte. <Link to="/verificacao#motivo-senado_sem_tipo">Por quê</Link>.</p>
+      )}
+    </>
+  );
+}
+
+/* Notas que a fonte publica, mas que o total oficial não soma: aparecem à parte, com o link, sem entrar no total */
+function ForaDoTotal({ d, ano }: { d: AnoDetalhe; ano: string }) {
+  const ft = d.fora_do_total_oficial;
+  if (!ft || !ft.notas.length) return null;
+  return (
+    <section data-testid="fora-do-total">
+      <h2>Notas fora do total oficial em {ano}</h2>
+      <Explain>O Senado publica estas {ft.n} nota{ft.n > 1 ? "s" : ""} ({reais(ft.valor)}) sem o tipo de despesa, e o total oficial do senador não as soma. Por isso também não entram no total do site. Mostramos aqui para você conferir.</Explain>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Data</th><th>Fornecedor</th><th className="r">Valor</th><th>Fonte</th></tr></thead>
+          <tbody>
+            {ft.notas.map((n, i) => (
+              <tr key={i}>
+                <td className="num">{dataBR(n.data)}</td>
+                <td>{n.doc.length === 14 ? <Link to={`/e/${n.doc}`}>{n.fornecedor}</Link> : n.fornecedor}{n.detalhe && <div className="small">{n.detalhe}</div>}</td>
+                <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(n.valor, true)}</td>
+                <td className="small"><LinkNota url={n.url} link={n.url ? "nota" : ""} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 

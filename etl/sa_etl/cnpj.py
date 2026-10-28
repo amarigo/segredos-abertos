@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -16,6 +17,11 @@ from .util import digits, get, norm_name
 log = logging.getLogger("sa_etl.cnpj")
 
 URL = "https://minhareceita.org/{cnpj}"
+
+# A Receita atualiza a base de CNPJ uma vez por mês. Sem prazo, o cache (guardado entre coletas no GitHub Actions)
+# ficaria com sócios e nomes antigos para sempre: a verificação achou exatamente isso (oficial.receita_copia_antiga).
+# Por isso cada empresa é consultada de novo depois de DIAS_CACHE; se a consulta nova falhar, fica a cópia antiga.
+DIAS_CACHE = 30
 
 
 def parse_empresa(d: dict) -> dict:
@@ -54,18 +60,23 @@ def parse_empresa(d: dict) -> dict:
     }
 
 
-def _fetch(cnpj: str, cache: Path) -> dict | None:
+def _fetch(cnpj: str, cache: Path, dias: float = DIAS_CACHE) -> dict | None:
     f = cache / f"{cnpj}.json"
+    antiga = None
     if f.exists():
         try:
-            return json.loads(f.read_text(encoding="utf-8"))
+            antiga = json.loads(f.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             pass
+        # prazo espalhado entre dias-9 e dias, para as empresas não vencerem todas na mesma coleta
+        prazo = (dias - int(cnpj[-1]) if cnpj[-1:].isdigit() else dias) * 86400
+        if antiga is not None and time.time() - f.stat().st_mtime < prazo:
+            return antiga
     try:
         raw = get(URL.format(cnpj=cnpj), tries=3, timeout=60).json()
     except Exception as e:  # noqa: BLE001
         log.debug("CNPJ %s sem dados: %s", cnpj, e)
-        return None
+        return antiga
     emp = parse_empresa(raw)
     f.parent.mkdir(parents=True, exist_ok=True)
     f.write_text(json.dumps(emp, ensure_ascii=False), encoding="utf-8")

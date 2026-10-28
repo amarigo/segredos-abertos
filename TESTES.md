@@ -85,8 +85,12 @@ Problemas que não bloqueiam (uma fonte fora do ar, cópia antiga em uso) aparec
 ### Verificação independente (segunda fonte oficial)
 
 A conferência acima vê se os arquivos batem entre si. Depois dela, `python -m sa_etl.verificar` sorteia números do site e
-pergunta de novo a uma fonte oficial diferente. Não bloqueia a publicação: o resultado aparece no site (selo em cada
-seção e a página `/verificacao`) e no resumo do GitHub Actions.
+pergunta de novo a uma fonte oficial diferente. O resultado aparece no site (selo no fim de cada página e a página
+`/verificacao`) e no resumo do GitHub Actions. Cada diferença é classificada por `oficial.classificar`: com motivo
+conhecido (`oficial.MOTIVOS`), o site já usa o número oficial e explica; sem motivo, fica "em revisão". Mais de 2% de
+diferenças sem motivo numa seção (com 20 ou mais conferidos) devolve código 3 e barra a publicação (para publicar
+assim mesmo: `--ignorar-barreira`, ou a opção `ignorar_barreira` ao rodar o workflow à mão). Empresas com diferença
+saem do cache de CNPJ; o cache vence em 30 dias.
 
 | Seção | Número do site (fonte da coleta) | Conferido com |
 |---|---|---|
@@ -103,7 +107,9 @@ seção e a página `/verificacao`) e no resumo do GitHub Actions.
 Regras: fonte fora do ar ou API respondendo vazio vira "não conferido", nunca "conferido"; a cota só é conferida em
 meses fechados há mais de 60 dias; a página de incentivos aparece como "sem segunda fonte" até haver uma.
 Testes: `etl/tests/test_verificar.py` (fontes simuladas: tudo batendo, divergência, API vazia, fonte fora do ar, sem
-chave, histórico) e `site/e2e/site.spec.ts` (selos no navegador; sem arquivo, nenhum selo).
+chave, histórico), `etl/tests/test_oficial.py` (motivos, barreira, cache de CNPJ, total oficial do Senado, placar da
+ata) e `site/e2e/site.spec.ts` (selos e avisos no fim da página; número em revisão com o oficial; sem arquivo, nenhum
+selo).
 
 ## 5. Segurança
 

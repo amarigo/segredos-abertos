@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { DinheiroCidade } from "./CidadeDinheiro";
 import { Explain, Loading, useData } from "../components/ui";
+import { AvisosFim } from "../components/Selo";
 import {
   corPartido, linkSeguro, numero, partidoComHoje, type Candidato, type Cidade, type EleicaoGeral, type Legislatura, type MandatoPrefeito,
 } from "../data";
@@ -38,10 +39,6 @@ export default function CidadePage() {
           municipais, aprovam o orçamento e fiscalizam o prefeito.
         </p>
       </section>
-
-      {c.avisos.length > 0 && (
-        <div className="alert" role="note"><div><strong>Dados incompletos.</strong><ul>{c.avisos.map((a) => <li key={a}>{a}</li>)}</ul></div></div>
-      )}
 
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={aba === "politica"} onClick={() => setParams({}, { replace: true })}>Quem governa</button>
@@ -134,6 +131,11 @@ export default function CidadePage() {
           ))}</p>
         )}
       </section>
+      <AvisosFim>
+        {c.avisos.length > 0 && (
+          <div className="alert" role="note"><div><strong>Dados incompletos.</strong><ul>{c.avisos.map((a) => <li key={a}>{a}</li>)}</ul></div></div>
+        )}
+      </AvisosFim>
     </>
   );
 }

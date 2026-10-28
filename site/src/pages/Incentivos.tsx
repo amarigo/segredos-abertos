@@ -6,7 +6,7 @@ import { LADOS, ladoPelosVotos } from "../partidos";
 import { Pizza } from "./Partidos";
 import "./emendas.css";
 import "./incentivos.css";
-import Selo from "../components/Selo";
+import { AvisosFim } from "../components/Selo";
 
 /* Formato de data/incentivos/ (gerado por etl/sa_etl/incentivos.py) */
 type Par = [string, number];
@@ -86,13 +86,11 @@ export default function Incentivos() {
       <section className="hero">
         <span className="eyebrow">Incentivos e dinheiro público para empresas · {ano}</span>
         <h1>Quem ganha com o dinheiro público</h1>
-        <Selo secao="incentivos" />
         <Explain>
           O dinheiro público chega às empresas, ONGs e outras entidades de três jeitos: o governo federal <strong>paga</strong> por compras, obras, serviços, convênios e subsídios;
           deixa de <strong>cobrar imposto</strong> de quem tem um benefício fiscal (a renúncia fiscal); e deputados e senadores <strong>indicam emendas</strong> que pagam empresas e entidades.
           Aqui você vê quem mais recebe, quem são os donos e de quais parlamentares, partidos e estados veio o dinheiro das emendas. Tudo com dados oficiais e link para o original.
         </Explain>
-        {outroAno && <p className="aviso-ano small">Ainda não temos os pagamentos de {anoSite}: o Portal da Transparência libera os arquivos diários aos poucos, e a leitura avança a cada atualização. Por enquanto, os pagamentos e as emendas abaixo são de {ano}.</p>}
         <div className="grid">
           <div className="card stat"><span className="label">Pago a empresas e entidades em {ano}</span><span className="value">{pag ? reaisCurto(pag.total) : "—"}</span>
             <span className="hint">{pag ? <>{plural(pag.n, "recebedor", "recebedores")}{!pag.cobertura.completo && <> · dados de {dataBR(pag.cobertura.de)} a {dataBR(pag.cobertura.ate)}</>}</> : `Ainda sem dados de ${ano}`}</span></div>
@@ -118,6 +116,9 @@ export default function Incentivos() {
           <li><strong>Donos:</strong> base de CNPJ da Receita Federal, via <a href={linkSeguro(idx.fontes.receita)} target="_blank" rel="noreferrer">Minha Receita ↗</a>. Buscamos as empresas e entidades que mais receberam. Em cada uma você vê os sócios, quem está por trás das empresas sócias e as outras empresas dos mesmos donos que aparecem no site.</li>
         </ul>
       </section>
+      <AvisosFim secao="incentivos">
+        {outroAno && <p className="aviso-ano small">Ainda não temos os pagamentos de {anoSite}: o Portal da Transparência libera os arquivos diários aos poucos, e a leitura avança a cada atualização. Por enquanto, os pagamentos e as emendas desta página são de {ano}.</p>}
+      </AvisosFim>
     </>
   );
 }

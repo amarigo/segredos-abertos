@@ -5,6 +5,7 @@ import { TEMAS, autorSigla, casaNome, dataBR, dataHoraBR, linkSeguro, type Grupo
 import { norm } from "./Home";
 import { MG } from "../recorte";
 import { VotacoesAbas } from "./Votacoes";
+import { AvisosFim } from "../components/Selo";
 
 const ETAPAS_CONGRESSO = ["Apresentada", "Comissões", "Plenário", "Outra Casa", "Sanção ou promulgação"];
 const ETAPAS_ALMG = ["Apresentado", "Comissões", "Plenário", "Sanção do governador"];
@@ -163,9 +164,6 @@ export default function TramitacaoPage() {
         Tudo vem das APIs oficiais da Câmara e do Senado{MG && " e dos dados abertos da ALMG"}, atualizado em {dataBR(data.atualizado_em)}.
         Esta página mostra o momento atual e não depende do ano escolhido no topo.
       </Explain>
-      {faltando.length > 0 && (
-        <p className="alert">{faltando.map(([c, s]) => `${casaNome(c as "camara" | "senado")}: ${s === "reserva" ? "a API não respondeu hoje; mostramos a última lista que conseguimos" : "a API não respondeu; essa Casa está faltando"}`).join(". ")}.</p>
-      )}
 
       <details className="card">
         <summary><b>Como uma proposta vira lei</b> (5 etapas)</summary>
@@ -217,6 +215,11 @@ export default function TramitacaoPage() {
         {MG && <>, e o <a href="https://dadosabertos.almg.gov.br/" target="_blank" rel="noreferrer">arquivo de proposições da ALMG</a></>}.
         O resumo em linguagem simples troca o número da lei pelo nome conhecido e o juridiquês por palavras do dia a dia; a ementa oficial fica sempre nos detalhes. <Link to="/sobre">Como funciona</Link>.
       </p>
+      <AvisosFim>
+        {faltando.length > 0 && (
+          <p className="alert">{faltando.map(([c, s]) => `${casaNome(c as "camara" | "senado")}: ${s === "reserva" ? "a API não respondeu hoje; mostramos a última lista que conseguimos" : "a API não respondeu; essa Casa está faltando"}`).join(". ")}.</p>
+        )}
+      </AvisosFim>
     </section>
   );
 }

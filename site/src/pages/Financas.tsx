@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Barras, Explain, Loading, useData, useTip } from "../components/ui";
 import { linkSeguro, reais } from "../data";
 import "./financas.css";
-import Selo from "../components/Selo";
+import { AvisosFim } from "../components/Selo";
 
 /* Formato de data/financas/ (gerado por etl/sa_etl/financas.py) */
 type Nivel = "verde" | "amarelo" | "vermelho" | "sem_dados";
@@ -110,7 +110,6 @@ export default function Financas() {
       <section className="hero">
         <span className="eyebrow">Brasil · arrecadação e gastos do governo federal · {d.ano}</span>
         <h1>De onde vem e para onde vai o dinheiro</h1>
-        <Selo secao="financas" />
         <div className="row fin-anos" role="group" aria-label="Ano">
           {anos.slice().reverse().map((a) => (
             <button key={a} className="fin-ano" aria-pressed={a === ano} onClick={() => setEscolhido(a)}>{a}</button>
@@ -121,7 +120,6 @@ export default function Financas() {
           {d.parcial && <> <strong>{d.ano} ainda não terminou:</strong> os valores vão de janeiro a {d.periodo.mes_nome}, o último relatório publicado pelo Tesouro Nacional.</>}
           {" "}Estados e municípios têm orçamentos próprios e não entram aqui.
         </Explain>
-        {idx.avisos?.length > 0 && <div className="alert" role="note"><div>{idx.avisos.map((a) => <div key={a}>{a}</div>)}</div></div>}
         <div className="grid">
           <div className="card stat"><span className="label">Arrecadado em impostos e contribuições</span><span className="value">{rs(impostos)}</span><span className="hint">{periodo}</span></div>
           <div className="card stat"><span className="label">Gasto (sem a rolagem da dívida)</span><span className="value">{rs(gasto)}</span><span className="hint">despesa liquidada {periodo}</span></div>
@@ -146,6 +144,9 @@ export default function Financas() {
       <AnoAAno idx={idx} />
       <Ligacoes d={d} />
       <Fontes d={d} idx={idx} />
+      <AvisosFim secao="financas">
+        {idx.avisos?.length > 0 && <div className="alert" role="note"><div>{idx.avisos.map((a) => <div key={a}>{a}</div>)}</div></div>}
+      </AvisosFim>
     </div>
   );
 }

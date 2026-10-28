@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Barras, Explain, GastoMensal, Loading, useData } from "../components/ui";
 import { cnpjFmt, corPartido, dataBR, linkSeguro, reais, type AlmgIndice, type DeputadoEstadual } from "../data";
 import { Metrica } from "./Atuacao";
+import { AvisosFim } from "../components/Selo";
 
 type Aba = "gastos" | "atuacao" | "emendas";
 const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
@@ -71,9 +72,6 @@ function Gastos({ d, ano, colegas, primeiro }: { d: DeputadoEstadual; ano: strin
           <Metrica nome="Total reembolsado" quem="deputados estaduais" eu={primeiro} v={v.total} todos={colegas} tipico="Deputado típico" fmt={(x) => reais(x)}
             explica={`${v.n_notas} notas pagas a ${v.n_fornecedores} fornecedores.`} />
         </div>
-        {!!v.meses_faltando?.length && (
-          <p className="alert small" role="note">Ainda estamos baixando da Assembleia os meses de {v.meses_faltando.map((m) => MESES[m - 1]).join(", ")} de {ano}. A ALMG só deixa consultar um mês por vez; o histórico completo aparece nos próximos dias.</p>
-        )}
       </section>
       <section>
         <h2>Por mês</h2>
@@ -121,6 +119,11 @@ function Gastos({ d, ano, colegas, primeiro }: { d: DeputadoEstadual; ano: strin
         </div>
         <p className="muted small fonte-linha">Cada nota, com o número do documento, está na <a href={linkSeguro(d.url_verba || `https://www.almg.gov.br/transparencia/prestacao-de-contas/deputados/verba-indenizatoria/detalhe.html?id=${d.id}`)} target="_blank" rel="noreferrer">prestação de contas de {primeiro} no site da ALMG ↗</a>. A Assembleia não publica a imagem das notas.</p>
       </section>
+      <AvisosFim>
+      {!!v.meses_faltando?.length && (
+        <p className="alert small" role="note">Ainda estamos baixando da Assembleia os meses de {v.meses_faltando.map((m) => MESES[m - 1]).join(", ")} de {ano}. A ALMG só deixa consultar um mês por vez; o histórico completo aparece nos próximos dias.</p>
+      )}
+      </AvisosFim>
     </>
   );
 }

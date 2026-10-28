@@ -4,7 +4,7 @@ import { Explain, Loading, ResultadoChip, VotoBarra, VotoChip, VotoLegenda, useD
 import { casaNome, dataBR, descricaoCurta, linkSeguro, proposicaoNome, tipoVotacao, type Votacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 import { MG } from "../recorte";
-import Selo from "../components/Selo";
+import { AvisosFim, EmRevisao } from "../components/Selo";
 
 const LADOS = ["Esquerda", "Centro-esquerda", "Centro", "Centro-direita", "Direita"];
 
@@ -38,9 +38,6 @@ export default function VotacaoPage() {
           {linkSeguro(v.proposicao?.url) && <a className="chip" href={linkSeguro(v.proposicao?.url)} target="_blank" rel="noreferrer">Ver a proposta e as votações no site {v.casa === "camara" ? "da Câmara" : "do Senado"} ↗</a>}
           {v.temas?.map((t) => <Link key={t} className="chip" to={`/votacoes?tema=${encodeURIComponent(t)}`}>{t}</Link>)}
         </div>
-        {!MG && v.placar_casa && (v.placar_casa.sim !== v.sim || v.placar_casa.nao !== v.nao) &&
-          <p className="small muted">A lista de votos abaixo mostra só quem está no mandato hoje (Sim {v.sim} · Não {v.nao}). A diferença para o placar oficial são votos de {v.casa === "camara" ? "deputados" : "senadores"} que saíram do cargo depois desta votação.</p>}
-        <Selo secao="votacoes" />
       </section>
 
       {irmas.length > 1 && (
@@ -140,6 +137,13 @@ export default function VotacaoPage() {
         </div>
       </section>
       {linkSeguro(v.fonte) && <p className="muted small">Para programadores: <a href={linkSeguro(v.fonte)} target="_blank" rel="noreferrer">dados brutos desta votação</a> (formato para computador).</p>}
+      <AvisosFim secao="votacoes">
+        {v.placar_casa?.fonte === "ata" && v.placar_casa.painel &&
+          <p className="small muted" role="note" data-testid="placar-ata">O placar oficial é o da ata da sessão (Sim {v.placar_casa.sim} · Não {v.placar_casa.nao}). O painel eletrônico registrou Sim {v.placar_casa.painel.sim} · Não {v.placar_casa.painel.nao}: algum voto foi corrigido depois da votação. <Link to="/verificacao#motivo-senado_painel_ata">Por quê</Link>.</p>}
+        {!MG && v.placar_casa && (v.placar_casa.sim !== v.sim || v.placar_casa.nao !== v.nao) &&
+          <p className="small muted">A lista de votos mostra só quem está no mandato hoje (Sim {v.sim} · Não {v.nao}). A diferença para o placar oficial são votos de {v.casa === "camara" ? "deputados" : "senadores"} que saíram do cargo depois desta votação{v.placar_casa.fonte === "ata" ? " ou correções registradas na ata" : ""}.</p>}
+        <EmRevisao campo="votacao" valor={v.id} />
+      </AvisosFim>
     </>
   );
 }

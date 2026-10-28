@@ -30,10 +30,14 @@ Regras de honestidade:
 - se uma fonte não respondeu, a checagem fica "não conferida" (nunca "conferida");
 - dados do mês corrente e do anterior mudam (notas lançadas com atraso): a cota só é conferida em meses fechados
   há mais de 60 dias, e isso aparece escrito no site;
-- seções sem uma segunda fonte (ainda) aparecem como "sem segunda fonte".
+- seções sem uma segunda fonte (ainda) aparecem como "sem segunda fonte";
+- toda diferença é classificada (oficial.classificar): com motivo conhecido, o site explica e usa o número oficial;
+  sem motivo, fica "em revisão" no site, e se passar de oficial.LIMITE_SEM_MOTIVO numa seção a publicação é barrada
+  (código de saída 3) até o motivo ser entendido e registrado em oficial.py.
 
 Uso:
     python -m sa_etl.verificar ../site/public/data [--anterior https://.../data/verificacao.json] [--minutos 20]
+        [--cache .cache] [--ignorar-barreira]
 """
 from __future__ import annotations
 
@@ -52,7 +56,8 @@ from typing import Any, Callable
 
 from .camara import API as API_CAMARA, normaliza_voto
 from .emendas import _chave
-from .senado import LEGIS, _as_list, normaliza_voto_senado
+from .senado import LEGIS, _as_list, normaliza_voto_senado, placar_da_ata  # noqa: F401 (placar_da_ata: usado nos testes)
+from . import oficial
 from .util import chave_portal, digits, get_json, norm_name, to_float, write_json
 
 log = logging.getLogger("sa_etl.verificar")
@@ -137,6 +142,7 @@ class Checagem:
         self.falhas: list[str] = []  # itens que não deu para conferir (fonte fora do ar)
         self.motivo = ""  # por que a checagem inteira não rodou
         self.completados = 0  # só na comparação com a página oficial: meses que o site completou com ela
+        self.sem_motivo = 0  # divergências sem motivo conhecido (oficial.classificar)
 
     def bateu(self, ok: bool, item: dict) -> None:
         self.n += 1
@@ -145,7 +151,13 @@ class Checagem:
                 self.exemplos.append(item)
         else:
             self.k += 1
-            if len(self.divergencias) < 20:
+            # Por que é diferente? Motivo conhecido (oficial.MOTIVOS) ou None: "em revisão"
+            item = {**item, "motivo": oficial.classificar(self.id, item)}
+            for k in [k for k in item if k.startswith("_")]:
+                item.pop(k)
+            if item["motivo"] is None:
+                self.sem_motivo += 1
+            if len(self.divergencias) < 20 or item["motivo"] is None and len(self.divergencias) < 60:
                 self.divergencias.append(item)
 
     def falhou(self, msg: str) -> None:
@@ -154,15 +166,17 @@ class Checagem:
 
     @property
     def status(self) -> str:
-        if self.k:
+        if self.sem_motivo:
             return "divergente"
+        if self.k:
+            return "explicado"
         if self.n == 0:
             return "nao_conferido"
         return "conferido"
 
     def json(self) -> dict:
         return {"id": self.id, "secao": self.secao, "titulo": self.titulo, "como": self.como, "fonte": self.fonte,
-                "status": self.status, "conferidos": self.n, "divergentes": self.k,
+                "status": self.status, "conferidos": self.n, "divergentes": self.k, "sem_motivo": self.sem_motivo,
                 "nao_conferidos": len(self.falhas), **({"completados": self.completados} if self.completados else {}),
                 "motivo": self.motivo or (self.falhas[0] if self.n == 0 and self.falhas else ""),
                 "divergencias": self.divergencias, "exemplos": self.exemplos}
@@ -399,9 +413,8 @@ def cota_senado(pols: list[dict], rng: random.Random, prazo: Prazo, hoje: dt.dat
             det = ((saida / "p" / f"{p['id']}.json") if saida else None)
             cats = (((_ler(det) or {}).get("anos") or {}).get(ano) or {}).get("categorias") or [] if det else []
             sem_tipo = round(sum(x["valor"] for x in cats if x["categoria"] == SEM_TIPO_SENADO), 2)
-            if sem_tipo and abs(nosso - sem_tipo - oficial) <= 1.0:
-                item["o_que"] += (f" (a diferença é igual às notas que o Senado lista sem tipo de despesa, {_fmt(sem_tipo)}: "
-                                  f"estão na lista oficial de reembolsos, mas o total oficial não as soma)")
+            if sem_tipo:
+                item["sem_tipo"] = sem_tipo
         c.bateu(abs(nosso - oficial) <= 1.0, item)
     return c
 
@@ -454,17 +467,6 @@ def votos_camara(saida: Path, vots: list[dict], rng: random.Random, prazo: Prazo
     return c_votos, c_placar
 
 
-SIM_ATA = re.compile(r"\bSim\s*[-–:]?\s*(\d+)", re.I)
-NAO_ATA = re.compile(r"\bN[ãa]o\s*[-–:]?\s*(\d+)", re.I)
-
-
-def placar_da_ata(texto: str) -> tuple[int, int] | None:
-    """(sim, não) escritos na ata. A ata usa vários formatos ("Sim - 65; Não - 1", "Sim: 72, Pres.: 1, Total: 73").
-    Se o texto traz mais de um resultado (várias votações da mesma matéria), não dá para saber qual é: None."""
-    sims, naos = SIM_ATA.findall(texto or ""), NAO_ATA.findall(texto or "")
-    if len(sims) != 1 or len(naos) > 1 or (not naos and not re.search(r"\btotal\b", texto, re.I)):
-        return None
-    return int(sims[0]), int(naos[0]) if naos else 0
 
 
 def votos_senado(saida: Path, vots: list[dict], rng: random.Random, prazo: Prazo,
@@ -509,7 +511,9 @@ def votos_senado(saida: Path, vots: list[dict], rng: random.Random, prazo: Prazo
         if m and pc:
             c_ata.bateu((pc["sim"], pc["nao"]) == m, {
                 "o_que": f"{titulo} ({v['data']})", "votacao": v["id"], "site": f"Sim {pc['sim']} · Não {pc['nao']}",
-                "oficial": f"Sim {m[0]} · Não {m[1]} (ata)", "fonte": url})
+                "oficial": f"Sim {m[0]} · Não {m[1]} (ata)", "fonte": url,
+                # o site ainda mostrava o placar do painel (dado de antes da coleta passar a usar a ata)
+                **({"painel_difere_da_ata": True} if pc.get("fonte") != "ata" else {})})
     if c_ata.n == 0 and not c_ata.falhas:
         c_ata.motivo = "Nenhuma votação sorteada tinha o placar escrito na ata"
     return c_votos, c_ata
@@ -521,7 +525,15 @@ def _nome(s: str) -> str:
     return re.sub(r"[^A-Z0-9]+", " ", norm_name(s or "").upper()).strip()
 
 
-def empresas_receita(saida: Path, rng: random.Random, prazo: Prazo, buscar: Callable = get_json) -> Checagem:
+MINHA_RECEITA = "https://minhareceita.org/{cnpj}"
+
+
+def _assinatura(razao: str | None, socios: list[str]) -> str:
+    return _nome(razao or "") + " | " + "; ".join(sorted(socios))
+
+
+def empresas_receita(saida: Path, rng: random.Random, prazo: Prazo, buscar: Callable = get_json,
+                     cache_cnpj: Path | None = None) -> Checagem:
     c = Checagem(
         "empresas_receita", "empresas", "Nome e sócios de cada empresa",
         "O site lê a base de CNPJ da Receita Federal pelo Minha Receita. Sorteamos empresas e comparamos a razão social "
@@ -551,11 +563,22 @@ def empresas_receita(saida: Path, rng: random.Random, prazo: Prazo, buscar: Call
             continue
         nossos = sorted(_nome(s.get("nome")) for s in e.get("socios") or [])
         deles = sorted(_nome(s.get("nome_socio")) for s in r.get("qsa") or [])
-        ok_nome = _nome(e["empresa"].get("razao_social")) == _nome(r["razao_social"])
-        c.bateu(ok_nome and nossos == deles, {
-            "o_que": e.get("nome") or f.stem, "cnpj": f.stem,
-            "site": f"{e['empresa'].get('razao_social')} · sócios: {', '.join(nossos) or 'nenhum'}",
-            "oficial": f"{r['razao_social']} · sócios: {', '.join(deles) or 'nenhum'}", "fonte": url})
+        ok = _assinatura(e["empresa"].get("razao_social"), nossos) == _assinatura(r["razao_social"], deles)
+        item = {"o_que": e.get("nome") or f.stem, "cnpj": f.stem,
+                "site": f"{e['empresa'].get('razao_social')} · sócios: {', '.join(nossos) or 'nenhum'}",
+                "oficial": f"{r['razao_social']} · sócios: {', '.join(deles) or 'nenhum'}", "fonte": url}
+        if not ok:
+            # Por quê? Consultamos de novo o Minha Receita agora: se a consulta nova bate com a BrasilAPI, o site estava
+            # com uma cópia antiga; se não, as duas cópias da base da Receita estão em meses diferentes.
+            try:
+                agora = buscar(MINHA_RECEITA.format(cnpj=f.stem), timeout=40)
+                item["minha_receita_agora"] = _assinatura(agora.get("razao_social"), [_nome(x.get("nome_socio")) for x in agora.get("qsa") or []])
+                item["oficial_normalizado"] = _assinatura(r["razao_social"], deles)
+            except Exception:  # noqa: BLE001 - sem a consulta nova, a diferença fica sem motivo
+                pass
+            if cache_cnpj is not None:  # a próxima coleta consulta esta empresa de novo
+                (cache_cnpj / f"{f.stem}.json").unlink(missing_ok=True)
+        c.bateu(ok, item)
     if not com_dados:
         c.motivo = "Nenhuma página de empresa para sortear"
     return c
@@ -655,35 +678,39 @@ def resumo_secoes(checagens: list[Checagem], historico: dict[str, list[dict]], h
             status = "sem_segunda_fonte"
         elif "divergente" in st:
             status = "divergente"
-        elif st and all(s == "conferido" for s in st):
-            status = "conferido"
-        elif "conferido" in st:
+        elif st and all(s in ("conferido", "explicado") for s in st):
+            status = "explicado" if "explicado" in st else "conferido"
+        elif "conferido" in st or "explicado" in st:
             status = "parcial"
         else:
             status = "nao_conferido"
         hist = [h for h in historico.get(sid) or [] if h["data"] != hoje]
-        n, k = sum(c.n for c in cs), sum(c.k for c in cs)
+        n, k, sm = sum(c.n for c in cs), sum(c.k for c in cs), sum(c.sem_motivo for c in cs)
         if n:
-            hist.append({"data": hoje, "n": n, "k": k})
+            hist.append({"data": hoje, "n": n, "k": k, "sem_motivo": sm})
         limite = (dt.date.fromisoformat(hoje) - dt.timedelta(days=DIAS_HISTORICO)).isoformat()
         hist = sorted((h for h in hist if h["data"] >= limite), key=lambda h: h["data"])
         n_ac, k_ac = sum(h["n"] for h in hist), sum(h["k"] for h in hist)
         em = erro_maximo(n_ac, k_ac)
+        # Barreira: diferenças sem motivo demais hoje, numa amostra que dá para levar a sério, barram a publicação
+        barrar = n >= oficial.MIN_AMOSTRA and sm / n > oficial.LIMITE_SEM_MOTIVO
         secoes[sid] = {
             "titulo": titulo, "status": status, "checagens": [c.id for c in cs],
-            "hoje": {"conferidos": n, "divergentes": k},
+            "hoje": {"conferidos": n, "divergentes": k, "sem_motivo": sm},
             "acumulado": {"conferidos": n_ac, "divergentes": k_ac, "desde": hist[0]["data"] if hist else None,
                           "dias": len(hist),
                           # com 95% de confiança, pelo menos esta fração dos números está certa
                           "certos_min": None if em is None else round(1 - em, 6)},
             "historico": hist,
+            **({"barrar": True} if barrar else {}),
             **({"motivo": SEM_SEGUNDA_FONTE[sid]} if status == "sem_segunda_fonte" else {}),
         }
     return secoes
 
 
 def verificar(saida: Path, anterior: dict | None = None, minutos: float = 20, semente: str | None = None,
-              hoje: dt.date | None = None, chave: str | None = None, buscar: Callable = get_json) -> dict:
+              hoje: dt.date | None = None, chave: str | None = None, buscar: Callable = get_json,
+              cache_cnpj: Path | None = None) -> dict:
     hoje = hoje or dt.date.today()
     semente = semente or hoje.isoformat()  # amostra nova a cada dia, e repetível (mesma data, mesma amostra)
     rng = random.Random(f"segredos-abertos-{semente}")
@@ -708,7 +735,7 @@ def verificar(saida: Path, anterior: dict | None = None, minutos: float = 20, se
     rodar("cota_senado_ano", lambda: cota_senado(pols, random.Random(rng.random()), prazo, hoje, buscar, saida))
     rodar("votos_camara", lambda: votos_camara(saida, vots, random.Random(rng.random()), prazo, buscar))
     rodar("votos_senado", lambda: votos_senado(saida, vots, random.Random(rng.random()), prazo, buscar))
-    rodar("empresas_receita", lambda: empresas_receita(saida, random.Random(rng.random()), prazo, buscar))
+    rodar("empresas_receita", lambda: empresas_receita(saida, random.Random(rng.random()), prazo, buscar, cache_cnpj))
     rodar("emendas_autor", lambda: emendas_autor(saida, random.Random(rng.random()), prazo,
                                                  chave_portal() if chave is None else chave, buscar))
     rodar("financas_juros", lambda: financas_juros(saida))
@@ -721,7 +748,11 @@ def verificar(saida: Path, anterior: dict | None = None, minutos: float = 20, se
         "para_99_99": conferidos_para(0.9999),
         "secoes": resumo_secoes(cs, hist, hoje.isoformat()),
         "checagens": [c.json() for c in cs],
+        # o que cada motivo de diferença quer dizer e o que o site faz (aparece na página "Como conferimos")
+        "motivos": {**oficial.MOTIVOS, "sem_motivo": oficial.SEM_MOTIVO},
+        "limite_sem_motivo": oficial.LIMITE_SEM_MOTIVO, "min_amostra": oficial.MIN_AMOSTRA,
     }
+    out["barradas"] = [sid for sid, sec in out["secoes"].items() if sec.get("barrar")]
     return out
 
 
@@ -747,7 +778,7 @@ def _fmt(x: Any) -> str:
 
 
 def relatorio(v: dict) -> str:
-    rot = {"conferido": "conferido", "divergente": "DIVERGENTE", "parcial": "parcial", "nao_conferido": "não conferido",
+    rot = {"conferido": "conferido", "explicado": "diferenças explicadas", "divergente": "DIVERGENTE", "parcial": "parcial", "nao_conferido": "não conferido",
            "sem_segunda_fonte": "sem segunda fonte"}
     linhas = ["## Verificação independente (segunda fonte oficial)\n",
               "| Seção | Situação | Conferidos hoje | Divergentes hoje | Acumulado | Pelo menos certos (95%) |",
@@ -762,8 +793,13 @@ def relatorio(v: dict) -> str:
         extra = f" ({c['nao_conferidos']} não conferidos)" if c["nao_conferidos"] else ""
         motivo = f" — {c['motivo']}" if c["status"] == "nao_conferido" and c["motivo"] else ""
         linhas.append(f"- **{c['titulo']}**: {rot[c['status']]}, {c['conferidos']} conferidos, {c['divergentes']} divergentes{extra}{motivo}")
-        for d in c["divergencias"][:5]:
-            linhas.append(f"  - {d['o_que']}: site {_fmt(d['site'])}, fonte {_fmt(d['oficial'])} ({d['fonte']})")
+        for d in sorted(c["divergencias"], key=lambda d: d.get("motivo") is not None)[:8]:
+            m = v.get("motivos", {}).get(d.get("motivo") or "sem_motivo", {}).get("titulo", "")
+            linhas.append(f"  - {d['o_que']}: site {_fmt(d['site'])}, fonte {_fmt(d['oficial'])} ({d['fonte']}) — {m}")
+    if v.get("barradas"):
+        linhas += ["", f"**Publicação barrada**: diferenças sem motivo conhecido acima de "
+                       f"{v['limite_sem_motivo'] * 100:.0f}% em: {', '.join(v['secoes'][s]['titulo'] for s in v['barradas'])}. "
+                       "Entenda o motivo, registre em etl/sa_etl/oficial.py e rode de novo."]
     return "\n".join(linhas)
 
 
@@ -773,13 +809,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--anterior", default="", help="verificacao.json publicado antes (URL ou arquivo), para somar o histórico")
     ap.add_argument("--minutos", type=float, default=20)
     ap.add_argument("--semente", default=None)
+    ap.add_argument("--cache", type=Path, default=None,
+                    help="cache da coleta: empresas com diferença saem do cache e são consultadas de novo")
+    ap.add_argument("--ignorar-barreira", action="store_true",
+                    help="publica mesmo com diferenças sem motivo acima do limite (o site mostra a situação)")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     logging.getLogger("sa_etl").setLevel(logging.ERROR)  # novas tentativas de download não poluem o resumo
-    v = verificar(a.saida, _baixar_anterior(a.anterior), a.minutos, a.semente)
+    v = verificar(a.saida, _baixar_anterior(a.anterior), a.minutos, a.semente,
+                  cache_cnpj=a.cache / "cnpj" if a.cache else None)
     write_json(a.saida / "verificacao.json", v)
     print(relatorio(v))
-    # Não bloqueia a publicação: o site mostra a situação de cada seção, inclusive as divergências.
+    # Diferença com motivo conhecido não barra: o site já usa o número oficial e explica. Diferença sem motivo, acima
+    # do limite, barra a publicação (código 3): o site continua com a versão anterior até alguém entender o motivo.
+    if v["barradas"] and not a.ignorar_barreira:
+        return 3
     return 0
 
 

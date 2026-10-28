@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Explain, Loading, useData } from "../components/ui";
 import { corPartido, linkSeguro, reaisCurto, type AlmgAno, type AlmgIndice } from "../data";
 import { norm } from "./Home";
+import { AvisosFim } from "../components/Selo";
 
 type Ordem = "verba" | "projetos" | "aprovadas" | "emendas_indicado" | "nome";
 const ORDENS: { k: Ordem; nome: string }[] = [
@@ -62,9 +63,6 @@ export default function Assembleia() {
         </select>
       </div>
       {med && ordem !== "nome" && <p className="muted small">Deputado do meio da lista em {ano}: {valor(med)}.</p>}
-      {ordem === "verba" && data.verba_completa && data.verba_completa[ano] === false && (
-        <p className="alert small" role="note">Os gastos de {ano} ainda estão incompletos: a Assembleia só deixa consultar um deputado e um mês por vez, e estamos baixando aos poucos para não sobrecarregar o site dela. Os meses mais recentes vêm primeiro.</p>
-      )}
       <p className="muted small">{lista.length} deputado{lista.length === 1 ? "" : "s"}</p>
       <div className="list">
         {lista.map((d) => (
@@ -79,6 +77,11 @@ export default function Assembleia() {
         ))}
       </div>
       <p className="muted small">Fonte: <a href={linkSeguro(data.fontes.dados)} target="_blank" rel="noreferrer">dados abertos da ALMG ↗</a> e <a href={linkSeguro(data.fontes.verba)} target="_blank" rel="noreferrer">prestação de contas da verba indenizatória ↗</a>.</p>
+      <AvisosFim>
+        {ordem === "verba" && data.verba_completa && data.verba_completa[ano] === false && (
+          <p className="alert small" role="note">Os gastos de {ano} ainda estão incompletos: a Assembleia só deixa consultar um deputado e um mês por vez, e estamos baixando aos poucos para não sobrecarregar o site dela. Os meses mais recentes vêm primeiro.</p>
+        )}
+      </AvisosFim>
     </section>
   );
 }

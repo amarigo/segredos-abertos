@@ -408,6 +408,49 @@ test.describe("verificação independente", () => {
     expect(erros).toEqual([]);
   });
 
+  test("avisos e selos ficam no fim da página, depois dos números", async ({ page }) => {
+    const erros = vigiar(page);
+    await page.route("**/data/verificacao.json", (r) => r.fulfill({ json: verif }));
+    await page.route("**/data/meta.json", (r) => r.fulfill({ json: { ...meta, avisos: ["Votações do Senado: a API oficial não respondeu para 03/2025"] } }));
+    const noFim = () => page.evaluate(() => {
+      const fim = document.querySelector("[data-testid=avisos-fim]");
+      if (!fim) return false;
+      const resto = [...document.querySelectorAll("main section, main h1, main .grid")].filter((x) => !fim.contains(x));
+      return resto.length > 0 && resto.every((x) => !!(x.compareDocumentPosition(fim) & Node.DOCUMENT_POSITION_FOLLOWING));
+    });
+    for (const rota of ["", "#/politicos", `#/p/${pols[0].id}`, "#/votacoes", `#/v/${vots[0].id}`, "#/empresas", `#/e/${empresas[0].cnpj}`]) {
+      await page.goto(`./${rota}`);
+      await expect(page.locator("[data-testid=avisos-fim] .selo, [data-testid=avisos-fim] .selos").first()).toBeVisible();
+      expect(await noFim(), rota).toBe(true);
+    }
+    await page.goto("./");
+    await expect(page.locator("[data-testid=avisos-fim]")).toContainText("Dados incompletos");
+    expect(erros).toEqual([]);
+  });
+
+  test("número em revisão mostra o número oficial na página e o motivo na verificação", async ({ page }) => {
+    const erros = vigiar(page);
+    const p = pols[0];
+    const v2 = {
+      ...verif,
+      motivos: { senado_sem_tipo: { titulo: "Notas do Senado sem tipo de despesa", explica: "O total oficial não soma.", decisao: "O site usa o total oficial.", corrigido: true },
+                 sem_motivo: { titulo: "Diferença ainda sem motivo conhecido", explica: "Não sabemos.", decisao: "Em revisão.", corrigido: false } },
+      checagens: [{ ...verif.checagens[0], divergencias: [
+        { o_que: `${p.nome}, 2025`, politico: p.id, site: 1000, oficial: 900, motivo: null, fonte: "https://adm.senado.gov.br/x" },
+        { o_que: "Outra, 2025", politico: "sen-0", site: 1000, oficial: 900, motivo: "senado_sem_tipo", fonte: "https://adm.senado.gov.br/y" }] }],
+    };
+    await page.route("**/data/verificacao.json", (r) => r.fulfill({ json: v2 }));
+    await page.goto(`./#/p/${p.id}`);
+    const nota = page.locator("[data-testid=avisos-fim] [data-testid=em-revisao]");
+    await expect(nota).toContainText("Número em revisão");
+    await expect(nota).toContainText("900,00");
+    await page.goto("./#/verificacao");
+    await expect(page.locator("[data-motivo=sem_motivo]")).toContainText("Em revisão");
+    await expect(page.locator("[data-motivo=senado_sem_tipo]")).toContainText("Notas do Senado sem tipo de despesa");
+    await expect(page.locator("#motivo-senado_sem_tipo")).toContainText("Já corrigido no site");
+    expect(erros).toEqual([]);
+  });
+
   test("sem o arquivo de verificação, nenhum selo aparece (nunca 'conferido' por engano)", async ({ page }) => {
     await page.route("**/data/verificacao.json", (r) => r.fulfill({ status: 404, body: "" }));
     await page.goto("./#/votacoes");
