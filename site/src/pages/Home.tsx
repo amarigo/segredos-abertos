@@ -39,7 +39,7 @@ export default function Home() {
     <>
       <section className="hero">
         <span className="eyebrow">Cota parlamentar · {ano}</span>
-        <div className="big">{reaisCurto(meta.total_por_ano?.[ano] || 0)}</div>
+        <h1 className="big">{reaisCurto(meta.total_por_ano?.[ano] || 0)}</h1>
         <p>foi o que os {meta.contagens.politicos} {SITE.quem} pediram de reembolso com dinheiro público em {ano}.{meta.custo_por_ano?.[ano] ? <> Somando salários e equipe dos gabinetes, o custo conhecido chega a <strong>{reaisCurto(meta.custo_por_ano[ano])}</strong>.</> : null} Veja quanto cada um gastou, com quais empresas, quem são os donos dessas empresas e como cada um vota.</p>
         <form className="search" role="search" onSubmit={(e) => { e.preventDefault(); if (resultados[0]) nav(`/p/${resultados[0].id}`); }}>
           <label htmlFor="busca" className="muted small" style={{ flexBasis: "100%" }}>{SITE.busca}</label>

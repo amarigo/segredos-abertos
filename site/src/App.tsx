@@ -99,7 +99,8 @@ export default function App() {
             {!MG && <NavLink to="/incentivos">Incentivos</NavLink>}
             <NavLink to="/sobre">Como funciona</NavLink>
           </nav>
-          <AnoSeletor />
+          {/* A página de arrecadação tem os próprios anos (do Tesouro); o ano da cota no topo só confundiria */}
+          {pathname !== "/dinheiro" && <AnoSeletor />}
         </div>
       </header>
       <main className="wrap">

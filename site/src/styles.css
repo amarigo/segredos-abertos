@@ -15,17 +15,19 @@
   --hot: #1351b4;       /* destaque: azul gov.br (números grandes, bordas) */
   --hot-vivo: #ffcd07;  /* destaque sobre a faixa azul */
   --gold: #ffcd07;      /* ponto dourado do espectro, foco do teclado */
-  --gold-ink: #168821;  /* sobretítulos (eyebrow) */
+  --gold-ink: #137a1d;  /* sobretítulos (eyebrow); mais escuro que o verde gov.br para dar 4,5:1 no fundo claro */
   --accent: #1351b4;    /* links */
   --grid: #e8ebf0;
   --tint: #edf5ff;      /* fundo de caixas de explicação (azul bem claro) */
   /* bandeiras de status: verde (ok), amarelo (atenção), vermelho (alerta) */
-  --flag-g: #168821; --flag-y: #a06b00; --flag-r: #e52207;
+  --flag-g: #12701c; --flag-y: #855900; --flag-r: #c01c06;  /* texto sobre os fundos abaixo com 4,5:1 ou mais */
   --flag-g-bg: #e3f5e1; --flag-y-bg: #fff5c2; --flag-r-bg: #fde0db;
   /* séries (paleta validada) */
   --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
   --c4: #eda100; --c5: #e87ba4; --c6: #008300; --c7: #6250d6; --c8: #e34948; --c-outros: #b9b6ac;
   --sim: #1baf7a; --nao: #eb6834; --outro: #b9b6ac;
+  --sim-ink: #0d7a52; --nao-ink: #b4441a;  /* Sim e Não quando são texto (as cores acima ficam para barras) */
+  --foco: #071d41;      /* anel do teclado no fundo claro (o amarelo some nele) */
   --esq: #d03b3b; --dir: #2a78d6; --centro: #a9a69c;
   --alert-bg: #fff5c2; --alert-ink: #5c4300;
   --display: "Raleway", "Rawline", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -37,23 +39,25 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0b1220; --surface: #131c2e; --ink: #eef2f8; --ink-2: #c5cedd; --muted: #93a0b5; --line: #26324a;
-    --navy: #04112a; --navy-2: #020a1a; --verde: #36c35a; --amarelo: #ffcd07; --hot: #5992ed; --hot-vivo: #ffcd07; --gold: #ffcd07; --gold-ink: #36c35a;
+    --navy: #13284f; --navy-2: #020a1a; --verde: #36c35a; --amarelo: #ffcd07; --hot: #5992ed; --hot-vivo: #ffcd07; --gold: #ffcd07; --gold-ink: #36c35a;
     --accent: #7fb0ff; --grid: #1f2a40; --tint: #16233b;
     --flag-g: #36c35a; --flag-y: #f2c230; --flag-r: #ff6b5a;
     --flag-g-bg: #10301a; --flag-y-bg: #33290a; --flag-r-bg: #3a1512;
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --c4: #c98500; --c5: #d55181; --c6: #008300; --c7: #9085e9; --c8: #e66767; --c-outros: #4a4f5c; --sim: #199e70; --nao: #d95926; --outro: #4a4f5c;
     --esq: #e66767; --dir: #3987e5; --centro: #5c6070; --alert-bg: #33290a; --alert-ink: #ffe28a;
+    --sim-ink: #36c98f; --nao-ink: #ef7a4a; --foco: #ffcd07;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0b1220; --surface: #131c2e; --ink: #eef2f8; --ink-2: #c5cedd; --muted: #93a0b5; --line: #26324a;
-  --navy: #04112a; --navy-2: #020a1a; --verde: #36c35a; --amarelo: #ffcd07; --hot: #5992ed; --hot-vivo: #ffcd07; --gold: #ffcd07; --gold-ink: #36c35a;
+  --navy: #13284f; --navy-2: #020a1a; --verde: #36c35a; --amarelo: #ffcd07; --hot: #5992ed; --hot-vivo: #ffcd07; --gold: #ffcd07; --gold-ink: #36c35a;
   --accent: #7fb0ff; --grid: #1f2a40; --tint: #16233b;
   --flag-g: #36c35a; --flag-y: #f2c230; --flag-r: #ff6b5a;
   --flag-g-bg: #10301a; --flag-y-bg: #33290a; --flag-r-bg: #3a1512;
   --s1: #3987e5; --s2: #d95926; --s3: #199e70; --c4: #c98500; --c5: #d55181; --c6: #008300; --c7: #9085e9; --c8: #e66767; --c-outros: #4a4f5c; --sim: #199e70; --nao: #d95926; --outro: #4a4f5c;
   --esq: #e66767; --dir: #3987e5; --centro: #5c6070; --alert-bg: #33290a; --alert-ink: #ffe28a;
+    --sim-ink: #36c98f; --nao-ink: #ef7a4a; --foco: #ffcd07;
   color-scheme: dark;
 }
 
@@ -61,17 +65,21 @@
 html, body { margin: 0; }
 /* Raleway usa números "antigos" (de alturas diferentes) por padrão: aqui todos ficam da mesma altura */
 html { font-feature-settings: "lnum" 1; }
-body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body); font-variant-numeric: lining-nums; -webkit-font-smoothing: antialiased; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body); font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font-family: inherit; font-variant-numeric: lining-nums; }
 a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
 a:hover { text-decoration-thickness: 2px; }
-a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+/* na faixa azul do topo e no rodapé o amarelo aparece bem */
+.top :focus-visible, .projetos :focus-visible, footer :focus-visible { outline-color: var(--gold); }
+.person:focus-visible { outline-offset: -3px; }
 h1, h2, h3 { font-family: var(--display); line-height: 1.05; text-wrap: balance; margin: 0; }
 h1 { font-size: clamp(1.9rem, 4.6vw, 2.9rem); font-weight: 800; letter-spacing: -.01em; }
 h2 { font-size: clamp(1.35rem, 3vw, 1.7rem); font-weight: 800; }
 h3 { font-size: 1.12rem; font-weight: 700; line-height: 1.2; }
 p { margin: 0; max-width: 68ch; }
 strong, b { font-weight: 700; }
-.num, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.num, .mono { font-family: var(--mono); font-variant-numeric: lining-nums tabular-nums; }
 .muted { color: var(--muted); }
 .small { font-size: .875rem; }
 
@@ -111,7 +119,7 @@ section { display: grid; gap: 16px; min-width: 0; }
 
 /* Herói: sobretítulo, número enorme e texto de apoio */
 .hero { display: grid; gap: 14px; padding-block: 8px 4px; }
-.hero .big { font-family: var(--display); font-size: clamp(2.8rem, 9vw, 5.2rem); font-weight: 900; line-height: 1; color: var(--hot); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.hero .big { font-family: var(--display); font-size: clamp(2.8rem, 9vw, 5.2rem); font-weight: 900; line-height: 1; color: var(--hot); letter-spacing: -.01em; font-variant-numeric: lining-nums tabular-nums; }
 .hero p { font-size: 1.15rem; color: var(--ink-2); }
 
 .search { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -121,12 +129,17 @@ section { display: grid; gap: 16px; min-width: 0; }
 
 /* Fichas e grades */
 .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
-@media (max-width: 560px) { .grid { grid-template-columns: 1fr 1fr; gap: 10px; } .card { padding: 14px; } .stat .value { font-size: 1.55rem; } .stat .hint { font-size: .78rem; } }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio); padding: 18px; display: grid; gap: 8px; min-width: 0; }
-a.card { transition: border-color .15s, transform .15s; }
+@media (max-width: 560px) {
+  .grid { grid-template-columns: 1fr 1fr; gap: 10px; } .card { padding: 14px 12px; }
+  .stat .value { font-size: clamp(1.2rem, 6.2vw, 1.55rem); overflow-wrap: anywhere; } .stat .hint { font-size: .78rem; } .stat .label { letter-spacing: .04em; }
+  /* cartão sozinho na última linha ocupa a largura toda, em vez de ficar espremido pela metade */
+  .grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio); padding: 18px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+a.card { transition: border-color .15s, transform .16s cubic-bezier(.23, 1, .32, 1); }
 a.card:hover { border-color: var(--ink); }
 .stat .label { font-size: .78rem; color: var(--ink-2); text-transform: uppercase; letter-spacing: .07em; font-weight: 700; }
-.stat .value { font-family: var(--display); font-size: 1.9rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.stat .value { font-family: var(--display); font-size: 1.9rem; font-weight: 900; line-height: 1; font-variant-numeric: lining-nums tabular-nums; }
 .stat .hint { font-size: .85rem; color: var(--muted); }
 
 .person { display: grid; grid-template-columns: 48px 1fr auto; gap: 12px; align-items: center; text-decoration: none; color: inherit; padding: 12px 6px; border-bottom: 1px solid var(--line); }
@@ -139,8 +152,8 @@ a.card:hover { border-color: var(--ink); }
 
 /* Pílulas (chips) e status */
 .chip { display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink-2); white-space: nowrap; text-transform: uppercase; letter-spacing: .04em; }
-.chip.ok { color: var(--sim); border-color: currentColor; }
-.chip.nao { color: var(--nao); border-color: currentColor; }
+.chip.ok { color: var(--sim-ink); border-color: currentColor; }
+.chip.nao { color: var(--nao-ink); border-color: currentColor; }
 
 /* Perfil */
 .profile { display: grid; grid-template-columns: 112px 1fr; gap: 20px; align-items: center; }
@@ -204,19 +217,21 @@ button.link { background: none; border: 0; color: var(--accent); font: inherit; 
 footer { background: var(--navy); color: #c5d0e3; padding-block: 32px 48px; font-size: .88rem; }
 footer a { color: #fff; }
 footer .wrap { display: grid; gap: 6px; }
-@media (prefers-reduced-motion: no-preference) { .fill { transition: width .4s ease; } }
+@media (prefers-reduced-motion: no-preference) { .fill { transition: width .3s cubic-bezier(.23, 1, .32, 1); } }
 
 /* Seletor de ano no topo */
 .ano-sel { display: flex; align-items: center; gap: 6px; margin-left: auto; grid-row: 1; grid-column: 2; }
-.ano-sel .muted { color: #c5d0e3; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; font-size: .72rem; }
-.ano-sel select { background: rgba(255,255,255,.1); color: #fff; border: 1.5px solid rgba(255,255,255,.4); border-radius: 999px; padding: 5px 12px; font: inherit; font-weight: 700; }
-.ano-sel select option { color: #000; }
+.top .ano-sel .muted { color: #c5d0e3; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; font-size: .72rem; }
+.top .ano-sel select { background: rgba(255,255,255,.1); color: #fff; border: 1.5px solid rgba(255,255,255,.4); border-radius: 999px; padding: 5px 12px; font: inherit; font-weight: 700; }
+.top .ano-sel select option { color: #000; }
+main .ano-sel .muted { color: var(--muted); font-weight: 700; }
+main .ano-sel select { border-radius: 999px; padding: 5px 12px; font-weight: 700; }
 .toggle { display: inline-flex; gap: 4px; padding: 4px; background: var(--tint); border-radius: 999px; overflow: hidden; }
 .toggle button { border: 0; background: transparent; padding: 7px 16px; font: inherit; font-weight: 700; cursor: pointer; color: var(--ink-2); border-radius: 999px; }
 .toggle button:hover { color: var(--ink); }
 .toggle button[aria-pressed="true"] { background: var(--navy); color: #fff; }
 .kv { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; }
-.kv > :nth-child(even) { text-align: right; font-variant-numeric: tabular-nums; }
+.kv > :nth-child(even) { text-align: right; font-variant-numeric: lining-nums tabular-nums; }
 
 /* Pizza de gasto por partido */
 .pizza { display: grid; grid-template-columns: minmax(180px, 260px) 1fr; gap: 16px 24px; align-items: center; margin-bottom: 24px; }
@@ -392,7 +407,7 @@ tr.atual td { background: color-mix(in srgb, var(--gold) 12%, transparent); }
 .atu-veredito { display: grid; gap: 2px; }
 .atu-lado { font-weight: 700; }
 .atu-lado span { display: inline-block; width: 1.1em; }
-.atu-acima span { color: var(--sim); } .atu-abaixo span { color: var(--nao); } .atu-meio span { color: var(--muted); }
+.atu-acima span { color: var(--sim-ink); } .atu-abaixo span { color: var(--nao-ink); } .atu-meio span { color: var(--muted); }
 /* O político e o típico em duas barras na mesma escala */
 .atu-comp { display: grid; grid-template-columns: max-content 1fr max-content; align-items: center; gap: 4px 8px; margin: 2px 0; }
 .atu-comp-trilha { height: 12px; border-radius: 4px; background: color-mix(in srgb, var(--line) 70%, transparent); overflow: hidden; }
@@ -404,7 +419,7 @@ tr.atual td { background: color-mix(in srgb, var(--gold) 12%, transparent); }
 .cidade-nome { font-family: var(--display); font-size: 1.45rem; font-weight: 800; line-height: 1.1; }
 .stat .value.cidade-quem { font-size: 1.3rem; line-height: 1.2; }
 .partido-tag { white-space: nowrap; font-weight: 600; }
-.txt-sim { color: var(--sim); } .txt-nao { color: var(--nao); }
+.txt-sim { color: var(--sim-ink); } .txt-nao { color: var(--nao-ink); }
 .resumo-cidade { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; font-size: 1.02rem; }
 .cidade-foco { display: grid; gap: 8px; justify-items: start; }
 .historia { width: 100%; }
@@ -445,7 +460,7 @@ tr.atual td { background: color-mix(in srgb, var(--gold) 12%, transparent); }
 .status.amarelo { background: var(--flag-y-bg); color: var(--flag-y); }
 .status.vermelho { background: var(--flag-r-bg); color: var(--flag-r); }
 .medidor { display: grid; gap: 10px; }
-.medidor-num { font-family: var(--display); font-weight: 900; font-size: clamp(2.6rem, 8vw, 4.6rem); line-height: 1; color: var(--hot); font-variant-numeric: tabular-nums; }
+.medidor-num { font-family: var(--display); font-weight: 900; font-size: clamp(2.6rem, 8vw, 4.6rem); line-height: 1; color: var(--hot); font-variant-numeric: lining-nums tabular-nums; }
 .medidor-barra { height: 22px; border-radius: 999px; background: var(--grid); overflow: hidden; display: flex; }
 .medidor-barra > span { display: block; height: 100%; background: var(--hot); }
 .medidor-barra > span + span { opacity: .45; }
@@ -504,3 +519,54 @@ details > summary { cursor: pointer; font-weight: 700; }
 .proj-etapas span { overflow-wrap: anywhere; }
 .proj-col { display: grid; gap: 12px; }
 @media (max-width: 599px) { .proj-etapas span { display: none; } .proj-etapas { gap: 3px; } }
+
+/* ===== Acabamento (skills de design: impeccable, taste, Emil Kowalski). Só aparência: nenhum dado muda. ===== */
+/* Superfícies do navegador no padrão do site */
+:root { accent-color: var(--hot); }
+::selection { background: color-mix(in srgb, var(--amarelo) 60%, transparent); color: var(--ink); }
+.table-wrap, .fluxo { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+/* O topo fixo não cobre o item que recebe o foco do teclado */
+@media (min-width: 700px) { html { scroll-padding-top: 170px; } }
+
+/* Toque: áreas de pelo menos 40px nos links pequenos */
+.projetos a { padding: 10px 4px; }
+.linguas a { padding: 10px 10px; }
+button.chip { min-height: 36px; padding: 6px 14px; cursor: pointer; }
+details > summary { padding-block: 10px; }
+
+/* Menu e abas que rolam para o lado no celular: a borda direita some aos poucos, para mostrar que há mais */
+@media (max-width: 699px) {
+  .nav, .tabs { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); padding-right: 32px; }
+}
+
+/* Aba e botão escolhidos bem visíveis no modo escuro (azul-escuro sumia no fundo azul) */
+:root[data-theme="dark"] .tabs button[aria-selected="true"], :root[data-theme="dark"] .tabs a.ativa, :root[data-theme="dark"] .toggle button[aria-pressed="true"] { background: var(--accent); color: #071d41; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tabs button[aria-selected="true"], :root:not([data-theme="light"]) .tabs a.ativa, :root:not([data-theme="light"]) .toggle button[aria-pressed="true"] { background: var(--accent); color: #071d41; }
+}
+
+/* Resposta ao toque: botões, abas e cartões afundam um pouco ao apertar (rápido, com saída suave) */
+@media (prefers-reduced-motion: no-preference) {
+  .btn, .tabs button, .tabs a, .toggle button, button.chip, .nav a {
+    transition: transform .16s cubic-bezier(.23, 1, .32, 1), background-color .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .btn:active, .tabs button:active, .tabs a:active, .toggle button:active, button.chip:active { transform: scale(.97); }
+  a.card:active { transform: scale(.99); }
+}
+/* Sem mouse (celular), o "passar por cima" não fica grudado depois do toque */
+@media (hover: none) {
+  a.card:hover { border-color: var(--line); }
+  .person:hover { background: none; }
+  tbody tr:hover td { background: none; }
+}
+
+/* Foto que não carregou: não deixa o texto alternativo vazar do círculo */
+.person img, .profile img { font-size: 0; color: transparent; }
+
+/* Gráfico de gasto por mês: no celular rola dentro da caixa em vez de encolher os rótulos até ficarem ilegíveis */
+.gm svg { max-width: 760px; }
+@media (max-width: 560px) { .gm svg { min-width: 540px; } }
+/* Legenda da pizza não espalha os números pela tela inteira */
+.pizza .leg { max-width: 460px; }
+/* Barra dos projetos no celular: o último link não encosta na borda da tela */
+@media (max-width: 699px) { .projetos .wrap::after { content: ""; flex: 0 0 4px; } }
