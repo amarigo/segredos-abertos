@@ -339,7 +339,7 @@ nav.projetos a[aria-current="page"]{font-weight:700;text-decoration:none}
 :root{
   --bg:#F8F8F8; --panel:#F8F8F8; --fg:#1B2533; --muted:#4F5B6B; --line:#DCDFE5; --soft:#EDF5FF;
   --br-green:#168821; --br-ink:#071D41; --br-gold:#FFCD07; --br-blue:#1351B4; --focus:#FFCD07;
-  --sa-link:#1351B4; --sa-hot:#168821; --sa-hot-vivo:#FFCD07; --sa-faixa:#071D41; --sa-faixa-2:#04132E;
+  --sa-link:#1351B4; --sa-hot:#137A1D; --sa-hot-vivo:#FFCD07; --sa-faixa:#071D41; --sa-faixa-2:#04132E;
   --f-body:"Raleway", "Rawline", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-head:"Raleway", "Rawline", system-ui, sans-serif;
 }
@@ -405,6 +405,43 @@ select,input[type=number]{border-radius:999px;padding-inline:1rem}
 .tomenu{background:var(--sa-faixa)}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tomenu{color:#fff}}
 :root[data-theme="dark"] .tomenu{color:#fff}
+/* ===== Acabamento (skills de design: impeccable, taste, Emil Kowalski) ===== */
+/* foco: no fundo claro o amarelo sozinho some (1,4:1); ganha um contorno azul-escuro por dentro */
+main :focus-visible,nav.menu :focus-visible,.wrap > section :focus-visible{outline:3px solid var(--sa-faixa);outline-offset:2px;box-shadow:0 0 0 6px var(--focus)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) main :focus-visible,:root:not([data-theme="light"]) nav.menu :focus-visible{outline-color:var(--focus);box-shadow:none}}
+:root[data-theme="dark"] main :focus-visible,:root[data-theme="dark"] nav.menu :focus-visible{outline-color:var(--focus);box-shadow:none}
+/* laranja das etiquetas com contraste de texto (4,5:1) no fundo claro */
+:root{--warnc:#8F5600}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--warnc:#FFB547;--sa-faixa:#13284F}}
+:root[data-theme="dark"]{--warnc:#FFB547;--sa-faixa:#13284F}
+.hrow.sel .hb i{background:var(--warnc)}
+/* "ver mais" com seta, para se ver que abre */
+summary{list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"";flex:none;width:.45em;height:.45em;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(-45deg);margin-right:.7em}
+details[open]>summary::before{transform:rotate(45deg)}
+@media (prefers-reduced-motion:no-preference){summary::before{transition:transform .2s cubic-bezier(.23,1,.32,1)}}
+/* resposta ao toque: botões afundam um pouco ao apertar */
+.btn:not(.alt):hover{background:var(--br-blue);border-color:var(--br-blue)}
+@media (prefers-reduced-motion:no-preference){
+  .btn,.toggle button,.radios button,.menu button,.srow,header.top .size button{transition:transform .16s cubic-bezier(.23,1,.32,1),background-color .15s ease,color .15s ease}
+  .btn:active,.toggle button:active,.radios button:active,.menu button:active,.srow:active,header.top .size button:active{transform:scale(.97)}
+}
+/* textos de explicação: um respiro entre os parágrafos */
+#n-why{display:flex;flex-direction:column;gap:.75rem}
+/* números que mudam ficam com largura fixa, sem "pular" */
+.bigbar div,.who,.outbig,#headline,.fact b{font-variant-numeric:tabular-nums}
+/* superfícies do navegador */
+::selection{background:var(--br-gold);color:#071D41}
+html{scrollbar-color:var(--line) transparent}
+/* toque: links da barra dos projetos e de conferência com área maior */
+nav.projetos a{display:inline-block;padding-block:.5rem}
+.verify a,a.ext{display:inline-block;padding-block:.35rem}
+@media (max-width:640px){
+  .menu li{flex:1 1 calc(50% - .35rem)}
+  .toggle,.toggle button,.radios,.radios button{border-radius:14px}
+}
+@media (max-width:860px){.statelist{max-height:none;overflow:visible;padding-bottom:4.5rem}}
 </style>
 
 <nav class="projetos" aria-label="Projetos do Segredos Abertos">
@@ -915,6 +952,8 @@ const leader=o=>o.L>o.F?"Lula":"Flávio";
 const cls=o=>o.L>o.F?"c-l":"c-f";
 
 /* ---------- navegação ---------- */
+/* quem pede menos movimento no sistema não vê a página deslizar */
+const suave=()=>matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth";
 const VIEWS=["resultado","noite","diferencas","simulador","horario","tarde","fontes"];
 function go(id,scroll=true){
   if(!VIEWS.includes(id))id="resultado";
@@ -927,7 +966,9 @@ function go(id,scroll=true){
   if(id==="simulador"&&!$("smap").dataset.lab)buildMap($("smap"),uf=>{$("sa-uf").value=uf;resetA()});
   if(id==="resultado"&&!$("brmap").dataset.lab)buildMap($("brmap"),uf=>selectUF(uf,window.innerWidth<860));
   if(id==="horario"&&$("hmap").firstChild&&!$("hmap").dataset.lab)buildMap($("hmap"),uf=>{$("c-uf").value=uf;$("l-uf").value=uf;drawCut();loadList()});
-  if(scroll){const nav=document.querySelector("nav.menu");window.scrollTo({top:Math.max(0,$(id).offsetTop-nav.offsetHeight-8),behavior:"smooth"})}
+  /* o endereço guarda a seção: o botão voltar e um link compartilhado abrem nela */
+  if(scroll&&location.hash!=="#"+id)history.replaceState(null,"",location.pathname+location.search+"#"+id);
+  if(scroll){const nav=document.querySelector("nav.menu");window.scrollTo({top:Math.max(0,$(id).offsetTop-nav.offsetHeight-8),behavior:suave()})}
 }
 document.addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b)go(b.dataset.go)});
 
@@ -946,7 +987,7 @@ function cardify(root){
 (function(){const b=$("tomenu"),nav=document.querySelector("nav.menu");
   const upd=()=>{b.hidden=nav.getBoundingClientRect().bottom>0};
   window.addEventListener("scroll",upd,{passive:true});upd();
-  b.onclick=()=>{nav.scrollIntoView({behavior:"smooth",block:"start"});const f=nav.querySelector('[aria-current="page"]')||nav.querySelector("button");setTimeout(()=>f.focus({preventScroll:true}),400)};
+  b.onclick=()=>{nav.scrollIntoView({behavior:suave(),block:"start"});const f=nav.querySelector('[aria-current="page"]')||nav.querySelector("button");setTimeout(()=>f.focus({preventScroll:true}),400)};
 })();
 function factsHTML(o){
   return `<div class="fact"><span class="muted small">Eleitores aptos</span><b class="num">${fmt(o.apt)}</b></div>
@@ -1053,7 +1094,7 @@ function selectUF(uf,scroll){
     <div class="next"><button class="btn" type="button" id="toSim">Simular ${NAMES[uf]} →</button><button class="btn alt" type="button" id="toH">Urnas de ${NAMES[uf]} que fecharam tarde →</button></div>`;
   $("toSim").onclick=()=>{if(uf!=="ZZ"){$("sa-uf").value=uf}resetA();go("simulador")};
   $("toH").onclick=()=>{go("horario");$("c-uf").value=uf;$("l-uf").value=uf;drawCut();loadList()};
-  if(scroll)$("detail").scrollIntoView({behavior:"smooth",block:"start"});
+  if(scroll)$("detail").scrollIntoView({behavior:suave(),block:"start"});
 }
 $("zzbtn").onclick=()=>selectUF("ZZ",true);
 function drawAll(){drawTop();drawList();paintMain();if(selUF)selectUF(selUF)}

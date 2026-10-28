@@ -92,7 +92,7 @@ export function GastoMensal({ meses, ano, cor = "var(--s1)" }: { meses: { mes: n
   const y = (v: number) => padT + (H - padT - padB) * (1 - v / topo);
   const ticks = Array.from({ length: Math.round(topo / passo) + 1 }, (_, i) => i * passo);
   return (
-    <div style={{ overflowX: "auto" }}>
+    <div className="gm" style={{ overflowX: "auto" }}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Gasto por mês em ${ano}`}>
         {ticks.map((t) => (
           <g key={t}>

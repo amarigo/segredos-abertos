@@ -43,7 +43,7 @@
 .emd-motivo { display: block; margin-top: 2px; color: var(--ink, inherit); }
 .emd-pix-li { display: block !important; }
 .emd-pix summary { display: flex; justify-content: space-between; gap: 8px; cursor: pointer; }
-.emd-pix .link-like { color: var(--link, #1a5fb4); text-decoration: underline; white-space: nowrap; }
+.emd-pix .link-like { color: var(--accent); text-decoration: underline; white-space: nowrap; }
 .emd-pix ul { margin-top: 6px; }
 .emd-pix-item { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
 .emd-pix summary > span:first-child { min-width: 0; }
