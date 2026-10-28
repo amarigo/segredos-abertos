@@ -160,6 +160,15 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
     if len(despesas) != len(dados["despesas"]):  # uma linha de outro ano no arquivo deixaria os totais do site sem bater
         log.warning("Despesas: %d fora dos anos pedidos ou de parlamentar desconhecido foram descartadas",
                     len(dados["despesas"]) - len(despesas))
+    # Número oficial: notas que a fonte lista mas o total oficial não soma ficam fora das contas, à parte
+    fora_oficial = defaultdict(list)  # (politico, ano) -> notas
+    for d in despesas:
+        if d.get("fora_total_oficial"):
+            fora_oficial[(d["politico"], d["ano"])].append(d)
+    if fora_oficial:
+        despesas = [d for d in despesas if not d.get("fora_total_oficial")]
+        log.info("Notas fora do total oficial (oficial.py): %d, R$ %.2f", sum(len(x) for x in fora_oficial.values()),
+                 sum(d["valor"] for x in fora_oficial.values() for d in x))
     despesas = completar_com_oficial(despesas, politicos, dados.get("recursos") or {})
     votacoes = sem_repetidos(dados["votacoes"], "id")
     ids_v = {v["id"] for v in votacoes}
@@ -257,6 +266,14 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
             if atuacao:
                 extra["atuacao"] = atuacao
             por_ano[str(ano)] = {"total": det["total"], "grupos": det["grupos"], **extra}
+            fo = fora_oficial.get((p["id"], ano))
+            if fo:
+                extra["fora_do_total_oficial"] = {
+                    "motivo": fo[0]["fora_total_oficial"], "valor": round(sum(x["valor"] for x in fo), 2), "n": len(fo),
+                    "notas": [{"data": x["data"], "fornecedor": x["fornecedor"],
+                               "doc": mask_cpf(x["doc"]) if doc_kind(x["doc"]) == "cpf" else x["doc"],
+                               "valor": x["valor"], "url": x["url"], "detalhe": x.get("detalhe", "")}
+                              for x in sorted(fo, key=lambda x: x["data"])][:50]}
             detalhe[str(ano)] = {**det, "recursos": r or None, **extra}
         meus_votos = sorted(
             ({"votacao": v["votacao"], "voto": v["voto"],
@@ -385,7 +402,7 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         lista_v.append(r)
         write_json(saida / "v" / f"{v['id']}.json", {
             **{k: x for k, x in v.items() if k != "placar_oficial"}, "sim": r["sim"], "nao": r["nao"], "contagem": dict(cont),
-            **({"placar_casa": r["placar_casa"]} if po else {}),
+            **({"placar_casa": {**r["placar_casa"], **{k: po[k] for k in ("fonte", "painel") if k in po}}} if po else {}),
             "por_partido": {k: dict(c) for k, c in sorted(por_partido.items())},
             "por_lado": {k: dict(c) for k, c in por_lado.items()},
             "votos": sorted(({"politico": x["politico"], "nome": por_id[x["politico"]]["nome"], "partido": x["partido"],

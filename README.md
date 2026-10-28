@@ -89,6 +89,15 @@ para a fonte. As conferências se somam por 90 dias: com n números conferidos e
 de que pelo menos 1 − 0,05^(1/n) estão certos. Para afirmar 99,99% são precisos cerca de 30 mil números conferidos sem
 erro. Uma seção só aparece como conferida se todas as suas checagens rodaram e nenhuma achou diferença.
 
+**Número oficial** (`etl/sa_etl/oficial.py`): quando duas publicações oficiais mostram números diferentes, entendemos o
+motivo e o site usa o número oficial. Cada motivo entendido fica registrado em `oficial.py` (o que acontece e o que o
+site faz), e a coleta aplica a decisão: por exemplo, o total da cota do Senado não soma as notas sem tipo de despesa
+(como o total oficial do Senado), e o placar do Senado é o da ata quando ela difere do painel. A cada atualização, a
+verificação classifica cada diferença: com motivo conhecido, aparece explicada; sem motivo, o número fica "em revisão"
+na página, com o número oficial ao lado. Se uma seção tiver mais de 2% de diferenças sem motivo (com pelo menos 20
+números conferidos), a publicação é barrada e o site continua com a versão anterior, até o motivo ser entendido e
+registrado. Os avisos sobre os dados ficam sempre no fim de cada página, depois dos números.
+
 ## Próximas etapas
 
 1. Salários da equipe do gabinete (verba de gabinete).

@@ -4,7 +4,7 @@ import { Explain, Loading, ResultadoChip, useData } from "../components/ui";
 import { TEMAS, casaNome, dataBR, descricaoCurta, proposicaoNome, tipoVotacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 import { MG } from "../recorte";
-import Selo from "../components/Selo";
+import { AvisosFim } from "../components/Selo";
 
 /** As duas partes da seção de votações: o que já foi votado e o que está em andamento. */
 export function VotacoesAbas() {
@@ -33,7 +33,6 @@ export default function Votacoes() {
     <section>
       <VotacoesAbas />
       <h1>Votações</h1>
-        <Selo secao="votacoes" />
       <Explain>Votações nominais do plenário, em que cada parlamentar registra o próprio voto.{MG ? " Sim e Não mostram o placar da Casa inteira; ao lado, como votou a bancada de Minas Gerais." : " Sim e Não mostram o placar oficial da Casa inteira."} PEC é proposta de emenda à Constituição, PL é projeto de lei, MPV é medida provisória e PLP é projeto de lei complementar.</Explain>
       <div className="search">
         <input id="busca-votacao" aria-label="Buscar votação" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Assunto ou número (ex.: PEC 45)" />
@@ -72,6 +71,7 @@ export default function Votacoes() {
           </tbody>
         </table>
       </div>
+      <AvisosFim secao="votacoes" />
     </section>
   );
 }

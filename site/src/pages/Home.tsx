@@ -6,7 +6,7 @@ import { GastoPartidos } from "./Partidos";
 import { LADOS, ladoPelosVotos } from "../partidos";
 import { MG, SITE } from "../recorte";
 import type { CidadeResumo } from "../data";
-import { SelosResumo } from "../components/Selo";
+import { AvisosFim, SelosResumo } from "../components/Selo";
 
 export default function Home() {
   const { data: meta, error } = useData<Meta>("meta.json");
@@ -37,15 +37,6 @@ export default function Home() {
 
   return (
     <>
-      {meta.avisos && meta.avisos.length > 0 && (
-        <div className="alert" role="note">
-          <div>
-            <strong>Dados incompletos nesta atualização.</strong> Alguns sites oficiais não responderam na última coleta:
-            <ul>{meta.avisos.map((a) => <li key={a}>{a}</li>)}</ul>
-            {!MG && <p className="alert-nota">Tentamos de novo sozinhos a cada 2 horas, até todos os sites responderem.</p>}
-          </div>
-        </div>
-      )}
       <section className="hero">
         <span className="eyebrow">Cota parlamentar · {ano}</span>
         <div className="big">{reaisCurto(meta.total_por_ano?.[ano] || 0)}</div>
@@ -58,8 +49,6 @@ export default function Home() {
           <div className="list">{resultados.map((p) => <PessoaLinha key={p.id} p={p} />)}</div>
         )}
       </section>
-
-      {!MG && <SelosResumo />}
 
       {MG && (
         <section>
@@ -132,6 +121,18 @@ export default function Home() {
       )}
       {partidos && <GastoPartidos partidos={partidos} ano={ano} limite={10} />}
       <p className="muted small">Média de cota por deputado federal: {reais(medias.camara)} · por senador: {reais(medias.senado)} em {ano}.</p>
+      <AvisosFim>
+        {meta.avisos && meta.avisos.length > 0 && (
+          <div className="alert" role="note">
+            <div>
+              <strong>Dados incompletos nesta atualização.</strong> Alguns sites oficiais não responderam na última coleta:
+              <ul>{meta.avisos.map((a) => <li key={a}>{a}</li>)}</ul>
+              {!MG && <p className="alert-nota">Tentamos de novo sozinhos a cada 2 horas, até todos os sites responderem.</p>}
+            </div>
+          </div>
+        )}
+        {!MG && <SelosResumo />}
+      </AvisosFim>
     </>
   );
 }

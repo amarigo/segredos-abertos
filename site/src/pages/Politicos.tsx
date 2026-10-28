@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Loading, useAno, useData } from "../components/ui";
 import { atuacaoAtiva, reaisCurto, taxaPresenca, type Resumo } from "../data";
 import { PessoaLinha, norm } from "./Home";
-import Selo from "../components/Selo";
+import { AvisosFim } from "../components/Selo";
 
 type Ordem = "total" | "nome" | "posicao" | "presenca" | "autoria" | "relatadas" | "discursos";
 const ROTULO: Record<string, [string, string]> = { autoria: ["proposta", "propostas"], relatadas: ["relatoria", "relatorias"], discursos: ["discurso", "discursos"] };
@@ -48,7 +48,6 @@ export default function Politicos() {
   return (
     <section>
       <h1>Políticos</h1>
-        <Selo secao="cota" />
       <div className="search">
         <input id="filtro-nome" aria-label="Nome" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nome" />
         <select id="filtro-casa" aria-label="Casa" value={casa} onChange={(e) => setCasa(e.target.value)}>
@@ -72,6 +71,7 @@ export default function Politicos() {
       <div className="list">
         {lista.map((p) => <PessoaLinha key={p.id} p={p} extra={extra(p)} />)}
       </div>
+      <AvisosFim secao="cota" />
     </section>
   );
 }

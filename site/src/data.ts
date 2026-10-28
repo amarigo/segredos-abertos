@@ -79,6 +79,8 @@ export interface AnoDetalhe extends AnoResumo {
   maiores_notas: Nota[];
   sem_nota_meses?: { mes: number; valor: number; url: string }[];
   passagens_da_lista?: { n: number; valor: number };
+  /** Notas que a fonte publica mas que o total oficial não soma (por exemplo, Senado sem tipo de despesa); fora do total */
+  fora_do_total_oficial?: { motivo: string; valor: number; n: number; notas: { data: string; fornecedor: string; doc: string; valor: number; url: string; detalhe?: string }[] };
   recursos: Recursos | null;
 }
 export interface Fornecedor { doc: string; tipo: string; nome: string; valor: number; n: number; ficha: boolean; socios: string[] }
@@ -91,7 +93,7 @@ export interface Politico extends Resumo {
 export interface Proposicao { sigla: string; numero: string; ano: string; ementa: string; titulo: string; url: string }
 /** sim e não: votos listados (no site nacional, de quem está no mandato hoje; no Minas Nossa, da bancada de MG).
     placar_casa: placar oficial da Casa inteira, inclusive quem já saiu do cargo. */
-export interface VotacaoResumo { id: string; casa: Casa; data: string; descricao: string; aprovada: boolean; proposicao: Proposicao | null; sim: number; nao: number; temas?: string[]; placar_casa?: { sim: number; nao: number } }
+export interface VotacaoResumo { id: string; casa: Casa; data: string; descricao: string; aprovada: boolean; proposicao: Proposicao | null; sim: number; nao: number; temas?: string[]; placar_casa?: { sim: number; nao: number; fonte?: "ata"; painel?: { sim: number; nao: number } } }
 export const TEMAS = ["Mulheres", "Micro e pequenas empresas", "Saúde", "Educação", "Segurança pública", "Armas", "Meio ambiente",
   "Impostos e contas públicas", "Trabalho e aposentadoria", "Agropecuária", "Crianças e adolescentes", "Indígenas e minorias",
   "Energia e combustíveis", "Eleições e política"];
@@ -162,21 +164,28 @@ export interface Cidade {
 export interface CidadeResumo { id: string; nome: string; uf: string; prefeito: PessoaEleita | null; desde: number | null; vereadores: number | null }
 
 /* Verificação independente (etl/sa_etl/verificar.py, arquivo verificacao.json) */
-export type StatusVerificacao = "conferido" | "parcial" | "divergente" | "nao_conferido" | "sem_segunda_fonte";
-export interface ItemVerificado { o_que: string; site: number | string; oficial: number | string; fonte: string }
+export type StatusVerificacao = "conferido" | "explicado" | "parcial" | "divergente" | "nao_conferido" | "sem_segunda_fonte";
+export interface ItemVerificado {
+  o_que: string; site: number | string; oficial: number | string; fonte: string;
+  /** Por que é diferente: id em Verificacao.motivos, ou null quando ainda não sabemos (em revisão) */
+  motivo?: string | null;
+  politico?: string; cnpj?: string; votacao?: string;
+}
 export interface Checagem {
-  id: string; secao: string; titulo: string; como: string; fonte: string; status: "conferido" | "divergente" | "nao_conferido";
-  conferidos: number; divergentes: number; nao_conferidos: number; completados?: number; motivo: string;
+  id: string; secao: string; titulo: string; como: string; fonte: string; status: "conferido" | "explicado" | "divergente" | "nao_conferido";
+  conferidos: number; divergentes: number; sem_motivo?: number; nao_conferidos: number; completados?: number; motivo: string;
   divergencias: ItemVerificado[]; exemplos: ItemVerificado[];
 }
 export interface SecaoVerificada {
-  titulo: string; status: StatusVerificacao; checagens: string[]; motivo?: string;
-  hoje: { conferidos: number; divergentes: number };
+  titulo: string; status: StatusVerificacao; checagens: string[]; motivo?: string; barrar?: boolean;
+  hoje: { conferidos: number; divergentes: number; sem_motivo?: number };
   acumulado: { conferidos: number; divergentes: number; desde: string | null; dias: number; certos_min: number | null };
 }
+export interface MotivoDiferenca { titulo: string; explica: string; decisao: string; corrigido: boolean }
 export interface Verificacao {
   gerado_em: string; data: string; confianca: number; dias_mes_fechado: number; dias_historico: number; para_99_99: number;
   secoes: Record<string, SecaoVerificada>; checagens: Checagem[];
+  motivos?: Record<string, MotivoDiferenca>; limite_sem_motivo?: number; min_amostra?: number; barradas?: string[];
 }
 
 export interface Meta {

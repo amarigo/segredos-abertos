@@ -5,7 +5,7 @@ import { casaNome, cnpjFmt, corPartido, dataBR, linkSeguro, reais, reaisCurto, t
 import { DocsDoAutor, type AutorEmenda } from "../components/DocsEmendas";
 import { Pizza } from "./Partidos";
 import "./emendas.css";
-import Selo from "../components/Selo";
+import { AvisosFim } from "../components/Selo";
 
 /* Formato de data/emendas/{ano}.json (gerado por etl/sa_etl/emendas.py) */
 interface Valores { empenhado: number; pago: number }
@@ -89,7 +89,6 @@ export default function Emendas() {
       <section className="hero">
         <span className="eyebrow">Emendas parlamentares · {ano}</span>
         <h1>Para onde foi o dinheiro das emendas</h1>
-        <Selo secao="emendas" />
         <Explain>
           Todo ano, deputados federais e senadores decidem para onde vai uma parte do Orçamento do governo federal. Essa parte se chama <strong>emenda parlamentar</strong>.
           O dinheiro costuma ir para prefeituras, estados, hospitais e entidades da base eleitoral de quem fez a emenda. Aqui você vê para onde foi, para quê, quem mandou mais e que partido usa mais.
@@ -147,6 +146,7 @@ export default function Emendas() {
           <li>Quem pagou, as empresas e os documentos vêm dos arquivos diários de despesas do Portal da Transparência. Cada pagamento é ligado à nota de empenho (a reserva do dinheiro), que diz de qual emenda ele é. Só entram pagamentos de empenhos feitos a partir do ano anterior ao primeiro ano do site, por isso a soma pode ser menor que o total pago acima.{data.pagamentos?.ate && <> Dados de pagamento até {dataBR(data.pagamentos.ate)}.</>}</li>
         </ul>
       </section>
+      <AvisosFim secao="emendas" />
     </>
   );
 }

@@ -11,6 +11,7 @@ import calendar
 import datetime as dt
 import json
 import logging
+import re
 from pathlib import Path
 
 from .camara import normaliza_voto
@@ -102,6 +103,8 @@ def parse_ceaps(rows: list[dict], ids: set[str]) -> list[dict]:
             "valor": round(valor, 2),
             "url": link_lista(r.get("codSenador"), cat, int(to_float(r.get("ano")))),
             "link": "lista",
+            # Nota sem tipo de despesa: o total oficial do Senado não a soma (oficial.MOTIVOS["senado_sem_tipo"])
+            **({"fora_total_oficial": "senado_sem_tipo"} if not (r.get("tipoDespesa") or "").strip() else {}),
             "detalhe": " · ".join(x for x in (
                 f"{r['tipoDocumento']} nº {r['documento']}" if r.get("documento") and r.get("tipoDocumento") else
                 f"Documento nº {r['documento']}" if r.get("documento") else "",
@@ -157,6 +160,19 @@ def despesas(anos: list[int], ids: set[str], cache: Path | None = None) -> list[
     return out
 
 
+SIM_ATA = re.compile(r"\bSim\s*[-–:]?\s*(\d+)", re.I)
+NAO_ATA = re.compile(r"\bN[ãa]o\s*[-–:]?\s*(\d+)", re.I)
+
+
+def placar_da_ata(texto: str) -> tuple[int, int] | None:
+    """(sim, não) escritos na ata. A ata usa vários formatos ("Sim - 65; Não - 1", "Sim: 72, Pres.: 1, Total: 73").
+    Se o texto traz mais de um resultado (várias votações da mesma matéria), não dá para saber qual é: None."""
+    sims, naos = SIM_ATA.findall(texto or ""), NAO_ATA.findall(texto or "")
+    if len(sims) != 1 or len(naos) > 1 or (not naos and not re.search(r"\btotal\b", texto, re.I)):
+        return None
+    return int(sims[0]), int(naos[0]) if naos else 0
+
+
 def parse_votacoes(items: list[dict], ids: set[str]) -> tuple[list[dict], list[dict]]:
     votacoes, votos = [], []
     vistas = set()
@@ -187,13 +203,19 @@ def parse_votacoes(items: list[dict], ids: set[str]) -> tuple[list[dict], list[d
         # O Senado só preenche totalVotosSim/Nao em algumas votações; nas outras, contamos todos os votos da resposta
         todos = [normaliza_voto_senado(x.get("siglaVotoParlamentar") or "") for x in _as_list(v.get("votos"))]
         sim, nao = v.get("totalVotosSim"), v.get("totalVotosNao")
+        painel = None
         if sim is None or nao is None:
             sim, nao = todos.count("Sim"), todos.count("Não")
+            # Número oficial: se a ata da sessão traz outro placar, vale o da ata (oficial.MOTIVOS["senado_painel_ata"])
+            ata = placar_da_ata(((v.get("informeLegislativo") or {}).get("texto")) or "")
+            if ata and ata != (sim, nao):
+                painel = {"sim": sim, "nao": nao}
+                sim, nao = ata
         votacoes.append({
             "id": vid,
             "casa": "senado",
             # placar oficial do Senado (todos os senadores que votaram, inclusive os que já saíram do cargo)
-            **({"placar_oficial": {"sim": int(sim), "nao": int(nao)}}
+            **({"placar_oficial": {"sim": int(sim), "nao": int(nao), **({"fonte": "ata", "painel": painel} if painel else {})}}
                if str(sim).strip().isdigit() and str(nao).strip().isdigit() else {}),
             "data": (v.get("dataSessao") or "")[:10],
             "descricao": (v.get("descricaoVotacao") or "").strip(),
