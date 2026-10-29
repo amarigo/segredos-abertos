@@ -29,6 +29,8 @@ from .util import id_seguro
 
 FINS = {"pessoa", "estrangeiro", "sem_socios", "sem_dados", "limite", "ciclo"}
 CHAVES_LINK = {"url", "foto", "fonte"}
+# "fonte" também guarda rótulos, não links: no placar do Senado, "ata" diz que o número oficial é o da ata da sessão
+ROTULOS_FONTE = {"ata"}
 CPF_ABERTO = re.compile(r"^\d{11}$|^\d{3}\.\d{3}\.\d{3}-\d{2}$")
 CPF_NO_LINK = re.compile(r"(?:cnpjFornecedor|cpf)=\d{11}(?:&|$)", re.I)
 NOME_ARQ = re.compile(r"^[A-Za-z0-9_-]+\.json$")
@@ -75,7 +77,8 @@ def _varrer(x: Any, caminho: str, r: Resultado) -> None:
     """Procura links perigosos e CPFs sem máscara em qualquer lugar do JSON."""
     if isinstance(x, dict):
         for k, v in x.items():
-            if k in CHAVES_LINK and isinstance(v, str) and v and not re.match(r"^https?://", v, re.I):
+            if (k in CHAVES_LINK and isinstance(v, str) and v and not re.match(r"^https?://", v, re.I)
+                    and not (k == "fonte" and v in ROTULOS_FONTE)):
                 r.erro(f"Link que não é http(s) em {caminho}.{k}: {v[:80]!r}")
             elif k in CHAVES_LINK and isinstance(v, str) and CPF_NO_LINK.search(v):
                 r.erro(f"CPF dentro de um link em {caminho}.{k}")
