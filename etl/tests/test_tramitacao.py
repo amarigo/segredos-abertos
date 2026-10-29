@@ -98,3 +98,14 @@ def test_api_fora_do_ar_usa_a_ultima_lista(coleta):
     assert d["situacao_fontes"]["camara"] == "reserva"
     assert any(i["nome"] == "PL 101/2025" for i in d["itens"])
     assert any("Projetos em andamento" in a for a in coleta.ler(saida, "meta.json")["avisos"])
+
+
+def test_proposta_sem_detalhe_sai_da_agenda(coleta):
+    gov = coleta.usar(FakeGov())
+    gov.falhar("dadosabertos.camara.leg.br/api/v2/proposicoes/9001", "html")
+    saida = coleta.rodar(com_emendas=False, com_incentivos=False)
+    d = coleta.ler(saida, "tramitacao.json")
+    ids = {i["id"] for i in d["itens"]}
+    assert "cd-9001" not in ids
+    assert all(x in ids for ev in d["agenda"] for x in ev["itens"])
+    assert coleta.validar(saida).ok
