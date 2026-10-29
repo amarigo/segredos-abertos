@@ -30,10 +30,15 @@ site/             a página (HTML, CSS e JavaScript, sem build) e o desenho do m
    de Brasília (em `dados/brutos/<turno>turno_log/`). O registro não diz em quem foi o voto (o voto é secreto).
    `depois17.py` junta isso aos boletins. Só entram as urnas em que o total de votos do registro é igual ao
    comparecimento do boletim; se faltar o registro de alguma urna, o site não é publicado.
-7. `validar.py` confere antes de publicar: a soma das urnas tem que ser igual ao total oficial, voto por voto
+7. `locais.py` baixa o arquivo oficial "Eleitorado por local de votação - 2026" (Portal de Dados Abertos do TSE),
+   com o local de votação, a latitude e a longitude de cada seção, e guarda em `dados/tse/locais_votacao_2026.jsonl.gz`.
+   `mudancas.py` soma as urnas por cidade e por local de votação nos dois turnos (a soma das cidades tem que dar o
+   total oficial) e faz os testes estatísticos: valores impossíveis, a mesma urna nos dois turnos, último dígito e
+   comparecimento × votos.
+8. `validar.py` confere antes de publicar: a soma das urnas tem que ser igual ao total oficial, voto por voto
    (cada candidato, brancos, nulos e comparecimento), no Brasil, em cada estado e no exterior. Se não bater, o
    site da eleição não é publicado.
-8. `montar.py` põe os números na página e gera as planilhas por estado para baixar.
+9. `montar.py` põe os números na página e gera as planilhas por estado para baixar.
 
 O GitHub Action do Segredos Abertos roda os testes, monta e confere o site da eleição a partir de `dados/` e
 publica em `/eleicao2026/`. Uma falha aqui não trava o site nacional.
@@ -47,6 +52,7 @@ publica em `/eleicao2026/`. Uma falha aqui não trava o site nacional.
 | Urnas do 2º turno (horário e votos) | Boletim de urna digital de cada seção, no [site de resultados do TSE](https://resultados.tse.jus.br/oficial/app/index.html) |
 | Hora em que o TSE recebeu cada boletim | 1º turno: campo `DT_BU_RECEBIDO` do Boletim de Urna; 2º turno: registro de cada seção (`-aux.json`) no site de resultados |
 | Hora de cada voto (sem o voto) | Registro (log) de cada urna (`-log.jez`), no [site de resultados do TSE](https://resultados.tse.jus.br/oficial/app/index.html) |
+| Local de votação de cada seção, com latitude e longitude | [Eleitorado por local de votação - 2026, Portal de Dados Abertos do TSE](https://dadosabertos.tse.jus.br/dataset/eleitorado-2026) |
 | Fotos dos candidatos | Fotos oficiais do [site de resultados do TSE](https://resultados.tse.jus.br/oficial/app/index.html) |
 | Mapa | MapSVG, pacote [@svg-maps/brazil](https://www.npmjs.com/package/@svg-maps/brazil) (CC BY 4.0) |
 

@@ -31,10 +31,12 @@ def titulo(n):
     return ' '.join(w.capitalize() if w not in pequenas else w.lower() for w in n.split())
 
 
-def dados_site(oficial, resumos, noites=None, d17=None):
+def dados_site(oficial, resumos, noites=None, d17=None, mud=None):
     """O objeto D usado pela página. `noites`: a apuração ao longo da noite, por turno (noite.apuracao)."""
     D = {'cand': {}, 'r': {}, 'h': {}, 'noite': {r: n for r, n in (noites or {}).items() if n},
          'd17': {r: x for r, x in (d17 or {}).items() if x}}
+    if mud:
+        D['mud'] = mud
     for e, r in (('6257', '1'), ('6258', '2')):
         D['r'][r] = {}
         for uf, rec in oficial[e].items():

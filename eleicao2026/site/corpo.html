@@ -171,6 +171,28 @@ details{border-top:1px solid var(--line)}
 .ngrid .nhead{grid-area:head;margin:.4rem 0 0;max-width:44em}.ngrid #n-panel{grid-area:map}.ngrid #n-ctl{grid-area:ctl}.ngrid #n-graf{grid-area:graf}
 @media (max-width:860px){.ngrid{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "map" "ctl" "graf";grid-template-rows:none}}
 .linkbtn{background:none;border:0;padding:0;margin:0;font:inherit;font-weight:700;color:var(--br-ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+/* cidades: mapa à esquerda, cidade escolhida à direita */
+.mgrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:1.2rem 1.6rem;align-items:start;margin-top:.8rem}
+@media (max-width:860px){.mgrid{grid-template-columns:minmax(0,1fr)}}
+#mmap{width:100%;height:auto;display:block;max-height:40rem;touch-action:manipulation}
+#mmap path{fill:var(--soft);stroke:var(--line);stroke-width:.8;cursor:pointer}
+#mmap path.sel{stroke:var(--fg);stroke-width:1.6}
+#mmap circle{stroke:var(--panel);stroke-width:.35;cursor:pointer}
+#mmap circle.sel{stroke:var(--fg);stroke-width:1.6}
+#mmap circle:focus-visible{outline:none;stroke:var(--focus);stroke-width:2}
+#m-card .cmpt{margin-top:.4rem}
+#m-card h4{margin:.4rem 0 .2rem;font-size:1.2rem}
+.dualfig{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.2rem 1.6rem;align-items:start}
+@media (max-width:860px){.dualfig{grid-template-columns:minmax(0,1fr)}}
+.dualfig figure{margin:0}.dualfig figcaption{font-weight:700;margin-bottom:.4rem}
+#m-sc,.fpc{width:100%;max-width:22rem;height:auto;display:block;image-rendering:pixelated;border:1px solid var(--line)}
+.mtip{position:absolute;pointer-events:none;background:var(--panel);color:var(--fg);border:1.5px solid var(--fg);border-radius:6px;padding:.35rem .55rem;font-size:.85rem;max-width:16rem;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.test{border-top:1px solid var(--line);padding:.9rem 0 .4rem}
+.test h4{margin:0 0 .3rem;font-size:1.1rem;display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap}
+.test .pass{font-size:.8rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border:1.5px solid var(--apur,#1B7A43);color:var(--apur,#1B7A43);border-radius:4px;padding:0 .35rem}
+.test .lim{color:var(--muted);font-size:.92rem}
+.digs{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:1rem;margin:.5rem 0}
+.digs svg{width:100%;height:auto;display:block}
 .tgrid{grid-template-areas:"map graf";grid-template-rows:auto}.tgrid #t-mapp{grid-area:map}.tgrid #t-horap{grid-area:graf}
 @media (max-width:860px){.tgrid{grid-template-areas:"map" "graf"}}
 .nspeed{display:flex;align-items:center;gap:.4rem .8rem;flex-wrap:wrap;margin:.2rem 0 .6rem}
@@ -617,6 +639,67 @@ nav.projetos a{display:inline-block;padding-block:.5rem}
     <p class="small muted" id="cmp-ni"></p>
     <p class="verify" id="cmp-verify"></p>
   </div>
+
+  <div class="panel" id="m-cid">
+    <h3>Cidade por cidade: o que mudou do 1º para o 2º turno</h3>
+    <p>Cada bolinha é uma cidade. Quanto maior a bolinha, mais eleitores a cidade tem. Toque em uma bolinha (ou escolha na lista) para ver os números da cidade e de cada local de votação dela.</p>
+    <div class="toggle sm" role="group" aria-label="O que mostrar no mapa das cidades">
+      <button type="button" data-mmode="mud" aria-pressed="true">Para quem a cidade mudou</button>
+      <button type="button" data-mmode="win" aria-pressed="false">Quem venceu no 2º turno</button>
+      <button type="button" data-mmode="part" aria-pressed="false">Quantos foram votar</button>
+      <button type="button" data-mmode="dpart" aria-pressed="false">Mais ou menos gente votou</button>
+    </div>
+    <div class="mgrid">
+      <div class="mapwrap" id="m-mapw">
+        <svg id="mmap" role="group" aria-label="Mapa das cidades do Brasil"></svg>
+        <div class="maplegend" id="mlegend"></div>
+        <button class="btn alt" type="button" id="m-all" hidden>Ver o Brasil todo</button>
+      </div>
+      <div id="m-side">
+        <div class="field"><label for="m-uf">Estado</label><select id="m-uf"></select></div>
+        <div class="field"><label for="m-mun">Cidade</label><select id="m-mun"></select></div>
+        <div id="m-card" aria-live="polite"><p class="muted">Carregando as cidades…</p></div>
+      </div>
+    </div>
+    <div id="m-locp" hidden>
+      <h4 id="m-loch">Locais de votação</h4>
+      <p class="small muted" id="m-locn"></p>
+      <div class="tablewrap"><table class="cmpt" id="t-loc"><thead><tr><th>Local de votação</th><th>1º turno<span class="pp">Lula · Flávio</span></th><th>2º turno<span class="pp">Lula · Flávio</span></th><th>Mudou para</th></tr></thead><tbody></tbody></table></div>
+      <button class="btn alt" type="button" id="m-locmore" hidden>Mostrar mais locais</button>
+    </div>
+  </div>
+
+  <div class="panel" id="m-top">
+    <h3>Onde as mudanças foram maiores</h3>
+    <p>As cidades com pelo menos <span id="m-min"></span> eleitores, em ordem. Escolha o que quer ver e o lugar.</p>
+    <div class="field"><label for="m-rank">Mostrar</label><select id="m-rank">
+      <option value="sL">Cidades que mais mudaram para Lula</option>
+      <option value="sF">Cidades que mais mudaram para Flávio</option>
+      <option value="flip">Cidades que mudaram de lado</option>
+      <option value="pHi">Onde mais gente foi votar (2º turno)</option>
+      <option value="pLo">Onde menos gente foi votar (2º turno)</option>
+      <option value="dUp">Onde a participação mais subiu</option>
+      <option value="dDn">Onde a participação mais caiu</option>
+    </select></div>
+    <div class="field"><label for="m-ruf">Lugar</label><select id="m-ruf"></select></div>
+    <p id="m-rsum"></p>
+    <div class="tablewrap"><table class="cmpt" id="t-rank"><thead><tr><th>Cidade</th><th>1º turno</th><th>2º turno</th><th>Mudança</th></tr></thead><tbody></tbody></table></div>
+    <p class="small muted">“Parte de Lula” é a parte dos votos de Lula somando só os votos dos dois (Lula + Flávio). Assim o 1º e o 2º turno ficam comparáveis, mesmo com os outros candidatos no 1º turno. “Mudança” é a diferença em pontos percentuais. Participação: quem foi votar sobre os eleitores aptos.</p>
+  </div>
+
+  <div class="panel" id="m-dist">
+    <h3>A mudança foi parecida em quase todas as urnas</h3>
+    <p id="m-dtxt"></p>
+    <div class="dualfig">
+      <figure><figcaption>Cada urna no 1º turno × a mesma urna no 2º turno</figcaption><canvas id="m-sc" width="300" height="300" role="img"></canvas><div class="maplegend" id="m-sclg"></div></figure>
+    </div>
+  </div>
+
+  <div class="panel" id="m-fraude">
+    <h3>Os números mostram sinal de fraude?</h3>
+    <div class="notice" role="note" style="margin-top:0"><strong>O que a estatística consegue e o que não consegue dizer</strong><p>Fraudes conhecidas deixam marcas nos números: urnas com mais votos que eleitores, urnas que mudam de forma muito diferente das vizinhas, números “redondos” demais, urnas com quase todo mundo votando e todos no mesmo candidato. Fizemos esses testes em todas as urnas dos dois turnos. <b>Nenhuma dessas marcas apareceu.</b> Isso é uma evidência forte, mas a estatística não consegue provar que não houve nenhuma fraude: uma fraude pequena ou bem feita poderia não deixar marca. Por isso a confiança vem também de outras conferências do processo eleitoral, como o boletim impresso e afixado na porta de cada seção, o teste de integridade das urnas e as auditorias.</p></div>
+    <div id="m-tests"></div>
+  </div>
   <div class="panel">
     <h3>Quanto cada estado somou para a vitória</h3>
     <p>Cada barra é a diferença de votos entre os dois no 2º turno. Barras laranja à esquerda deram vantagem a Lula. Barras azuis à direita deram vantagem a Flávio. A soma de todos os estados e do exterior dá a vitória de Lula por <b class="num" id="d-m"></b> votos.</p>
@@ -847,7 +930,7 @@ nav.projetos a{display:inline-block;padding-block:.5rem}
         <span class="small">O que cada coluna quer dizer: <a href="dados/urnas/LEIA-ME.txt" target="_blank" rel="noopener">guia das colunas</a>.</span>
       </div>
       <a class="dlrow" href="dados/resultados_oficiais.json" download><b>Resultados oficiais por estado</b><span>Os totais do TSE (Brasil, cada estado e exterior), nos dois turnos, como vieram do site de resultados. JSON · 35 KB</span></a>
-      <a class="dlrow" href="dados/numeros_do_site.json" download><b>Todos os números desta página</b><span>O arquivo que alimenta os mapas e gráficos. JSON · 32 KB</span></a>
+      <a class="dlrow" href="dados/numeros_do_site.json" download><b>Todos os números desta página</b><span>O arquivo que alimenta os mapas e gráficos. JSON · 300 KB</span></a>
       <div class="dlrow"><b class="nolink">O código usado</b><span>Os programas que baixam os arquivos do TSE, leem cada boletim de urna, fazem as contas e conferem tudo com o oficial antes de publicar. Estão abertos no GitHub, dentro do projeto Segredos Abertos: <a class="ext" href="https://github.com/amarigo/segredos-abertos/tree/main/eleicao2026" target="_blank" rel="noopener">ver o código e o passo a passo</a>.</span>
         <span class="small codelist"><a class="ext" href="https://github.com/amarigo/segredos-abertos/blob/main/eleicao2026/etl/el_etl/turno1.py" target="_blank" rel="noopener">turno1.py</a> (1º turno: baixar e ler) · <a class="ext" href="https://github.com/amarigo/segredos-abertos/blob/main/eleicao2026/etl/el_etl/turno2.py" target="_blank" rel="noopener">turno2.py</a> (2º turno: baixar e ler cada boletim) · <a class="ext" href="https://github.com/amarigo/segredos-abertos/blob/main/eleicao2026/etl/el_etl/analisar.py" target="_blank" rel="noopener">analisar.py</a> (horários e contas) · <a class="ext" href="https://github.com/amarigo/segredos-abertos/blob/main/eleicao2026/etl/el_etl/validar.py" target="_blank" rel="noopener">validar.py</a> (conferência com o oficial) · <a class="ext" href="https://github.com/amarigo/segredos-abertos/tree/main/eleicao2026/dados/brutos" target="_blank" rel="noopener">boletins lidos</a> (dados brutos)</span></div>
     </div>
@@ -862,6 +945,8 @@ nav.projetos a{display:inline-block;padding-block:.5rem}
       <li><b>Hora de Brasília.</b> A urna grava a hora do lugar onde está. Convertemos para Brasília. Onde o fuso muda dentro do estado (oeste do Amazonas, Fernando de Noronha), usamos a hora em que as urnas da cidade abriram para saber o fuso.</li>
       <li><b>Conferência.</b> Somamos os votos de todas as urnas e comparamos com o total oficial. Bateu exatamente, nos dois turnos, no Brasil e em cada estado.</li>
       <li><b>Votos depois das 17h.</b> Baixamos o registro (log) de cada urna, publicado pelo TSE no site de resultados, e contamos os votos computados depois das 17h. O registro diz a hora de cada voto, mas não em quem foi, porque o voto é secreto. Em cada urna, o total de votos do registro foi comparado com o boletim.</li>
+      <li><b>Cidade por cidade e local por local.</b> Somamos as urnas de cada cidade e de cada local de votação, nos dois turnos. Para saber em que escola fica cada seção e onde a escola fica no mapa, usamos o arquivo oficial “Eleitorado por local de votação - 2026”, do Portal de Dados Abertos do TSE (latitude e longitude de cada local). O ponto da cidade no mapa é a média dos locais de votação dela; coordenadas muito longe do centro da cidade, que são erros do cadastro, ficam de fora. A soma das cidades bate com o total oficial.</li>
+      <li><b>Testes estatísticos.</b> Valores impossíveis; a mesma urna nos dois turnos (reta que liga a parte de Lula entre os dois no 1º e no 2º turno, urnas com pelo menos 20 votos nos dois, fora do padrão acima de 5 desvios-padrão); último dígito dos votos (urnas com 100 votos ou mais, esperado tirado da própria distribuição suavizada de 10 em 10, qui-quadrado com 9 graus de liberdade); comparecimento × votos (Klimek e outros, 2012).</li>
       <li><b>Com e sem as urnas que fecharam tarde.</b> Para cada horário de corte, separamos as urnas que fecharam depois dele e tiramos os votos delas do total oficial. É só uma conta para entender o peso dessas urnas. O resultado oficial não muda.</li>
     </ol>
   </div>
@@ -917,6 +1002,7 @@ nav.projetos a{display:inline-block;padding-block:.5rem}
         <li>26/10: fotos oficiais dos candidatos; seção “Apuração hora a hora”; tabela 1º turno × 2º turno; texto sobre a origem dos votos corrigido (o voto é secreto, então não dá para saber quem votou em quem).</li>
         <li>26/10: versão para celular; botões visíveis no modo escuro; na “Apuração hora a hora”, mapa e gráfico lado a lado e escolha da velocidade da animação.</li>
         <li>26/10: nova seção “Votos depois das 17h”, com a hora de cada voto tirada do registro (log) de todas as urnas; coluna Votos_depois_17h nas planilhas.</li>
+        <li>29/10: em “Onde mudou”, mapa de todas as cidades, números de cada cidade e de cada local de votação nos dois turnos, cidades onde mais mudou e onde mais e menos gente votou, e cinco testes estatísticos nas urnas.</li>
       </ul>
     </details>
   </div>
@@ -961,6 +1047,7 @@ function go(id,scroll=true){
   document.querySelectorAll(".menu button").forEach(b=>b.setAttribute("aria-current",b.dataset.go===id?"page":"false"));
   $("srcnote").hidden=id!=="resultado";
   if(id==="horario")initH();
+  if(id==="diferencas")initM();
   if(id==="tarde"){initT();if($("tmap").firstChild&&!$("tmap").dataset.lab)buildMap($("tmap"),tPick)}
   if(id==="noite"){initN();if($("nmap").firstChild&&!$("nmap").dataset.lab)buildMap($("nmap"),uf=>{nSel=uf;paintN();nUF()});nChart()}
   if(id==="simulador"&&!$("smap").dataset.lab)buildMap($("smap"),uf=>{$("sa-uf").value=uf;resetA()});
@@ -1131,6 +1218,231 @@ document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{mode=b.datase
   const flips=UFS.filter(uf=>leader(r1(uf))!==leader(r2(uf)));
   $("flips").innerHTML=flips.length?`<p>Nestes lugares, quem estava na frente no 1º turno perdeu no 2º turno:</p><ul class="steps">${flips.map(uf=>{const x=r1(uf),y=r2(uf);return `<li><b>${NAMES[uf]}</b>: no 1º turno, ${leader(x)} tinha ${pc(Math.max(x.L,x.F)/x.T)}; no 2º turno, <span class="${cls(y)}">${leader(y)} venceu com ${pc(Math.max(y.L,y.F)/y.T)}</span>.</li>`}).join("")}</ul><p class="small muted">Lembre: no 1º turno a porcentagem inclui os outros candidatos, por isso ninguém chega perto de 100%.</p>`:"<p>Nenhum estado mudou de lado.</p>";
 })();
+
+/* ---------- 3b. cidade por cidade, locais de votação e testes ---------- */
+/* cidade: [uf, código TSE, nome, x, y, aptos1, foram1, válidos1, Lula1, Flávio1, aptos2, foram2, válidos2, Lula2, Flávio2] */
+let MC=null,mInit=false,mMode="mud",mSel=null,mUF="BR",mZ="BR",mLoc=null,mLocN=0;
+const mcache={};
+const MMIN=10000;
+const sh=(l,f)=>l+f?l/(l+f):null;
+const s1=c=>sh(c[8],c[9]),s2=c=>sh(c[13],c[14]),sw=c=>{const a=s1(c),b=s2(c);return a===null||b===null?null:b-a};
+const p1=c=>c[5]?c[6]/c[5]:null,p2=c=>c[10]?c[11]/c[10]:null,dp=c=>{const a=p1(c),b=p2(c);return a===null||b===null?null:b-a};
+const pp=x=>(x>0?"+":x<0?"−":"")+Math.abs(x*100).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ponto"+(Math.abs(x*100)>=2||Math.abs(x*100)<1?"s":"");
+const mix=(c,p)=>`color-mix(in srgb, ${c} ${p}%, var(--panel))`;
+const GRAY="var(--neutral)";
+/* cada modo: limites, cores e rótulos da legenda. Mudança e participação: duas cores com cinza no meio */
+const MM={
+  mud:{v:sw,b:[-1,-.02,-.005,.005,.025,.045],c:[mix("var(--flavio)",100),mix("var(--flavio)",50),mix(GRAY,45),mix("var(--lula)",40),mix("var(--lula)",70),mix("var(--lula)",100)],
+    l:["2 pontos ou mais para Flávio","0,5 a 2 pontos para Flávio","quase igual (menos de 0,5 ponto)","0,5 a 2,5 pontos para Lula","2,5 a 4,5 pontos para Lula","4,5 pontos ou mais para Lula"],t:"Para quem a cidade mudou do 1º para o 2º turno"},
+  win:{v:c=>{const s=s2(c);return s===null?null:s},b:[0,.3,.4,.45,.5,.55,.6,.7],c:[mix("var(--flavio)",100),mix("var(--flavio)",78),mix("var(--flavio)",58),mix("var(--flavio)",38),mix("var(--lula)",38),mix("var(--lula)",58),mix("var(--lula)",78),mix("var(--lula)",100)],
+    l:["Flávio com 70% ou mais","Flávio 60 a 70%","Flávio 55 a 60%","Flávio 50 a 55%","Lula 50 a 55%","Lula 55 a 60%","Lula 60 a 70%","Lula com 70% ou mais"],t:"Quem venceu no 2º turno, e por quanto"},
+  part:{v:p2,b:[0,.7,.75,.8,.85],c:[mix("var(--br-green)",15),mix("var(--br-green)",35),mix("var(--br-green)",55),mix("var(--br-green)",78),mix("var(--br-green)",100)],
+    l:["menos de 70%","70 a 75%","75 a 80%","80 a 85%","85% ou mais"],t:"Parte dos eleitores que foi votar no 2º turno"},
+  dpart:{v:dp,b:[-1,-.03,-.01,.01,.03],c:[mix("var(--warnc)",100),mix("var(--warnc)",50),mix(GRAY,45),mix("var(--br-green)",50),mix("var(--br-green)",100)],
+    l:["caiu 3 pontos ou mais","caiu 1 a 3 pontos","quase igual","subiu 1 a 3 pontos","subiu 3 pontos ou mais"],t:"A participação subiu ou caiu do 1º para o 2º turno"}};
+function mIdx(m,x){const b=MM[m].b;for(let i=b.length-1;i>=0;i--)if(x>=b[i])return i;return 0}
+function mColor(c){const m=MM[mMode],x=m.v(c);return x===null?"var(--soft)":m.c[mIdx(mMode,x)]}
+const mNome=c=>c[0]==="ZZ"?`${c[2]} (exterior)`:`${c[2]} (${c[0]})`;
+const tit=s=>s.toLowerCase().replace(/(^|[\s\-'(])([a-zà-ÿ])/g,(a,b,c)=>b+c.toUpperCase()).replace(/\b(De|Da|Do|Das|Dos|E)\b/g,w=>w.toLowerCase());
+async function mGet(path){if(!mcache[path]){const r=await fetch(path);if(!r.ok)throw new Error(r.status);mcache[path]=await r.json()}return mcache[path]}
+function initM(){
+  if(mInit)return;mInit=true;
+  $("m-min").textContent=fmt(MMIN);
+  const ufs=`<option value="BR">Brasil inteiro</option>`+UFS.map(u=>`<option value="${u}">${NAMES[u]}</option>`).join("")+`<option value="ZZ">Exterior</option>`;
+  $("m-uf").innerHTML=ufs;$("m-ruf").innerHTML=ufs;
+  document.querySelectorAll("[data-mmode]").forEach(b=>b.onclick=()=>{mMode=b.dataset.mmode;document.querySelectorAll("[data-mmode]").forEach(x=>x.setAttribute("aria-pressed",x===b));mPaint()});
+  $("m-uf").onchange=()=>mPickUF($("m-uf").value);
+  $("m-mun").onchange=()=>{const i=$("m-mun").value;if(i!=="")mPick(+i,false)};
+  $("m-all").onclick=()=>mPickUF("BR");
+  $("m-rank").onchange=mRank;$("m-ruf").onchange=mRank;
+  $("m-locmore").onclick=()=>{mLocN+=25;mLocDraw()};
+  mTests();mDist();
+  mGet("mudancas/cidades.json").then(c=>{MC=c;mBuild();mFill();mRank();
+    const sp=MC.findIndex(x=>x[0]==="SP"&&x[2]==="SÃO PAULO");mPick(sp>=0?sp:0,false)})
+  .catch(()=>{$("m-card").innerHTML=`<p>Não foi possível carregar os dados das cidades agora. Tente de novo mais tarde.</p>`;$("m-top").hidden=true});
+}
+function mBuild(){
+  const svg=$("mmap");svg.setAttribute("viewBox",MAP.vb);svg.innerHTML="";
+  const g=document.createElementNS(SVGNS,"g"),d=document.createElementNS(SVGNS,"g");
+  for(const uf in MAP.p){const p=document.createElementNS(SVGNS,"path");p.setAttribute("d",MAP.p[uf]);p.dataset.uf=uf;p.addEventListener("click",()=>mPickUF(uf));g.appendChild(p)}
+  const ord=MC.map((c,i)=>i).filter(i=>MC[i][3]!==null).sort((a,b)=>MC[b][10]-MC[a][10]);
+  for(const i of ord){const c=MC[i],e=document.createElementNS(SVGNS,"circle");e.setAttribute("cx",c[3]);e.setAttribute("cy",c[4]);e.dataset.i=i;d.appendChild(e)}
+  svg.appendChild(g);svg.appendChild(d);
+  const tip=document.createElement("div");tip.className="mtip";tip.hidden=true;$("m-mapw").appendChild(tip);
+  d.addEventListener("click",e=>{const t=e.target.closest("circle");if(t)mPick(+t.dataset.i,false)});
+  d.addEventListener("pointermove",e=>{const t=e.target.closest("circle");if(!t||e.pointerType==="touch"){tip.hidden=true;return}
+    const c=MC[+t.dataset.i],w=$("m-mapw").getBoundingClientRect();tip.innerHTML=mTip(c);tip.hidden=false;
+    let x=e.clientX-w.left+14,y=e.clientY-w.top+14;if(x+tip.offsetWidth>w.width)x=e.clientX-w.left-tip.offsetWidth-14;tip.style.left=x+"px";tip.style.top=y+"px"});
+  d.addEventListener("pointerleave",()=>tip.hidden=true);
+  mZoom();mPaint();
+}
+function mTip(c){
+  const a=s1(c),b=s2(c),x=sw(c);
+  if(mMode==="part"||mMode==="dpart")return `<b>${mNome(c)}</b><br>Foram votar: ${pc(p1(c))} no 1º turno, ${pc(p2(c))} no 2º turno (${pp(dp(c))})`;
+  return `<b>${mNome(c)}</b><br>Parte de Lula entre os dois: ${a===null?"—":pc(a)} no 1º turno, ${b===null?"—":pc(b)} no 2º turno${x===null?"":` (${pp(x)})`}`;
+}
+function mZoom(){
+  const svg=$("mmap");let vb=MAP.vb.split(" ").map(Number),k=1;
+  if(mZ!=="BR"&&mZ!=="ZZ"){const p=svg.querySelector(`path[data-uf="${mZ}"]`);if(p){const b=p.getBBox();if(b.width){const pad=Math.max(b.width,b.height)*.06;
+    vb=[b.x-pad,b.y-pad,b.width+2*pad,b.height+2*pad];k=Math.max(1,Math.min(14,Math.max(613/vb[2],639/vb[3])))}}}
+  svg.setAttribute("viewBox",vb.join(" "));
+  svg.querySelectorAll("path").forEach(p=>{p.classList.toggle("sel",p.dataset.uf===mZ);p.style.strokeWidth=(.8/k)+"px"});
+  svg.querySelectorAll("circle").forEach(e=>{const c=MC[+e.dataset.i];e.setAttribute("r",((.55+Math.sqrt(c[10])/170)/Math.pow(k,.75)).toFixed(2));e.style.strokeWidth=(.35/k)+"px"});
+  $("m-all").hidden=mZ==="BR"||mZ==="ZZ";
+}
+function mPaint(){
+  if(!MC)return;const svg=$("mmap"),m=MM[mMode];
+  svg.querySelectorAll("circle").forEach(e=>{const i=+e.dataset.i;e.style.fill=mColor(MC[i]);e.classList.toggle("sel",i===mSel)});
+  const sel=svg.querySelector("circle.sel");if(sel)sel.parentNode.appendChild(sel);
+  $("mlegend").innerHTML=`<span class="small"><b>${m.t}</b></span>`+m.l.map((l,i)=>`<span><i style="background:${m.c[i]}"></i>${l}</span>`).join("");
+  svg.setAttribute("aria-label","Mapa das cidades. "+m.t+". Use as listas ao lado para escolher uma cidade.");
+}
+function mFill(){
+  const u=mUF==="BR"?null:mUF;
+  const L=MC.map((c,i)=>[c,i]).filter(([c])=>u?c[0]===u:true);
+  if(!u){$("m-mun").innerHTML=`<option value="">Escolha um estado primeiro</option>`;return}
+  $("m-mun").innerHTML=`<option value="">Escolha a cidade</option>`+L.sort((a,b)=>a[0][2].localeCompare(b[0][2],"pt")).map(([c,i])=>`<option value="${i}">${tit(c[2])}</option>`).join("");
+  if(mSel!==null&&MC[mSel][0]===u)$("m-mun").value=mSel;
+}
+function mPickUF(u){mUF=u;mZ=u;$("m-uf").value=u;mFill();if(MC){mZoom();mPaint()}}
+function mPick(i,scroll){
+  mSel=i;const c=MC[i];
+  if(mUF!==c[0]){mUF=c[0];$("m-uf").value=c[0];mFill()}
+  if(mZ!=="BR"&&mZ!==c[0]){mZ=c[0];mZoom()}
+  $("m-mun").value=i;mPaint();mCard(c);mLocLoad(c);
+  if(scroll){const nav=document.querySelector("nav.menu");window.scrollTo({top:Math.max(0,$("m-cid").offsetTop-nav.offsetHeight-8),behavior:suave()})}
+}
+function mStory(L1,F1,L2,F2,onde){
+  const lead=(l,f)=>l>f?`Lula teve <b class="num">${fmt(l-f)}</b> votos a mais que Flávio`:l<f?`Flávio teve <b class="num">${fmt(f-l)}</b> votos a mais que Lula`:"os dois empataram";
+  const w1=L1>F1?"L":L1<F1?"F":"=",w2=L2>F2?"L":L2<F2?"F":"=";
+  const virou=w1!==w2&&w1!=="="&&w2!=="="?` <b>${onde} mudou de lado:</b> ${w2==="L"?"Lula":"Flávio"} passou na frente.`:"";
+  return `No 1º turno, aqui ${lead(L1,F1)}. No 2º turno, ${lead(L2,F2)}.${virou}`;
+}
+function mCard(c){
+  const O1=c[7]-c[8]-c[9],BN1=c[6]-c[7],BN2=c[11]-c[12],A1=c[5]-c[6],A2=c[10]-c[11];
+  const dif=(x,y)=>(y-x>0?"+":y-x<0?"−":"")+fmt(Math.abs(y-x));
+  const cel=(x,p,l)=>x===null?`<td data-l="${l}">—</td>`:`<td data-l="${l}">${fmt(x)}${p===undefined||p===null?"":`<span class="pp">${pc(p)}</span>`}</td>`;
+  const row=(lab,x,y,px,py)=>`<tr><td>${lab}</td>${cel(x,px,"1º turno")}${cel(y,py,"2º turno")}<td data-l="Diferença">${y===null||x===null?"—":dif(x,y)}</td></tr>`;
+  const a=s1(c),b=s2(c),x=sw(c);
+  $("m-card").innerHTML=`<h4>${tit(c[2])} <span class="muted small">${c[0]==="ZZ"?"exterior":NAMES[c[0]]}</span></h4>
+  <p>${mStory(c[8],c[9],c[13],c[14],"Esta cidade")}</p>
+  ${x===null?"":`<p>Parte de Lula entre os dois: <b>${pc(a)}</b> no 1º turno e <b>${pc(b)}</b> no 2º turno. <span class="${x>=0?"c-l":"c-f"}"><b>${pp(x)}</b> ${x>=0?"para Lula":"para Flávio"}</span>.</p>`}
+  <div class="tablewrap"><table class="cmpt" id="t-mc"><thead><tr><th>${tit(c[2])}</th><th>1º turno</th><th>2º turno</th><th>Diferença</th></tr></thead><tbody>
+  ${row(`<span class="c-l">Lula (13)</span>`,c[8],c[13],c[7]?c[8]/c[7]:null,c[12]?c[13]/c[12]:null)}
+  ${row(`<span class="c-f">Flávio Bolsonaro (22)</span>`,c[9],c[14],c[7]?c[9]/c[7]:null,c[12]?c[14]/c[12]:null)}
+  ${row("Outros 10 candidatos",O1,null,c[7]?O1/c[7]:null)}
+  ${row("Brancos e nulos",BN1,BN2,c[6]?BN1/c[6]:null,c[11]?BN2/c[11]:null)}
+  ${row("Não foram votar",A1,A2,c[5]?A1/c[5]:null,c[10]?A2/c[10]:null)}
+  ${row("Eleitores",c[5],c[10])}
+  </tbody></table></div>
+  <p class="small muted">Lula e Flávio: parte dos votos válidos. Brancos e nulos: parte de quem foi votar. Não foram votar: parte dos eleitores. Soma de todas as urnas da cidade (boletins de urna do TSE). O cadastro de eleitores é o mesmo nos dois turnos; o número de eleitores da cidade pode mudar um pouco por causa do voto em trânsito, que o eleitor pode pedir só para um dos turnos.</p>`;
+  cardify($("t-mc"));
+}
+async function mLocLoad(c){
+  const u=c[0];$("m-locp").hidden=false;$("m-loch").textContent="Locais de votação de "+tit(c[2]);
+  $("m-locn").textContent="Carregando os locais de votação…";$("t-loc").querySelector("tbody").innerHTML="";$("m-locmore").hidden=true;
+  try{const L=await mGet(`mudancas/locais_${u}.json`);if(MC[mSel]!==c)return;
+    mLoc=L.filter(r=>r[0]===c[1]).map(r=>({r,x:(r[7]+r[8]&&r[12]+r[13])?r[12]/(r[12]+r[13])-r[7]/(r[7]+r[8]):null}));
+    mLoc.sort((a,b)=>(b.r[9]+b.r[4])-(a.r[9]+a.r[4]));mLocN=10;mLocDraw();
+  }catch(e){$("m-locn").textContent="Não foi possível carregar os locais de votação agora."}
+}
+function mLocDraw(){
+  const c=MC[mSel],rows=mLoc;let up=0,dn=0;rows.forEach(o=>{if(o.x>0)up++;else if(o.x<0)dn++});
+  $("m-locn").innerHTML=`${fmt(rows.length)} locais de votação (escolas, por exemplo), do maior para o menor. Em <b>${fmt(up)}</b> deles a parte de Lula entre os dois subiu do 1º para o 2º turno; em <b>${fmt(dn)}</b> caiu. Nome e bairro como estão no cadastro do TSE.`;
+  const m=(l,f)=>l>f?`<span class="pp c-l">Lula +${fmt(l-f)}</span>`:l<f?`<span class="pp c-f">Flávio +${fmt(f-l)}</span>`:`<span class="pp">empate</span>`;
+  $("t-loc").querySelector("tbody").innerHTML=rows.slice(0,mLocN).map(({r,x})=>`<tr><td>${tit(r[1])}${r[2]?`<span class="pp">${tit(r[2])} · zona ${r[3]}</span>`:`<span class="pp">zona ${r[3]}</span>`}</td>
+    <td data-l="1º turno">${r[4]?`${fmt(r[7])} · ${fmt(r[8])}${m(r[7],r[8])}`:"não votou aqui"}</td>
+    <td data-l="2º turno">${r[9]?`${fmt(r[12])} · ${fmt(r[13])}${m(r[12],r[13])}`:"não votou aqui"}</td>
+    <td data-l="Mudou para">${x===null?"—":`<span class="${x>=0?"c-l":"c-f"}"><b>${x>=0?"Lula":"Flávio"}</b></span><span class="pp">${pp(x)}</span>`}</td></tr>`).join("");
+  $("m-locmore").hidden=rows.length<=mLocN;cardify($("t-loc"));
+}
+function mRank(){
+  if(!MC)return;const k=$("m-rank").value,u=$("m-ruf").value;
+  let L=MC.map((c,i)=>({c,i})).filter(o=>(u==="BR"||o.c[0]===u)&&o.c[10]>=MMIN&&o.c[5]>=MMIN);
+  const F={sL:[o=>sw(o.c),-1],sF:[o=>sw(o.c),1],pHi:[o=>p2(o.c),-1],pLo:[o=>p2(o.c),1],dUp:[o=>dp(o.c),-1],dDn:[o=>dp(o.c),1]};
+  let tot=L.length;
+  if(k==="flip"){L=L.filter(o=>(o.c[8]>o.c[9])!==(o.c[13]>o.c[14])&&o.c[8]!==o.c[9]&&o.c[13]!==o.c[14]).sort((a,b)=>b.c[10]-a.c[10])}
+  else{const [f,s]=F[k];L=L.filter(o=>f(o)!==null);if(k==="sF")L=L.filter(o=>sw(o.c)<0);if(k==="dDn")L=L.filter(o=>dp(o.c)<0);L.sort((a,b)=>s*(f(a)-f(b)))}
+  const n=L.length;L=L.slice(0,20);
+  const lugar=u==="BR"?"no Brasil":u==="ZZ"?"no exterior":"em "+NAMES[u];
+  const lk=o=>`<button type="button" class="linkbtn" data-mi="${o.i}">${tit(o.c[2])}</button> <span class="muted small">${o.c[0]}</span>`;
+  const win=(l,f)=>l>f?`<span class="c-l">Lula ${pc(l/(l+f))}</span>`:`<span class="c-f">Flávio ${pc(f/(l+f))}</span>`;
+  let rows;
+  if(k==="sL"||k==="sF"||k==="flip")rows=L.map(o=>{const c=o.c,x=sw(c);return `<tr><td>${lk(o)}</td><td data-l="1º turno">${win(c[8],c[9])}</td><td data-l="2º turno">${win(c[13],c[14])}</td><td data-l="Mudança"><span class="${x>=0?"c-l":"c-f"}">${pp(x)} ${x>=0?"para Lula":"para Flávio"}</span></td></tr>`});
+  else rows=L.map(o=>{const c=o.c,x=dp(c);return `<tr><td>${lk(o)}</td><td data-l="1º turno">${pc(p1(c))}</td><td data-l="2º turno">${pc(p2(c))}</td><td data-l="Mudança">${pp(x)}</td></tr>`});
+  $("t-rank").querySelector("tbody").innerHTML=rows.join("")||`<tr><td colspan="4">Nenhuma cidade.</td></tr>`;
+  const th=$("t-rank").querySelectorAll("thead th");th[1].textContent=k.startsWith("s")||k==="flip"?"1º turno (entre os dois)":"Foram votar, 1º turno";th[2].textContent=k.startsWith("s")||k==="flip"?"2º turno":"Foram votar, 2º turno";
+  const txt={sL:`${fmt(tot)} cidades ${lugar} com pelo menos ${fmt(MMIN)} eleitores. As 20 em que a parte de Lula entre os dois mais subiu:`,
+    sF:`De ${fmt(tot)} cidades ${lugar} com pelo menos ${fmt(MMIN)} eleitores, em <b>${fmt(n)}</b> a parte de Flávio entre os dois subiu. ${n?"As que mais subiram:":""}`,
+    flip:`<b>${fmt(n)}</b> de ${fmt(tot)} cidades ${lugar} com pelo menos ${fmt(MMIN)} eleitores mudaram de lado: quem estava na frente entre os dois no 1º turno perdeu no 2º turno.${n>20?" As 20 maiores:":""}`,
+    pHi:`As 20 cidades ${lugar} (de ${fmt(tot)} com pelo menos ${fmt(MMIN)} eleitores) em que a maior parte dos eleitores foi votar no 2º turno:`,
+    pLo:`As 20 cidades ${lugar} (de ${fmt(tot)} com pelo menos ${fmt(MMIN)} eleitores) em que a menor parte dos eleitores foi votar no 2º turno:`,
+    dUp:`As 20 cidades ${lugar} (de ${fmt(tot)} com pelo menos ${fmt(MMIN)} eleitores) em que a participação mais subiu do 1º para o 2º turno:`,
+    dDn:`De ${fmt(tot)} cidades ${lugar} com pelo menos ${fmt(MMIN)} eleitores, em <b>${fmt(n)}</b> a participação caiu do 1º para o 2º turno. ${n?"As que mais caíram:":""}`};
+  $("m-rsum").innerHTML=txt[k];
+  $("t-rank").querySelectorAll("[data-mi]").forEach(b=>b.onclick=()=>mPick(+b.dataset.mi,true));
+  cardify($("t-rank"));
+}
+function mDist(){
+  const M=D.mud;if(!M){$("m-dist").hidden=true;$("m-fraude").hidden=true;return}
+  const C=M.cons,H=M.sw;let n=0;H.forEach(([,q])=>n+=q);
+  const qt=p=>{let a=0;for(const [b,q] of H){a+=q;if(a>=p*n)return b}return 0};
+  const lo=qt(.25),hi=qt(.75)+1,neg=H.filter(([b])=>b<0).reduce((s,[,q])=>s+q,0);
+  $("m-dtxt").innerHTML=`Comparamos a mesma urna nos dois turnos: <b class="num">${fmt(C.n)}</b> urnas com pelo menos ${C.min} votos nos dois candidatos nos dois turnos. Em metade delas, a parte de Lula entre os dois mudou de ${lo>=0?"+":"−"}${Math.abs(lo)} a +${hi} pontos. Em ${pc(neg/n)} das urnas ela caiu. Urnas em que Lula ia bem no 1º turno continuaram indo bem no 2º, e o mesmo para Flávio: a ligação entre os dois turnos é de <b>${C.r.toLocaleString("pt-BR")}</b> (numa escala em que 1 quer dizer “exatamente igual”).`;
+  heat($("m-sc"),M.sc,"Parte de Lula, 1º turno →","Parte de Lula, 2º turno →",true);
+  $("m-sc").setAttribute("aria-label","Gráfico de calor: cada urna no 1º turno (da esquerda para a direita) e no 2º turno (de baixo para cima). As urnas formam uma faixa estreita, perto da diagonal.");
+  $("m-sclg").innerHTML=`<span class="small">Cada quadradinho junta as urnas com números parecidos. Mais escuro: mais urnas. A linha tracejada é “igual nos dois turnos”.</span>`;
+}
+/* gráfico de calor 50×50 em canvas (contagens; cor mais escura = mais urnas, em escala logarítmica) */
+function heat(cv,g,xl,yl,diag){
+  const N=Math.round(Math.sqrt(g.length)),S=6,pad=52,W=N*S+pad+22,Hh=N*S+pad+6;cv.width=W;cv.height=Hh;
+  const ctx=cv.getContext("2d"),cs=getComputedStyle(document.documentElement),ink=cs.getPropertyValue("--br-ink").trim()||"#00672A",fg=cs.getPropertyValue("--muted").trim()||"#555",bg=cs.getPropertyValue("--panel").trim()||"#fff";
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,Hh);const mx=Math.log(1+Math.max(...g));
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const q=g[y*N+x];if(!q)continue;ctx.globalAlpha=.12+.88*Math.log(1+q)/mx;ctx.fillStyle=ink;ctx.fillRect(pad+x*S,(N-1-y)*S+6,S,S)}
+  ctx.globalAlpha=1;ctx.strokeStyle=fg;ctx.lineWidth=1;ctx.strokeRect(pad+.5,6.5,N*S,N*S);
+  if(diag){ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(pad,6+N*S);ctx.lineTo(pad+N*S,6);ctx.stroke();ctx.setLineDash([])}
+  ctx.fillStyle=fg;ctx.font="12px sans-serif";ctx.textAlign="center";
+  for(const t of [0,50,100]){ctx.fillText(t+"%",pad+t/100*N*S,Hh-18);ctx.save();ctx.translate(pad-5,6+N*S-t/100*N*S+4);ctx.textAlign="right";ctx.fillText(t+"%",0,0);ctx.restore()}
+  ctx.fillText(xl,pad+N*S/2,Hh-3);ctx.save();ctx.translate(11,6+N*S/2);ctx.rotate(-Math.PI/2);ctx.fillText(yl,0,0);ctx.restore();
+}
+function digSVG(d,tit2){
+  const W=260,Hh=150,y0=120;const mx=Math.max(...d.obs,...d.esp),sc=v=>v/mx*(y0-12);
+  let s=`<line x1="10" x2="${W-6}" y1="${y0}" y2="${y0}" stroke="var(--line)"/>`;
+  for(let i=0;i<10;i++){const x=12+i*24.5,h=sc(d.obs[i]),he=sc(d.esp[i]);
+    s+=`<rect x="${x}" y="${(y0-h).toFixed(1)}" width="18" height="${h.toFixed(1)}" rx="2" fill="var(--br-ink)" fill-opacity=".75"><title>Final ${i}: ${fmt(d.obs[i])} urnas (esperado ${fmt(d.esp[i])})</title></rect><line x1="${x-2}" x2="${x+20}" y1="${(y0-he).toFixed(1)}" y2="${(y0-he).toFixed(1)}" stroke="var(--fg)" stroke-width="2.5"/><text x="${x+9}" y="${y0+16}" text-anchor="middle" font-size="13" fill="var(--muted)">${i}</text>`}
+  return `<figure style="margin:0"><figcaption class="small"><b>${tit2}</b></figcaption><svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="${tit2}: finais dos números de votos. Barras: o que aconteceu; traços: o esperado.">${s}</svg><span class="small muted">Qui-quadrado ${d.qui2.toLocaleString("pt-BR")} · p = ${d.p.toLocaleString("pt-BR")}</span></figure>`;
+}
+function lista(rows,cab){return `<details><summary>Ver a lista (${fmt(rows.length)} urnas)</summary><div class="tablewrap"><table class="cmpt"><thead><tr>${cab.map(c=>`<th>${c}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div></details>`}
+function mTests(){
+  const M=D.mud;if(!M)return;const C=M.cons,o2=r2("BR"),marg=Math.abs(o2.L-o2.F);
+  const nT=M.n["1"]+M.n["2"];
+  const passou=`<span class="pass">✓ nada fora do normal</span>`;
+  const T=(t,ok,txt,lim)=>`<div class="test"><h4>${t} ${ok?passou:`<span class="pass" style="color:var(--warnc);border-color:var(--warnc)">! ver abaixo</span>`}</h4>${txt}<p class="lim"><b>O que este teste não mostra:</b> ${lim}</p></div>`;
+  const dg=M.dig,dok=["1","2"].every(t=>[dg[t]["13"],dg[t]["22"]].every(x=>!x||x.p>=.01));
+  const fp=M.fpc,uf2=new Set(fp["2"].lista.map(r=>r[0])).size,uf1=new Set(fp["1"].lista.map(r=>r[0])).size;
+  const fl=t=>{let l=0,f=0;fp[t].lista.forEach(r=>{l+=r[7];f+=r[8]});return [l,f]};const [fl2,ff2]=fl("2");
+  const kOk=C.k/C.n<.001&&C.kv<marg/100;
+  const ind=fp["2"].lista.filter(r=>/IND[IÍ]GENA|ALDEIA|QUILOMBO/i.test(r[4])).length;
+  $("m-tests").innerHTML=
+  T("1. A soma das urnas dá o resultado oficial",true,`<p>Somamos os boletins de todas as <b class="num">${fmt(nT)}</b> urnas dos dois turnos. A soma bate com o total oficial do TSE <b>voto por voto</b>: cada candidato, brancos, nulos e quem foi votar, no Brasil, em cada estado e no exterior. A soma das cidades desta seção também bate. Se não batesse, o site não seria publicado.</p>`,
+    `se o boletim de uma urna estivesse errado desde a origem. Para isso existe o boletim impresso, afixado na porta de cada seção, que qualquer pessoa pode comparar com o boletim publicado pelo TSE.`)+
+  T("2. Nenhum número impossível",M.imp["1"]+M.imp["2"]===0,`<p>Em <b>${M.imp["1"]+M.imp["2"]===0?"nenhuma":fmt(M.imp["1"]+M.imp["2"])}</b> das ${fmt(nT)} urnas votou mais gente do que o número de eleitores da seção, e em todas a soma dos votos é igual ao número de pessoas que votaram.</p>`,
+    `uma troca de votos entre candidatos que mantivesse o total igual.`)+
+  T("3. Cada urna votou de forma parecida nos dois turnos",kOk,`<p>A mesma urna, com os mesmos eleitores, costuma votar parecido nos dois turnos. A ligação entre a parte de Lula no 1º e no 2º turno, urna por urna, é de <b>${C.r.toLocaleString("pt-BR")}</b> (1 seria igual). Usando a tendência geral (cada urna mudou um pouco para Lula), ${pc(C.dentro3)} das urnas ficaram perto do esperado (a até 3 desvios-padrão, ou ${(3*C.dp).toLocaleString("pt-BR",{maximumFractionDigits:2})} pontos).</p>
+    <p>Fora do padrão (mais de ${C.lim} desvios-padrão): <b class="num">${fmt(C.k)}</b> urnas de ${fmt(C.n)} (${pc(C.k/C.n)}). Elas não puxam para um lado só: <span class="c-l">${fmt(C.kL)} mudaram mais para Lula</span> e <span class="c-f">${fmt(C.kF)} mudaram mais para Flávio</span>. Juntas tiveram <b class="num">${fmt(C.kv)}</b> votos nos dois candidatos no 2º turno, ${pc(C.kv/marg)} da diferença entre eles (${fmt(marg)} votos). Algumas mudanças grandes são esperadas em uma eleição deste tamanho, principalmente em seções pequenas.</p>
+    ${lista(C.fora.map(r=>`<tr><td>${tit(r[1])} <span class="muted small">${r[0]}</span><span class="pp">${tit(r[4])}</span></td><td data-l="Zona / seção">${r[2]} / ${r[3]}</td><td data-l="1º turno">${fmt(r[5])} · ${fmt(r[6])}</td><td data-l="2º turno">${fmt(r[7])} · ${fmt(r[8])}</td><td data-l="Desvios">${r[9]>0?"+":"−"}${Math.abs(r[9]).toLocaleString("pt-BR")}</td></tr>`),["Cidade e local","Zona / seção","1º turno<span class=\"pp\">Lula · Flávio</span>","2º turno<span class=\"pp\">Lula · Flávio</span>","Desvios (+ Lula, − Flávio)"])}`,
+    `uma mudança igual em todas as urnas, porque ela manteria a ligação entre os turnos. Para isso servem os boletins impressos (teste 1).`)+
+  T("4. Os finais dos números são os esperados",dok,`<p>Quando alguém inventa números à mão, alguns finais (como 0 e 5) aparecem demais. Olhamos o último algarismo dos votos de Lula e de Flávio em cada urna com 100 votos ou mais. As barras mostram quantas urnas tiveram cada final; o traço preto mostra o esperado. As barras ficam quase do mesmo tamanho dos traços. Em todos os casos a diferença está dentro do que o acaso explica (p maior que 0,01; quanto mais perto de 0, mais estranho seria).</p>
+    <div class="digs">${digSVG(dg["2"]["13"],"Lula, 2º turno")}${digSVG(dg["2"]["22"],"Flávio, 2º turno")}${digSVG(dg["1"]["13"],"Lula, 1º turno")}${digSVG(dg["1"]["22"],"Flávio, 1º turno")}</div>
+    <p class="small muted">O esperado não é 10% para cada final: há mais urnas com 120 votos do que com 129, então os finais menores aparecem um pouco mais, sem fraude nenhuma. Calculamos o esperado a partir dos próprios números, suavizados de 10 em 10 (teste de Beber e Scacco, 2012, com essa correção).</p>`,
+    `números alterados por um programa que escolhesse valores ao acaso.`)+
+  T("5. Não há urnas “cheias demais”",fp["2"].k/M.n["2"]<.001,`<p>Quando há enchimento de urna, aparece um grupo de urnas em um canto do gráfico abaixo: quase todo mundo votando e quase todos no mesmo candidato (método de Klimek e outros, revista PNAS, 2012). No gráfico, cada quadradinho junta urnas com comparecimento e votos parecidos. As urnas formam uma mancha contínua, sem grupo separado no canto.</p>
+    <div class="digs"><figure style="margin:0"><figcaption class="small"><b>2º turno</b></figcaption><canvas class="fpc" id="m-fp2" role="img" aria-label="Gráfico de calor do 2º turno: comparecimento e parte de Lula em cada urna"></canvas></figure><figure style="margin:0"><figcaption class="small"><b>1º turno</b></figcaption><canvas class="fpc" id="m-fp1" role="img" aria-label="Gráfico de calor do 1º turno: comparecimento e parte de Lula em cada urna"></canvas></figure></div>
+    <p>Urnas com 95% ou mais de comparecimento e 95% ou mais dos votos válidos para um só candidato: <b class="num">${fmt(fp["2"].k)}</b> de ${fmt(M.n["2"])} no 2º turno (${pc(fp["2"].k/M.n["2"])}), em ${uf2} estados, com <span class="c-l">${fmt(fl2)} votos para Lula</span> e <span class="c-f">${fmt(ff2)} para Flávio</span> (juntas, a diferença nelas é ${pc(Math.abs(fl2-ff2)/marg)} da diferença no Brasil). Pelo nome do local no cadastro do TSE, ${fmt(ind)} delas ficam em escolas indígenas, aldeias ou comunidades quilombolas. E <b class="num">${fmt(fp["1"].k)}</b> no 1º turno, em ${uf1} estados.</p>
+    ${lista(fp["2"].lista.map(r=>`<tr><td>${tit(r[1])} <span class="muted small">${r[0]}</span><span class="pp">${tit(r[4])}</span></td><td data-l="Zona / seção">${r[2]} / ${r[3]}</td><td data-l="Eleitores">${fmt(r[5])}</td><td data-l="Foram votar">${fmt(r[6])}</td><td data-l="Lula · Flávio">${fmt(r[7])} · ${fmt(r[8])}</td></tr>`),["Cidade e local (2º turno)","Zona / seção","Eleitores","Foram votar","Lula · Flávio"])}`,
+    `uma fraude pequena, espalhada por muitas urnas, que não chegasse perto do canto.`);
+  heat($("m-fp2"),M.fp["2"],"Foram votar →","Parte de Lula →",false);heat($("m-fp1"),M.fp["1"],"Foram votar →","Parte de Lula →",false);
+}
 
 function cmpTable(uf){
   const a=r1(uf),b=r2(uf),A=a.o,B=b.o;
