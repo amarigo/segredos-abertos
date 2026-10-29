@@ -95,3 +95,11 @@ def test_linha_de_comando(boa, capsys):
     saida, _ = boa
     assert V.main([str(saida)]) == 1  # poucos parlamentares para os mínimos de produção
     assert "Poucos parlamentares" in capsys.readouterr().out
+
+
+def test_rotulo_ata_no_placar_nao_e_link():
+    r = V.Resultado()
+    V._varrer({"placar_casa": {"sim": 67, "nao": 0, "fonte": "ata", "painel": {"sim": 66, "nao": 1}}}, "v/sf-1.json", r)
+    assert r.erros == []
+    V._varrer({"placar_casa": {"fonte": "javascript:alert(1)"}}, "v/sf-1.json", r)
+    assert r.erros

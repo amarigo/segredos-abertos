@@ -1,0 +1,56 @@
+/* Seção Corrupção */
+.grid.casos-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.caso-card { text-decoration: none; color: inherit; }
+.caso-card h3 { font-size: 1.2rem; }
+.caso-valor { font-family: var(--display); font-weight: 900; font-size: 1.15rem; color: var(--flag-r); }
+.caso-partidos { display: flex; flex-wrap: wrap; gap: 6px; }
+.partido-chip { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--tint); white-space: normal; }
+.partido-chip .partido-cor { margin-right: 0; }
+.campo-chip { display: inline-block; font-size: .72rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; border: 2px solid var(--line); text-transform: uppercase; letter-spacing: .04em; }
+
+.chip.sit { text-transform: none; letter-spacing: 0; }
+.sit-fim { color: var(--flag-g); background: var(--flag-g-bg); border-color: transparent; }
+.sit-parcial { color: var(--flag-y); background: var(--flag-y-bg); border-color: transparent; }
+.sit-aberto { color: var(--flag-r); background: var(--flag-r-bg); border-color: transparent; }
+.chip.status { text-transform: none; letter-spacing: 0; }
+.chip.status i, .placar-opcao i, .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+
+/* Placar */
+.placar-filtro { border: 1px solid var(--line); border-radius: var(--raio); padding: 10px 14px; margin: 12px 0; display: flex; flex-wrap: wrap; gap: 6px 16px; background: var(--surface); }
+.placar-opcao { display: inline-flex; align-items: center; gap: 6px; font-size: .9rem; cursor: pointer; min-height: 32px; }
+.placar { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.placar-linha { display: grid; grid-template-columns: 40px minmax(150px, 220px) 48px 1fr; gap: 6px 14px; align-items: start; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.placar-pos { color: var(--muted); font-weight: 700; padding-top: 2px; }
+.placar-total { font-family: var(--display); font-size: 1.6rem; font-weight: 900; line-height: 1; text-align: right; }
+.placar-detalhe { display: grid; gap: 4px; min-width: 0; }
+.placar-barra { display: flex; height: 18px; border-radius: 999px; overflow: hidden; gap: 2px; min-width: 6px; }
+@media (max-width: 640px) {
+  .placar-linha { grid-template-columns: 32px 1fr 44px; }
+  .placar-detalhe { grid-column: 1 / -1; }
+}
+
+/* Caso */
+.timeline { list-style: none; margin: 0; padding: 0 0 0 18px; border-left: 3px solid var(--line); display: grid; gap: 14px; }
+.timeline li { position: relative; display: grid; grid-template-columns: 110px 1fr; gap: 4px 14px; }
+.timeline li::before { content: ""; position: absolute; left: -26px; top: 5px; width: 13px; height: 13px; border-radius: 50%; background: var(--surface); border: 3px solid var(--hot); }
+.tl-data { font-weight: 700; color: var(--ink-2); }
+@media (max-width: 640px) { .timeline li { grid-template-columns: 1fr; } }
+
+.pessoas-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); margin-top: 12px; }
+.pessoa-card { gap: 10px; }
+.pessoa-topo { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: start; }
+.foto-pessoa, .foto-iniciais { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: var(--line); }
+.foto-iniciais { display: grid; place-items: center; font-weight: 800; font-size: 1.2rem; color: var(--ink-2); }
+.pessoa-nome { margin: 0; font-size: 1.05rem; }
+.pessoa-detalhe { margin: 0; }
+.pessoa-kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 0; }
+.pessoa-kv dt { font-weight: 700; color: var(--muted); }
+.pessoa-kv dd { margin: 0; }
+.fontes a { overflow-wrap: anywhere; }
+
+.visoes { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); margin-top: 12px; }
+.visao ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.visao-esq { border-top: 5px solid var(--esq); }
+.visao-dir { border-top: 5px solid var(--dir); }
+.visao-just { border-top: 5px solid var(--ink); }
+@media (max-width: 640px) { .grid.casos-grid { grid-template-columns: 1fr; } }

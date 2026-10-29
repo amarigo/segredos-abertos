@@ -150,7 +150,7 @@ test.describe("jornada", () => {
 
   test("todas as páginas do menu abrem sem erro", async ({ page }) => {
     const erros = vigiar(page);
-    for (const rota of ["dinheiro", "politicos", "empresas", "votacoes", "votacoes/em-andamento", "partidos", "emendas", "incentivos", "sobre"]) {
+    for (const rota of ["dinheiro", "politicos", "empresas", "votacoes", "votacoes/em-andamento", "partidos", "emendas", "incentivos", "corrupcao", "corrupcao/banco-master", "sobre"]) {
       await page.goto(`./#/${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();
       await expect(page.locator("main")).not.toContainText("Não foi possível");
@@ -158,10 +158,33 @@ test.describe("jornada", () => {
     expect(erros).toEqual([]);
   });
 
+  test("corrupção: placar responde aos filtros e cada caso mostra pessoas, fontes e as três visões", async ({ page }) => {
+    const erros = vigiar(page);
+    await page.goto("./#/corrupcao");
+    const linhas = page.locator(".placar-linha");
+    await expect(linhas.first()).toBeVisible();
+    const antes = await linhas.count();
+    // Só condenados: o placar encolhe ou fica igual
+    for (const nome of ["Condenados (cabe recurso)", "Condenação anulada", "Réus", "Indiciados", "Investigados"]) {
+      await page.getByRole("checkbox", { name: nome, exact: true }).uncheck();
+    }
+    expect(await linhas.count()).toBeLessThanOrEqual(antes);
+    await page.locator(".caso-card", { hasText: "Mensalão" }).click();
+    await expect(page.locator("h1")).toHaveText("Mensalão");
+    await expect(page.locator(".pessoa-card").first()).toBeVisible();
+    await expect(page.locator(".visao")).toHaveCount(3);
+    const links = await page.locator(".pessoa-card a[href^='http']").evaluateAll((as) => as.map((a) => a.getAttribute("href") || ""));
+    expect(links.length).toBeGreaterThan(10);
+    expect(links.every((h) => h.startsWith("https://"))).toBe(true);
+    await page.goto("./#/corrupcao/nao-existe");
+    await expect(page.locator("main")).toContainText("Caso não encontrado");
+    expect(erros).toEqual([]);
+  });
+
   test("sem rolagem lateral no celular", async ({ page }, info) => {
     test.skip(info.project.name !== "celular");
     vigiar(page);
-    for (const rota of ["", `#/p/${pols[0].id}`, "#/votacoes", "#/votacoes/em-andamento", "#/votacoes/em-andamento?aba=nova", "#/empresas", "#/incentivos", "#/dinheiro"]) {
+    for (const rota of ["", `#/p/${pols[0].id}`, "#/votacoes", "#/votacoes/em-andamento", "#/votacoes/em-andamento?aba=nova", "#/empresas", "#/incentivos", "#/dinheiro", "#/corrupcao", "#/corrupcao/mensalao", "#/corrupcao/banco-master"]) {
       await page.goto(`./${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();
       const largura = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
