@@ -38,6 +38,15 @@ clique em **Run workflow** e confirme com o branch `main`. Em cerca de 30 a 60 m
 | Funcionários da Câmara e do Senado por vínculo | [Arquivo de funcionários da Câmara](https://dadosabertos.camara.leg.br/arquivos/funcionarios/json/funcionarios.json) e [API de servidores do Senado](https://adm.senado.gov.br/adm-dadosabertos/api/v1/servidores/servidores) |
 | Inflação (IPCA) para comparar anos | [API do SIDRA, IBGE](https://sidra.ibge.gov.br/tabela/1737) |
 
+## Corrupção (/corrupcao)
+
+Os maiores escândalos (Mensalão, Sanguessugas, Petrolão, Lava Jato, Banco Master, Careca do INSS e políticos cassados),
+com linha do tempo, pessoas e a situação de cada uma na Justiça, delações e acordos, empresas, o que dizem a esquerda,
+a direita e a Justiça, e um placar por partido. Não existe API oficial que junte processos, delações e cassações, então
+o conteúdo é escrito à mão em `site/src/corrupcao/dados.ts`, cada item com o link da fonte original, e conferido na data
+de `ATUALIZADO_EM`. Esquerda, centro ou direita vêm da pesquisa de Bolognesi, Ribeiro e Codato (revista Dados, 2023).
+Os testes em `site/tests/corrupcao.test.ts` exigem fonte https em tudo e conferem as contas do placar.
+
 ## Rodar localmente
 
 ```bash

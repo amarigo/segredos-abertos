@@ -20,6 +20,8 @@ import Assembleia from "./pages/Assembleia";
 import DeputadoEstadualPage from "./pages/DeputadoEstadual";
 import GovernoPage from "./pages/Governo";
 import EmendasEstaduais from "./pages/EmendasEstaduais";
+import Corrupcao from "./pages/Corrupcao";
+import CasoCorrupcao from "./pages/CasoCorrupcao";
 import { MG, SITE } from "./recorte";
 import { AnoCtx, AnoSeletor, ErroNaPagina, useData } from "./components/ui";
 import { dataBR, type Meta } from "./data";
@@ -97,10 +99,11 @@ export default function App() {
             <NavLink to="/partidos">Partidos</NavLink>
             {!MG && <NavLink to="/emendas">Emendas</NavLink>}
             {!MG && <NavLink to="/incentivos">Incentivos</NavLink>}
+            {!MG && <NavLink to="/corrupcao">Corrupção</NavLink>}
             <NavLink to="/sobre">Como funciona</NavLink>
           </nav>
-          {/* A página de arrecadação tem os próprios anos (do Tesouro); o ano da cota no topo só confundiria */}
-          {pathname !== "/dinheiro" && <AnoSeletor />}
+          {/* A página de arrecadação tem os próprios anos (do Tesouro) e a de corrupção não depende de ano: o seletor só confundiria */}
+          {pathname !== "/dinheiro" && !pathname.startsWith("/corrupcao") && <AnoSeletor />}
         </div>
       </header>
       <main className="wrap">
@@ -118,6 +121,8 @@ export default function App() {
           {!MG && <Route path="/dinheiro" element={<Financas />} />}
           {!MG && <Route path="/emendas" element={<Emendas />} />}
           {!MG && <Route path="/incentivos" element={<Incentivos />} />}
+          {!MG && <Route path="/corrupcao" element={<Corrupcao />} />}
+          {!MG && <Route path="/corrupcao/:id" element={<CasoCorrupcao />} />}
           {MG && <Route path="/cidades" element={<Cidades />} />}
           {MG && <Route path="/cidade/:id" element={<CidadePage />} />}
           {MG && <Route path="/governo" element={<GovernoPage />} />}
