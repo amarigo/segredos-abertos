@@ -21,6 +21,9 @@ site/             a página (HTML, CSS e JavaScript, sem build) e o desenho do m
    uma linha por seção com a hora de abertura, a hora de encerramento e os votos para presidente.
 3. `turno2.py` faz o mesmo para o 2º turno, lendo o boletim de urna digital (.bu) de cada seção no site de
    resultados, porque o arquivo do Portal ainda não tinha saído. `ber.py` lê o formato do boletim (ASN.1/BER).
+   Quando o TSE publicou o bweb do 2º turno (27/10/2026), `bweb2.py` conferiu o SHA-512 de cada arquivo e comparou
+   seção por seção: votos, comparecimento, aptos e horários iguais nas 499.205 urnas. A hora de recebimento de cada
+   boletim passou a ser a do bweb (`DT_BU_RECEBIDO`); a antiga, do `-aux.json`, fica em `rec_aux`.
 4. `analisar.py` converte a hora de cada urna para Brasília (o fuso de cada cidade sai da hora em que as urnas
    abriram) e soma os votos das urnas que fecharam depois de cada horário de corte.
 5. `noite.py` refaz a apuração ao longo da noite: soma os boletins na ordem em que o TSE os recebeu (hora oficial de
@@ -49,8 +52,8 @@ publica em `/eleicao2026/`. Uma falha aqui não trava o site nacional.
 | --- | --- |
 | Resultados oficiais por estado | [Site de resultados do TSE](https://resultados.tse.jus.br/oficial/app/index.html) |
 | Urnas do 1º turno (horário e votos) | [Boletim de Urna, Portal de Dados Abertos do TSE](https://dadosabertos.tse.jus.br/dataset/resultados-2026-boletim-de-urna) |
-| Urnas do 2º turno (horário e votos) | Boletim de urna digital de cada seção, no [site de resultados do TSE](https://resultados.tse.jus.br/oficial/app/index.html) |
-| Hora em que o TSE recebeu cada boletim | 1º turno: campo `DT_BU_RECEBIDO` do Boletim de Urna; 2º turno: registro de cada seção (`-aux.json`) no site de resultados |
+| Urnas do 2º turno (horário e votos) | Boletim de urna digital de cada seção, no [site de resultados do TSE](https://resultados.tse.jus.br/oficial/app/index.html), conferido seção por seção com o [Boletim de Urna do 2º turno, Portal de Dados Abertos do TSE](https://dadosabertos.tse.jus.br/dataset/resultados-2026-boletim-de-urna) |
+| Hora em que o TSE recebeu cada boletim | 1º turno: campo `DT_BU_RECEBIDO` do Boletim de Urna; 2º turno: campo `DT_BU_RECEBIDO` do Boletim de Urna do 2º turno |
 | Hora de cada voto (sem o voto) | Registro (log) de cada urna (`-log.jez`), no [site de resultados do TSE](https://resultados.tse.jus.br/oficial/app/index.html) |
 | Local de votação de cada seção, com latitude e longitude | [Eleitorado por local de votação - 2026, Portal de Dados Abertos do TSE](https://dadosabertos.tse.jus.br/dataset/eleitorado-2026) |
 | Fotos dos candidatos | Fotos oficiais do [site de resultados do TSE](https://resultados.tse.jus.br/oficial/app/index.html) |
