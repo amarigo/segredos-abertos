@@ -654,7 +654,17 @@ def coletar(saida: Path, cache: Path, politicos: list[dict], hoje: dt.date | Non
     itens.sort(key=lambda i: (min(ordem[g] for g in i["grupos"]),
                               i["pauta"][0]["data"] if i["pauta"] else "",
                               -int(i["apresentada"].replace("-", "") or 0) if not i["pauta"] else 0))
-    agenda = sorted(ac + as_, key=lambda e: e["data"])
+    # A agenda só aponta para propostas da lista. Se a API não devolveu o detalhe de uma proposta, ela fica de fora
+    # da lista e também da agenda (antes a reunião continuava apontando para ela e a conferência barrava o site).
+    ids = {i["id"] for i in itens}
+    agenda = []
+    for ev in sorted(ac + as_, key=lambda e: e["data"]):
+        fora = [x for x in ev["itens"] if x not in ids]
+        if fora:
+            log.warning("Agenda %s: propostas sem detalhe na API ficam de fora: %s", ev.get("id"), fora)
+        ev = {**ev, "itens": [x for x in ev["itens"] if x in ids]}
+        if ev["itens"]:
+            agenda.append(ev)
     out = {"atualizado_em": hoje.isoformat(), "dias_pauta": DIAS_PAUTA, "dias_novas": DIAS_NOVAS,
            "etapas": ETAPAS, "o_que_e": O_QUE_E, "situacao_fontes": {"camara": sc or "ok", "senado": ss or "ok"},
            "fontes": {"camara": CAMARA, "senado": SENADO}, "itens": itens, "agenda": agenda}
