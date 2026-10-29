@@ -295,3 +295,40 @@ test("em inglês, as frases montadas com números também são traduzidas (1º �
   await expect(page.locator("body")).toContainText("million");
   await expect(page.locator("body")).not.toContainText("milhões");
 });
+
+test("cidade por cidade: mapa, cidade escolhida, locais de votação e testes estatísticos", async ({ page }) => {
+  const erros = semErros(page);
+  const cidades: (string | number | null)[][] = dados("mudancas/cidades.json");
+  // a soma das cidades é o total oficial, nos dois turnos
+  const soma = (i: number) => cidades.reduce((s, c) => s + (c[i] as number), 0);
+  expect(soma(8)).toBe(oficial["6257"].BR.cand["13"].v);
+  expect(soma(14)).toBe(oficial["6258"].BR.cand["22"].v);
+  await page.goto("./#diferencas");
+  await expect(page.locator("#mmap circle")).toHaveCount(cidades.filter((c) => c[3] !== null).length);
+  // a cidade escolhida no começo é São Paulo, com os números do arquivo
+  const sp = cidades.find((c) => c[0] === "SP" && c[2] === "SÃO PAULO")!;
+  await expect(page.locator("#m-card")).toContainText(fmt(sp[13] as number));
+  await expect(page.locator("#t-loc tbody tr").first()).toBeVisible();
+  // escolher outra cidade pela lista
+  await page.selectOption("#m-uf", "MG");
+  const bh = cidades.findIndex((c) => c[0] === "MG" && c[2] === "BELO HORIZONTE");
+  await page.selectOption("#m-mun", String(bh));
+  await expect(page.locator("#m-card")).toContainText(fmt(cidades[bh][14] as number));
+  await expect(page.locator("#m-loch")).toContainText("Belo Horizonte");
+  // os quatro jeitos de pintar o mapa trocam a legenda
+  await page.click('[data-mmode="part"]');
+  await expect(page.locator("#mlegend")).toContainText("foi votar");
+  // ranking e testes
+  await page.selectOption("#m-rank", "flip");
+  await expect(page.locator("#m-rsum")).toContainText("mudaram de lado");
+  await expect(page.locator("#m-tests .test")).toHaveCount(5);
+  await expect(page.locator("#m-tests .pass")).toHaveCount(5);
+  expect(erros).toEqual([]);
+});
+
+test("caos: se os dados das cidades não carregarem, avisa e os testes continuam", async ({ page }) => {
+  await page.route("**/mudancas/**", (r) => r.abort());
+  await page.goto("./#diferencas");
+  await expect(page.locator("#m-card")).toContainText("Não foi possível carregar");
+  await expect(page.locator("#m-tests .test")).toHaveCount(5);
+});

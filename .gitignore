@@ -2,6 +2,7 @@ node_modules/
 site/dist/
 site/public/data/
 etl/.cache/
+eleicao2026/etl/.cache/
 __pycache__/
 .pytest_cache/
 *.pyc
