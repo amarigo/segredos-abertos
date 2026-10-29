@@ -825,7 +825,7 @@ nav.projetos a{display:inline-block;padding-block:.5rem}
     <h3>Como fizemos esta conta</h3>
     <ul class="steps">
       <li><b>1º turno:</b> arquivos “Boletim de Urna” de cada estado, do <a href="https://dadosabertos.tse.jus.br/dataset/resultados-2026-boletim-de-urna" target="_blank" rel="noopener">Portal de Dados Abertos do TSE</a>. Eles têm a hora de abertura e de encerramento de cada urna.</li>
-      <li><b>2º turno:</b> o TSE ainda não publicou essa planilha. Então baixamos o boletim de urna digital de cada seção, no <a href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener">site de resultados do TSE</a>, e lemos a hora de encerramento gravada nele.</li>
+      <li><b>2º turno:</b> primeiro lemos o boletim de urna digital de cada seção, no <a href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener">site de resultados do TSE</a>. Em 27/10 o TSE publicou os arquivos “Boletim de Urna” do 2º turno no <a href="https://dadosabertos.tse.jus.br/dataset/resultados-2026-boletim-de-urna" target="_blank" rel="noopener">Portal de Dados Abertos do TSE</a>. Conferimos: a hora de abertura e de encerramento é igual nas 499.205 urnas.</li>
       <li><b>Fuso horário:</b> a urna grava a hora local. Convertemos para Brasília (Acre e oeste do Amazonas: +2h; Amazonas, Mato Grosso, Mato Grosso do Sul, Rondônia e Roraima: +1h; Fernando de Noronha: −1h). No exterior, usamos a hora local de cada país.</li>
       <li><b>Conferência:</b> somamos os votos de todas as urnas e comparamos com o total oficial do TSE. <span id="h-check"></span></li>
       <li>Seções “agregadas” (juntadas a outra seção no dia) não têm boletim próprio: os votos delas estão na seção principal.</li>
@@ -941,7 +941,7 @@ nav.projetos a{display:inline-block;padding-block:.5rem}
     <ol class="steps">
       <li><b>Resultados oficiais.</b> Baixamos do site de resultados do TSE o total de votos do Brasil, de cada estado e do exterior, nos dois turnos. Esses são os números da seção 1.</li>
       <li><b>Cada urna, 1º turno.</b> Baixamos do Portal de Dados Abertos do TSE o arquivo “Boletim de Urna” de cada estado. Ele traz a hora em que cada urna abriu e fechou e os votos dela.</li>
-      <li><b>Cada urna, 2º turno.</b> Esse arquivo ainda não tinha saído. Então baixamos, uma por uma, o boletim de urna digital de cada seção, publicado pelo TSE no site de resultados, e lemos a hora e os votos dentro dele.</li>
+      <li><b>Cada urna, 2º turno.</b> Antes de o arquivo oficial sair, baixamos, uma por uma, o boletim de urna digital de cada seção, publicado pelo TSE no site de resultados, e lemos a hora e os votos dentro dele. Em 27/10 o TSE publicou o arquivo “Boletim de Urna” do 2º turno (28 arquivos, um por estado e um do exterior). Conferimos o código SHA-512 de cada arquivo e comparamos seção por seção: nas 499.205 urnas, os votos de cada número, quem foi votar, os eleitores aptos e as horas de abertura e encerramento são iguais. Só a hora em que o TSE recebeu o boletim era diferente em 36.107 urnas (quase sempre poucos minutos); agora usamos a do arquivo oficial, como no 1º turno.</li>
       <li><b>Hora de Brasília.</b> A urna grava a hora do lugar onde está. Convertemos para Brasília. Onde o fuso muda dentro do estado (oeste do Amazonas, Fernando de Noronha), usamos a hora em que as urnas da cidade abriram para saber o fuso.</li>
       <li><b>Conferência.</b> Somamos os votos de todas as urnas e comparamos com o total oficial. Bateu exatamente, nos dois turnos, no Brasil e em cada estado.</li>
       <li><b>Votos depois das 17h.</b> Baixamos o registro (log) de cada urna, publicado pelo TSE no site de resultados, e contamos os votos computados depois das 17h. O registro diz a hora de cada voto, mas não em quem foi, porque o voto é secreto. Em cada urna, o total de votos do registro foi comparado com o boletim.</li>
@@ -1002,6 +1002,7 @@ nav.projetos a{display:inline-block;padding-block:.5rem}
         <li>26/10: fotos oficiais dos candidatos; seção “Apuração hora a hora”; tabela 1º turno × 2º turno; texto sobre a origem dos votos corrigido (o voto é secreto, então não dá para saber quem votou em quem).</li>
         <li>26/10: versão para celular; botões visíveis no modo escuro; na “Apuração hora a hora”, mapa e gráfico lado a lado e escolha da velocidade da animação.</li>
         <li>26/10: nova seção “Votos depois das 17h”, com a hora de cada voto tirada do registro (log) de todas as urnas; coluna Votos_depois_17h nas planilhas.</li>
+        <li>29/10: o TSE publicou o arquivo oficial do 2º turno. Conferimos as 499.205 urnas, uma por uma: tudo igual ao que o site já mostrava. A hora de recebimento dos boletins passou a vir desse arquivo, o que muda um pouco a “Apuração hora a hora” do 2º turno.</li>
         <li>29/10: em “Onde mudou”, mapa de todas as cidades, números de cada cidade e de cada local de votação nos dois turnos, cidades onde mais mudou e onde mais e menos gente votou, e cinco testes estatísticos nas urnas.</li>
       </ul>
     </details>
