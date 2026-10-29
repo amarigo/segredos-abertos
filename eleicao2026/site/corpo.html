@@ -185,7 +185,6 @@ details{border-top:1px solid var(--line)}
 .dualfig{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.2rem 1.6rem;align-items:start}
 @media (max-width:860px){.dualfig{grid-template-columns:minmax(0,1fr)}}
 .dualfig figure{margin:0}.dualfig figcaption{font-weight:700;margin-bottom:.4rem}
-#m-swing{width:100%;height:auto;display:block}
 #m-sc,.fpc{width:100%;max-width:22rem;height:auto;display:block;image-rendering:pixelated;border:1px solid var(--line)}
 .mtip{position:absolute;pointer-events:none;background:var(--panel);color:var(--fg);border:1.5px solid var(--fg);border-radius:6px;padding:.35rem .55rem;font-size:.85rem;max-width:16rem;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .test{border-top:1px solid var(--line);padding:.9rem 0 .4rem}
@@ -692,7 +691,6 @@ nav.projetos a{display:inline-block;padding-block:.5rem}
     <h3>A mudança foi parecida em quase todas as urnas</h3>
     <p id="m-dtxt"></p>
     <div class="dualfig">
-      <figure><figcaption>Quanto cada urna mudou (pontos percentuais)</figcaption><svg id="m-swing" role="img"></svg></figure>
       <figure><figcaption>Cada urna no 1º turno × a mesma urna no 2º turno</figcaption><canvas id="m-sc" width="300" height="300" role="img"></canvas><div class="maplegend" id="m-sclg"></div></figure>
     </div>
   </div>
@@ -1392,14 +1390,6 @@ function mDist(){
   const qt=p=>{let a=0;for(const [b,q] of H){a+=q;if(a>=p*n)return b}return 0};
   const lo=qt(.25),hi=qt(.75)+1,neg=H.filter(([b])=>b<0).reduce((s,[,q])=>s+q,0);
   $("m-dtxt").innerHTML=`Comparamos a mesma urna nos dois turnos: <b class="num">${fmt(C.n)}</b> urnas com pelo menos ${C.min} votos nos dois candidatos nos dois turnos. Em metade delas, a parte de Lula entre os dois mudou de ${lo>=0?"+":"−"}${Math.abs(lo)} a +${hi} pontos. Em ${pc(neg/n)} das urnas ela caiu. Urnas em que Lula ia bem no 1º turno continuaram indo bem no 2º, e o mesmo para Flávio: a ligação entre os dois turnos é de <b>${C.r.toLocaleString("pt-BR")}</b> (numa escala em que 1 quer dizer “exatamente igual”).`;
-  // histograma da mudança de cada urna
-  const W=600,Hh=230,x0=34,y0=196,lim=20,bw=(W-x0-10)/(2*lim+1);let mx=0;const bins={};H.forEach(([b,q])=>{const k=Math.max(-lim,Math.min(lim,b));bins[k]=(bins[k]||0)+q;mx=Math.max(mx,bins[k])});
-  let s=`<line x1="${x0}" x2="${W-6}" y1="${y0}" y2="${y0}" stroke="var(--line)"/>`;
-  for(let b=-lim;b<=lim;b++){const q=bins[b]||0,h=q/mx*(y0-14),x=x0+(b+lim)*bw;
-    s+=`<rect x="${(x+1).toFixed(1)}" y="${(y0-h).toFixed(1)}" width="${(bw-2).toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${b<0?"var(--flavio)":"var(--lula)"}"><title>${b===-lim?"−20 pontos ou menos":b===lim?"+20 pontos ou mais":`de ${b>=0?"+":"−"}${Math.abs(b)} a ${b+1>=0?"+":"−"}${Math.abs(b+1)} pontos`}: ${fmt(q)} urnas</title></rect>`}
-  for(const t of [-20,-10,0,10,20]){const x=x0+(t+lim)*bw+(t===0?0:bw/2);s+=`<text x="${x.toFixed(1)}" y="${y0+18}" text-anchor="middle" font-size="13" fill="var(--muted)">${t>0?"+":t<0?"−":""}${Math.abs(t)}</text>`}
-  s+=`<text x="${x0+4}" y="${y0+36}" font-size="13" fill="var(--flavio)" font-weight="700">← mudou para Flávio</text><text x="${W-8}" y="${y0+36}" text-anchor="end" font-size="13" fill="var(--lula)" font-weight="700">mudou para Lula →</text>`;
-  const sv=$("m-swing");sv.setAttribute("viewBox",`0 0 ${W} ${Hh+10}`);sv.innerHTML=s;sv.setAttribute("aria-label",`Histograma: em metade das urnas a parte de Lula mudou entre ${lo} e ${hi} pontos; ${pc(neg/n)} das urnas mudaram para Flávio.`);
   heat($("m-sc"),M.sc,"Parte de Lula, 1º turno →","Parte de Lula, 2º turno →",true);
   $("m-sc").setAttribute("aria-label","Gráfico de calor: cada urna no 1º turno (da esquerda para a direita) e no 2º turno (de baixo para cima). As urnas formam uma faixa estreita, perto da diagonal.");
   $("m-sclg").innerHTML=`<span class="small">Cada quadradinho junta as urnas com números parecidos. Mais escuro: mais urnas. A linha tracejada é “igual nos dois turnos”.</span>`;
