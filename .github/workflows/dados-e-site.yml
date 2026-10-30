@@ -246,6 +246,11 @@ jobs:
         run: |
           set -o pipefail
           python -m el_etl.build montar --saida ../../site/dist/eleicao2026 | tee -a "$GITHUB_STEP_SUMMARY"
+      # Terras Raras em Minas (/terras-raras/): planilhas escritas à mão em terras-raras/dados, cada linha com fonte e
+      # data (não há API oficial que junte projetos, donos e licenças). Uma falha aqui não trava o site nacional.
+      - name: "Terras Raras: montar o site em /terras-raras/"
+        continue-on-error: true
+        run: python terras-raras/gerar_pagina.py --site site/dist/terras-raras/index.html | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist

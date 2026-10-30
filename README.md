@@ -9,6 +9,7 @@ etl/          coletor em Python: baixa os dados oficiais e gera arquivos JSON
 site/         site e app (React + Vite, instalável no celular como PWA)
 mg/           Minas Nossa, o recorte de Minas Gerais (/mg/)
 eleicao2026/  Eleição 2026 Aberta: presidente, 1º e 2º turno, urna por urna, com dados do TSE (/eleicao2026/)
+terras-raras/ Terras Raras em Minas: quem explora terras raras em MG, licenças, dinheiro, leis e propostas (/terras-raras/)
 ```
 
 Um GitHub Action roda todo dia: baixa os dados, gera os JSON em `site/public/data/`, monta o site e publica no GitHub Pages.
@@ -46,6 +47,16 @@ a direita e a Justiça, e um placar por partido. Não existe API oficial que jun
 o conteúdo é escrito à mão em `site/src/corrupcao/dados.ts`, cada item com o link da fonte original, e conferido na data
 de `ATUALIZADO_EM`. Esquerda, centro ou direita vêm da pesquisa de Bolognesi, Ribeiro e Codato (revista Dados, 2023).
 Os testes em `site/tests/corrupcao.test.ts` exigem fonte https em tudo e conferem as contas do placar.
+
+## Terras Raras em Minas (/terras-raras/)
+
+Rastreador da mineração de terras raras em Minas Gerais: projetos e áreas com potencial num mapa interativo, empresas,
+donos e países, donos da terra, licenças pendentes, painel com os números econômicos, processos e notícias, leis,
+impactos ambientais e propostas para legisladores. Não existe API oficial que junte esses dados, então eles ficam em
+planilhas CSV escritas à mão em `terras-raras/dados/`, cada linha com o link da fonte e a data em que foi conferida.
+`python terras-raras/gerar_pagina.py --site site/dist/terras-raras/index.html` monta a página (um único HTML, mapa com
+Leaflet e a malha municipal do IBGE). Dicas do público chegam como issues com a etiqueta `terras-raras`. Como atualizar:
+[terras-raras/COMO_ATUALIZAR.md](terras-raras/COMO_ATUALIZAR.md).
 
 ## Rodar localmente
 

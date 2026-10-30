@@ -26,12 +26,13 @@ import { MG, SITE } from "./recorte";
 import { AnoCtx, AnoSeletor, ErroNaPagina, useData } from "./components/ui";
 import { dataBR, type Meta } from "./data";
 
-/* Os projetos do Segredos Abertos, publicados lado a lado no mesmo site (/, /mg/ e /eleicao2026/).
+/* Os projetos do Segredos Abertos, publicados lado a lado no mesmo site (/, /mg/, /eleicao2026/ e /terras-raras/).
    Links relativos: funcionam no GitHub Pages e numa cópia local de site/dist. */
 const PROJETOS = [
   { id: "brasil", nome: "Brasil", href: MG ? "../" : "./" },
   { id: "mg", nome: "Minas Nossa", href: MG ? "./" : "mg/" },
   { id: "eleicao", nome: "Eleição 2026", href: MG ? "../eleicao2026/" : "eleicao2026/" },
+  { id: "terras", nome: "Terras Raras MG", href: MG ? "../terras-raras/" : "terras-raras/" },
 ];
 
 /* Seletor de língua. A tradução é feita por public/i18n/tradutor.js (carregado no index.html), que troca os textos

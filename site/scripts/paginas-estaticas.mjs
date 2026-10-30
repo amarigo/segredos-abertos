@@ -337,6 +337,7 @@ const app = ["", ...outros].flatMap((d) => LINGUAS.map((l) => `<url><loc>${base}
 writeFileSync(join(dist, "sitemap-paginas.xml"), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${app}
+${MG ? "" : `<url><loc>${base}terras-raras/</loc><lastmod>${lastmod}</lastmod><changefreq>weekly</changefreq></url>`}
 ${paginas.map(entrada).join("\n")}
 </urlset>
 `);
@@ -367,6 +368,7 @@ Atualizado em ${lastmod}. ${c.politicos || politicos.length} parlamentares, ${c.
 - [Site completo (app)](${base}): busca, gráficos, página de cada político, empresa, votação, partido, emendas, incentivos e contas do governo federal
 - [Minas Nossa](${base}mg/): o recorte de Minas Gerais (governo do estado, deputados estaduais, cidades)
 - [Eleição 2026 Aberta](${base}eleicao2026/): eleição para presidente de 2026, urna por urna, com dados do TSE
+- [Terras Raras em Minas](${base}terras-raras/): quem explora terras raras em Minas Gerais (empresas, países, donos da terra), licenças pendentes, dinheiro envolvido, leis, impactos e propostas para legisladores; só em português
 
 ## Dados em JSON (os mesmos que o site usa)
 

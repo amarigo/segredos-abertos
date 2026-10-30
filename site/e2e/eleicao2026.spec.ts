@@ -28,6 +28,7 @@ test("barra dos projetos liga a Eleição 2026 aos outros sites do Segredos Aber
   await expect(nav.getByRole("link", { name: "Brasil" })).toHaveAttribute("href", "../");
   await expect(nav.getByRole("link", { name: "Minas Nossa" })).toHaveAttribute("href", "../mg/");
   await expect(nav.getByRole("link", { name: "Eleição 2026" })).toHaveAttribute("href", "./");
+  await expect(nav.getByRole("link", { name: "Terras Raras MG" })).toHaveAttribute("href", "../terras-raras/");
   await expect(nav.locator('a[aria-current="page"]')).toHaveText("Eleição 2026");
 });
 
