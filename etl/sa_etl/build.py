@@ -21,8 +21,9 @@ log = logging.getLogger("sa_etl")
 
 
 def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool = True,
-            cnpjs_emendas: list[str] | None = None) -> dict:
-    """cnpjs_emendas: empresas pagas com emendas, para buscar os donos junto com as fornecedoras da cota."""
+            cnpjs_emendas: list[str] | None = None, novas_empresas: int = cnpj.NOVAS_POR_COLETA) -> dict:
+    """cnpjs_emendas: empresas pagas com emendas, para buscar os donos junto com as fornecedoras da cota.
+    novas_empresas: quantas fornecedoras além das `max_empresas` maiores buscar na Receita nesta coleta."""
     util.AVISOS.clear()
     deps = sem_repetidos(camara.deputados(), "id")
     sens = sem_repetidos(senado.senadores(), "id")
@@ -41,9 +42,12 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
     for d in despesas:
         if cnpj_valido(d["doc"]):
             por_cnpj[d["doc"]] += d["valor"]
-    alvo = [c for c, _ in por_cnpj.most_common(max_empresas)]
+    ordem = [c for c, _ in por_cnpj.most_common()]
+    alvo = ordem[:max_empresas]
     alvo += [c for c in cnpjs_emendas or [] if c not in set(alvo) and cnpj_valido(c)]
     emps = cnpj.empresas(alvo, cache / "cnpj")
+    # As demais fornecedoras: as já guardadas entram, e cada coleta busca mais algumas (a cobertura cresce a cada dia)
+    emps.update(cnpj.ampliar([c for c in ordem[max_empresas:] if c not in emps], cache / "cnpj", novas_empresas))
     socias = cnpj.buscar_socias(emps, cache / "cnpj")  # holdings: sócios que são empresas
     rec = recursos.coletar(politicos, anos, cache / "recursos") if com_recursos else {}
     aut = autorias.coletar(politicos, anos, cache / "autorias") if com_recursos else {}
@@ -639,17 +643,20 @@ def main() -> None:
                     help="não monta a lista de projetos em andamento (pauta, novas e medidas provisórias)")
     ap.add_argument("--minutos-pagamentos-gerais", type=float, default=40,
                     help="tempo máximo, por execução, para completar os dias antigos dos pagamentos a empresas")
+    ap.add_argument("--novas-empresas", type=int, default=cnpj.NOVAS_POR_COLETA,
+                    help="quantas fornecedoras além das maiores buscar na Receita nesta coleta (o resto vem do cache)")
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     executar(a.anos, a.cache, a.saida, max_empresas=a.max_empresas, com_recursos=not a.sem_recursos,
              com_emendas=not a.sem_emendas, com_incentivos=not a.sem_incentivos,
              minutos_pagamentos=a.minutos_pagamentos, minutos_gerais=a.minutos_pagamentos_gerais,
-             com_financas=not a.sem_financas, com_tramitacao=not a.sem_tramitacao)
+             com_financas=not a.sem_financas, com_tramitacao=not a.sem_tramitacao, novas_empresas=a.novas_empresas)
 
 
 def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500, com_recursos: bool = True,
              com_emendas: bool = True, com_incentivos: bool = True, minutos_pagamentos: float = 45,
-             minutos_gerais: float = 40, com_financas: bool = True, com_tramitacao: bool = True) -> None:
+             minutos_gerais: float = 40, com_financas: bool = True, com_tramitacao: bool = True,
+             novas_empresas: int = cnpj.NOVAS_POR_COLETA) -> None:
     """A coleta inteira, na ordem certa (usada também pelos testes)."""
     # A renúncia vem antes dos arquivos diários: o Portal passa a recusar downloads (HTTP 405) depois de muitos
     # pedidos seguidos, e os arquivos de renúncia são poucos (e ficam uma semana no cache)
@@ -662,7 +669,8 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
     inc = (coletar_incentivos(anos, cache, minutos_gerais), ren) if com_incentivos else None
     avisos = list(util.AVISOS)  # coletar() recomeça a lista de avisos
     dados = coletar(anos, cache, max_empresas, com_recursos,
-                    cnpjs_emendas=pagamentos.cnpjs_empresas(pag) + incentivos.cnpjs_para_receita(*(inc or (None, None))))
+                    cnpjs_emendas=pagamentos.cnpjs_empresas(pag) + incentivos.cnpjs_para_receita(*(inc or (None, None))),
+                    novas_empresas=novas_empresas)
     for x in avisos:
         util.avisar(x)
     if com_emendas:  # antes de montar(), para os avisos das emendas entrarem no meta.json

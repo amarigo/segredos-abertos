@@ -1,6 +1,7 @@
 """Recorte de MG dos dados nacionais e montagem completa (meio e topo da pirâmide no coletor)."""
 import json
 import random
+import re
 
 import pytest
 
@@ -66,6 +67,35 @@ def test_empresas_so_com_o_que_mg_pagou(mg):
         assert d["mesmo_endereco"] == [] and all(s["outras_empresas"] == [] for s in d["socios"])
         notas = [n for a in d["notas_por_ano"] for n in ler(saida, f"e/notas/{e['cnpj']}-{a}.json")]
         assert len(notas) == d["n_notas"] and {n[1] for n in notas} <= ids
+
+
+def _empresas_citadas(saida) -> set[str]:
+    """CNPJs que as páginas dos políticos de MG ligam a uma página de empresa (como o site faz)."""
+    out = set()
+    for p in ler(saida, "politicos.json"):
+        for d in ler(saida, f"p/{p['id']}.json").get("anos", {}).values():
+            out |= {f["doc"] for f in d.get("fornecedores") or [] if f.get("ficha")}
+            out |= {n["doc"] for n in d.get("maiores_notas") or [] if re.fullmatch(r"\d{14}", n.get("doc") or "")}
+    return out
+
+
+def test_toda_empresa_citada_por_politico_de_mg_tem_pagina(nac, tmp_path):
+    """O nacional lista só as maiores empresas; a página de MG tem que existir para todas as pagas por MG."""
+    lista = ler(nac, "empresas.json")
+    (nac / "empresas.json").write_text(json.dumps(lista[:1]), encoding="utf-8")  # como se fossem só as 1.000 maiores
+    saida = tmp_path / "mg"
+    recorte.recortar(nac, saida)
+    citadas = _empresas_citadas(saida)
+    assert len(citadas) > 1
+    sem_pagina = sorted(c for c in citadas if not (saida / "e" / f"{c}.json").exists())
+    assert sem_pagina == []
+    emps = ler(saida, "empresas.json")
+    assert citadas <= {e["cnpj"] for e in emps}, "a busca do site também acha as menores"
+    for e in emps:
+        assert set(e) >= {"cnpj", "nome", "total", "n_politicos", "por_ano"}
+        assert all(not isinstance(e.get(k), dict) for k in ("emendas", "governo", "renuncia")), "na lista, só o total"
+    r = V.validar(saida, minimos=MINIMOS_TESTE)
+    assert [x for x in r.erros if "mpresa" in x] == []
 
 
 def test_recorte_passa_na_conferencia_nacional_e_na_de_mg(mg):
