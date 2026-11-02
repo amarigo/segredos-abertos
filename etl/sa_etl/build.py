@@ -321,6 +321,7 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
 
     # ---------- Empresas ----------
     lista_emp = []
+    lado_de = {r["id"]: ideologia.lado(r.get("posicao")) for r in resumo}
     no_site = set(recebeu) | set(emd) | set(inc)
     for doc in list(recebeu) + [c for c in emd if c not in recebeu] + [c for c in inc if c not in recebeu and c not in emd]:
         quem = recebeu.get(doc, {})
@@ -332,12 +333,22 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
                            key=lambda x: -x["valor"])
         # Cota recebida em cada ano, para as listas mostrarem o ano escolhido no site (o total de todos os anos fica em segundo plano)
         cota_ano = defaultdict(lambda: [0.0, set()])
+        # Por ano, também quanto cada lado (esquerda, centro, direita) e cada partido pagou à empresa
+        lados_ano = defaultdict(lambda: defaultdict(lambda: [set(), 0.0]))
+        partidos_ano = defaultdict(lambda: defaultdict(float))
         for n in notas_emp[doc]:
             cota_ano[str(n["ano"])][0] += n["valor"]
             cota_ano[str(n["ano"])][1].add(n["politico"])
+            la = lados_ano[str(n["ano"])][lado_de.get(n["politico"], "sem")]
+            la[0].add(n["politico"])
+            la[1] += n["valor"]
+            partidos_ano[str(n["ano"])][(por_id.get(n["politico"]) or {}).get("partido") or "Sem partido"] += n["valor"]
         resumo_e = {"cnpj": doc, "nome": (e or {}).get("razao_social") or nome_forn.get(doc, "") or (de_emendas or {}).get("nome", ""),
                     "total": total, "n_politicos": len(quem), "tem_socios": bool(e and e["socios"]),
-                    "por_ano": {a: {"valor": round(v, 2), "n_politicos": len(ps)} for a, (v, ps) in sorted(cota_ano.items())},
+                    "por_ano": {a: {"valor": round(v, 2), "n_politicos": len(ps),
+                                    "lados": {k: [len(x[0]), round(x[1], 2)] for k, x in lados_ano[a].items()},
+                                    "partidos": [[k, round(x, 2)] for k, x in sorted(partidos_ano[a].items(), key=lambda kv: -kv[1])]}
+                                for a, (v, ps) in sorted(cota_ano.items())},
                     "n_mesmo_endereco": len(vizinhas.get(doc, [])),
                     **_emd(emd, doc), **_inc(inc, doc)}
         if quem:  # a lista de empresas é a da cota; as pagas só com emendas aparecem na página de emendas

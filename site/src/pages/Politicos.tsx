@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loading, useAno, useData } from "../components/ui";
-import { atuacaoAtiva, reaisCurto, taxaPresenca, type Resumo } from "../data";
+import { Link } from "react-router-dom";
+import { Abrir, Barras, Loading, OndeVer, useAno, useData } from "../components/ui";
+import { atuacaoAtiva, corPartido, reaisCurto, taxaPresenca, type Resumo } from "../data";
 import { PessoaLinha, norm } from "./Home";
 import { AvisosFim } from "../components/Selo";
 
@@ -67,10 +68,20 @@ export default function Politicos() {
           <option value="relatadas">Mais relatorias em {ano}</option><option value="discursos">Mais discursos em {ano}</option>
         </select>
       </div>
+      {lista.some((p) => t(p) > 0) && <Abrir aberto titulo={`Gráfico: quem mais gastou da cota em ${ano}`}>
+        <Barras itens={lista.slice().sort((a, b) => t(b) - t(a)).slice(0, 15).filter((p) => t(p) > 0).map((p) => ({
+          label: <Link to={`/p/${p.id}`}>{p.nome}</Link>, nota: `${p.partido}-${p.uf} · ${p.casa === "senado" ? "senador" : "deputado federal"}`, valor: t(p), cor: corPartido(p.partido) }))} />
+        <p className="muted small">Os 15 maiores gastos com os filtros escolhidos acima. Clique no nome para abrir cada gasto, nota por nota.</p>
+      </Abrir>}
       <p className="muted small">{lista.length} resultado{lista.length === 1 ? "" : "s"}</p>
       <div className="list">
         {lista.map((p) => <PessoaLinha key={p.id} p={p} extra={extra(p)} />)}
       </div>
+      <OndeVer links={[
+        { nome: "Gastos da cota parlamentar na Câmara", url: "https://www.camara.leg.br/transparencia/gastos-parlamentares", explica: "cada nota de cada deputado federal" },
+        { nome: "Dados abertos da Câmara", url: "https://dadosabertos.camara.leg.br/swagger/api.html", explica: "a API oficial de deputados, despesas e votações" },
+        { nome: "Dados abertos do Senado", url: "https://www12.senado.leg.br/dados-abertos", explica: "senadores, gastos (CEAPS) e votações" },
+      ]} />
       <AvisosFim secao="cota" />
     </section>
   );

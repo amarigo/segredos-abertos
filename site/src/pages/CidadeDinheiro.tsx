@@ -27,6 +27,7 @@ function Contas({ d, nome }: { d: Dinheiro; nome: string }) {
   return (
     <section>
       <h2>Onde a prefeitura gasta</h2>
+      <p className="small">Para comparar os anos e abrir cada área, veja <Link to={`/dinheiro?onde=${d.id}`}>o dinheiro de {nome}, passo a passo</Link>.</p>
       {!a ? <div className="empty">As contas de {nome} não puderam ser baixadas do Tesouro Nacional nesta atualização.</div> : <>
         <div className="row" style={{ gap: 8, flexWrap: "wrap", alignItems: "baseline" }}>
           <Explain>Despesas da prefeitura (e da Câmara Municipal, na área "Legislativa") por área, como a própria prefeitura informou ao Tesouro Nacional. "Liquidado" é o que foi entregue: a obra feita, o serviço prestado.</Explain>
