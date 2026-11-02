@@ -442,7 +442,13 @@ class ApiRenuncia:
         return out
 
 
-def coletar(cache: Path, ano_atual: int, n_anos: int = N_ANOS, chave: str | None = None, minutos_api: float = 20) -> dict:
+# Minutos de leitura da API por execução. A leitura completa tem dezenas de milhares de páginas (uns 5 segundos cada);
+# com 20 minutos ela levava semanas, e o site ficava com os arquivos de download, que param em 2024 (2025 dá HTTP 403).
+# Com 40 minutos ela termina na metade do tempo e a coleta ainda cabe folgada no limite de 120 minutos do workflow.
+MINUTOS_API = 40
+
+
+def coletar(cache: Path, ano_atual: int, n_anos: int = N_ANOS, chave: str | None = None, minutos_api: float = MINUTOS_API) -> dict:
     """Os anos-calendário mais recentes que o Portal tiver. {"anos": {ano: resumo}, "empresas": {cnpj: {ano: {...}}}}
 
     A API de dados do Portal vem primeiro (pede uma chave, cadastro grátis por e-mail). Enquanto a primeira leitura

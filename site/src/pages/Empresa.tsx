@@ -26,6 +26,22 @@ export default function EmpresaPage() {
   return <EmpresaAno e={e} />;
 }
 
+/** Texto do cartão de renúncia quando o ano escolhido não tem valor para a empresa. Diz o que a Receita já publicou
+ *  (para todas as empresas) e, se a empresa não aparece nos anos mais novos, diz isso, sem culpar o atraso da Receita. */
+function renunciaDica(porAno: Record<string, number>, ano: string, ultimo: string | undefined,
+  publicados: { ano: number; parcial: boolean }[]): string {
+  if (porAno[ano] != null || !ultimo) return "renúncia fiscal federal · ";
+  const pub = publicados.map((x) => x.ano).sort((a, b) => a - b);
+  const maisNovo = pub[pub.length - 1];
+  const doUltimo = `Último ano com valor para esta empresa: ${ultimo}, ${reais(porAno[ultimo])}. `;
+  if (!maisNovo || Number(ano) > maisNovo) {
+    const ate = maisNovo ? `A Receita publicou até ${maisNovo}${publicados.find((x) => x.ano === maisNovo)?.parcial ? " (ainda incompleto)" : ""}; ${ano} ainda não saiu. ` : `A Receita ainda não publicou ${ano}. `;
+    const faltam = maisNovo ? pub.filter((a) => a > Number(ultimo)) : [];
+    return ate + (faltam.length ? `Nos anos publicados depois de ${ultimo} (${faltam.join(", ")}) a empresa não aparece. ` : "") + doUltimo;
+  }
+  return `A empresa não aparece na renúncia de ${ano} publicada pela Receita. ` + doUltimo;
+}
+
 /** Soma de um "por_ano" e a lista dos anos, para o texto secundário dos cartões */
 const somaAnos = (pa: Record<string, number>) => `${reais(Object.values(pa).reduce((a, b) => a + b, 0))} somando ${Object.keys(pa).sort().join(", ")}`;
 
@@ -37,6 +53,9 @@ function EmpresaAno({ e }: { e: Empresa }) {
   const cotaValor = cotaAno.reduce((a, x) => a + x.valor, 0);
   const cotaPols = new Set(cotaAno.map((x) => x.politico)).size;
   const ultimoRen = e.renuncia ? Object.keys(e.renuncia.por_ano).sort().pop() : undefined;
+  // Quais anos a Receita já publicou (para todas as empresas): separa "ainda não saiu" de "a empresa não aparece"
+  const { data: idxInc } = useData<{ anos_renuncia?: { ano: number; parcial: boolean }[] }>(e.renuncia ? "incentivos/indice.json" : null);
+  const dicaRen = renunciaDica(e.renuncia?.por_ano || {}, ano, ultimoRen, idxInc?.anos_renuncia || []);
   return (
     <>
       <section>
@@ -50,8 +69,8 @@ function EmpresaAno({ e }: { e: Empresa }) {
           <span className="hint">{cotaPols ? `de ${cotaPols} parlamentar${cotaPols > 1 ? "es" : ""}` : `nada em ${ano}`}{e.total !== cotaValor && <> · {reais(e.total)} em todos os anos</>}</span></div>}
         {e.governo && <div className="card stat"><span className="label">Recebeu do governo federal em {ano}</span><span className="value" title={reais(e.governo.por_ano[ano] || 0)}>{grande(e.governo.por_ano[ano] || 0)}</span>
           <span className="hint">compras, obras, serviços, convênios e subsídios · {somaAnos(e.governo.por_ano)}</span></div>}
-        {e.renuncia && <div className="card stat"><span className="label">Deixou de pagar de impostos em {ano}</span><span className="value">{e.renuncia.por_ano[ano] != null ? grande(e.renuncia.por_ano[ano]) : "—"}</span>
-          <span className="hint">{e.renuncia.por_ano[ano] == null && ultimoRen ? `A Receita ainda não publicou ${ano}. Último ano com dado: ${ultimoRen}, ${reais(e.renuncia.por_ano[ultimoRen])}. ` : "renúncia fiscal federal · "}{somaAnos(e.renuncia.por_ano)}</span></div>}
+        {e.renuncia && <div className="card stat"><span className="label">Deixou de pagar de impostos em {ano}</span><span className="value" title={e.renuncia.por_ano[ano] != null ? reais(e.renuncia.por_ano[ano]) : undefined}>{e.renuncia.por_ano[ano] != null ? grande(e.renuncia.por_ano[ano]) : "—"}</span>
+          <span className="hint">{dicaRen}{somaAnos(e.renuncia.por_ano)}</span></div>}
         {e.emendas && <div className="card stat"><span className="label">Recebeu de emendas parlamentares em {ano}</span><span className="value" title={reais(e.emendas.por_ano[ano] || 0)}>{grande(e.emendas.por_ano[ano] || 0)}</span>
           <span className="hint">pagos pelo governo federal · {somaAnos(e.emendas.por_ano)}</span></div>}
         {emp && <>
