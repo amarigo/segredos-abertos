@@ -121,6 +121,7 @@ table{border-collapse:collapse;width:100%;font-size:14px}
 th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
 th{font:500 12px var(--f-body);color:var(--muted);white-space:nowrap}
 td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td.num.quebra{white-space:normal;min-width:14ch;overflow-wrap:anywhere}
 tr:last-child td{border-bottom:0}
 tbody tr:hover{background:var(--hover)}
 .timeline{display:grid;border-left:2px solid var(--line);margin-left:6px}
@@ -179,7 +180,7 @@ footer .wrap{display:grid;gap:8px}
   <div>Mapa: malha municipal do IBGE, simplificada. Valores convertidos para reais com o câmbio das próprias fontes (US$ 1 ≈ R$ 5,20; A$ 1 ≈ R$ 3,55). Informações de empresas são declarações delas. Itens "a verificar" ainda precisam de confirmação em fonte primária.</div>
 </div></footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 const MODO = "/*__MODO__*/" || "artifact";
 
@@ -200,7 +201,7 @@ const brl = v => v >= 1000 ? "R$ " + (v / 1000).toLocaleString("pt-BR", { maximu
 const plural = (n, s, p) => n + " " + (n === 1 ? s : p);
 const statusChip = c => { if (!c) return null; const cls = /^alta|Aguarda|Pendente|Em análise|Não iniciado/.test(c) ? "bad" : /verificar|única|média|acompanhar|negociação/.test(c) ? "warn" : /referência|pesquisa/.test(c) ? "" : "ok"; return $("span", { class: "chip " + cls }, c); };
 const tip = document.getElementById("tip");
-const showTip = (ev, html) => { tip.innerHTML = html; tip.hidden = false; tip.style.left = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8) + "px"; tip.style.top = (ev.clientY + 14) + "px"; };
+const showTip = (ev, ...kids) => { tip.replaceChildren($("div", {}, kids)); tip.hidden = false; tip.style.left = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8) + "px"; tip.style.top = (ev.clientY + 14) + "px"; };
 const hideTip = () => { tip.hidden = true; };
 document.getElementById("upd").textContent = fmtDate(DADOS.atualizado_em);
 
@@ -242,8 +243,10 @@ DADOS.areas_potencial.forEach(a => {
   if (!a.munis.length && REG2MESO[a.regiao]) MESO[REG2MESO[a.regiao]].areas.add(a);
 });
 DADOS.empresas.forEach(e => { e.projetos = DADOS.projetos.filter(p => p.emp.includes(e)); });
-const licDe = p => DADOS.licencas.filter(l => norm(l.projeto).includes(norm(p.projeto.split(" (")[0])));
-const procDe = p => { const k = norm(p.projeto.split(" (")[0].split(" /")[0]); return DADOS.processos_noticias.filter(n => norm(n.titulo + " " + n.resumo + " " + n.envolvidos).includes(k)); };
+// Licenças, impactos, donos da terra e notícias apontam para os projetos pela coluna projetos_ids (ids de projetos.csv).
+const doProjeto = (tabela, p) => DADOS[tabela].filter(r => split(r.projetos_ids).includes(p.id));
+const licDe = p => doProjeto("licencas", p);
+const procDe = p => doProjeto("processos_noticias", p);
 const MUNIS_COM = Object.values(MUNI).filter(m => m.itens.length);
 const MESOS_COM = Object.values(MESO).filter(m => m.projetos.size || m.areas.size).sort((a, b) => (b.projetos.size + b.areas.size) - (a.projetos.size + a.areas.size));
 
@@ -253,7 +256,7 @@ const menu = document.getElementById("menu");
 MENU.forEach(([id, n]) => menu.append($("a", { href: "#" + id, id: "m-" + id, class: id === "enviar" ? "cta" : null }, n)));
 const view = document.getElementById("view");
 function route() {
-  const h = decodeURIComponent((location.hash || "#inicio").slice(1)) || "inicio";
+  let h = (location.hash || "#inicio").slice(1); try { h = decodeURIComponent(h); } catch (e) {} h = h || "inicio";
   view.innerHTML = ""; hideTip();
   let base = h.split("-")[0];
   MENU.forEach(([id]) => document.getElementById("m-" + id).classList.toggle("on", id === base || (id === "inicio" && /^(regiao|municipio|projeto)$/.test(base)) || (id === "empresas" && base === "empresa")));
@@ -284,7 +287,7 @@ const MAP = (() => {
       if (!ll) return;
       const k = ll.join(); const n = (pos[k] = (pos[k] || 0) + 1) - 1; const off = n ? .045 : 0;
       const mk = L.circleMarker([ll[0] + off * Math.sin(n * 2.1), ll[1] + off * Math.cos(n * 2.1)], { radius: 7, weight: 2, color: css("--surface"), fillColor: catColor(p.categoria), fillOpacity: 1 });
-      mk.bindTooltip(`<b>${p.projeto}</b><br>${p.empresa}<br>${p.pais_do_controlador}${aprox ? " · local aproximado" : ""}`, { direction: "top", offset: [0, -6] });
+      mk.bindTooltip($("div", {}, $("b", {}, p.projeto), $("br"), p.empresa, $("br"), p.pais_do_controlador + (aprox ? " · local aproximado" : "")), { direction: "top", offset: [0, -6] });
       mk.on("click", e => { L.DomEvent.stopPropagation(e); onSelect({ projeto: p }); });
       mkLayer.addLayer(mk);
     });
@@ -295,7 +298,7 @@ const MAP = (() => {
     muniLayer = L.geoJSON(DADOS.geo.municipios, { style: estilo, onEachFeature: (f, l) => {
       l.on("click", () => onSelect({ muni: f.properties }));
       l.on("mouseover", () => l.setStyle({ weight: 2, color: css("--ink") })); l.on("mouseout", () => muniLayer.resetStyle(l));
-      l.bindTooltip(f.properties.n + (f.properties.itens.length ? ` · ${plural(f.properties.itens.length, "item", "itens")}` : ""), { sticky: true });
+      l.bindTooltip($("span", {}, f.properties.n + (f.properties.itens.length ? ` · ${plural(f.properties.itens.length, "item", "itens")}` : "")), { sticky: true });
     } }).addTo(map);
     mesoLayer = L.geoJSON(DADOS.geo.mesorregioes, { interactive: false }).addTo(map);
     mkLayer = L.layerGroup().addTo(map);
@@ -439,9 +442,9 @@ function pProjeto(id) {
   view.append($("h2", {}, "Ficha do projeto"), $("dl", { class: "sheet paper" }, rows.map(([k, v]) => [$("dt", {}, k), $("dd", {}, v)])));
   const lic = licDe(p);
   if (lic.length) { view.append($("h2", {}, "Licenças e aprovações pendentes")); view.append(tabelaLic(lic)); }
-  const terra = DADOS.donos_terra.filter(t => norm(t.area_projeto).includes(norm(p.projeto.split(" (")[0])));
+  const terra = doProjeto("donos_terra", p);
   if (terra.length) { view.append($("h2", {}, "Donos da terra e dos direitos")); view.append($("dl", { class: "sheet paper" }, terra.map(t => [$("dt", {}, t.area_projeto), $("dd", {}, $("div", {}, $("b", {}, "Direito minerário: "), t.quem_tem_o_direito_minerario), $("div", {}, $("b", {}, "Superfície: "), t.quem_e_dono_da_superficie), filled(t.royalty_ou_pagamento_privado) ? $("div", {}, $("b", {}, "Royalty: "), t.royalty_ou_pagamento_privado) : null, $("div", { class: "src" }, ext(t.fonte_url, fmtDate(t.fonte_data))))]))); }
-  const imp = DADOS.impactos.filter(i => norm(i.projeto).includes(norm(p.projeto.split(" (")[0])));
+  const imp = doProjeto("impactos", p);
   if (imp.length) { view.append($("h2", {}, "Impactos apontados")); view.append($("dl", { class: "sheet paper" }, imp.map(i => [$("dt", {}, i.tema), $("dd", {}, i.o_que_se_sabe, " ", statusChip(i.gravidade), $("div", { class: "src" }, ext(i.fonte_url, fmtDate(i.fonte_data))))]))); }
   const pr = procDe(p);
   if (pr.length) { view.append($("h2", {}, "Linha do tempo")); const tl = $("div", { class: "timeline" }); pr.sort((a, b) => b.data.localeCompare(a.data)).forEach(x => tl.append(evento(x))); view.append(tl); }
@@ -476,7 +479,7 @@ function pEmpresa(id) {
 /* ---------- LICENÇAS ---------- */
 function tabelaLic(lista) {
   const tb = $("tbody");
-  lista.forEach(l => tb.append($("tr", {}, $("td", {}, l.projeto), $("td", {}, l.o_que_esta_pendente), $("td", {}, l.orgao), $("td", { class: "num" }, l.processo), $("td", {}, statusChip(l.status)), $("td", {}, l.proximo_marco), $("td", {}, ext(l.fonte_url)))));
+  lista.forEach(l => tb.append($("tr", {}, $("td", {}, l.projeto), $("td", {}, l.o_que_esta_pendente), $("td", {}, l.orgao), $("td", { class: "num quebra" }, l.processo), $("td", {}, statusChip(l.status)), $("td", {}, l.proximo_marco), $("td", {}, ext(l.fonte_url)))));
   return $("div", { class: "paper tablebox" }, $("table", {}, $("thead", {}, $("tr", {}, ["Projeto", "O que está pendente", "Órgão", "Processo", "Status", "Próximo marco", "Fonte"].map(h => $("th", {}, h)))), tb));
 }
 function pLicencas() {
@@ -515,19 +518,21 @@ function pPainel() {
   const kpis = $("div", { class: "kpis" }), charts = $("div", { class: "charts" }), tabela = $("div", {});
   view.append($("div", { class: "tools" }, $("label", { class: "sel" }, $("span", { class: "lbl" }, "Região"), selReg), $("label", { class: "sel" }, $("span", { class: "lbl" }, "País do controlador"), selPais), $("label", { class: "sel" }, $("span", { class: "lbl" }, "Projeto"), selProj)), kpis, charts, $("h2", {}, "Todos os números"), tabela);
   const filtra = () => N.filter(r => { const g = selReg.value; if (g === "Sul de Minas" || g === "Alto Paranaíba") { if (r.regiao !== g) return false; } else if (g === "Minas Gerais (todas)" && r.regiao === "Fora de MG") return false; if (selPais.value && r.pais_controlador !== selPais.value) return false; if (selProj.value && r.projeto !== selProj.value) return false; return true; });
+  // Largura de cada gráfico em pixels: uma coluna no celular, duas no computador (veja .charts no CSS).
+  const largura = () => { const w = charts.clientWidth || 520, gap = 14; return Math.round((w >= 2 * 520 + gap ? (w - gap) / 2 : w) - 32); };
   const soma = (R, c) => R.filter(r => r.categoria === c && !isNaN(r.v)).reduce((a, r) => a + r.v, 0);
   function hbar(titulo, desc, rows, { fmt, colorBy, legenda, nota }) {
     const box = $("div", { class: "chart paper" }, $("h3", {}, titulo), $("p", { class: "d" }, desc));
     if (legenda && legenda.length > 1) box.append($("div", { class: "legend-row" }, legenda.map(([n, c]) => $("span", {}, $("span", { class: "dot", style: `background:${c}` }), n))));
     if (!rows.length) { box.append($("p", { class: "count" }, "Sem dados para este filtro.")); return box; }
-    const W = 520, lw = 150, rh = 30, bh = 18, padR = 80, H = rows.length * rh + 6, max = Math.max(...rows.map(r => r.value)) || 1;
+    const W = largura(), estreito = W < 420, lw = estreito ? 112 : 150, maxl = estreito ? 15 : 22, rh = 30, bh = 18, padR = estreito ? 72 : 80, H = rows.length * rh + 6, max = Math.max(...rows.map(r => r.value)) || 1;
     const svg = S("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": titulo });
     svg.append(S("line", { x1: lw, x2: lw, y1: 0, y2: H, stroke: css("--line"), "stroke-width": 1 }));
     rows.forEach((r, i) => {
       const y = i * rh + 4, w = Math.max(6, (W - lw - padR) * r.value / max);
-      const t = S("text", { x: lw - 8, y: y + bh / 2 + 4, "text-anchor": "end" }); t.textContent = r.label.length > 22 ? r.label.slice(0, 21) + "…" : r.label; svg.append(t);
+      const t = S("text", { x: lw - 8, y: y + bh / 2 + 4, "text-anchor": "end" }); t.textContent = r.label.length > maxl ? r.label.slice(0, maxl - 1) + "…" : r.label; svg.append(t);
       const pth = S("path", { class: "bar", fill: colorBy(r), d: `M${lw},${y} h${w - 4} a4,4 0 0 1 4,4 v${bh - 8} a4,4 0 0 1 -4,4 h${-(w - 4)} z` });
-      pth.addEventListener("mousemove", ev => showTip(ev, `<b>${r.label}</b><br>${fmt(r.value)}${r.tip ? "<br>" + r.tip : ""}`)); pth.addEventListener("mouseleave", hideTip);
+      pth.addEventListener("mousemove", ev => showTip(ev, $("b", {}, r.label), $("br"), fmt(r.value), r.tip ? [$("br"), r.tip] : null)); pth.addEventListener("mouseleave", hideTip);
       svg.append(pth);
       const v = S("text", { x: lw + w + 6, y: y + bh / 2 + 4, class: "v" }); v.textContent = fmt(r.value); svg.append(v);
     });
@@ -547,10 +552,13 @@ function pPainel() {
     const quem = [["Capital privado captado", "Ações (privado)"], ["Crédito de governos estrangeiros (sinalizado)", "Governos estrangeiros"], ["Dinheiro público brasileiro", "BNDES (Brasil)"]].map(([c, l]) => ({ label: l, value: soma(R, c), tip: c })).filter(r => r.value > 0);
     charts.append(hbar("Quem coloca o dinheiro", "Soma por origem do dinheiro já captado ou sinalizado.", quem, { fmt: brl, colorBy: () => css("--s1"), nota: "Governos estrangeiros inclui apoios ainda não vinculantes (Ex-Im dos EUA e agências da Austrália e do Canadá)." }));
     tabela.innerHTML = ""; const tb = $("tbody");
-    R.forEach(n => tb.append($("tr", {}, $("td", {}, n.indicador), $("td", { class: "num" }, n.valor), $("td", {}, n.unidade), $("td", {}, n.projeto), $("td", {}, n.categoria), $("td", { class: "num" }, fmtDate(n.data)), $("td", {}, ext(n.fonte_url)))));
+    R.forEach(n => tb.append($("tr", {}, $("td", {}, n.indicador), $("td", { class: "num quebra" }, n.valor), $("td", {}, n.unidade), $("td", {}, n.projeto), $("td", {}, n.categoria), $("td", { class: "num" }, fmtDate(n.data)), $("td", {}, ext(n.fonte_url)))));
     tabela.append($("div", { class: "paper tablebox" }, $("table", {}, $("thead", {}, $("tr", {}, ["Indicador", "Valor", "Unidade", "Projeto", "Tipo", "Data", "Fonte"].map(h => $("th", {}, h)))), tb)));
   }
   [selReg, selPais, selProj].forEach(x => x.addEventListener("change", render)); render();
+  // Redesenha quando a largura muda (girar o celular, redimensionar a janela)
+  let ultima = charts.clientWidth;
+  try { new ResizeObserver(() => { if (charts.isConnected && charts.clientWidth !== ultima) { ultima = charts.clientWidth; render(); } }).observe(charts); } catch (e) {}
 }
 
 /* ---------- APRENDER ---------- */
@@ -585,7 +593,7 @@ function pPropostas() {
 function pSobre() {
   view.append($("h1", {}, "Sobre"), $("p", { class: "lede" }, "Projeto cidadão para mapear quem está tentando lucrar com as terras raras de Minas Gerais: empresas, donos, países, dinheiro, licenças e impactos. O objetivo é que comunidades e legisladores tenham a informação antes das decisões."));
   view.append($("h2", {}, "De onde vêm os dados"), $("p", { style: "max-width:78ch" }, "Anúncios das empresas nas bolsas (ASX, SEC), processos da Feam/Semad e do Copam, Ministério Público Federal, TCU, Câmara dos Deputados, Assembleia de Minas, Câmaras municipais, Codemge, Serviço Geológico do Brasil e imprensa regional e nacional. Cada linha tem link e data. O mapa usa a malha municipal do IBGE."));
-  view.append($("h2", {}, "Como é atualizado"), $("ol", { class: "steps", html: "<li>Toda segunda-feira de manhã uma rotina pesquisa novidades e atualiza as planilhas.</li><li>Informações enviadas pela página <a href=\"#enviar\">Enviar informação</a> são conferidas antes de entrar.</li><li>Itens com uma única fonte ficam marcados como <code>fonte única</code> ou <code>a verificar</code>.</li>" }));
+  view.append($("h2", {}, "Como é atualizado"), $("ol", { class: "steps", html: "<li>Todo dia de manhã uma rotina pesquisa novidades e atualiza as planilhas.</li><li>Informações enviadas pela página <a href=\"#enviar\">Enviar informação</a> são conferidas antes de entrar.</li><li>Itens com uma única fonte ficam marcados como <code>fonte única</code> ou <code>a verificar</code>.</li>" }));
   view.append($("h2", {}, "Onde pesquisar por conta própria"));
   const fontes = [["ANM: Cadastro Mineiro e SIGMINE", "títulos minerários por município e titular", "https://www.gov.br/anm/pt-br"], ["Feam/Semad: processos SEI e pautas do Copam", "licenças LP, LI, LO", "https://www.meioambiente.mg.gov.br/"], ["Codemge: Recursos Minerais de MG", "ocorrências por município", "http://recursomineralmg.codemge.com.br/substancias-minerais/terras-raras/"], ["Serviço Geológico do Brasil", "mapeamentos de potencial", "https://www.sgb.gov.br/"], ["ASX", "anúncios das mineradoras australianas", "https://www.asx.com.au/markets/trade-our-cash-market/announcements"], ["SEC EDGAR", "prospectos de empresas dos EUA", "https://www.sec.gov/edgar/search/"], ["Câmara dos Deputados", "projetos de lei", "https://www.camara.leg.br/"], ["MPF Minas Gerais", "recomendações e inquéritos", "https://www.mpf.mp.br/mg"]];
   view.append($("div", { class: "paper tablebox" }, $("table", {}, $("thead", {}, $("tr", {}, ["Fonte", "Para quê", "Link"].map(h => $("th", {}, h)))), $("tbody", {}, fontes.map(f => $("tr", {}, $("td", {}, f[0]), $("td", {}, f[1]), $("td", {}, ext(f[2]))))))));

@@ -11,11 +11,12 @@ amarigo/segredos-abertos, que é a cópia principal):
 ## Como a página está organizada (estilo trackdatacenters.com)
 Mapa primeiro, depois navegação: **região → município → projeto → empresa**. Cada projeto e empresa tem página própria com ficha, licenças, donos da terra, impactos e fontes. Menu: Mapa, Painel econômico, Empresas, Licenças, Notícias e processos, Aprender, O que pedir, Sobre, Enviar informação.
 - A ligação projeto ↔ empresa vem da coluna `empresas_ids` de `projetos.csv` (ids de `empresas.csv` separados por `;`).
+- Licenças, impactos, donos da terra e notícias aparecem na página de um projeto pela coluna `projetos_ids` (ids de `projetos.csv` separados por `;`, ex.: `P01;P02`). Deixe vazia quando a linha não é de um projeto específico. O gerador avisa se um id não existe.
 
 ## Informações enviadas pelo público
 - **No site público**, "Enviar informação" abre uma issue no GitHub já preenchida (título começa com `[Terras raras]`, etiqueta `terras-raras`).
 - **No link do Claude**, os envios ficam na base da própria página (coleção `envios`, um documento por pessoa). Só o dono lê; envia quem tem acesso de **Colaborador** ou mais.
-- Na atualização semanal, o Claude lê os dois, confere cada dica com fonte e só então coloca nas planilhas. Dica sem fonte não entra.
+- Na atualização diária, o Claude lê os dois, confere cada dica com fonte e só então coloca nas planilhas. Dica sem fonte não entra.
 
 ## Jeito mais fácil
 Escreva no projeto: **"atualize o tracker de terras raras"**. O Claude pesquisa notícias e documentos novos, edita as planilhas desta pasta, gera a página de novo e republica no mesmo link.
@@ -48,7 +49,7 @@ Escreva no projeto: **"atualize o tracker de terras raras"**. O Claude pesquisa 
 - Campo `verificado_em`: data em que você conferiu a linha. A página mostra a data mais recente como "atualizado em".
 - Não apague linhas antigas de processos e notícias: mude o `status`.
 
-## Checklist de cada atualização (semanal ou quinzenal)
+## Checklist de cada atualização (diária)
 - [ ] Ler os envios novos: issues `[Terras raras]` no GitHub e a coleção `envios` do link do Claude
 - [ ] Feam/Semad e pauta do Copam (CMI): andamento das LIs do Caldeira (SEI 2090.01.0003107/2026-75) e Colossus (SEI 2090.01.0005881/2026-61)
 - [ ] Justiça Federal (Subseção de Poços de Caldas): decisão da ação civil pública

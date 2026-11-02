@@ -5,7 +5,7 @@ Uso:  python3 gerar_pagina.py                    (gera tracker.html nesta pasta,
       python3 gerar_pagina.py --site saida.html  (versão do site Segredos Abertos: documento HTML completo,
                                                   barra dos projetos e dicas enviadas como issue no GitHub)
 """
-import csv, json, sys, unicodedata, re
+import base64, csv, hashlib, json, sys, unicodedata, re
 from pathlib import Path
 
 PASTA = Path(__file__).resolve().parent
@@ -35,6 +35,14 @@ for t in ("projetos", "areas_potencial"):
             if norm(m) not in nomes:
                 print(f"AVISO: município '{m}' ({t}, {r.get('id')}) não encontrado no mapa do IBGE")
 
+# confere se licenças, impactos, donos da terra e notícias apontam para projetos que existem
+ids = {r["id"] for r in dados["projetos"]}
+for t in ("licencas", "impactos", "donos_terra", "processos_noticias"):
+    for n, r in enumerate(dados[t], start=2):
+        for i in filter(None, (x.strip() for x in r.get("projetos_ids", "").split(";"))):
+            if i not in ids:
+                print(f"AVISO: projeto '{i}' ({t}.csv, linha {n}) não existe em projetos.csv")
+
 modelo = (PASTA / "pagina_modelo.html").read_text(encoding="utf-8")
 leaflet_css = (PASTA / "geo" / "leaflet.css").read_text(encoding="utf-8")
 json_txt = json.dumps(dados, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
@@ -43,7 +51,24 @@ html = html.replace("/*__MODO__*/", "site" if SITE else "artifact")
 if SITE:
     descricao = ("Quem quer lucrar com as terras raras de Minas Gerais: projetos, empresas e seus países, donos da terra, "
                  "licenças pendentes, dinheiro envolvido, leis, impactos e o que pedir aos legisladores. Com fonte e data.")
+    # Política de segurança (CSP), como no resto do site: o GitHub Pages não manda cabeçalhos, então vai numa <meta>.
+    # Só roda o script embutido desta página (conferido pelo hash) e o Leaflet do unpkg (conferido pelo integrity).
+    embutido = re.search(r"<script>(.*?)</script>", html, re.S).group(1)
+    hash_js = base64.b64encode(hashlib.sha256(embutido.encode("utf-8")).digest()).decode()
+    csp = "; ".join([
+        "default-src 'self'",
+        f"script-src 'sha256-{hash_js}' https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data:",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+    ])
     cabeca = ('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">'
+              f'<meta http-equiv="Content-Security-Policy" content="{csp}">'
+              '<meta name="referrer" content="strict-origin-when-cross-origin">'
               '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
               f'<meta name="description" content="{descricao}"><link rel="canonical" href="{URL_SITE}">'
               '<meta property="og:type" content="website"><meta property="og:title" content="Terras Raras em Minas">'
