@@ -5,6 +5,8 @@ import { Abrir, Barras, Loading, OndeVer, useAno, useData } from "../components/
 import { atuacaoAtiva, corPartido, reaisCurto, taxaPresenca, type Resumo } from "../data";
 import { PessoaLinha, norm } from "./Home";
 import { AvisosFim } from "../components/Selo";
+import { MapaUF, Rosca, prepararFatias } from "../components/graficos";
+import { COR_LADO, LADOS, ladoPelosVotos } from "../partidos";
 
 type Ordem = "total" | "nome" | "posicao" | "presenca" | "autoria" | "relatadas" | "discursos";
 const ROTULO: Record<string, [string, string]> = { autoria: ["proposta", "propostas"], relatadas: ["relatoria", "relatorias"], discursos: ["discurso", "discursos"] };
@@ -13,8 +15,8 @@ export default function Politicos() {
   const { data, error } = useData<Resumo[]>("politicos.json");
   const [q, setQ] = useState("");
   const [casa, setCasa] = useState("");
-  const [uf, setUf] = useState("");
   const [params] = useSearchParams();
+  const [uf, setUf] = useState(params.get("uf") || "");
   const [partido, setPartido] = useState(params.get("partido") || "");
   const [ordem, setOrdem] = useState<Ordem>("total");
   const { ano } = useAno();
@@ -45,10 +47,36 @@ export default function Politicos() {
     return l;
   }, [data, q, casa, uf, partido, ordem, ano]);
 
+  // Para os gráficos: os mesmos filtros, menos o de estado (o mapa mostra todos os estados)
+  const semUf = useMemo(() => (data || []).filter((p) => (!casa || p.casa === casa) && (!partido || p.partido === partido)), [data, casa, partido]);
+  const mediaUf = useMemo(() => {
+    const s: Record<string, [number, number]> = {};
+    semUf.forEach((p) => { const v = t(p); if (v > 0) { const x = (s[p.uf] ||= [0, 0]); x[0] += v; x[1] += 1; } });
+    return Object.fromEntries(Object.entries(s).map(([u, [a, n]]) => [u, a / n]));
+  }, [semUf, ano]);
+  const lados = useMemo(() => {
+    const c: Record<string, number> = {};
+    lista.forEach((p) => { const l = p.posicao == null ? "Sem posição" : ladoPelosVotos(p.posicao); c[l] = (c[l] || 0) + 1; });
+    return prepararFatias([...LADOS, "Sem posição"].map((l) => ({ nome: l, valor: c[l] || 0, cor: COR_LADO[l] })), 9);
+  }, [lista]);
   if (!data) return <Loading error={error} />;
   return (
     <section>
       <h1>Políticos</h1>
+      <div className="secao-graficos">
+        {ufs.length > 1 && (
+          <div>
+            <h3 className="graf-titulo">Média de cota por parlamentar em {ano}, por estado</h3>
+            <p className="small muted">Toque num estado para ver só os parlamentares dele.{uf && <> <button className="link" onClick={() => setUf("")}>Mostrar todos os estados</button></>}</p>
+            <MapaUF valores={mediaUf} titulo={`Média de cota por parlamentar em ${ano}, por estado`} onUf={(u) => setUf(u === uf ? "" : u)} ufAtiva={uf} />
+          </div>
+        )}
+        <div>
+          <h3 className="graf-titulo">Da esquerda à direita, pelos votos</h3>
+          <p className="small muted">Os {lista.length} parlamentares da lista abaixo, pelo lado em que ficam nas votações nominais. <a href="#/sobre">Entenda o cálculo</a>.</p>
+          <Rosca fatias={lados} titulo="Parlamentares por lado" formato={(v) => `${v} parlamentar${v === 1 ? "" : "es"}`} centroRotulo="Parlamentares" centro={String(lista.length)} />
+        </div>
+      </div>
       <div className="search">
         <input id="filtro-nome" aria-label="Nome" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nome" />
         <select id="filtro-casa" aria-label="Casa" value={casa} onChange={(e) => setCasa(e.target.value)}>

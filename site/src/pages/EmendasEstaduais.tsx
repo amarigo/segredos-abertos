@@ -1,8 +1,9 @@
+import { Kpi } from "../components/graficos";
 import { useState } from "react";
 import { norm } from "./Home";
 import { Link } from "react-router-dom";
 import { Abrir, Barras, Colunas, Explain, Loading, OndeVer, useData } from "../components/ui";
-import { reais, reaisCurto, type DeputadoEstadual, type EmendasEstado } from "../data";
+import { reais, type DeputadoEstadual, type EmendasEstado } from "../data";
 
 /** Emendas estaduais: quanto os deputados estaduais indicaram do orçamento de Minas, para quais cidades */
 export default function EmendasEstaduais() {
@@ -26,8 +27,8 @@ export default function EmendasEstaduais() {
           </label>
         </div>
         <div className="grid">
-          <div className="card stat"><span className="label">Indicado em {ano}</span><span className="value">{reaisCurto(a.indicado)}</span><span className="hint">{a.n.toLocaleString("pt-BR")} indicações para {a.n_municipios} municípios</span></div>
-          <div className="card stat"><span className="label">Já pago</span><span className="value">{reaisCurto(a.pago)}</span><span className="hint">{a.indicado ? Math.round((a.pago / a.indicado) * 100) : 0}% do indicado</span></div>
+          <Kpi rotulo={`Indicado em ${ano}`} valor={a.indicado} serie={anos.slice().sort().map((x) => [x, data.anos[x]?.indicado || 0] as [string, number])} ano={ano} dica={`${a.n.toLocaleString("pt-BR")} indicações para ${a.n_municipios} municípios`} />
+          <Kpi rotulo="Já pago" valor={a.pago} serie={anos.slice().sort().map((x) => [x, data.anos[x]?.pago || 0] as [string, number])} ano={ano} dica={`${a.indicado ? Math.round((a.pago / a.indicado) * 100) : 0}% do indicado`} />
         </div>
       </section>
       {anos.length > 1 && <section>
@@ -38,7 +39,7 @@ export default function EmendasEstaduais() {
       </section>}
       <section>
         <h2>Quem indicou mais</h2>
-        <Barras itens={a.autores.slice(0, todos ? 100 : 15).map((x) => ({
+        <Barras rosca={{ titulo: `Emendas estaduais indicadas em ${ano}, por deputado`, total: a.indicado }} itens={a.autores.slice(0, todos ? 100 : 15).map((x) => ({ nome: x.nome,
           label: x.deputado ? <Link to={`/deputado-estadual/${x.deputado}?aba=emendas&ano=${ano}`}>{x.nome}</Link> : <span>{x.nome}</span>,
           nota: `${x.n} indicações · ${reais(x.pago)} pago`, valor: x.indicado, cor: "var(--s3)" }))} />
         {a.autores.length > 15 && <button className="link" onClick={() => setTodos(!todos)}>{todos ? "Mostrar menos" : `Mostrar os ${a.autores.length}`}</button>}
@@ -56,7 +57,7 @@ export default function EmendasEstaduais() {
       </section>
       <section>
         <h2>Cidades que mais receberam indicações</h2>
-        <Barras itens={a.municipios.map((m) => ({ label: m.nome, nota: `${m.n} indicações · ${reais(m.pago)} pago`, valor: m.indicado, cor: "var(--s1)" }))} />
+        <Barras rosca={{ titulo: `Emendas estaduais indicadas em ${ano}, por cidade`, total: a.indicado }} itens={a.municipios.map((m) => ({ label: m.nome, nota: `${m.n} indicações · ${reais(m.pago)} pago`, valor: m.indicado, cor: "var(--s1)" }))} />
         <p className="small">Veja também a aba Dinheiro das <Link to="/cidades">cidades acompanhadas</Link>, com cada indicação.</p>
       </section>
       <OndeVer links={[

@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Barras, Explain, Loading, useAno, useData } from "../components/ui";
+import { Barras, Explain, Loading, useAno, useData, useVarios, useVisivel } from "../components/ui";
+import { CompararAnos, Kpi, MapaAnos, curto, numero, type Fatia } from "../components/graficos";
 import { casaNome, cnpjFmt, corPartido, dataBR, linkSeguro, reais, reaisCurto, type Casa } from "../data";
 import { DocsDoAutor, type AutorEmenda } from "../components/DocsEmendas";
 import { Pizza } from "./Partidos";
@@ -67,6 +68,10 @@ export default function Emendas() {
   const tem = indice?.anos.map(String).includes(ano);
   const { data, error } = useData<EmendasAno>(tem ? `emendas/${ano}.json` : null);
   const [medida, setMedida] = useState<Medida>("pago");
+  // Os outros anos, para o mapa e as comparações: baixados quando a pessoa rola até lá
+  const [ref, visivel] = useVisivel<HTMLDivElement>();
+  const outros = useVarios<EmendasAno>(visivel && indice ? indice.anos.map((a) => `emendas/${a}.json`) : null);
+  const todos = useMemo(() => Object.fromEntries(Object.values(outros).map((x) => [String(x.ano), x])) as Record<string, EmendasAno>, [outros]);
 
   if (!indice && !erroIndice) return <Loading />;
   if (!tem) {
@@ -83,6 +88,11 @@ export default function Emendas() {
   if (!data) return <Loading error={error} />;
   const v = (x: Valores) => x[medida];
   const tot = v(data.total);
+  const serieTot = (k: keyof Valores | "n"): [string, number][] => (indice?.anos || []).map(String).filter((a) => indice!.totais[a]).map((a) => [a, indice!.totais[a][k]]);
+  const areasAnos: Record<string, Fatia[]> = Object.fromEntries(Object.entries(todos).map(([a, x]) => [a, x.por_area.map((y) => ({ nome: y.area, valor: v(y) }))]));
+  const tiposAnos: Record<string, Fatia[]> = Object.fromEntries(Object.entries(todos).map(([a, x]) => [a, x.por_tipo.map((y) => ({ nome: y.rotulo, valor: v(y), cor: COR_TIPO[y.tipo] }))]));
+  const ufAnos: Record<string, Record<string, number>> = Object.fromEntries(Object.entries(todos).filter(([, x]) => x.favorecidos?.por_uf.length).map(([a, x]) => [a, Object.fromEntries(x.favorecidos!.por_uf)]));
+  if (data.favorecidos && !ufAnos[ano]) ufAnos[ano] = Object.fromEntries(data.favorecidos.por_uf);
 
   return (
     <>
@@ -94,9 +104,9 @@ export default function Emendas() {
           O dinheiro costuma ir para prefeituras, estados, hospitais e entidades da base eleitoral de quem fez a emenda. Aqui você vê para onde foi, para quê, quem mandou mais e que partido usa mais.
         </Explain>
         <div className="grid">
-          <div className="card stat"><span className="label">Reservado (empenhado)</span><span className="value">{reaisCurto(data.total.empenhado)}</span><span className="hint">O governo separou esse valor para as emendas de {ano}</span></div>
-          <div className="card stat"><span className="label">Pago até agora</span><span className="value">{reaisCurto(data.total.pago)}</span><span className="hint">{pctDe(data.total.pago, data.total.empenhado)} do reservado já saiu do caixa</span></div>
-          <div className="card stat"><span className="label">Emendas</span><span className="value">{data.total.n.toLocaleString("pt-BR")}</span><span className="hint">{data.autores.length.toLocaleString("pt-BR")} parlamentares fizeram emendas</span></div>
+          <Kpi rotulo={`Reservado (empenhado) em ${ano}`} valor={data.total.empenhado} serie={serieTot("empenhado")} ano={ano} dica={`O governo separou esse valor para as emendas de ${ano}`} />
+          <Kpi rotulo={`Pago até agora, emendas de ${ano}`} valor={data.total.pago} serie={serieTot("pago")} ano={ano} dica={`${pctDe(data.total.pago, data.total.empenhado)} do reservado já saiu do caixa`} />
+          <Kpi rotulo={`Emendas de ${ano}`} valor={data.total.n} formato={numero} serie={serieTot("n")} ano={ano} dica={`${data.autores.length.toLocaleString("pt-BR")} parlamentares fizeram emendas`} />
           {data.favorecidos && <div className="card stat"><span className="label">Cidades</span><span className="value">{data.favorecidos.n_municipios.toLocaleString("pt-BR")}</span><span className="hint">receberam pagamentos de emendas em {ano}</span></div>}
         </div>
         <div className="row emd-medida">
@@ -111,7 +121,7 @@ export default function Emendas() {
 
       <section>
         <h2>Tipos de emenda</h2>
-        <Barras itens={data.por_tipo.filter((t) => v(t) > 0).map((t) => ({
+        <Barras formato={curto} rosca={{ titulo: `Emendas de ${ano} por tipo` }} itens={data.por_tipo.filter((t) => v(t) > 0).map((t) => ({ nome: t.rotulo,
           label: <strong>{t.rotulo}</strong>, nota: `${EXPLICA_TIPO[t.tipo] || ""} ${t.n.toLocaleString("pt-BR")} emendas · ${pctDe(v(t), tot)} do total.`.trim(),
           valor: v(t), cor: COR_TIPO[t.tipo],
         }))} />
@@ -120,13 +130,23 @@ export default function Emendas() {
       <section>
         <h2>Para quê: áreas que receberam mais</h2>
         <Explain>Cada emenda diz em que área do governo o dinheiro será usado, como saúde, educação ou obras na cidade (urbanismo). Na emenda Pix essa informação não existe.</Explain>
-        <Barras itens={data.por_area.filter((a) => v(a) > 0).sort((a, b) => v(b) - v(a)).slice(0, 14).map((a) => ({
-          label: <strong>{a.area}</strong>, nota: pctDe(v(a), tot), valor: v(a),
+        <Barras formato={curto} rosca={{ titulo: `Emendas de ${ano} por área`, total: tot, paleta: true }} itens={data.por_area.filter((a) => v(a) > 0).sort((a, b) => v(b) - v(a)).slice(0, 14).map((a) => ({
+          nome: a.area, label: <strong>{a.area}</strong>, nota: pctDe(v(a), tot), valor: v(a),
           cor: a.area.includes("Pix") ? "var(--c4)" : "var(--s1)",
         }))} />
       </section>
 
-      {data.favorecidos && <Destinos f={data.favorecidos} ano={ano} />}
+      <div ref={ref}>
+        <section>
+          <h2>Como as emendas mudaram de um ano para outro</h2>
+          <Explain>Os mesmos números, ano por ano, pelo ano do Orçamento em que a emenda foi feita. Emendas de anos recentes ainda estão sendo pagas: o valor pago delas sobe com o tempo.</Explain>
+          <div className="secao-graficos">
+            <CompararAnos porAno={tiposAnos} titulo="Por tipo de emenda" anoInicial={ano} />
+            <CompararAnos porAno={areasAnos} titulo="Por área" anoInicial={ano} limite={10} />
+          </div>
+        </section>
+        {data.favorecidos && <Destinos f={data.favorecidos} ano={ano} ufAnos={ufAnos} />}
+      </div>
       {data.pagamentos && <QuemPagou p={data.pagamentos} ano={ano} />}
       {data.pagamentos && <EmpresasPagas p={data.pagamentos} ano={ano} />}
       <Autores data={data} medida={medida} />
@@ -151,22 +171,18 @@ export default function Emendas() {
   );
 }
 
-function Destinos({ f, ano }: { f: Recebedores; ano: string }) {
+function Destinos({ f, ano, ufAnos }: { f: Recebedores; ano: string; ufAnos: Record<string, Record<string, number>> }) {
   const [q, setQ] = useState("");
   const [n, setN] = useState(12);
-  const [todosUf, setTodosUf] = useState(false);
   const muns = useMemo(() => f.municipios.filter((m) => !q.trim() || semAcento(`${m.nome} ${m.uf}`).includes(semAcento(q.trim()))), [f, q]);
   return (
     <section>
       <h2>Para onde foi o dinheiro</h2>
       <Explain>Aqui contamos os <strong>pagamentos feitos em {ano}</strong>, pelo local de quem recebeu: a prefeitura, o governo do estado, o hospital ou a entidade. Inclui pagamentos de emendas de anos anteriores. O dinheiro repassado por bancos e órgãos federais (como a Caixa, que paga obras) fica de fora do mapa, porque o arquivo não diz em que cidade ele foi usado.</Explain>
-      <div className="two">
-        <div>
-          <h3>Por estado</h3>
-          <p className="small muted" style={{ margin: "4px 0 12px" }}>Soma o que foi para as prefeituras, para o governo do estado e para as entidades de cada estado.</p>
-          <Barras itens={f.por_uf.slice(0, todosUf ? 27 : 10).map(([uf, x]) => ({ label: <strong>{uf}</strong>, nota: pctDe(x, f.por_uf.reduce((a, [, y]) => a + y, 0)), valor: x, cor: "var(--s3)" }))} />
-          {!todosUf && f.por_uf.length > 10 && <button className="link" style={{ marginTop: 8 }} onClick={() => setTodosUf(true)}>Ver todos os estados</button>}
-        </div>
+      <h3>Por estado</h3>
+      <MapaAnos porAno={ufAnos} anoInicial={ano} titulo="Pagamentos de emendas por estado de quem recebeu"
+        explica="Soma o que foi para as prefeituras, para o governo do estado e para as entidades de cada estado, pelo ano do pagamento. Toque em “Ver os anos passando” para ver como mudou." />
+      <div>
         <div>
           <h3>Cidades que mais receberam</h3>
           <p className="small muted" style={{ margin: "4px 0 0" }}>Prefeituras, fundos municipais e entidades da cidade. Não inclui o que foi para o governo do estado.</p>
@@ -312,7 +328,7 @@ function Coletivas({ data, medida }: { data: EmendasAno; medida: Medida }) {
     <section>
       <h2>Emendas de bancada, comissão e relator</h2>
       <Explain>Estas emendas são decididas por um grupo, e não por uma pessoa. Por isso não aparecem no ranking de parlamentares nem de partidos.</Explain>
-      <Barras itens={lista.map((c) => ({
+      <Barras formato={curto} itens={lista.map((c) => ({
         label: <><span className="chip">{NOME_COLETIVO[c.tipo] || c.tipo}</span> <strong>{c.nome}</strong></>,
         nota: c.areas.slice(0, 3).map(([k]) => k).join(" · "), valor: v(c), cor: COR_TIPO[c.tipo],
       }))} />
@@ -330,8 +346,8 @@ function Favorecidos({ f, ano }: { f: Recebedores; ano: string }) {
     <section>
       <h2>Quem recebeu o dinheiro em {ano}</h2>
       <Explain>Prefeituras, governos estaduais, hospitais, entidades e empresas que receberam pagamentos de emendas neste ano. Ao todo, {f.n.toLocaleString("pt-BR")} recebedores e {reaisCurto(f.total)}. As empresas recebem quando são contratadas diretamente com dinheiro de emenda, por exemplo para obras ou compras.</Explain>
-      <Barras itens={f.por_categoria.filter((c) => c.valor > 0).map((c) => ({
-        label: <strong>{c.rotulo}</strong>, nota: `${c.n.toLocaleString("pt-BR")} recebedores · ${pctDe(c.valor, f.total)}`, valor: c.valor, cor: COR_CAT[c.cat],
+      <Barras formato={curto} rosca={{ titulo: `Quem recebeu pagamentos de emendas em ${ano}`, paleta: true }} itens={f.por_categoria.filter((c) => c.valor > 0).map((c) => ({
+        nome: c.rotulo, label: <strong>{c.rotulo}</strong>, nota: `${c.n.toLocaleString("pt-BR")} recebedores · ${pctDe(c.valor, f.total)}`, valor: c.valor, cor: COR_CAT[c.cat],
       }))} />
       <div className="toggle" role="group" aria-label="Quem mostrar" style={{ justifySelf: "start" }}>
         <button aria-pressed={aba === "lista"} onClick={() => { setAba("lista"); setN(15); }}>Todos</button>
@@ -376,8 +392,8 @@ function QuemPagou({ p, ano }: { p: Pagamentos; ano: string }) {
         O parlamentar indica a emenda, mas quem paga é um ministério ou órgão do governo federal. Em {ano}, encontramos {p.n.toLocaleString("pt-BR")} pagamentos ligados a emendas, somando {reaisCurto(p.total)}.
         Embaixo de cada órgão aparecem as unidades que fizeram os pagamentos.
       </Explain>
-      <Barras itens={p.orgaos.slice(0, 12).map((o) => ({
-        label: <strong>{o.nome}</strong>,
+      <Barras formato={curto} rosca={{ titulo: `Pagamentos de emendas em ${ano}, por órgão que pagou`, total: p.total, paleta: true }} itens={p.orgaos.slice(0, 12).map((o) => ({
+        nome: o.nome, label: <strong>{o.nome}</strong>,
         nota: `${o.n.toLocaleString("pt-BR")} pagamentos · ${pctDe(o.valor, p.total)}${o.ugs.length ? ` · ${o.ugs.slice(0, 3).map(([u]) => u).join("; ")}` : ""}`,
         valor: o.valor, cor: "var(--s1)",
       }))} />

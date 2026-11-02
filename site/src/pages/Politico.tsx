@@ -1,6 +1,7 @@
 import { AtuacaoPolitico } from "./Atuacao";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { CompararAnos, Kpi, Variacao, type Fatia } from "../components/graficos";
 import { Abrir, Barras, COR_GRUPO, Espectro, Explain, GastoMensal, LinkNota, Loading, ResultadoChip, VotoChip, useAno, useData } from "../components/ui";
 import {
   GRUPO_CURTO, GRUPO_EXPLICA, cnpjFmt, dataBR, linkSeguro, pct, proposicaoNome, reais,
@@ -61,17 +62,19 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
     { label: "Cota parlamentar", valor: d.total, nota: "Reembolsos com nota fiscal: viagens, escritório, divulgação.", cor: "var(--s2)" },
     { label: "Outros gastos do mandato", valor: d.outros_gastos || 0, nota: "Fora da cota: correios, diárias e passagens de viagens oficiais.", cor: "var(--gold)" },
   ].filter((x) => x.valor > 0);
+  const anos = Object.keys(p.anos).sort();
+  const anoAntes = anos[anos.indexOf(ano) - 1];
+  const serieDe = (k: "custo_total" | "total"): [string, number][] => anos.filter((a) => p.anos[a]?.[k]).map((a) => [a, p.anos[a][k]]);
+  const categoriasAnos: Record<string, Fatia[]> = Object.fromEntries(anos.map((a) => [a, p.anos[a].categorias.map((c) => ({ nome: c.categoria, valor: c.valor }))]));
   return (
     <>
       <section className="grid">
-        <div className="card stat">
-          <span className="label">Custo conhecido em {ano}</span>
-          <span className="value">{reais(d.custo_total)}</span>
-          <span className="hint">Soma de salário, equipe, cota e outros gastos informados pelos sites oficiais.</span>
-        </div>
-        <div className="card stat">
+        <Kpi rotulo={`Custo conhecido em ${ano}`} valor={d.custo_total} formato={(v) => reais(v)} serie={serieDe("custo_total")} ano={ano}
+          dica="Soma de salário, equipe, cota e outros gastos informados pelos sites oficiais." />
+        <div className="card stat kpi">
           <span className="label">Cota parlamentar em {ano}</span>
           <span className="value">{reais(d.total)}</span>
+          {anoAntes && <Variacao de={p.anos[anoAntes]?.total} para={d.total} rotulo={anoAntes} />}
           {media > 0 && <span className="hint">{vezes >= 1.05 ? `${vezes.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}× a média` : vezes <= 0.95 ? `${Math.round((1 - vezes) * 100)}% abaixo da média` : "Na média"} {p.casa === "camara" ? "dos deputados" : "dos senadores"} ({reais(media)})</span>}
         </div>
         {d.n_pessoal != null && <div className="card stat"><span className="label">Pessoas na equipe em {ano}</span><span className="value">{d.n_pessoal}</span><span className="hint">Inclui quem entrou ou saiu durante o ano.</span></div>}
@@ -80,7 +83,7 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
       {partes.length > 1 && (
         <section>
           <h2>Para onde foi o dinheiro em {ano}</h2>
-          <Barras itens={partes.map((x) => ({ label: <strong>{x.label}</strong>, nota: x.nota, valor: x.valor, cor: x.cor }))} />
+          <Barras rosca={{ titulo: `Custo conhecido de ${p.nome} em ${ano}` }} itens={partes.map((x) => ({ nome: x.label, label: <strong>{x.label}</strong>, nota: x.nota, valor: x.valor, cor: x.cor }))} />
         </section>
       )}
 
@@ -104,8 +107,10 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
 
       <section>
         <h2>Em que gastou a cota</h2>
-        <Barras itens={d.categorias.slice(0, todas ? 99 : 8).map((c) => ({ label: c.categoria, valor: c.valor, cor: COR_GRUPO[c.grupo] }))} />
+        <Barras rosca={{ titulo: `Cota de ${p.nome} em ${ano}, por tipo de gasto`, total: d.total, paleta: true }} itens={d.categorias.slice(0, todas ? 99 : 8).map((c) => ({ label: c.categoria, valor: c.valor }))} />
         {d.categorias.length > 8 && <button className="link" onClick={() => setTodas(!todas)}>{todas ? "Mostrar menos" : `Mostrar todas as ${d.categorias.length} categorias`}</button>}
+        <CompararAnos porAno={categoriasAnos} titulo="Como a cota mudou de um ano para outro" anoInicial={ano} limite={8}
+          nota="Cada tipo de gasto da cota, ano a ano. O ano em andamento vai só até a última nota publicada." />
       </section>
 
       <section>

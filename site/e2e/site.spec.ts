@@ -99,7 +99,13 @@ test.describe("jornada", () => {
     await expect(page.locator(".emd-autor").first()).toContainText(inc.emendas.politicos[0].nome);
     // a empresa abre com os donos e o que recebeu do governo
     await page.getByRole("button", { name: "Recebeu do governo" }).first().click();
-    await tabela.locator("tbody tr").first().getByRole("link", { name: maior.nome }).click();
+    // tocar no nome abre a explicação: de onde veio o dinheiro, com os links oficiais
+    const linha = tabela.locator("tbody tr").first();
+    await linha.getByText(maior.nome, { exact: true }).first().click();
+    await expect(linha.locator(".inc-explica-corpo")).toBeVisible();
+    await expect(linha.locator(".inc-explica-corpo")).toContainText(maior.orgaos[0][0]);
+    await expect(linha.locator(`.inc-explica-corpo a[href$="pessoa-juridica/${maior.cnpj}"]`)).toBeVisible();
+    await linha.getByRole("link", { name: /Donos, outras empresas/ }).click();
     await expect(page).toHaveURL(new RegExp(`#/e/${maior.cnpj}`));
     await expect(page.locator("main")).toContainText("Pagamentos do governo federal");
     await expect(page.locator("main")).toContainText(maior.donos[0]);
@@ -283,6 +289,38 @@ test.describe("idiomas e buscadores", () => {
       await expect(page.locator("h1")).toContainText(p.nome);
       await expect(page.locator(`a[href*="#/p/${p.id}"]`).first()).toBeVisible();
     }
+  });
+});
+
+test.describe("gráficos", () => {
+  test("rosca ao lado da lista, mapa por estado e comparação de anos", async ({ page }) => {
+    const erros = vigiar(page);
+    await page.goto("./#/dinheiro");
+    // a área de governo aparece na lista e na rosca ao lado
+    const area = page.locator("section#destino .com-rosca").nth(1);
+    await expect(area.locator(".rosca svg")).toBeVisible();
+    await expect(area.locator(".rosca-leg")).toContainText("Encargos Especiais");
+    // mapa com os 27 estados e o botão que passa pelos anos
+    const mapa = page.locator("section#quem-pagou .mapa-anos");
+    await mapa.scrollIntoViewIfNeeded();
+    await expect(mapa.locator(".mapa-uf path")).toHaveCount(27);
+    await mapa.getByRole("button", { name: "O que mudou" }).click();
+    await expect(mapa.locator(".mapa-uf path")).toHaveCount(27);
+    // sinais no fim da página, com a tendência dos anos
+    const sinais = page.locator("section#sinais");
+    await sinais.scrollIntoViewIfNeeded();
+    await expect(sinais.locator(".fin-tendencia").first()).toBeVisible();
+    expect(erros).toEqual([]);
+  });
+
+  test("números grandes cabem no quadro", async ({ page }) => {
+    await page.goto("./#/dinheiro");
+    await expect(page.locator(".stat .value").first()).toBeVisible();
+    const vazam = await page.locator(".stat .value").evaluateAll((els) => els.filter((e) => {
+      const c = e.closest(".card")!.getBoundingClientRect(), r = e.getBoundingClientRect();
+      return r.right > c.right + 1;
+    }).length);
+    expect(vazam).toBe(0);
   });
 });
 

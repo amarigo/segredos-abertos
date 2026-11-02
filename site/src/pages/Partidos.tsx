@@ -1,8 +1,10 @@
-import { Fragment, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Barras, Explain, Loading, OndeVer, useAno, useData, useTip } from "../components/ui";
+import { Barras, Explain, Loading, OndeVer, useAno, useData } from "../components/ui";
 import { MG } from "../recorte";
 import { casaNome, corPartido, reais, reaisCurto, type Casa, type Partido } from "../data";
+import { CompararAnos, Rosca, prepararFatias, type Fatia, type FatiaPronta } from "../components/graficos";
+import { COR_LADO, LADOS, ladoPelosVotos } from "../partidos";
 
 type Medida = "total" | "membro";
 type Base = "cota" | "custo";
@@ -56,45 +58,15 @@ export function GastoPartidos({ partidos, ano, limite }: { partidos: Partido[]; 
 }
 
 
-/* Pizza (rosca) com o total de cada partido; os partidos menores entram juntos em "Outros" */
+/* Pizza (rosca) com o total de cada partido; os partidos menores entram juntos em "Outros". Usa a rosca do site inteiro. */
 export function Pizza({ fatias, titulo }: { fatias: { sigla: string; valor: number; cor: string; outros?: boolean }[]; titulo: string }) {
-  const tip = useTip();
-  const proprias = fatias.filter((f) => !f.outros).sort((a, b) => b.valor - a.valor);
-  const resto = fatias.filter((f) => f.outros);
-  const itens = [...proprias, ...(resto.length ? [{ sigla: `Outros (${resto.length})`, valor: resto.reduce((a, f) => a + f.valor, 0), cor: "var(--c-outros)" }] : [])];
-  const total = itens.reduce((a, f) => a + f.valor, 0);
+  const proprias = fatias.filter((f) => !f.outros && f.valor > 0).sort((a, b) => b.valor - a.valor);
+  const resto = fatias.filter((f) => f.outros).reduce((a, f) => a + f.valor, 0);
+  const total = proprias.reduce((a, f) => a + f.valor, 0) + resto;
   if (!total) return null;
-  const R = 100, r = 58;
-  let ang = -Math.PI / 2;
-  const arcos = itens.map((f) => {
-    const a0 = ang, a1 = ang + (f.valor / total) * Math.PI * 2;
-    ang = a1;
-    const grande = a1 - a0 > Math.PI ? 1 : 0;
-    const p = (rad: number, raio: number) => `${(R + raio * Math.cos(rad)).toFixed(2)} ${(R + raio * Math.sin(rad)).toFixed(2)}`;
-    const d = itens.length === 1
-      ? `M ${p(0, R)} A ${R} ${R} 0 1 1 ${p(Math.PI, R)} A ${R} ${R} 0 1 1 ${p(0, R)} M ${p(0, r)} A ${r} ${r} 0 1 0 ${p(Math.PI, r)} A ${r} ${r} 0 1 0 ${p(0, r)} Z`
-      : `M ${p(a0, R)} A ${R} ${R} 0 ${grande} 1 ${p(a1, R)} L ${p(a1, r)} A ${r} ${r} 0 ${grande} 0 ${p(a0, r)} Z`;
-    return { ...f, d };
-  });
-  const pct = (v: number) => `${((v / total) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
-  return (
-    <figure className="pizza" style={{ margin: 0 }}>
-      <svg viewBox="0 0 200 200" width="100%" role="img" aria-label={titulo}>
-        {arcos.map((f) => (
-          <path key={f.sigla} d={f.d} fill={f.cor} stroke="var(--surface)" strokeWidth={2} fillRule="evenodd"
-            onMouseMove={(e) => tip.show(e, `${f.sigla}: ${reais(f.valor)} (${pct(f.valor)})`)} onMouseLeave={tip.hide} />
-        ))}
-        <text x={100} y={96} textAnchor="middle" style={{ fontSize: 11, fill: "var(--muted)" }}>Total</text>
-        <text x={100} y={114} textAnchor="middle" style={{ fontSize: 15, fontWeight: 700, fill: "var(--ink)" }}>{reaisCurto(total)}</text>
-      </svg>
-      <figcaption className="leg">
-        {itens.map((f) => (
-          <Fragment key={f.sigla}><i style={{ background: f.cor }} /><span>{f.sigla}</span><span className="num muted">{pct(f.valor)}</span><span className="num">{reaisCurto(f.valor)}</span></Fragment>
-        ))}
-      </figcaption>
-      {tip.el}
-    </figure>
-  );
+  const itens: FatiaPronta[] = proprias.map((f) => ({ nome: f.sigla, valor: f.valor, cor: f.cor, pct: f.valor / total }));
+  if (resto > 0) itens.push({ nome: "Outros", valor: resto, cor: "var(--c-outros)", pct: resto / total, outros: true });
+  return <div className="pizza-nova"><Rosca fatias={itens} titulo={titulo} formato={reaisCurto} /></div>;
 }
 
 export default function Partidos() {
@@ -104,7 +76,9 @@ export default function Partidos() {
   return (
     <>
       <h1>Partidos</h1>
+      <Bancadas partidos={data} />
       <GastoPartidos partidos={data} ano={ano} />
+      <PartidosAnos partidos={data} ano={ano} />
       <p className="muted small">Conta cada parlamentar no partido atual. Quem mudou de partido aparece no partido de hoje, com todos os gastos do ano. Para ver cada parlamentar de um partido, use o filtro de partido em <Link to="/politicos">{MG ? "Federais" : "Políticos"}</Link>.</p>
       <OndeVer links={[
         { nome: "Gastos da cota parlamentar na Câmara", url: "https://www.camara.leg.br/transparencia/gastos-parlamentares", explica: "cada nota de cada deputado federal" },
@@ -112,5 +86,57 @@ export default function Partidos() {
         { nome: "Dados abertos do Senado", url: "https://www12.senado.leg.br/dados-abertos", explica: "senadores, gastos (CEAPS) e votações" },
       ]} />
     </>
+  );
+}
+
+/* Tamanho das bancadas: cadeiras por partido e por lado (esquerda a direita, pelos votos) */
+function Bancadas({ partidos }: { partidos: Partido[] }) {
+  return (
+    <section>
+      <h2>Quem tem mais cadeiras</h2>
+      <p className="small muted">Parlamentares no mandato hoje, pelo partido atual. O lado vem dos votos da bancada nas votações nominais, o mesmo critério para todos.</p>
+      <div className="secao-graficos">
+        {(["camara", "senado"] as Casa[]).map((c) => {
+          const ps = partidos.filter((p) => p.casa === c && p.n > 0).sort((a, b) => b.n - a.n);
+          if (!ps.length) return null;
+          const total = ps.reduce((a, p) => a + p.n, 0);
+          const porLado: Record<string, number> = {};
+          ps.forEach((p) => { const l = p.posicao == null ? "Sem posição" : ladoPelosVotos(p.posicao); porLado[l] = (porLado[l] || 0) + p.n; });
+          const fmt = (v: number) => `${v} cadeira${v === 1 ? "" : "s"}`;
+          return (
+            <div key={c} className="card">
+              <h3>{casaNome(c)}</h3>
+              <div className="secao-graficos">
+                <Rosca fatias={prepararFatias(ps.map((p) => ({ nome: p.sigla, valor: p.n, cor: corPartido(p.sigla) })), 7)} titulo={`Cadeiras por partido na ${casaNome(c)}`} formato={fmt} centroRotulo="Cadeiras" centro={String(total)} />
+                <Rosca fatias={prepararFatias([...LADOS, "Sem posição"].map((l) => ({ nome: l, valor: porLado[l] || 0, cor: COR_LADO[l] })), 9)} titulo={`Cadeiras por lado na ${casaNome(c)}`} formato={fmt} centroRotulo="Por lado" centro={String(total)} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/* Gasto de cada partido ano a ano, com a animação e a comparação de dois anos */
+function PartidosAnos({ partidos, ano }: { partidos: Partido[]; ano: string }) {
+  const [casa, setCasa] = useState<Casa>("camara");
+  const porAno = useMemo(() => {
+    const r: Record<string, Fatia[]> = {};
+    partidos.filter((p) => p.casa === casa).forEach((p) => Object.entries(p.por_ano || {}).forEach(([a, x]) => {
+      (r[a] ||= []).push({ nome: p.sigla, valor: x.cota_por_membro, cor: corPartido(p.sigla) });
+    }));
+    return r;
+  }, [partidos, casa]);
+  if (Object.keys(porAno).length < 2) return null;
+  return (
+    <section>
+      <h2>Como o gasto de cada partido mudou</h2>
+      <div className="toggle" role="group" aria-label="Casa">
+        {(["camara", "senado"] as Casa[]).map((c) => <button key={c} aria-pressed={casa === c} onClick={() => setCasa(c)}>{casaNome(c)}</button>)}
+      </div>
+      <CompararAnos porAno={porAno} titulo="Cota por parlamentar, por partido" anoInicial={ano} limite={12}
+        nota="Cota dividida pelo número de parlamentares do partido em cada ano, para comparar bancadas grandes e pequenas. O ano em andamento vai só até a última nota publicada." />
+    </section>
   );
 }
