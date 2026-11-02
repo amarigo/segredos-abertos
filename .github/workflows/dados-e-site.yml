@@ -42,6 +42,8 @@ jobs:
         run: python -m pytest -q mg/etl/tests
       - name: Coletor da Eleição 2026
         run: python -m pytest -q eleicao2026/etl/tests
+      - name: Painel de análises
+        run: python -m pytest -q analises/tests
 
   # Topo da pirâmide: o site no navegador (jornada, segurança e caos), com dados fictícios
   testes-site:
@@ -251,6 +253,15 @@ jobs:
       - name: "Terras Raras: montar o site em /terras-raras/"
         continue-on-error: true
         run: python terras-raras/gerar_pagina.py --site site/dist/terras-raras/index.html | tee -a "$GITHUB_STEP_SUMMARY"
+      # Painel de análises (/analises/): todos os dados acima em tabelas CSV para baixar e em gráficos próprios
+      # (Apache ECharts). Só reorganiza os arquivos já coletados; não busca nada novo. Uma falha aqui não trava o site.
+      - name: "Análises: montar o painel em /analises/"
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          MG=""; [ -f site/public-mg/data/meta.json ] && MG="--mg site/public-mg/data"
+          python analises/publicar.py --nacional site/public/data $MG --eleicao eleicao2026/dados/tse \
+            --terras terras-raras/dados --saida site/dist/analises | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist
