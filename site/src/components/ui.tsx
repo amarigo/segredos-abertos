@@ -1,4 +1,5 @@
-import { Component, Fragment, createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { Component, Fragment, createContext, isValidElement, useContext, useEffect, useState, type ReactNode } from "react";
+import { COR_OUTROS, ComRosca, prepararFatias } from "./graficos";
 import { Link } from "react-router-dom";
 import { linkSeguro, load, reais, MESES, type Grupo } from "../data";
 
@@ -12,6 +13,36 @@ export function useData<T>(path: string | null): { data: T | null; error: string
     return () => { vivo = false; };
   }, [path]);
   return state;
+}
+
+/** Vários arquivos de uma vez (por exemplo, um por ano, para comparar). Arquivo que falha fica de fora. */
+export function useVarios<T>(paths: string[] | null): Record<string, T> {
+  const [dados, set] = useState<Record<string, T>>({});
+  const chave = paths ? paths.join("|") : "";
+  useEffect(() => {
+    if (!paths || !paths.length) return;
+    let vivo = true;
+    Promise.all(paths.map((p) => load<T>(p).then((d) => [p, d] as const).catch(() => null))).then((r) => {
+      if (vivo) set(Object.fromEntries(r.filter((x): x is readonly [string, Awaited<T>] => !!x)) as Record<string, T>);
+    });
+    return () => { vivo = false; };
+  }, [chave]); // eslint-disable-line
+  return dados;
+}
+
+/** Fica true quando o elemento chega perto da tela: para baixar dados extras só quando a pessoa rolar até lá.
+ *  Devolve um ref de função: funciona mesmo quando o elemento só aparece depois que os dados chegam. */
+export function useVisivel<E extends Element>(): [(el: E | null) => void, boolean] {
+  const [el, setEl] = useState<E | null>(null);
+  const [v, setV] = useState(false);
+  useEffect(() => {
+    if (v || !el) return;
+    if (typeof IntersectionObserver === "undefined") { setV(true); return; }
+    const o = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { setV(true); o.disconnect(); } }, { rootMargin: "600px" });
+    o.observe(el);
+    return () => o.disconnect();
+  }, [v, el]);
+  return [setEl, v];
 }
 
 /* Ano escolhido no topo do site, compartilhado por todas as páginas */
@@ -63,20 +94,51 @@ export function useTip() {
 
 export const COR_GRUPO: Record<Grupo, string> = { pessoal: "var(--s1)", escritorio: "var(--s2)", servicos: "var(--s3)" };
 
-/* Barras horizontais com rótulo e valor */
-export function Barras({ itens, cor, max }: { itens: { label: ReactNode; valor: number; cor?: string; nota?: string }[]; cor?: string; max?: number }) {
+/* Barras horizontais com rótulo e valor.
+   rosca: quando as barras são partes de um todo, mostra a lista de um lado e a rosca (pizza) do outro, com as mesmas
+   cores; passar o mouse numa barra acende a fatia e vice-versa. total: o todo, quando a lista mostra só as maiores. */
+export function Barras({ itens, cor, max, rosca, formato }: {
+  itens: { label: ReactNode; valor: number; cor?: string; nota?: string; nome?: string }[]; cor?: string; max?: number;
+  rosca?: { titulo: string; total?: number; centroRotulo?: string; maxFatias?: number; paleta?: boolean }; formato?: (v: number) => string;
+}) {
+  const [ativo, setAtivo] = useState<string | null>(null);
   const m = max ?? Math.max(1, ...itens.map((i) => i.valor));
-  return (
+  const fmt = formato || ((v: number) => reais(v));
+  // Uma cor só na lista: cada parte ganha a sua, na ordem da paleta. Cores com sentido (partido, lado, grupo) ficam.
+  const umaCor = !!rosca?.paleta || new Set(itens.map((i) => i.cor || cor)).size <= 1;
+  const nomeDe = (i: { label: ReactNode; nome?: string }, k: number) => i.nome || (typeof i.label === "string" ? i.label : textoDe(i.label)) || `Item ${k + 1}`;
+  const fatias = rosca ? prepararFatias(itens.map((i, k) => ({ nome: nomeDe(i, k), valor: i.valor, cor: umaCor ? undefined : i.cor || cor })), rosca.maxFatias, rosca.total) : [];
+  const corDe = (k: number, i: { cor?: string }) => {
+    if (!rosca) return i.cor || cor || "var(--s1)";
+    return fatias.find((f) => f.nome === nomeDe(itens[k], k))?.cor || COR_OUTROS;
+  };
+  const lista = (
     <div className="bars">
-      {itens.map((i, k) => (
-        <div className="bar-row" key={k}>
-          <div style={{ minWidth: 0 }}>{i.label}{i.nota && <div className="muted small">{i.nota}</div>}</div>
-          <div className="num">{reais(i.valor)}</div>
-          <div className="track" aria-hidden="true"><div className="fill" style={{ width: `${(i.valor / m) * 100}%`, background: i.cor || cor || "var(--s1)" }} /></div>
-        </div>
-      ))}
+      {itens.map((i, k) => {
+        const nome = rosca ? nomeDe(i, k) : "";
+        const dono = rosca && (fatias.some((f) => f.nome === nome) ? nome : "Outros");
+        return (
+          <div className={`bar-row ${rosca && ativo && ativo !== dono ? "apagado" : ""}`} key={k}
+            onMouseEnter={rosca ? () => setAtivo(dono || null) : undefined} onMouseLeave={rosca ? () => setAtivo(null) : undefined}>
+            <div style={{ minWidth: 0 }}>{i.label}{i.nota && <div className="muted small">{i.nota}</div>}</div>
+            <div className="num">{fmt(i.valor)}</div>
+            <div className="track" aria-hidden="true"><div className="fill" style={{ width: `${(i.valor / m) * 100}%`, background: corDe(k, i) }} /></div>
+          </div>
+        );
+      })}
     </div>
   );
+  if (!rosca || fatias.length < 2) return lista;
+  return <ComRosca fatias={fatias} titulo={rosca.titulo} centroRotulo={rosca.centroRotulo} formato={formato} ativo={ativo} onAtivo={setAtivo}>{lista}</ComRosca>;
+}
+
+/** Texto de um rótulo em JSX (para o nome da fatia da rosca) */
+function textoDe(n: ReactNode): string {
+  if (n == null || typeof n === "boolean") return "";
+  if (typeof n === "string" || typeof n === "number") return String(n);
+  if (Array.isArray(n)) return n.map(textoDe).join("");
+  if (isValidElement(n)) return textoDe((n.props as { children?: ReactNode }).children);
+  return "";
 }
 
 /* Colunas de gasto por mês (um ano) */

@@ -1,11 +1,15 @@
 import { Link, useParams } from "react-router-dom";
 import { useMemo, useState } from "react";
+import { ColunasAnos, curto } from "../components/graficos";
 import { Barras, Explain, LinkNota, Loading, useAno, useData, useTip } from "../components/ui";
 import { MESES, cnpjFmt, dataBR, linkSeguro, reais, type DonoFinal, type Empresa, type NotaEmpresa, type OutraEmpresa, type Resumo } from "../data";
 import { ListaDocumentos } from "../components/DocsEmendas";
 import "./incentivos.css";
 
 /** "R$ X da cota + R$ Y de emendas + R$ Z do governo federal · R$ W de renúncia fiscal" */
+/** Número do quadro: acima de R$ 1 milhão, curto (R$ 5 bi), para caber; o valor exato aparece ao passar o mouse */
+const grande = (v: number) => (Math.abs(v) >= 1e6 ? curto(v) : reais(v));
+
 function recebeuTexto(o: OutraEmpresa) {
   const so = !o.emendas && !o.governo;
   const recebeu = [o.total ? `${reais(o.total)}${so ? "" : " da cota"}` : "", o.emendas ? `${reais(o.emendas)} de emendas` : "",
@@ -42,18 +46,18 @@ function EmpresaAno({ e }: { e: Empresa }) {
         {e.alertas.map((a) => <div className="alert" key={a} role="note"><strong>Ponto de atenção:</strong> {a}</div>)}
       </section>
       <section className="grid">
-        {e.total > 0 && <div className="card stat"><span className="label">Recebeu da cota de parlamentares em {ano}</span><span className="value">{reais(cotaValor)}</span>
+        {e.total > 0 && <div className="card stat"><span className="label">Recebeu da cota de parlamentares em {ano}</span><span className="value" title={reais(cotaValor)}>{grande(cotaValor)}</span>
           <span className="hint">{cotaPols ? `de ${cotaPols} parlamentar${cotaPols > 1 ? "es" : ""}` : `nada em ${ano}`}{e.total !== cotaValor && <> · {reais(e.total)} em todos os anos</>}</span></div>}
-        {e.governo && <div className="card stat"><span className="label">Recebeu do governo federal em {ano}</span><span className="value">{reais(e.governo.por_ano[ano] || 0)}</span>
+        {e.governo && <div className="card stat"><span className="label">Recebeu do governo federal em {ano}</span><span className="value" title={reais(e.governo.por_ano[ano] || 0)}>{grande(e.governo.por_ano[ano] || 0)}</span>
           <span className="hint">compras, obras, serviços, convênios e subsídios · {somaAnos(e.governo.por_ano)}</span></div>}
-        {e.renuncia && <div className="card stat"><span className="label">Deixou de pagar de impostos em {ano}</span><span className="value">{e.renuncia.por_ano[ano] != null ? reais(e.renuncia.por_ano[ano]) : "—"}</span>
+        {e.renuncia && <div className="card stat"><span className="label">Deixou de pagar de impostos em {ano}</span><span className="value">{e.renuncia.por_ano[ano] != null ? grande(e.renuncia.por_ano[ano]) : "—"}</span>
           <span className="hint">{e.renuncia.por_ano[ano] == null && ultimoRen ? `A Receita ainda não publicou ${ano}. Último ano com dado: ${ultimoRen}, ${reais(e.renuncia.por_ano[ultimoRen])}. ` : "renúncia fiscal federal · "}{somaAnos(e.renuncia.por_ano)}</span></div>}
-        {e.emendas && <div className="card stat"><span className="label">Recebeu de emendas parlamentares em {ano}</span><span className="value">{reais(e.emendas.por_ano[ano] || 0)}</span>
+        {e.emendas && <div className="card stat"><span className="label">Recebeu de emendas parlamentares em {ano}</span><span className="value" title={reais(e.emendas.por_ano[ano] || 0)}>{grande(e.emendas.por_ano[ano] || 0)}</span>
           <span className="hint">pagos pelo governo federal · {somaAnos(e.emendas.por_ano)}</span></div>}
         {emp && <>
           <div className="card stat"><span className="label">Situação na Receita</span><span className="value" style={{ fontSize: "1.3rem" }}>{emp.situacao || "—"}</span><span className="hint">Aberta em {dataBR(emp.abertura)}</span></div>
           <div className="card stat"><span className="label">Atividade</span><span style={{ fontWeight: 600 }}>{emp.atividade || "—"}</span><span className="hint">{emp.municipio}{emp.uf ? `-${emp.uf}` : ""} · {emp.porte}</span></div>
-          <div className="card stat"><span className="label">Capital social</span><span className="value" style={{ fontSize: "1.3rem" }}>{reais(Number(emp.capital_social) || 0)}</span><span className="hint">{emp.natureza}</span></div>
+          <div className="card stat"><span className="label">Capital social</span><span className="value" style={{ fontSize: "1.3rem" }}>{grande(Number(emp.capital_social) || 0)}</span><span className="hint">{emp.natureza}</span></div>
         </>}
       </section>
 
@@ -202,12 +206,16 @@ function PorAno({ e }: { e: Empresa }) {
 /** Linha com os valores de cada ano, o escolhido em negrito, e a soma no fim (informação secundária) */
 function AnosLinha({ pa, ano }: { pa: Record<string, number>; ano: string }) {
   const anos = Object.entries(pa).sort();
+  const { anos: anosSite, setAno } = useAno();
   if (!anos.length) return null;
   return (
+    <>
+    {anos.length > 1 && <div className="empresa-anos"><ColunasAnos serie={anos} titulo="Valor de cada ano" formato={curto} ano={ano} setAno={(a) => anosSite.includes(a) && setAno(a)} /></div>}
     <p className="small muted anos-linha">
       Cada ano: {anos.map(([a, v], i) => <span key={a}>{i > 0 && " · "}{a === ano ? <strong>{a}: {reais(v)}</strong> : `${a}: ${reais(v)}`}</span>)}
       {anos.length > 1 && <> · todos os anos somados: {reais(anos.reduce((t, [, v]) => t + v, 0))}</>}
     </p>
+    </>
   );
 }
 
@@ -229,8 +237,8 @@ function Governo({ g, cnpj, ano }: { g: NonNullable<Empresa["governo"]>; cnpj: s
       <AnosLinha pa={g.por_ano} ano={ano} />
       {temAno && !d ? <div className="empty">Nenhum pagamento do governo federal a esta empresa em {ano}.</div> : (
         <div className="two">
-          <div><h3>Para quê</h3><Barras itens={cats.map(([c, v]) => ({ label: c, valor: v, cor: "var(--s1)" }))} /></div>
-          <div><h3>Quem pagou</h3><Barras itens={orgaos.map(([o, v]) => ({ label: o, valor: v, cor: "var(--s3)" }))} /></div>
+          <div><h3>Para quê</h3><Barras formato={curto} rosca={{ titulo: `Para que o governo pagou esta empresa em ${ano}` }} itens={cats.map(([c, v]) => ({ label: c, valor: v, cor: "var(--s1)" }))} /></div>
+          <div><h3>Quem pagou</h3><Barras formato={curto} rosca={{ titulo: `Quem pagou esta empresa em ${ano}` }} itens={orgaos.map(([o, v]) => ({ label: o, valor: v, cor: "var(--s3)" }))} /></div>
         </div>
       )}
       <p className="small"><a href={`https://portaldatransparencia.gov.br/pessoa-juridica/${cnpj}`} target="_blank" rel="noreferrer">Todos os pagamentos, contratos e convênios no Portal da Transparência ↗</a></p>
@@ -251,7 +259,7 @@ function Renuncia({ r, ano }: { r: NonNullable<Empresa["renuncia"]>; ano: string
       <AnosLinha pa={r.por_ano} ano={ano} />
       {temAno && !d ? <div className="empty">A Receita não tem renúncia fiscal desta empresa em {ano} (ou ainda não publicou esse ano).</div> : <>
         <h3>Quais benefícios</h3>
-        <Barras itens={ben.map(([b, v]) => ({ label: b, valor: v, cor: "var(--c4)" }))} />
+        <Barras formato={curto} rosca={{ titulo: `Renúncia fiscal desta empresa em ${ano}, por benefício` }} itens={ben.map(([b, v]) => ({ label: b, valor: v, cor: "var(--c4)" }))} />
       </>}
       <p className="small"><a href={linkSeguro(r.fonte)} target="_blank" rel="noreferrer">Consultar a renúncia por empresa no Portal da Transparência ↗</a></p>
     </section>

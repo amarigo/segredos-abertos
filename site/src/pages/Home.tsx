@@ -7,6 +7,7 @@ import { LADOS, ladoPelosVotos } from "../partidos";
 import { MG, SITE } from "../recorte";
 import type { CidadeResumo } from "../data";
 import { AvisosFim, SelosResumo } from "../components/Selo";
+import { Kpi, MapaAnos } from "../components/graficos";
 
 export default function Home() {
   const { data: meta, error } = useData<Meta>("meta.json");
@@ -24,7 +25,22 @@ export default function Home() {
     return g;
   }, [pols, ano]);
 
+  // Cota por estado: média por parlamentar de cada estado, ano a ano (estados com mais deputados não ganham por tamanho)
+  const porUf = useMemo(() => {
+    const r: Record<string, Record<string, number>> = {};
+    const soma: Record<string, Record<string, [number, number]>> = {};
+    pols?.forEach((p) => Object.entries(p.por_ano).forEach(([a, x]) => {
+      if (!x.total) return;
+      const s = ((soma[a] ||= {})[p.uf] ||= [0, 0]);
+      s[0] += x.total; s[1] += 1;
+    }));
+    Object.entries(soma).forEach(([a, ufs]) => { r[a] = Object.fromEntries(Object.entries(ufs).map(([uf, [t, n]]) => [uf, t / n])); });
+    return r;
+  }, [pols]);
   if (!meta) return <Loading error={error} />;
+  const serie = (o?: Record<string, number>): [string, number][] => meta.anos.map(String).filter((a) => o?.[a] != null).map((a) => [a, o![a]]);
+  const serieMedia = (c: "camara" | "senado"): [string, number][] => meta.anos.map(String).filter((a) => meta.medias[a]?.[c]).map((a) => [a, meta.medias[a][c]]);
+  const ufs = new Set((pols || []).map((p) => p.uf));
   const totalAno = (p: Resumo) => p.por_ano[ano]?.total || 0;
   const top = (pols || []).slice().sort((a, b) => totalAno(b) - totalAno(a)).slice(0, 8);
   const medias = meta.medias[ano] || { camara: 0, senado: 0 };
@@ -48,6 +64,16 @@ export default function Home() {
         {resultados.length > 0 && (
           <div className="list">{resultados.map((p) => <PessoaLinha key={p.id} p={p} />)}</div>
         )}
+      </section>
+
+      <section>
+        <div className="grid">
+          <Kpi rotulo={`Cota parlamentar em ${ano}`} valor={meta.total_por_ano?.[ano]} serie={serie(meta.total_por_ano)} ano={ano} dica="reembolsos com nota fiscal" />
+          {meta.custo_por_ano?.[ano] ? <Kpi rotulo={`Custo conhecido em ${ano}`} valor={meta.custo_por_ano[ano]} serie={serie(meta.custo_por_ano)} ano={ano} dica="cota, salários e equipe dos gabinetes" /> : null}
+          {medias.camara > 0 && <Kpi rotulo="Média por deputado federal" valor={medias.camara} serie={serieMedia("camara")} ano={ano} dica={`cota em ${ano}`} />}
+          {medias.senado > 0 && <Kpi rotulo="Média por senador" valor={medias.senado} serie={serieMedia("senado")} ano={ano} dica={`cota em ${ano}`} />}
+        </div>
+        <p className="small muted">A seta compara com o ano anterior inteiro; o ano em andamento só vai até a última nota publicada. Troque o ano no topo da página.</p>
       </section>
 
       {MG && (
@@ -81,8 +107,16 @@ export default function Home() {
       <section>
         <h2>Para onde vai o dinheiro</h2>
         <Explain>Além do salário, cada parlamentar tem uma <strong>cota</strong> mensal para pagar despesas do mandato. Ele paga e pede reembolso apresentando a nota fiscal. Separamos esses gastos em três grupos.</Explain>
-        <Barras itens={(Object.keys(grupos) as Grupo[]).map((g) => ({ label: <strong>{GRUPO_CURTO[g]}</strong>, nota: GRUPO_EXPLICA[g], valor: grupos[g], cor: COR_GRUPO[g] }))} />
+        <Barras rosca={{ titulo: `Cota parlamentar em ${ano}, pelos três grupos de gasto` }} itens={(Object.keys(grupos) as Grupo[]).map((g) => ({ nome: GRUPO_CURTO[g], label: <strong>{GRUPO_CURTO[g]}</strong>, nota: GRUPO_EXPLICA[g], valor: grupos[g], cor: COR_GRUPO[g] }))} />
       </section>
+
+      {ufs.size > 1 && (
+        <section>
+          <h2>Quanto gasta, em média, cada parlamentar de cada estado</h2>
+          <Explain>A média de cota por deputado federal e senador de cada estado. Quem mora longe de Brasília gasta mais com passagens, por isso Norte e Nordeste costumam aparecer mais escuros. Toque num estado para ver os parlamentares dele.</Explain>
+          <MapaAnos porAno={porUf} anoInicial={ano} titulo="Média de cota por parlamentar, por estado" onUf={(uf) => nav(`/politicos?uf=${uf}`)} />
+        </section>
+      )}
 
       <div className="two">
         <section>

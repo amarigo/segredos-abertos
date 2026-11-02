@@ -79,7 +79,7 @@ function Gastos({ d, ano, colegas, primeiro }: { d: DeputadoEstadual; ano: strin
       </section>
       <section>
         <h2>Em que gastou</h2>
-        <Barras itens={v.tipos.slice(0, todas ? 99 : 8).map((t) => ({ label: t.tipo, valor: t.valor, cor: "var(--s2)" }))} />
+        <Barras rosca={{ titulo: `Verba indenizatória em ${ano}, por tipo de gasto`, total: v.total }} itens={v.tipos.slice(0, todas ? 99 : 8).map((t) => ({ label: t.tipo, valor: t.valor, cor: "var(--s2)" }))} />
         {v.tipos.length > 8 && <button className="link" onClick={() => setTodas(!todas)}>{todas ? "Mostrar menos" : `Mostrar os ${v.tipos.length} tipos`}</button>}
       </section>
       <section>
@@ -185,7 +185,7 @@ function EmendasDep({ d, ano, colegas, primeiro }: { d: DeputadoEstadual; ano: s
       </section>
       <section>
         <h2>Para quais cidades</h2>
-        <Barras itens={e.municipios.map((m) => ({ label: m.nome, nota: `${m.n} indicaç${m.n === 1 ? "ão" : "ões"}, ${reais(m.pago)} pago`, valor: m.indicado, cor: "var(--s3)" }))} />
+        <Barras rosca={{ titulo: `Emendas estaduais indicadas em ${ano}, por cidade`, total: e.indicado }} itens={e.municipios.map((m) => ({ label: m.nome, nota: `${m.n} indicaç${m.n === 1 ? "ão" : "ões"}, ${reais(m.pago)} pago`, valor: m.indicado, cor: "var(--s3)" }))} />
       </section>
       <section>
         <h2>Quem recebe</h2>

@@ -44,7 +44,7 @@ function Contas({ d, nome }: { d: Dinheiro; nome: string }) {
               <span className="hint">{reais(f.liquidado)} em {a.ano}</span></div>
           ))}
         </div>
-        <Barras itens={a.funcoes.map((f) => ({ label: f.funcao, valor: f.liquidado, cor: "var(--s1)",
+        <Barras rosca={{ titulo: `Gasto da prefeitura em ${a.ano}, por área`, total: a.total_liquidado }} itens={a.funcoes.map((f) => ({ label: f.funcao, valor: f.liquidado, cor: "var(--s1)",
           nota: f.principais.length ? `Principalmente: ${f.principais.map((p) => p.nome).join(", ")}` : undefined }))} />
         <p className="muted small fonte-linha">Fonte: <a href={linkSeguro(d.contas!.fonte)} target="_blank" rel="noreferrer">SICONFI, Tesouro Nacional ↗</a> (Declaração de Contas Anuais, despesas por função{a.instituicao ? `, ${a.instituicao}` : ""}). <a href={linkSeguro(d.contas!.api)} target="_blank" rel="noreferrer">Dados brutos ↗</a></p>
       </>}
@@ -65,7 +65,7 @@ function Federais({ d, nome }: { d: Dinheiro; nome: string }) {
         : !f.por_ano.length ? <div className="empty">Nenhum pagamento de emenda federal a quem tem endereço em {nome} no arquivo do Portal da Transparência.</div> : <>
           <p className="dinheiro-total small">{f.por_ano.slice(0, 6).map((x) => <span key={x.ano}><strong>{x.ano}:</strong> <span className="num">{reais(x.valor)}</span></span>)}</p>
           <h3>Quem mandou</h3>
-          <Barras itens={f.autores.slice(0, todos ? 40 : 10).map((a) => ({
+          <Barras rosca={{ titulo: `Emendas federais pagas em ${nome}, por quem mandou` }} itens={f.autores.slice(0, todos ? 40 : 10).map((a) => ({ nome: a.nome,
             label: a.politico ? <Link to={`/p/${a.politico}`}>{a.nome}</Link> : <span>{a.nome}</span>,
             nota: `${a.partido ? a.partido + " · " : ""}${a.n} pagamento${a.n === 1 ? "" : "s"}`, valor: a.valor, cor: "var(--s2)" }))} />
           {f.autores.length > 10 && <button className="link" onClick={() => setTodos(!todos)}>{todos ? "Mostrar menos" : `Mostrar os ${f.autores.length}`}</button>}

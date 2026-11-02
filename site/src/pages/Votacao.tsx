@@ -5,6 +5,8 @@ import { casaNome, dataBR, descricaoCurta, linkSeguro, proposicaoNome, tipoVotac
 import { norm } from "./Home";
 import { MG } from "../recorte";
 import { AvisosFim, EmRevisao } from "../components/Selo";
+import { Rosca, prepararFatias } from "../components/graficos";
+import { COR_LADO } from "../partidos";
 
 const LADOS = ["Esquerda", "Centro-esquerda", "Centro", "Centro-direita", "Direita"];
 
@@ -82,6 +84,8 @@ export default function VotacaoPage() {
         </section>
       )}
 
+      <PlacarGraficos v={v} />
+
       <section>
         <h2>Por tendência (esquerda e direita){MG && ", na Casa inteira"}</h2>
         <Explain>Agrupamos os parlamentares pela posição calculada a partir de todos os seus votos.</Explain>
@@ -152,4 +156,27 @@ const tot = (c: Record<string, number>) => Object.values(c).reduce((a, b) => a +
 function orientDe(o: Record<string, string>, sigla: string): string | undefined {
   const k = Object.keys(o || {}).find((k) => k.toUpperCase() === sigla.toUpperCase() || k.toUpperCase().split(/[^A-Z]/).includes(sigla.toUpperCase()));
   return k ? o[k] : undefined;
+}
+
+/* Placar em rosca e de que lado vieram os votos Sim e os votos Não */
+function PlacarGraficos({ v }: { v: Votacao }) {
+  const fmt = (n: number) => `${n} voto${n === 1 ? "" : "s"}`;
+  const c = v.contagem || {};
+  const outros = Object.entries(c).filter(([k]) => k !== "Sim" && k !== "Não").reduce((a, [, n]) => a + n, 0);
+  const placar = prepararFatias([{ nome: "Sim", valor: c["Sim"] || 0, cor: "var(--sim)" }, { nome: "Não", valor: c["Não"] || 0, cor: "var(--nao)" },
+    { nome: "Abstenção, obstrução ou ausência", valor: outros, cor: "var(--outro)" }]);
+  const deLado = (voto: string) => prepararFatias(LADOS.map((l) => ({ nome: l, valor: v.por_lado[l]?.[voto] || 0, cor: COR_LADO[l] })), 9);
+  const sim = deLado("Sim"), nao = deLado("Não");
+  if (!placar.length) return null;
+  return (
+    <section>
+      <h2>O placar em gráficos</h2>
+      <p className="small muted">{MG ? "Como votou a bancada de Minas Gerais. Ao lado, na Casa inteira," : "Votos registrados de quem está no mandato hoje. Ao lado,"} de que lado (esquerda a direita, pelos votos de cada um) vieram os votos Sim e os votos Não.</p>
+      <div className="secao-graficos">
+        <div><h3 className="graf-titulo">{MG ? "Como votou a bancada de MG" : "Como votaram"}</h3><Rosca fatias={placar} titulo="Placar da votação" formato={fmt} centroRotulo="Votos" centro={String(placar.reduce((a, f) => a + f.valor, 0))} /></div>
+        {sim.length > 0 && <div><h3 className="graf-titulo">De onde vieram os Sim</h3><Rosca fatias={sim} titulo="Votos Sim por lado" formato={fmt} centroRotulo="Sim" centro={String(c["Sim"] || 0)} /></div>}
+        {nao.length > 0 && <div><h3 className="graf-titulo">De onde vieram os Não</h3><Rosca fatias={nao} titulo="Votos Não por lado" formato={fmt} centroRotulo="Não" centro={String(c["Não"] || 0)} /></div>}
+      </div>
+    </section>
+  );
 }
