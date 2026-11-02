@@ -114,7 +114,10 @@ export interface DonoFinal {
 }
 /** Outra empresa do mesmo dono: total recebido da cota e, se houver, de emendas, do governo federal e renúncia fiscal */
 export interface OutraEmpresa { cnpj: string; nome: string; total: number; emendas?: number; governo?: number; renuncia?: number }
-export interface EmpresaResumo { cnpj: string; nome: string; total: number; n_politicos: number; por_ano?: Record<string, { valor: number; n_politicos: number }>; tem_socios: boolean; n_mesmo_endereco?: number; tem_holding?: boolean; emendas?: number; governo?: number; renuncia?: number }
+/** Cota que uma empresa recebeu num ano. lados: [parlamentares, valor] por lado (esquerda, centro, direita, sem);
+ *  partidos: [sigla, valor], do partido que mais pagou para o que menos pagou. */
+export interface CotaAnoEmpresa { valor: number; n_politicos: number; lados?: Record<string, [number, number]>; partidos?: [string, number][] }
+export interface EmpresaResumo { cnpj: string; nome: string; total: number; n_politicos: number; por_ano?: Record<string, CotaAnoEmpresa>; tem_socios: boolean; n_mesmo_endereco?: number; tem_holding?: boolean; emendas?: number; governo?: number; renuncia?: number }
 export interface Empresa extends Omit<EmpresaResumo, "emendas" | "governo" | "renuncia"> {
   empresa: null | { razao_social: string; nome_fantasia: string; situacao: string; abertura: string; atividade: string; municipio: string; uf: string; capital_social: number; porte: string; natureza: string;
     endereco?: { logradouro: string; numero: string; complemento: string; bairro: string; cep: string } };
@@ -293,9 +296,12 @@ export interface AlmgIndice { anos: string[]; medianas: Record<string, AlmgAno>;
 export interface VerbaAno {
   total: number; tipos: { tipo: string; valor: number }[]; meses: { mes: number; valor: number }[]; meses_faltando?: number[];
   fornecedores: { nome: string; cnpj: string; pf: boolean; valor: number; n: number }[]; n_fornecedores: number; n_notas: number;
-  notas: { data: string; mes: number; fornecedor: string; cnpj: string; pf: boolean; tipo: string; valor: number }[];
+  notas: NotaAlmg[];
 }
-export interface ProposicaoAlmg { sigla: string; numero: string; ano: number; ementa: string; situacao: string; aprovada: boolean; data: string; url: string }
+/** Uma nota da verba indenizatória. numero: o número do documento fiscal (vazio nos dados antigos e para pessoa física). */
+export interface NotaAlmg { data: string; mes: number; fornecedor: string; cnpj: string; pf: boolean; tipo: string; valor: number; numero?: string }
+export interface ProposicaoAlmg { sigla: string; numero: string; ano: number; ementa: string; situacao: string; aprovada: boolean; data: string; url: string;
+  resumo?: string; temas?: string[]; fase?: string; regime?: string; justificativa?: string }
 export interface EmendasDeputado {
   indicado: number; pago: number; n: number; n_municipios: number;
   municipios: { nome: string; indicado: number; pago: number; n: number }[];
@@ -342,9 +348,15 @@ export interface DinheiroCidade {
   federais: { fonte: string; por_ano: { ano: number; valor: number; n: number }[];
     favorecidos: { nome: string; cnpj: string; valor: number; anos: number[]; url: string; autores: { nome: string; valor: number }[] }[];
     autores: { nome: string; politico: string | null; partido: string; valor: number; n: number }[] } | null;
-  contas: { cod_ibge: number; fonte: string; api: string; anos: { ano: number; instituicao: string; total_empenhado: number; total_liquidado: number; total_pago: number;
-    funcoes: { codigo: string; funcao: string; empenhado: number; liquidado: number; pago: number; principais: { nome: string; valor: number }[] }[] }[] } | null;
+  contas: ContasEnte | null;
 }
+/** Contas entregues ao Tesouro (SICONFI): despesas por área, ano a ano. Prefeituras (cidades/dinheiro) e o estado (estado/contas.json). */
+export interface ContasEnte { cod_ibge: number; fonte: string; api: string; anos: { ano: number; instituicao: string; total_empenhado: number; total_liquidado: number; total_pago: number;
+    funcoes: { codigo: string; funcao: string; empenhado: number; liquidado: number; pago: number; principais: { nome: string; valor: number }[] }[] }[] }
+/** Renúncia fiscal federal das empresas com sede em MG (estado/incentivos.json) */
+export interface IncentivosMG { fonte: string; anos: { ano: number; parcial: boolean; total_brasil: number; total: number; n: number;
+  por_municipio: [string, number, number][]; por_setor: { setor: string; valor: number; n: number }[];
+  top: { cnpj: string; nome: string; municipio: string; setor: string; atividade: string; valor: number; beneficios: [string, number][]; donos?: string[] }[] }[] }
 
 /** Cota que a empresa recebeu no ano escolhido. Sem o detalhe por ano (dados antigos), devolve null e a tela usa o total. */
 export function cotaNoAno(e: { por_ano?: Record<string, { valor: number; n_politicos: number }> }, ano: string): { valor: number; n_politicos: number } | null {

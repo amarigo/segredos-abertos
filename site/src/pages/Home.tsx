@@ -55,6 +55,7 @@ export default function Home() {
           <h2>Minas em um só lugar</h2>
           <Explain>Quem governa o estado, quem faz as leis na Assembleia, para onde vai o dinheiro das emendas e quanto cada um gasta. Tudo com o link da fonte oficial.</Explain>
           <div className="grid">
+            <Link to="/dinheiro" className="card cidade-card destaque-card"><strong>O dinheiro de Minas</strong><span className="small muted">Em 3 cliques: quanto o estado e cada cidade gastaram, em quê, a comparação entre os anos e quem deixa de pagar imposto.</span></Link>
             <Link to="/governo" className="card cidade-card"><strong>Governo do estado</strong><span className="small muted">Governador e vice eleitos, quem está no cargo hoje, salários e viagens do governador e dos secretários.</span></Link>
             <Link to="/assembleia" className="card cidade-card"><strong>Deputados estaduais</strong><span className="small muted">{meta.estado?.deputados_estaduais ? `${meta.estado.deputados_estaduais} deputados: ` : ""}gastos da verba indenizatória nota por nota, projetos apresentados e aprovados.</span></Link>
             <Link to="/emendas-estaduais" className="card cidade-card"><strong>Emendas estaduais</strong><span className="small muted">Quanto cada deputado estadual indicou do orçamento de Minas, para quais cidades e quem recebeu.</span></Link>

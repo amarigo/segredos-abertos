@@ -584,3 +584,7 @@ details.abrir[open] > summary { border-bottom: 1px solid var(--line); margin-bot
 .grid-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 24px; }
 tr.linha-aberta > td { background: var(--tint); }
 .pessoa-detalhe { padding: 4px 0 8px; }
+.passos { margin: 8px 0 16px; padding-left: 22px; display: grid; gap: 4px; }
+.passos li::marker { font-weight: 800; color: var(--accent); }
+.destaque-card { border-color: var(--accent); }
+.lado-a-lado { align-items: start; }

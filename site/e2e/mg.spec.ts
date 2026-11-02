@@ -15,6 +15,8 @@ const dep = dados("almg/d/20003.json");
 const gov = dados("estado/governo.json");
 const dinheiroIta = dados("cidades/dinheiro/itajuba.json");
 const emEst = dados("estado/emendas.json");
+const contasMG = dados("estado/contas.json").contas;
+const emps = dados("empresas.json");
 const brl = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(v).replace(/\s/g, " ");
 const CPF = /(?<![\d.\/])\d{3}\.?\d{3}\.?\d{3}-?\d{2}(?![\d.])/;
 
@@ -47,7 +49,7 @@ test.describe("jornada", () => {
 
   test("todas as páginas do menu abrem sem erro", async ({ page }) => {
     const erros = vigiar(page);
-    for (const rota of ["politicos", "cidades", "empresas", "votacoes", "votacoes/em-andamento", "votacoes/em-andamento?aba=almg", "partidos", "sobre", "governo", "assembleia", "emendas-estaduais",
+    for (const rota of ["dinheiro", "dinheiro?onde=itajuba", "politicos", "cidades", "empresas", "votacoes", "votacoes/em-andamento", "votacoes/em-andamento?aba=almg", "partidos", "sobre", "governo", "assembleia", "emendas-estaduais",
       "deputado-estadual/20003", "deputado-estadual/20003?aba=atuacao", "deputado-estadual/20003?aba=emendas",
       ...cidades.map((c) => `cidade/${c.id}`), ...cidades.map((c) => `cidade/${c.id}?aba=dinheiro`)]) {
       await page.goto(`./#/${rota}`);
@@ -149,10 +151,24 @@ test.describe("jornada", () => {
     const v = dep.anos[ano].verba;
     await expect(page.locator("main")).toContainText(brl(v.total));
     await expect(page.locator("main")).toContainText("Pessoa física");
-    await expect(page.getByRole("link", { name: /prestação de contas/ })).toHaveAttribute("href", /verba-indenizatoria\/detalhe\.html\?id=20003/);
+    await expect(page.getByRole("link", { name: /Prestação de contas de/ })).toHaveAttribute("href", /verba-indenizatoria\/detalhe\.html\?id=20003/);
+    // notas agrupadas por tipo, como na ALMG: abrir o grupo mostra cada nota com o número
+    const tipo = v.tipos[0];
+    const notasTipo = v.notas.filter((n: { tipo: string }) => n.tipo === tipo.tipo);
+    await page.locator("details.abrir summary", { hasText: tipo.tipo }).click();
+    await expect(page.locator("details.abrir[open] tbody tr")).toHaveCount(notasTipo.length);
+    const comNumero = notasTipo.find((n: { numero?: string }) => n.numero);
+    if (comNumero) await expect(page.locator("details.abrir[open] tbody")).toContainText(comNumero.numero);
+    // filtro por tipo: só as notas daquele tipo nas maiores despesas
+    await page.locator("#filtro-tipo-nota").selectOption(tipo.tipo);
+    await expect(page.locator("main")).toContainText(`${notasTipo.length} nota`);
     await page.getByRole("tab", { name: "Atuação" }).click();
     const pr = dep.anos[ano].proposicoes;
-    if (pr?.lista.length) await expect(page.getByRole("link", { name: new RegExp(`${pr.lista[0].sigla} ${pr.lista[0].numero}/`) }).first()).toHaveAttribute("href", /almg\.gov\.br\/atividade-parlamentar\/projetos-de-lei\/texto/);
+    if (pr?.lista.length) {
+      await page.locator("details.abrir summary", { hasText: `${pr.lista[0].sigla} ${pr.lista[0].numero}/` }).first().click();
+      await expect(page.locator("details.abrir[open]").first()).toContainText(pr.lista[0].resumo || pr.lista[0].ementa);
+      await expect(page.getByRole("link", { name: /justificação na ALMG/ }).first()).toHaveAttribute("href", /almg\.gov\.br\/atividade-parlamentar\/projetos-de-lei\/texto/);
+    }
     await page.getByRole("tab", { name: "Emendas" }).click();
     await expect(page).toHaveURL(/aba=emendas/);
     expect(erros).toEqual([]);
@@ -175,6 +191,38 @@ test.describe("jornada", () => {
     await expect(page.locator("tr.linha-aberta details.abrir[open] tbody tr")).toHaveCount(doAno.length);
     await expect(page.locator("tr.linha-aberta details.abrir[open] tbody")).toContainText(doAno[0].destinos[0]);
     await expect(page.getByRole("link", { name: /Viagens e diárias do governo no Portal da Transparência/ })).toHaveAttribute("href", /transparencia\.mg\.gov\.br/);
+    expect(erros).toEqual([]);
+  });
+
+  test("dinheiro de Minas em 3 cliques: estado, ano com comparação, área aberta; e a cidade", async ({ page }) => {
+    const erros = vigiar(page);
+    await page.goto("./#/dinheiro");
+    const [a, b] = contasMG.anos;
+    await expect(page.locator("main")).toContainText(`Gasto em ${a.ano}`);
+    await expect(page.locator("main")).toContainText(`em relação a ${b.ano}`);
+    const f = a.funcoes[0];
+    await page.locator("details.abrir summary", { hasText: f.funcao }).first().click();
+    await expect(page.locator("details.abrir[open]").first()).toContainText(f.principais[0].nome);
+    await page.locator("#comparar-dinheiro").selectOption(String(contasMG.anos[contasMG.anos.length - 1].ano));
+    await expect(page.locator("main")).toContainText(`em relação a ${contasMG.anos[contasMG.anos.length - 1].ano}`);
+    await page.getByRole("tab", { name: cidades[0].nome }).click();
+    await expect(page).toHaveURL(new RegExp(`onde=${cidades[0].id}`));
+    await expect(page.locator("main")).toContainText(`a prefeitura de ${cidades[0].nome}`);
+    await expect(page.getByRole("link", { name: `Dinheiro de ${cidades[0].nome}` })).toBeVisible();
+    expect(erros).toEqual([]);
+  });
+
+  test("empresas: média por parlamentar e lados de quem pagou", async ({ page }) => {
+    const erros = vigiar(page);
+    await page.goto("./#/empresas");
+    const ano = Object.keys(emps[0].por_ano).sort().pop()!;
+    const e = emps.filter((x: { por_ano: Record<string, { valor: number }> }) => x.por_ano[ano]?.valor > 0)
+      .sort((x: { por_ano: Record<string, { valor: number }> }, y: { por_ano: Record<string, { valor: number }> }) => y.por_ano[ano].valor - x.por_ano[ano].valor)[0];
+    const c = e.por_ano[ano];
+    await expect(page.locator("main")).toContainText(brl(c.valor / c.n_politicos));
+    await expect(page.getByRole("button", { name: c.partidos[0][0], exact: true }).first()).toBeVisible();
+    await page.locator("#ordem-empresa").selectOption("media");
+    await expect(page.locator("main")).toContainText("maior média por parlamentar");
     expect(erros).toEqual([]);
   });
 

@@ -160,8 +160,11 @@ def notas_do_mes(dados: dict) -> list[dict]:
             doc = d.get("cpfCnpj")
             pf = fontes.tipo_doc(doc) == "cpf"
             nome = fontes.sem_cpf(fontes.bonito(str(d.get("nomeEmitente") or ""))) or ("Pessoa física" if pf else "Não informado")
+            # descDocumento é o número da nota fiscal (a coluna "Número" da prestação de contas no site da ALMG)
+            numero = re.sub(r"\s+", " ", str(d.get("descDocumento") or "")).strip()[:30]
             out.append({"tipo": desc, "valor": round(v, 2), "data": _data(d.get("dataEmissao")) or _data(tipo.get("dataReferencia")),
-                        "fornecedor": nome, "cnpj": fontes.doc_publico(doc), "pf": pf})
+                        "fornecedor": nome, "cnpj": fontes.doc_publico(doc), "pf": pf,
+                        "numero": "" if pf or fontes.CPF_NO_TEXTO.search(numero) else numero})
     return out
 
 
@@ -243,7 +246,8 @@ def verbas(por_mes: dict[str, dict[tuple, list]], anos: list[int], hoje: dt.date
                 "fornecedores": sorted(({**f, "valor": round(f["valor"], 2)} for f in forn.values()), key=lambda f: -f["valor"])[:40],
                 "n_fornecedores": len(forn),
                 "n_notas": len(notas),
-                "notas": sorted(notas, key=lambda n: -n["valor"])[:40],
+                # todas as notas do ano (o site agrupa por tipo de despesa, como a prestação de contas da ALMG)
+                "notas": sorted(notas, key=lambda n: -n["valor"]),
             }
     return out
 
@@ -286,6 +290,9 @@ def proposicoes(textos: dict[int, str], ids: set[str]) -> dict[str, dict[int, di
                     d["aprovadas"] += aprovada
                     d["lista"].append({"sigla": sigla, "numero": r["Numero"].strip(), "ano": a,
                                        "ementa": fontes.sem_cpf(r.get("Ementa") or "")[:240], "situacao": (r.get("Situacao") or "").strip(),
+                                       "resumo": fontes.sem_cpf(r.get("Resumo") or "")[:600],
+                                       "temas": [t.strip().capitalize() for t in re.split(r"[,;]", r.get("Indexacao") or "") if t.strip()][:6],
+                                       "fase": (r.get("NomeFaseAtual") or "").strip(), "regime": (r.get("Regime") or "").strip(),
                                        "aprovada": aprovada, "data": _data_iso(r.get("DataPublicacao") or "")})
                 elif sigla in REQUERIMENTOS:
                     d["requerimentos"] += 1

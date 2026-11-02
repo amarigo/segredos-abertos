@@ -96,9 +96,10 @@ export function Colunas({ itens, partes, rotulo, fmt = (v: number) => reais(v, t
   const ticks = Array.from({ length: Math.round(topo / passo) + 1 }, (_, i) => i * passo);
   const curto = (t: number) => (t >= 1e9 ? `${(t / 1e9).toLocaleString("pt-BR")} bi` : t >= 1e6 ? `${(t / 1e6).toLocaleString("pt-BR")} mi` : t >= 1000 ? `${Math.round(t / 1000)} mil` : `${t}`);
   return (
-    <div className="gm colunas">
+    <div className="gm colunas" style={{ overflowX: "auto" }}>
       {partes.length > 1 && <div className="legend">{partes.map((p) => <span key={p.nome}><i style={{ background: p.cor }} />{p.nome}</span>)}</div>}
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={rotulo}>
+      {/* Com poucas colunas o gráfico encolhe no celular; com muitas, rola para o lado dentro do quadro */}
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={rotulo} style={itens.length <= 6 ? { minWidth: 0 } : undefined}>
         {ticks.map((t) => (
           <g key={t}>
             <line x1={padL} x2={W} y1={y(t)} y2={y(t)} stroke="var(--grid)" />

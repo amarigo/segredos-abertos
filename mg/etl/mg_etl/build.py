@@ -69,6 +69,21 @@ def _seguro(nome: str, fn, padrao=None):
         return padrao
 
 
+def incentivos_mg(nacional: Path) -> dict:
+    """Renúncia fiscal federal das empresas com sede em MG, pelo recorte que o coletor nacional já faz (top_uf.MG).
+    Não é uma coleta nova: lê os arquivos renuncia-<ano>.json gerados na mesma execução."""
+    anos = []
+    for f in sorted((nacional / "incentivos").glob("renuncia-*.json")):
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except ValueError:
+            continue
+        mg = (d.get("top_uf") or {}).get("MG")
+        if mg:
+            anos.append({"ano": d.get("ano"), "parcial": d.get("parcial", False), "total_brasil": d.get("total"), **mg})
+    return {"fonte": "https://portaldatransparencia.gov.br/download-de-dados/renuncias", "anos": anos}
+
+
 def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[dict], cache_nacional: Path | None) -> dict:
     cont: dict = {}
     mapa_cidades = {emendas_mg.chave_cidade(c["nome"]): c["id"] for c in lista_cidades}
@@ -82,6 +97,11 @@ def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[
         util.write_json(saida / "estado" / "emendas.json", {
             "fonte": emendas_mg.PAGINA, "anos": {str(a): e for a, e in sorted(em["estado"].items())}})
         cont["emendas_estaduais"] = sum(e["n"] for e in em["estado"].values())
+    inc = _seguro("Incentivos fiscais de empresas de MG", lambda: incentivos_mg(nacional))
+    util.write_json(saida / "estado" / "incentivos.json", inc or {"anos": []})
+    contas_mg = _seguro("Contas do estado de MG (SICONFI)", lambda: siconfi.contas_estado(cache))
+    util.write_json(saida / "estado" / "contas.json", {"contas": contas_mg})
+    cont["contas_estado"] = len((contas_mg or {}).get("anos") or [])
     gov = _seguro("Governo de MG (TSE)", lambda: governo.coletar(cache)) or {"eleicoes": [], "links": governo.LINKS,
                                                                             "fonte_tse": governo.FONTE_TSE}
     gov["equipe"] = _seguro("Salários e viagens do governo de MG", lambda: equipe.coletar(cache))

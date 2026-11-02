@@ -275,3 +275,16 @@ def test_com_chave_a_api_vem_primeiro(coleta, monkeypatch):
     saida = coleta.rodar()
     assert not any("RenunciasFiscais.zip" in c or "/download-de-dados/renuncias/" in c for c in gov.chamadas)
     assert coleta.ler(saida, "incentivos/renuncia-2024.json")["url"] == renuncias.CONSULTA
+
+
+def test_renuncia_tem_recorte_de_minas():
+    lin = lambda c, n, mun, uf, v: {"cnpj": c, "nome": n, "fantasia": "", "cnae_cod": "41204", "cnae": "Construção", "municipio": mun,  # noqa: E731
+                                    "uf": uf, "valor": str(v)}
+    ben = [lin("11222333000181", "MINEIRA LTDA", "ITAJUBA", "MG", 300), lin("11444777000161", "OUTRA MINEIRA SA", "BELO HORIZONTE", "MG", 100),
+           lin("86692358000148", "PAULISTA LTDA", "SAO PAULO", "SP", 900)]
+    det = [{**b, "beneficio": "Sudene", "fundamento": "", "tributo": "IRPJ"} for b in ben]
+    r, _ = renuncias.resumir(2025, ben, det)
+    mg = r["top_uf"]["MG"]
+    assert mg["total"] == 400 and mg["n"] == 2
+    assert [e["nome"] for e in mg["top"]] == ["Mineira Ltda", "Outra Mineira Sa"], "só empresas de MG, da maior para a menor"
+    assert mg["por_municipio"][0] == ["Itajuba", 300, 1]

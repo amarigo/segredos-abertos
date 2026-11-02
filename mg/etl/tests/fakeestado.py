@@ -206,6 +206,8 @@ class FakeEstado:
                 sit = "Transformado em norma jurídica" if k == 0 else "Aguardando parecer em comissão"
                 linhas.append({"Codigo": f"PL {n}/{ano}", "TipoProposicao": "PROJETO DE LEI", "SiglaTipoProposicao": "PL", "Numero": n,
                                "Ano": ano, "Ementa": f"Dispõe sobre o tema {n}.", "Situacao": sit, "DataPublicacao": f"0{1 + k}/03/{ano}",
+                               "Resumo": f"Cria regras para o tema {n} nas escolas estaduais.", "Indexacao": "EDUCAÇÃO, ENSINO SUPERIOR",
+                               "NomeFaseAtual": "1º turno", "Regime": "Ordinário",
                                "Legislatura": "20", "Autores": json.dumps(aut + [{"id": outro["id"], "nome": outro["nome"], "partido": ""}])})
                 n += 1
             linhas.append({"Codigo": f"RQN {n}/{ano}", "SiglaTipoProposicao": "RQN", "Numero": n, "Ano": ano, "Situacao": "Aprovado",
@@ -271,12 +273,12 @@ class FakeEstado:
         return json.dumps({"items": itens, "hasMore": False}, ensure_ascii=False).encode()
 
     def dca(self, ano: int, cod: int) -> bytes:
-        nome = next((n for n, c in ENTES.items() if c == cod), None)
+        nome = "Minas Gerais" if cod == 31 else next((n for n, c in ENTES.items() if c == cod), None)
         if not nome or ano >= 2026:
             return json.dumps({"items": []}).encode()
-        inst = f"Prefeitura Municipal de {nome.title()} - MG"
+        inst = "Governo do Estado de Minas Gerais" if cod == 31 else f"Prefeitura Municipal de {nome.title()} - MG"
         itens = []
-        fator = 1 + (ano - 2018) / 10
+        fator = (1 + (ano - 2018) / 10) * (500 if cod == 31 else 1)
         for col, f in (("Despesas Empenhadas", 1.1), ("Despesas Liquidadas", 1.0), ("Despesas Pagas", 0.9),
                        ("Inscrição de Restos a Pagar Processados", 0.05), ("Inscrição de Restos a Pagar Não Processados", 0.07)):
             for k, (cf, nf, subs) in enumerate(FUNCOES):

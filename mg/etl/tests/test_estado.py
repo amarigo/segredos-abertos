@@ -378,3 +378,13 @@ def test_todas_as_viagens_num_arquivo_por_pessoa(estado, tmp_path):
     assert [v["inicio"] for v in lista] == sorted((v["inicio"] for v in lista), reverse=True)
     assert equipe.id_pessoa("Mateus Simões de Almeida", {}) == "mateus-simoes-de-almeida"
     assert equipe.id_pessoa("Ana", {"ana": 1}) == "ana-2"
+
+
+def test_nota_tem_numero_e_nunca_cpf():
+    dados = {"list": [{"descTipoDespesa": "Combustível", "listaDetalheVerba": [
+        {"valorReembolsado": 10, "cpfCnpj": "11222333000181", "nomeEmitente": "POSTO", "descDocumento": " 0002 7092 "},
+        {"valorReembolsado": 5, "cpfCnpj": "52998224725", "nomeEmitente": "JOSE", "descDocumento": "529.982.247-25"},
+        {"valorReembolsado": 7, "cpfCnpj": "11222333000181", "nomeEmitente": "POSTO", "descDocumento": "NF 529.982.247-25"}]}]}
+    n = almg.notas_do_mes(dados)
+    assert n[0]["numero"] == "0002 7092"
+    assert n[1]["numero"] == "" and n[2]["numero"] == "", "número com cara de CPF (ou de pessoa física) não sai"
