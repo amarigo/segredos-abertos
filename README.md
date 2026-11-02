@@ -40,6 +40,19 @@ clique em **Run workflow** e confirme com o branch `main`. Em cerca de 30 a 60 m
 | Funcionários da Câmara e do Senado por vínculo | [Arquivo de funcionários da Câmara](https://dadosabertos.camara.leg.br/arquivos/funcionarios/json/funcionarios.json) e [API de servidores do Senado](https://adm.senado.gov.br/adm-dadosabertos/api/v1/servidores/servidores) |
 | Inflação (IPCA) para comparar anos | [API do SIDRA, IBGE](https://sidra.ibge.gov.br/tabela/1737) |
 
+## Painel de status (/status/)
+
+[amarigo.github.io/segredos-abertos/status/](https://amarigo.github.io/segredos-abertos/status/) mostra se a coleta diária
+rodou, quando cada site foi atualizado, se as atualizações estão funcionando e, quando não estão, por quê: um resumo
+(verde, amarelo ou vermelho), um calendário dos últimos 30 dias, cada parte da coleta com a última vez que funcionou,
+o tempo de cada parte, a duração das coletas, os avisos da versão no ar, a verificação com a segunda fonte e o
+histórico com o motivo de cada falha. É uma página estática (`status/index.html` e `status/painel.js`, sem bibliotecas)
+que lê tudo na hora, no navegador, pela [API oficial do GitHub Actions](https://docs.github.com/pt/rest/actions) e
+pelos arquivos publicados (`data/meta.json`, `data/verificacao.json`, `mg/data/meta.json`). Por isso mostra a situação
+real mesmo quando uma coleta falha e o site não é publicado de novo. O motivo de cada problema chega como anotação do
+GitHub Actions (`::error`/`::warning`), escrita pelos validadores e por `etl/anotar.py`. As contas do painel são
+testadas em `status/painel.test.mjs` (`node --test status/painel.test.mjs`).
+
 ## Corrupção (/corrupcao)
 
 Os maiores escândalos (Mensalão, Sanguessugas, Petrolão, Lava Jato, Banco Master, Careca do INSS e políticos cassados),

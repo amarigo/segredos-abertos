@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from .cnpj import MAX_NIVEL
-from .util import id_seguro
+from .util import anotar, id_seguro
 
 FINS = {"pessoa", "estrangeiro", "sem_socios", "sem_dados", "limite", "ciclo"}
 CHAVES_LINK = {"url", "foto", "fonte"}
@@ -477,6 +477,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"- {len(r.erros)} erros, {len(r.alertas)} alertas\n")
     for e in r.erros[:60]:
         print(f"- ERRO: {e}")
+    for e in r.erros[:8]:  # o motivo também vai para o painel de status (/status/)
+        anotar("error", "Conferência dos dados", e)
     for x in r.alertas[:60]:
         print(f"- alerta: {x}")
     return 0 if r.ok else 1
