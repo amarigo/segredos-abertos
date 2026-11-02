@@ -23,9 +23,12 @@ on:
 permissions:
   contents: read
 
+# No main, um push novo espera a execução em andamento terminar (fica na fila) em vez de cancelá-la: cancelar no meio
+# jogava fora a coleta (que leva perto de 1 hora) e o site ficava sem atualizar quando vários PRs entravam seguidos.
+# Nos outros branches (PRs), o push novo cancela o anterior, que só roda testes.
 concurrency:
   group: dados-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   # Base e meio da pirâmide: unitários, propriedades, integração com o governo simulado e caos no coletor
