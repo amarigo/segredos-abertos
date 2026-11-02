@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Explain, Loading, useData } from "../components/ui";
-import { corPartido, linkSeguro, reaisCurto, type AlmgAno, type AlmgIndice } from "../data";
+import { Abrir, Barras, Explain, Loading, OndeVer, useData } from "../components/ui";
+import { corPartido, reais, reaisCurto, type AlmgAno, type AlmgIndice } from "../data";
 import { norm } from "./Home";
 import { AvisosFim } from "../components/Selo";
 
@@ -32,6 +32,12 @@ export default function Assembleia() {
   }, [data, q, partido, ordem, ano]);
   if (!data) return <Loading error={error} />;
   const med = data.medianas[ano];
+  const dinheiro = ordem === "verba" || ordem === "emendas_indicado";
+  const porPartido = ordem === "nome" ? [] : Object.values(lista.reduce((acc, d) => {
+    const p = (acc[d.partido] ||= { partido: d.partido, n: 0, valor: 0 });
+    p.n += 1; p.valor += d.por_ano[ano]?.[ordem] || 0;
+    return acc;
+  }, {} as Record<string, { partido: string; n: number; valor: number }>)).sort((a, b) => b.valor - a.valor);
   const valor = (x?: AlmgAno) => {
     if (!x) return "sem dado";
     if (ordem === "projetos") return `${x.projetos} projeto${x.projetos === 1 ? "" : "s"}`;
@@ -62,6 +68,14 @@ export default function Assembleia() {
           {anos.slice().reverse().map((a) => <option key={a}>{a}</option>)}
         </select>
       </div>
+      {ordem !== "nome" && lista.length > 1 && <Abrir aberto titulo={`Gráfico: ${ORDENS.find((o) => o.k === ordem)!.nome.toLowerCase()} em ${ano}`}>
+        <Barras fmt={dinheiro ? (v) => reais(v) : (v) => v.toLocaleString("pt-BR")}
+          itens={lista.slice(0, 15).map((d) => ({ label: <Link to={`/deputado-estadual/${d.id}`}>{d.nome}</Link>, nota: d.partido, valor: d.por_ano[ano]?.[ordem as Exclude<Ordem, "nome">] || 0, cor: corPartido(d.partido) }))} />
+        {porPartido.length > 1 && <Abrir titulo="Somado por partido">
+          <Barras fmt={dinheiro ? (v) => reais(v) : (v) => v.toLocaleString("pt-BR")}
+            itens={porPartido.map((p) => ({ label: p.partido, nota: `${p.n} deputado${p.n === 1 ? "" : "s"}`, valor: p.valor, cor: corPartido(p.partido) }))} />
+        </Abrir>}
+      </Abrir>}
       {med && ordem !== "nome" && <p className="muted small">Deputado do meio da lista em {ano}: {valor(med)}.</p>}
       <p className="muted small">{lista.length} deputado{lista.length === 1 ? "" : "s"}</p>
       <div className="list">
@@ -76,7 +90,12 @@ export default function Assembleia() {
           </Link>
         ))}
       </div>
-      <p className="muted small">Fonte: <a href={linkSeguro(data.fontes.dados)} target="_blank" rel="noreferrer">dados abertos da ALMG ↗</a> e <a href={linkSeguro(data.fontes.verba)} target="_blank" rel="noreferrer">prestação de contas da verba indenizatória ↗</a>.</p>
+      <OndeVer links={[
+        { nome: "Dados abertos da ALMG", url: data.fontes.dados, explica: "a API oficial de onde vêm deputados, projetos e gastos" },
+        { nome: "Verba indenizatória na ALMG", url: data.fontes.verba, explica: "a prestação de contas de cada deputado, mês a mês" },
+        { nome: "Emendas parlamentares na ALMG", url: "https://www.almg.gov.br/atividade-parlamentar/emendas-parlamentares/inicial/", explica: "cada indicação de dinheiro do orçamento" },
+        { nome: "Site da Assembleia (ALMG)", url: "https://www.almg.gov.br/", explica: "página de cada deputado, projetos e leis; o link de cada um está na página dele aqui" },
+      ]} />
       <AvisosFim>
         {ordem === "verba" && data.verba_completa && data.verba_completa[ano] === false && (
           <p className="alert small" role="note">Os gastos de {ano} ainda estão incompletos: a Assembleia só deixa consultar um deputado e um mês por vez, e estamos baixando aos poucos para não sobrecarregar o site dela. Os meses mais recentes vêm primeiro.</p>

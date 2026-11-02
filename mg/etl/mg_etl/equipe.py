@@ -201,20 +201,26 @@ def resumir_viagens(funcoes, favorecidos, cidades, documentos, trechos, hoje: dt
         destino = cid.get(t.get("id_cidade_destino"), "")
         if destino and (d or ps):
             p["destinos"][destino] += 1
-        v = p["viagens"].setdefault(doc, {"inicio": data, "fim": "", "destinos": [], "valor": 0.0, "motivo": motivos.get(doc, "")})
+        v = p["viagens"].setdefault(doc, {"inicio": data, "fim": "", "destinos": [], "valor": 0.0, "diarias": 0.0, "passagens": 0.0,
+                                          "motivo": motivos.get(doc, "")})
         v["inicio"] = min(v["inicio"], data) if v["inicio"] else data
         v["fim"] = max(v["fim"], (t.get("dt_fim_trecho") or "")[:10])
         if destino and destino not in v["destinos"]:
             v["destinos"].append(destino)
         v["valor"] += d + ps
+        v["diarias"] += d
+        v["passagens"] += ps
     out = {}
     for k, p in acc.items():
         anos = [{"ano": a, "viagens": len(x["viagens"]), "diarias": round(x["diarias"], 2), "passagens": round(x["passagens"], 2)}
                 for a, x in sorted(p["anos"].items(), reverse=True) if a >= hoje.year - 3]
-        ultimas = sorted(p["viagens"].values(), key=lambda v: v["inicio"], reverse=True)[:12]
+        # Todas as viagens dos anos mostrados (o site abre a lista por ano); "ultimas" é o resumo que vai no governo.json
+        todas = [{**v, "valor": round(v["valor"], 2), "diarias": round(v["diarias"], 2), "passagens": round(v["passagens"], 2)}
+                 for v in sorted(p["viagens"].values(), key=lambda v: v["inicio"], reverse=True)
+                 if v["inicio"][:4].isdigit() and int(v["inicio"][:4]) >= hoje.year - 3]
         out[k] = {"nome": p["nome"], "cargo": p["cargos"].most_common(1)[0][0] if p["cargos"] else "", "anos": anos,
                   "destinos": [{"nome": n, "vezes": c} for n, c in p["destinos"].most_common(6)],
-                  "ultimas": [{**v, "valor": round(v["valor"], 2)} for v in ultimas]}
+                  "ultimas": todas[:12], "todas": todas}
     return out
 
 
@@ -250,15 +256,33 @@ def coletar(cache: Path, hoje: dt.date | None = None) -> dict:
     sal = salarios(cache)
     via = viagens(cache, hoje)
     pessoas = []
-    vistos = set()
+    detalhe: dict[str, dict] = {}
     for p in (sal or {}).get("pessoas", []):
         k = fontes.chave_nome(p["nome"])
-        vistos.add(k)
-        pessoas.append({**p, "viagens": (via or {}).get("pessoas", {}).get(k)})
+        v = (via or {}).get("pessoas", {}).get(k)
+        if v:
+            # A lista completa de viagens vai num arquivo por pessoa (estado/viagens/<id>.json), lido só quando alguém
+            # abre "ver todas as viagens": assim o governo.json continua pequeno.
+            v = dict(v)
+            todas = v.pop("todas", None) or v.get("ultimas") or []
+            vid = id_pessoa(p["nome"], detalhe)
+            v["id"], v["n_todas"] = vid, len(todas)
+            detalhe[vid] = {"nome": p["nome"], "cargo": p["cargo"], "viagens": todas, "fonte": PAGINA_VIAGENS, "portal": PORTAL_VIAGENS}
+        pessoas.append({**p, "viagens": v})
     # quem viajou como secretário mas não está mais no cargo no mês do salário fica de fora: a lista é de quem está lá hoje
     return {
         "mes_salarios": (sal or {}).get("mes"), "pessoas": pessoas,
         "fontes": {"salarios": PAGINA_SALARIOS, "viagens": PAGINA_VIAGENS, "portal_salarios": PORTAL_PESSOAL,
                    "portal_viagens": PORTAL_VIAGENS},
         "tem_salarios": sal is not None, "tem_viagens": via is not None,
+        "viagens_detalhe": detalhe,
     }
+
+
+def id_pessoa(nome: str, usados) -> str:
+    """'Mateus Simões de Almeida' -> 'mateus-simoes-de-almeida' (com -2, -3 se o nome se repetir)."""
+    base = re.sub(r"[^a-z0-9]+", "-", norm_name(nome).lower()).strip("-") or "pessoa"
+    vid, i = base, 2
+    while vid in usados:
+        vid, i = f"{base}-{i}", i + 1
+    return vid

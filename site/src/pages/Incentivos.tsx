@@ -1,8 +1,9 @@
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Barras, Explain, Loading, useAno, useData } from "../components/ui";
+import { Barras, Explain, Loading, useAno, useData, useVarios, useVisivel } from "../components/ui";
+import { CompararAnos, Faisca, MapaAnos, curto, type Fatia } from "../components/graficos";
 import { casaNome, cnpjFmt, corPartido, dataBR, linkSeguro, reais, reaisCurto, type Casa, type Resumo } from "../data";
-import { LADOS, ladoPelosVotos } from "../partidos";
+import { COR_LADO, LADOS, ladoPelosVotos } from "../partidos";
 import { Pizza } from "./Partidos";
 import "./emendas.css";
 import "./incentivos.css";
@@ -49,7 +50,6 @@ interface Renuncia {
 
 const CAT_COR: Record<string, string> = { contrato: "var(--s1)", repasse: "var(--c7)", subsidio: "var(--c4)", outro: "var(--c-outros)" };
 const TIPO_NOME: Record<Tipo, string> = { empresa: "Empresa", entidade: "Entidade sem fins lucrativos", publico: "Estatal", outro: "Outro tipo", sem_dados: "" };
-const LADO_COR: Record<string, string> = { Esquerda: "var(--esq)", "Centro-esquerda": "var(--esq)", Centro: "var(--centro)", "Centro-direita": "var(--dir)", Direita: "var(--dir)", "Sem posição": "var(--c-outros)" };
 const PORTAL_PJ = "https://portaldatransparencia.gov.br/pessoa-juridica/";
 const semAcento = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const plural = (n: number, um: string, varios: string) => `${n.toLocaleString("pt-BR")} ${n === 1 ? um : varios}`;
@@ -68,7 +68,9 @@ export default function Incentivos() {
   const tem = anosComDados.includes(ano);
   const { data, error } = useData<Ano>(tem ? `incentivos/${ano}.json` : null);
   const anosR = idx?.anos_renuncia || [];
+  // A Receita publica a renúncia com atraso: abre no último ano completo e diz claramente qual é
   const padraoR = (anosR.filter((a) => !a.parcial).pop() || anosR[anosR.length - 1])?.ano;
+  const ultimoR = anosR[anosR.length - 1];
   const [escolhidoR, setAnoR] = useState<number | null>(null);
   const anoR = escolhidoR && anosR.some((a) => a.ano === escolhidoR) ? escolhidoR : padraoR;
   const { data: ren } = useData<Renuncia>(anoR ? `incentivos/renuncia-${anoR}.json` : null);
@@ -91,21 +93,34 @@ export default function Incentivos() {
           deixa de <strong>cobrar imposto</strong> de quem tem um benefício fiscal (a renúncia fiscal); e deputados e senadores <strong>indicam emendas</strong> que pagam empresas e entidades.
           Aqui você vê quem mais recebe, quem são os donos e de quais parlamentares, partidos e estados veio o dinheiro das emendas. Tudo com dados oficiais e link para o original.
         </Explain>
+        <p className="small muted">Cada número diz de que ano é. Mostramos sempre o ano mais recente que o governo já publicou; quando um dado ainda não existe para {anoSite}, o quadro avisa.</p>
         <div className="grid">
-          <div className="card stat"><span className="label">Pago a empresas e entidades em {ano}</span><span className="value">{pag ? reaisCurto(pag.total) : "—"}</span>
-            <span className="hint">{pag ? <>{plural(pag.n, "recebedor", "recebedores")}{!pag.cobertura.completo && <> · dados de {dataBR(pag.cobertura.de)} a {dataBR(pag.cobertura.ate)}</>}</> : `Ainda sem dados de ${ano}`}</span></div>
-          <div className="card stat"><span className="label">Imposto que deixou de ser cobrado em {anoR ?? "—"}</span><span className="value">{ren ? reaisCurto(ren.total) : "—"}</span>
-            <span className="hint">{ren ? `${plural(ren.n, "empresa", "empresas")} com benefício fiscal${ren.parcial ? " · ano ainda incompleto" : ""}` : anosR.length ? "Renúncia fiscal federal" : "O arquivo ainda não foi baixado do Portal da Transparência"}</span></div>
-          <div className="card stat"><span className="label">Emendas pagas a empresas e entidades em {ano}</span><span className="value">{emd ? reaisCurto(emd.total) : "—"}</span>
-            <span className="hint">{emd ? `por indicação de ${plural(emd.n_politicos, "parlamentar", "parlamentares")}` : "Ainda sem dados"}</span></div>
+          <div className="card stat kpi"><span className="label">Pago a empresas e entidades</span>
+            <span className={`ano-tag ${ano === anoSite ? "" : "outro"}`}>{ano}{pag && !pag.cobertura.completo ? ` · até ${dataBR(pag.cobertura.ate)}` : ""}</span>
+            <span className="value">{pag ? reaisCurto(pag.total) : "—"}</span>
+            <span className="hint">{pag ? plural(pag.n, "recebedor", "recebedores") : `Ainda sem dados de ${ano}`}</span></div>
+          <div className="card stat kpi"><span className="label">Imposto que deixou de ser cobrado (renúncia fiscal)</span>
+            {anoR && <span className={`ano-tag ${String(anoR) === anoSite ? "" : "outro"}`}>{anoR}{ren?.parcial ? " · incompleto" : ""}</span>}
+            <span className="value">{ren ? reaisCurto(ren.total) : "—"}</span>
+            {anosR.length > 1 && <Faisca serie={anosR.filter((a) => !a.parcial).map((a) => [String(a.ano), a.total])} marcado={String(anoR)} />}
+            <span className="hint">{ren ? `${plural(ren.n, "empresa", "empresas")} com benefício fiscal. ` : ""}{anosR.length
+              ? <>A Receita publica com atraso. {String(anoR) === anoSite ? null
+                : ultimoR && String(ultimoR.ano) === anoSite ? <>{anoSite} saiu incompleto; mostramos {anoR}, o último ano completo.</>
+                : <>{anoSite} ainda não foi publicado{ultimoR && ultimoR.parcial && ultimoR.ano !== anoR ? <> e {ultimoR.ano} saiu incompleto</> : null}; mostramos {anoR}, o {ultimoR?.ano === anoR ? "ano mais recente" : "último ano completo"}.</>}</>
+              : "O arquivo ainda não foi baixado do Portal da Transparência"}</span></div>
+          <div className="card stat kpi"><span className="label">Emendas pagas a empresas e entidades</span>
+            <span className={`ano-tag ${ano === anoSite ? "" : "outro"}`}>{ano}</span>
+            <span className="value">{emd ? reaisCurto(emd.total) : "—"}</span>
+            <span className="hint">{emd ? `por indicação de ${plural(emd.n_politicos, "parlamentar", "parlamentares")}`
+              : <>Os pagamentos de emendas de {ano} ainda não foram lidos. Lemos os arquivos diários do Portal da Transparência em ordem, um dia depois do outro{idx.ate_emendas ? <>, e a leitura está em {dataBR(idx.ate_emendas)}</> : null}. Avança a cada atualização. O total das emendas de {ano} está em <Link to="/emendas">Emendas</Link>.</>}</span></div>
         </div>
       </section>
 
       {pag?.destino && <ParaOnde d={pag.destino} cob={pag.cobertura} ano={ano} />}
       <QuemRecebeu pag={pag} ren={ren} emd={emd} ano={ano} anosR={anosR} anoR={anoR} setAnoR={setAnoR} />
       {emd && <QuemDeu emd={emd} ano={ano} />}
-      <PorEstado pag={pag} ren={ren} emd={emd} ano={ano} />
-      <ParaQue pag={pag} ren={ren} ano={ano} />
+      <PorEstado pag={pag} ren={ren} emd={emd} ano={ano} anosR={anosR} />
+      <ParaQue pag={pag} ren={ren} ano={ano} anosR={anosR} />
 
       <section>
         <h2>De onde vêm estes dados</h2>
@@ -157,13 +172,14 @@ function ParaOnde({ d, cob, ano }: { d: Destino; cob: Cobertura; ano: string }) 
         <div className="two">
           <div>
             <h3>Setor público, por esfera</h3>
-            <Barras itens={d.publico.por_esfera.map((x) => ({ label: x.rotulo, valor: x.valor, nota: plural(x.n, "recebedor", "recebedores"), cor: ESFERA_COR[x.esfera] }))} />
+            <Barras formato={curto} rosca={{ titulo: `Pagamentos ao setor público em ${ano}, por esfera` }} itens={d.publico.por_esfera.map((x) => ({ nome: x.rotulo, label: x.rotulo, valor: x.valor, nota: plural(x.n, "recebedor", "recebedores"), cor: ESFERA_COR[x.esfera] }))} />
             <p className="muted small">A esfera vem do nome do recebedor no arquivo do Portal (por exemplo, "Município de…", "Fundo Estadual de…", "Banco…"). O que não se encaixa conta como órgão federal.</p>
           </div>
           <div>
             <h3>Quem mais recebeu no setor público</h3>
-            <Barras itens={d.publico.top.slice(0, 10).map((x) => ({
-              label: <a href={`${PORTAL_PJ}${x.cnpj}`} target="_blank" rel="noreferrer">{x.nome} ↗</a>, valor: x.valor,
+            <Barras formato={curto} itens={d.publico.top.slice(0, 10).map((x) => ({
+              nome: x.nome, label: <Explicacao nome={x.nome} cnpj={x.cnpj} valor={x.valor} partes={[{ titulo: "Para quê", itens: x.cats }, { titulo: "Quem pagou", itens: x.orgaos }]}
+                frase={<>Em {ano}, o governo federal pagou {reais(x.valor)} a {x.nome}, pelos arquivos diários de despesas do Portal da Transparência. Por ser do setor público, o dinheiro continua dentro do governo: ele repassa a quem faz a obra ou presta o serviço.</>} />, valor: x.valor,
               nota: x.orgaos.length ? `Pago por ${x.orgaos.map(([o]) => o).join(", ")}` : undefined, cor: ESFERA_COR[x.esfera],
             }))} />
           </div>
@@ -175,7 +191,7 @@ function ParaOnde({ d, cob, ano }: { d: Destino; cob: Cobertura; ano: string }) 
 
 /* ------------------------------------------------------------------ quem recebeu mais */
 
-interface Linha extends Dono { cnpj: string; nome: string; tipo: Tipo; uf: string; valor: number; detalhe: ReactNode; busca: string }
+interface Linha extends Dono { cnpj: string; nome: string; tipo: Tipo; uf: string; valor: number; detalhe: ReactNode; busca: string; partes: { titulo: string; itens: Par[] }[]; frase: ReactNode }
 
 function QuemRecebeu({ pag, ren, emd, ano, anosR, anoR, setAnoR }: {
   pag: Pagamentos | null; ren: Renuncia | null; emd: Emendas | null; ano: string;
@@ -188,11 +204,18 @@ function QuemRecebeu({ pag, ren, emd, ano, anosR, anoR, setAnoR }: {
   const [q, setQ] = useState("");
   const [n, setN] = useState(20);
   const linhas: Linha[] = useMemo(() => {
+    const rotCat = (c: string) => pag?.por_categoria.find((p) => p.cat === c)?.rotulo || c;
     if (fonte === "pagamentos" && pag) return pag.top.map((x) => ({ ...x, busca: `${x.nome} ${x.orgaos.map(([o]) => o).join(" ")}`,
+      partes: [{ titulo: "Para quê", itens: x.cats.map(([c, v]) => [rotCat(c), v] as Par) }, { titulo: "Quem pagou", itens: x.orgaos }],
+      frase: <>Em {ano}, o governo federal pagou {reais(x.valor)} a {x.nome} ({plural(x.n, "pagamento", "pagamentos")}), pelos arquivos diários de despesas do Portal da Transparência. Cada pagamento tem a nota de empenho, que diz para que foi o dinheiro e qual órgão pagou.</>,
       detalhe: <>{x.cats.map(([c, v]) => `${pag.por_categoria.find((p) => p.cat === c)?.rotulo.split(" (")[0] || c}: ${reaisCurto(v)}`).join(" · ")}{x.orgaos.length > 0 && <div className="muted">Pago por {x.orgaos.map(([o]) => o).join(", ")}</div>}</> }));
     if (fonte === "renuncia" && ren) return ren.top.map((x) => ({ ...x, busca: `${x.nome} ${x.setor} ${x.municipio}`,
+      partes: [{ titulo: "Quais benefícios fiscais", itens: x.beneficios }],
+      frase: <>Em {ren.ano}, {x.nome} deixou de pagar {reais(x.valor)} de impostos federais por causa de benefícios fiscais, segundo a Receita Federal. É dinheiro que o governo deixou de arrecadar.{x.atividade ? ` Atividade: ${x.atividade}.` : ""}</>,
       detalhe: <>{x.beneficios.map(([b, v]) => `${b}: ${reaisCurto(v)}`).join(" · ")}<div className="muted">{[x.atividade, x.municipio && `${x.municipio}-${x.uf}`].filter(Boolean).join(" · ")}</div></> }));
     if (fonte === "emendas" && emd) return emd.top.map((x) => ({ ...x, busca: `${x.nome} ${x.autores.map((a) => `${a.nome} ${a.partido}`).join(" ")}`,
+      partes: [{ titulo: "De quem eram as emendas", itens: x.autores.map((a) => [`${a.nome}${a.partido ? ` (${a.partido})` : ""}`, a.valor] as Par) }],
+      frase: <>Em {ano}, {x.nome} recebeu {reais(x.valor)} em pagamentos feitos com dinheiro de emendas parlamentares. A emenda diz qual deputado ou senador indicou o dinheiro.</>,
       detalhe: <>Emendas de {x.autores.map((a, i) => <Fragment key={i}>{i > 0 && ", "}{a.politico ? <Link to={`/p/${a.politico}`}>{a.nome}</Link> : a.nome}{a.partido && <span className="muted"> ({a.partido})</span>}</Fragment>)}</> }));
     return [];
   }, [fonte, pag, ren, emd]);
@@ -210,7 +233,7 @@ function QuemRecebeu({ pag, ren, emd, ano, anosR, anoR, setAnoR }: {
         {fonte === "pagamentos" && <>Empresas e entidades que mais receberam pagamentos do governo federal em {ano}: compras, obras, serviços, convênios e subsídios.</>}
         {fonte === "renuncia" && <>Empresas que mais deixaram de pagar impostos federais por causa de benefícios fiscais no ano-calendário {anoR}. É dinheiro que o governo deixa de arrecadar.</>}
         {fonte === "emendas" && <>Empresas e entidades que mais receberam pagamentos feitos com dinheiro de emendas parlamentares em {ano}, e de quem eram as emendas.</>}
-        {" "}Toque no nome para ver os donos, se os mesmos donos têm outras empresas e os links oficiais.
+        {" "}Toque no nome para ver de onde veio o dinheiro, em detalhe, com os links oficiais para conferir.
       </Explain>
       <div className="row" style={{ gap: 8 }}>
         {fonte === "renuncia" && anosR.length > 1 && (
@@ -227,8 +250,8 @@ function QuemRecebeu({ pag, ren, emd, ano, anosR, anoR, setAnoR }: {
         </div>
       </div>
       <h3 className="inc-sub">As 10 maiores</h3>
-      <Barras itens={filtradas.slice(0, 10).map((x) => ({
-        label: <NomeEmpresa x={x} />, valor: x.valor, nota: `${pctDe(x.valor, total || 0)} do total${x.uf ? ` · ${x.uf}` : ""}`,
+      <Barras formato={curto} itens={filtradas.slice(0, 10).map((x) => ({
+        nome: x.nome, label: <ExplicaLinha x={x} />, valor: x.valor, nota: `${pctDe(x.valor, total || 0)} do total${x.uf ? ` · ${x.uf}` : ""}`,
         cor: fonte === "renuncia" ? "var(--c4)" : fonte === "emendas" ? "var(--c7)" : "var(--s1)",
       }))} />
       <div className="search" style={{ marginTop: 12 }}>
@@ -243,7 +266,7 @@ function QuemRecebeu({ pag, ren, emd, ano, anosR, anoR, setAnoR }: {
               <tr key={x.cnpj}>
                 <td className="r num muted">{linhas.indexOf(x) + 1}</td>
                 <td>
-                  <NomeEmpresa x={x} />
+                  <ExplicaLinha x={x} />
                   <div className="small muted">{[TIPO_NOME[x.tipo], cnpjFmt(x.cnpj), x.uf].filter(Boolean).join(" · ")}</div>
                   <div className="small">{x.detalhe}</div>
                   <Donos x={x} />
@@ -262,10 +285,11 @@ function QuemRecebeu({ pag, ren, emd, ano, anosR, anoR, setAnoR }: {
   );
 }
 
-function NomeEmpresa({ x }: { x: { cnpj: string; nome: string; tipo: Tipo; pagina: boolean } }) {
+function ExplicaLinha({ x }: { x: Linha }) {
   const chip = x.tipo === "entidade" ? <span className="chip">entidade</span> : x.tipo === "publico" ? <span className="chip">estatal</span> : null;
-  return <>{x.pagina ? <Link to={`/e/${x.cnpj}`}><strong>{x.nome}</strong></Link> : <strong>{x.nome}</strong>}{chip && <> {chip}</>}</>;
+  return <Explicacao nome={x.nome} cnpj={x.cnpj} valor={x.valor} partes={x.partes} frase={x.frase} pagina={x.pagina} chip={chip} />;
 }
+
 
 function Donos({ x }: { x: Dono & { tipo: Tipo } }) {
   if (!x.donos.length && !x.n_outras) return null;
@@ -349,7 +373,7 @@ function QuemDeu({ emd, ano }: { emd: Emendas; ano: string }) {
           <h3 className="inc-sub">Por partido</h3>
           <Pizza fatias={emd.partidos.map((p) => ({ sigla: p.sigla, valor: p.valor, cor: corPartido(p.sigla), outros: !principais.has(p.sigla) }))}
             titulo={`Emendas pagas a empresas e entidades por partido em ${ano}`} />
-          <Barras itens={emd.partidos.slice(0, 12).map((p) => ({
+          <Barras formato={curto} itens={emd.partidos.slice(0, 12).map((p) => ({
             label: <Link to={`/politicos?partido=${encodeURIComponent(p.sigla)}`}><i className="partido-cor" style={{ background: corPartido(p.sigla) }} /><strong>{p.sigla}</strong></Link>,
             nota: `${p.n} parlamentar${p.n > 1 ? "es" : ""} · ${reaisCurto(p.valor / p.n)} por parlamentar`, valor: p.valor, cor: corPartido(p.sigla),
           }))} />
@@ -358,15 +382,15 @@ function QuemDeu({ emd, ano }: { emd: Emendas; ano: string }) {
         <div>
           <h3 className="inc-sub">Da esquerda à direita</h3>
           <p className="small muted" style={{ margin: "4px 0 12px" }}>Cada parlamentar no lado em que vota, pela régua calculada com os votos de cada um no Plenário (a mesma das páginas de políticos e partidos).</p>
-          <Barras itens={lados.map((l) => ({ label: <strong>{l.lado}</strong>, nota: `${l.n} parlamentar${l.n > 1 ? "es" : ""}`, valor: l.valor, cor: LADO_COR[l.lado] }))} />
+          <Barras formato={curto} rosca={{ titulo: `Emendas pagas a empresas e entidades em ${ano}, por lado` }} itens={lados.map((l) => ({ nome: l.lado, label: <strong>{l.lado}</strong>, nota: `${l.n} parlamentar${l.n > 1 ? "es" : ""}`, valor: l.valor, cor: COR_LADO[l.lado] }))} />
           <h3 className="inc-sub" style={{ marginTop: 20 }}>Pelo estado do parlamentar</h3>
-          <Barras itens={emd.por_uf_politico.slice(0, 12).map(([uf, v, k]) => ({ label: <strong>{uf}</strong>, nota: `${k} parlamentar${k > 1 ? "es" : ""}`, valor: v, cor: "var(--s3)" }))} />
+          <MapaAnos porAno={{ [ano]: Object.fromEntries(emd.por_uf_politico.map(([uf, v]) => [uf, v])) }} titulo={`Emendas pagas a empresas e entidades em ${ano}, pelo estado do parlamentar`} formato={curto} />
         </div>
       </div>
       {emd.coletivos.length > 0 && <>
         <h3 className="inc-sub">Emendas de bancada, comissão e relator</h3>
         <p className="small muted">Decididas em grupo; não entram nas contas por parlamentar e por partido.</p>
-        <Barras itens={emd.coletivos.slice(0, 8).map((c) => ({ label: <strong>{c.nome}</strong>, nota: `${c.n} recebedor${c.n > 1 ? "es" : ""}`, valor: c.valor, cor: "var(--c-outros)" }))} />
+        <Barras formato={curto} itens={emd.coletivos.slice(0, 8).map((c) => ({ label: <strong>{c.nome}</strong>, nota: `${c.n} recebedor${c.n > 1 ? "es" : ""}`, valor: c.valor, cor: "var(--c-outros)" }))} />
       </>}
     </section>
   );
@@ -374,52 +398,96 @@ function QuemDeu({ emd, ano }: { emd: Emendas; ano: string }) {
 
 /* ------------------------------------------------------------------ por estado */
 
-function PorEstado({ pag, ren, emd, ano }: { pag: Pagamentos | null; ren: Renuncia | null; emd: Emendas | null; ano: string }) {
+function PorEstado({ pag, ren, emd, ano, anosR }: { pag: Pagamentos | null; ren: Renuncia | null; emd: Emendas | null; ano: string; anosR: Indice["anos_renuncia"] }) {
   const fontes = (["pagamentos", "renuncia", "emendas"] as Fonte[]).filter((f) => (f === "pagamentos" ? pag : f === "renuncia" ? ren : emd));
   const [escolhida, setFonte] = useState<Fonte>("renuncia");
-  const [todos, setTodos] = useState(false);
   const fonte = fontes.includes(escolhida) ? escolhida : fontes[0];
+  // Renúncia: todos os anos publicados, para ver no mapa como mudou (baixados quando a pessoa chega aqui)
+  const [ref, visivel] = useVisivel<HTMLElement>();
+  const rens = useVarios<Renuncia>(visivel && fonte === "renuncia" ? anosR.map((a) => `incentivos/renuncia-${a.ano}.json`) : null);
   if (!fonte) return null;
   const lista = fonte === "pagamentos" ? pag!.por_uf : fonte === "renuncia" ? ren!.por_uf : emd!.por_uf_recebedor;
   const total = lista.reduce((a, [, v]) => a + v, 0);
+  const rotR = (r: Renuncia) => `${r.ano}${r.parcial ? " (incompleto)" : ""}`;
+  const porAno: Record<string, Record<string, number>> = fonte === "renuncia"
+    ? Object.fromEntries([...Object.values(rens), ren!].map((r) => [rotR(r), Object.fromEntries(r.por_uf.map(([uf, v]) => [uf, v]))]))
+    : { [ano]: Object.fromEntries(lista.map(([uf, v]) => [uf, v])) };
   return (
-    <section>
+    <section ref={ref}>
       <h2>Em que estado ficam as empresas que mais recebem</h2>
       <div className="toggle inc-abas" role="group" aria-label="De onde vem o dinheiro">
         {fontes.map((f) => <button key={f} aria-pressed={fonte === f} onClick={() => setFonte(f)}>{FONTE_NOME[f]}</button>)}
       </div>
       <Explain>
-        {fonte === "renuncia" && <>Pelo endereço da empresa na Receita, no ano-calendário {ren?.ano}. Inclui todas as empresas com renúncia fiscal.</>}
+        {fonte === "renuncia" && <>Pelo endereço da empresa na Receita, no ano-calendário. Inclui todas as empresas com renúncia fiscal. Toque em “Ver os anos passando” para ver cada ano publicado.</>}
         {fonte === "pagamentos" && <>Pelo endereço na Receita das {pag?.top_n_receita.toLocaleString("pt-BR")} empresas e entidades que mais receberam em {ano} ({pctDe(total, pag?.total || 0)} do valor pago). Empresas com sede num estado podem trabalhar em outros.</>}
         {fonte === "emendas" && <>Pelo endereço na Receita das empresas e entidades pagas com emendas em {ano}.</>}
       </Explain>
-      <Barras itens={lista.slice(0, todos ? 40 : 10).map(([uf, v, k]) => ({ label: <strong>{uf}</strong>, nota: `${pctDe(v, total)} · ${plural(k, "recebedor", "recebedores")}`, valor: v, cor: "var(--s3)" }))} />
-      {!todos && lista.length > 10 && <button className="link" style={{ justifySelf: "start" }} onClick={() => setTodos(true)}>Ver todos os estados</button>}
+      <MapaAnos key={fonte} porAno={porAno} anoInicial={fonte === "renuncia" ? rotR(ren!) : ano} titulo={`${FONTE_NOME[fonte]}, por estado da empresa`} formato={curto} />
     </section>
   );
 }
 
 /* ------------------------------------------------------------------ para quê */
 
-function ParaQue({ pag, ren, ano }: { pag: Pagamentos | null; ren: Renuncia | null; ano: string }) {
+function ParaQue({ pag, ren, ano, anosR }: { pag: Pagamentos | null; ren: Renuncia | null; ano: string; anosR: Indice["anos_renuncia"] }) {
+  const [ref, visivel] = useVisivel<HTMLElement>();
+  const rens = useVarios<Renuncia>(visivel && ren ? anosR.map((a) => `incentivos/renuncia-${a.ano}.json`) : null);
+  const rot = (r: Renuncia) => `${r.ano}${r.parcial ? " (incompleto)" : ""}`;
+  const setores: Record<string, Fatia[]> = Object.fromEntries(Object.values(rens).map((r) => [rot(r), r.por_setor.map((x) => ({ nome: x.setor, valor: x.valor }))]));
+  const beneficios: Record<string, Fatia[]> = Object.fromEntries(Object.values(rens).map((r) => [rot(r), r.por_beneficio.map((x) => ({ nome: x.nome, valor: x.valor }))]));
   if (!pag && !ren) return null;
   return (
-    <section>
+    <section ref={ref}>
       <h2>Para quê</h2>
-      <div className="two">
+      <div>
         {pag && <div>
           <h3 className="inc-sub">O que o governo pagou em {ano}</h3>
-          <Barras itens={pag.por_categoria.map((c) => ({ label: <strong>{c.rotulo}</strong>, nota: `${plural(c.n, "recebedor", "recebedores")} · ${pctDe(c.valor, pag.total)}`, valor: c.valor, cor: CAT_COR[c.cat] }))} />
+          <Barras formato={curto} rosca={{ titulo: `O que o governo pagou em ${ano}` }} itens={pag.por_categoria.map((c) => ({ nome: c.rotulo, label: <strong>{c.rotulo}</strong>, nota: `${plural(c.n, "recebedor", "recebedores")} · ${pctDe(c.valor, pag.total)}`, valor: c.valor, cor: CAT_COR[c.cat] }))} />
           <h3 className="inc-sub" style={{ marginTop: 20 }}>Quem pagou: ministérios e órgãos</h3>
-          <Barras itens={pag.orgaos.slice(0, 10).map(([o, v]) => ({ label: <strong>{o}</strong>, nota: pctDe(v, pag.total), valor: v, cor: "var(--s1)" }))} />
+          <Barras formato={curto} rosca={{ titulo: `Quem pagou em ${ano}`, total: pag.total, paleta: true }} itens={pag.orgaos.slice(0, 10).map(([o, v]) => ({ nome: o, label: <strong>{o}</strong>, nota: pctDe(v, pag.total), valor: v, cor: "var(--s1)" }))} />
         </div>}
         {ren && <div>
           <h3 className="inc-sub">Os benefícios fiscais que mais custaram em {ren.ano}</h3>
-          <Barras itens={ren.por_beneficio.slice(0, 10).map((b) => ({ label: <strong>{b.nome}</strong>, nota: `${b.tributo ? `${b.tributo} · ` : ""}${plural(b.n, "empresa", "empresas")}`, valor: b.valor, cor: "var(--c4)" }))} />
+          <Barras formato={curto} rosca={{ titulo: `Renúncia fiscal em ${ren.ano}, por benefício`, total: ren.total, paleta: true }} itens={ren.por_beneficio.slice(0, 10).map((b) => ({ nome: b.nome, label: <strong>{b.nome}</strong>, nota: `${b.tributo ? `${b.tributo} · ` : ""}${plural(b.n, "empresa", "empresas")}`, valor: b.valor, cor: "var(--c4)" }))} />
           <h3 className="inc-sub" style={{ marginTop: 20 }}>Por setor da economia</h3>
-          <Barras itens={ren.por_setor.slice(0, 10).map((s) => ({ label: <strong>{s.setor}</strong>, nota: `${plural(s.n, "empresa", "empresas")} · ${pctDe(s.valor, ren.total)}`, valor: s.valor, cor: "var(--c4)" }))} />
+          <Barras formato={curto} rosca={{ titulo: `Renúncia fiscal em ${ren.ano}, por setor`, total: ren.total, paleta: true }} itens={ren.por_setor.slice(0, 10).map((s) => ({ nome: s.setor, label: <strong>{s.setor}</strong>, nota: `${plural(s.n, "empresa", "empresas")} · ${pctDe(s.valor, ren.total)}`, valor: s.valor, cor: "var(--c4)" }))} />
         </div>}
       </div>
+      {ren && (
+        <div className="secao-graficos">
+          <CompararAnos porAno={setores} titulo="Renúncia fiscal por setor, ano a ano" anoInicial={rot(ren)} limite={8} nota="Pelo ano-calendário. Ano marcado como incompleto ainda não foi publicado inteiro pela Receita." />
+          <CompararAnos porAno={beneficios} titulo="Os benefícios fiscais, ano a ano" anoInicial={rot(ren)} limite={8} />
+        </div>
+      )}
     </section>
+  );
+}
+
+/* Explicação ao tocar no nome: quanto recebeu, para quê, quem pagou e os links oficiais para conferir */
+function Explicacao({ nome, cnpj, valor, frase, partes, pagina, chip }: {
+  nome: string; cnpj: string; valor: number; frase: ReactNode; partes: { titulo: string; itens: Par[] }[]; pagina?: boolean; chip?: ReactNode;
+}) {
+  return (
+    <details className="inc-explica">
+      <summary><strong>{nome}</strong>{chip && <> {chip}</>} <span className="inc-explica-dica small">ver de onde veio o dinheiro</span></summary>
+      <div className="inc-explica-corpo small">
+        <p>{frase}</p>
+        {partes.filter((p) => p.itens.length).map((p) => (
+          <div key={p.titulo}>
+            <strong>{p.titulo}</strong>
+            <ul>{p.itens.slice(0, 8).map(([n, v]) => (
+              <li key={n}><span>{n}</span><span className="num">{curto(v)} <span className="muted">· {pctDe(v, valor)}</span></span>
+                <i aria-hidden="true" style={{ width: `${Math.min(100, (v / (valor || 1)) * 100)}%` }} /></li>
+            ))}</ul>
+          </div>
+        ))}
+        <p className="inc-explica-links">
+          {cnpj && <a href={`${PORTAL_PJ}${cnpj}`} target="_blank" rel="noreferrer">Cada pagamento, contrato e convênio no Portal da Transparência ↗</a>}
+          {cnpj && <a href={`https://minhareceita.org/${cnpj}`} target="_blank" rel="noreferrer">Cadastro na Receita Federal (CNPJ {cnpjFmt(cnpj)}) ↗</a>}
+          {pagina && <Link to={`/e/${cnpj}`}>Donos, outras empresas dos mesmos donos e tudo o que recebeu</Link>}
+        </p>
+      </div>
+    </details>
   );
 }

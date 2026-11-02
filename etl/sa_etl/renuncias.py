@@ -41,6 +41,8 @@ FONTE = "https://portaldatransparencia.gov.br/download-de-dados/renuncias"
 CONSULTA = "https://portaldatransparencia.gov.br/renuncias/beneficiario"
 N_ANOS = 4  # anos-calendário mostrados (os mais recentes que existirem)
 N_TOP = 300
+UFS_DETALHE = ("MG",)  # estados com recorte próprio no arquivo (o Minas Nossa)
+N_TOP_UF = 150
 
 REGRAS_BEN = {
     "ano": [["ano", "calendario"], ["ano"]],
@@ -245,6 +247,24 @@ def resumir(ano: int, ben, det, n_top: int = N_TOP) -> tuple[dict, dict[str, dic
                  "atividade": e["atividade"], "valor": round(e["valor"], 2), "beneficios": par(e["beneficios"], 3)}
                 for doc, e in ordem[:n_top]],
     }
+    # Recorte por estado (o Minas Nossa mostra as empresas de MG): total, cidades, setores e as maiores empresas
+    resumo["top_uf"] = {}
+    for uf in UFS_DETALHE:
+        do_uf = [(doc, e) for doc, e in ordem if e["uf"] == uf]
+        cid: dict[str, list] = defaultdict(lambda: [0.0, 0])
+        sts: dict[str, list] = defaultdict(lambda: [0.0, 0])
+        for _, e in do_uf:
+            cid[e["municipio"] or "Não informado"][0] += e["valor"]
+            cid[e["municipio"] or "Não informado"][1] += 1
+            sts[e["setor"]][0] += e["valor"]
+            sts[e["setor"]][1] += 1
+        resumo["top_uf"][uf] = {
+            "total": round(sum(e["valor"] for _, e in do_uf), 2), "n": len(do_uf),
+            "por_municipio": [[k, round(x[0], 2), x[1]] for k, x in sorted(cid.items(), key=lambda kv: -kv[1][0])[:30]],
+            "por_setor": [{"setor": k, "valor": round(x[0], 2), "n": x[1]} for k, x in sorted(sts.items(), key=lambda kv: -kv[1][0])],
+            "top": [{"cnpj": doc, "nome": e["nome"], "municipio": e["municipio"], "setor": e["setor"], "atividade": e["atividade"],
+                     "valor": round(e["valor"], 2), "beneficios": par(e["beneficios"], 3)} for doc, e in do_uf[:N_TOP_UF]],
+        }
     por_empresa = {doc: {"valor": round(e["valor"], 2), "beneficios": par(e["beneficios"], 8)} for doc, e in ordem}
     log.info("Renúncias %d: R$ %.0f, %d empresas", ano, total, len(empresas))
     return resumo, por_empresa
@@ -442,7 +462,13 @@ class ApiRenuncia:
         return out
 
 
-def coletar(cache: Path, ano_atual: int, n_anos: int = N_ANOS, chave: str | None = None, minutos_api: float = 20) -> dict:
+# Minutos de leitura da API por execução. A leitura completa tem dezenas de milhares de páginas (uns 5 segundos cada);
+# com 20 minutos ela levava semanas, e o site ficava com os arquivos de download, que param em 2024 (2025 dá HTTP 403).
+# Com 40 minutos ela termina na metade do tempo e a coleta ainda cabe folgada no limite de 120 minutos do workflow.
+MINUTOS_API = 40
+
+
+def coletar(cache: Path, ano_atual: int, n_anos: int = N_ANOS, chave: str | None = None, minutos_api: float = MINUTOS_API) -> dict:
     """Os anos-calendário mais recentes que o Portal tiver. {"anos": {ano: resumo}, "empresas": {cnpj: {ano: {...}}}}
 
     A API de dados do Portal vem primeiro (pede uma chave, cadastro grátis por e-mail). Enquanto a primeira leitura

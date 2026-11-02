@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Barras, Explain, Loading, useData, useTip } from "../components/ui";
+import { Barras, Explain, Loading, useData, useVarios, useVisivel } from "../components/ui";
+import { ColunasAnos, ComRosca, CompararAnos, Kpi, MapaAnos, prepararFatias, numero, type Fatia } from "../components/graficos";
 import { linkSeguro, reais } from "../data";
 import "./financas.css";
 import { AvisosFim } from "../components/Selo";
@@ -104,6 +105,16 @@ export default function Financas() {
   const gasto = d.rreo.despesas.filter((x) => x.id !== "AmortizacaoRefinanciamentoDaDivida").reduce((a, x) => a + x.liquidado, 0);
   const juros = d.rreo.despesas.find((x) => x.id === "JurosEEncargosDaDivida")?.liquidado || 0;
   const periodo = d.parcial ? `de janeiro a ${d.periodo.mes_nome} de ${d.ano}` : `em ${d.ano}`;
+  // Mesmo período do ano anterior (o Tesouro manda junto), para as setas dos números grandes
+  const a0 = d.anterior_mesmo_periodo;
+  const somaR = (ids: string[]) => (a0 ? ids.reduce((s, k) => s + (a0.receitas[k] || 0), 0) : null);
+  const somaD = (f: (k: string) => boolean) => (a0 ? Object.entries(a0.despesas).filter(([k]) => f(k)).reduce((s, [, v]) => s + v, 0) : null);
+  const rotAnt = d.parcial ? `jan-${d.periodo.mes_nome.slice(0, 3)}/${d.ano - 1}` : String(d.ano - 1);
+  const ant = (k: "impostos" | "gasto" | "divida" | "juros") => !a0 ? null : { rotulo: rotAnt, valor:
+    k === "impostos" ? somaR(["Impostos", "Taxas", "ContribuicoesSociais", "ContribuicaoDeIntervencaoNoDominioEconomico"])
+    : k === "divida" ? somaR(["ReceitasDeOperacoesDeCredito"]) : k === "juros" ? somaD((x) => x === "JurosEEncargosDaDivida")
+    : somaD((x) => x !== "AmortizacaoRefinanciamentoDaDivida") };
+  const serieCheia = (k: keyof Serie): [string, number][] => idx.serie.filter((x) => !x.parcial && x[k] != null).map((x) => [String(x.ano), x[k] as number]);
 
   return (
     <div className="fin">
@@ -121,27 +132,28 @@ export default function Financas() {
           {" "}Estados e municípios têm orçamentos próprios e não entram aqui.
         </Explain>
         <div className="grid">
-          <div className="card stat"><span className="label">Arrecadado em impostos e contribuições</span><span className="value">{rs(impostos)}</span><span className="hint">{periodo}</span></div>
-          <div className="card stat"><span className="label">Gasto (sem a rolagem da dívida)</span><span className="value">{rs(gasto)}</span><span className="hint">despesa liquidada {periodo}</span></div>
-          <div className="card stat"><span className="label">Pego emprestado (dívida nova)</span><span className="value">{rs(divida)}</span><span className="hint">{pc(gasto ? divida / gasto : null, 0)} do que foi gasto</span></div>
-          <div className="card stat"><span className="label">Pago de juros da dívida</span><span className="value">{rs(juros)}</span><span className="hint">{pc(impostos ? juros / impostos : null, 0)} do arrecadado em impostos</span></div>
+          <Kpi rotulo="Arrecadado em impostos e contribuições" valor={impostos} formato={rs} anterior={ant("impostos")} serie={serieCheia("impostos")} ano={ano} dica={periodo} />
+          <Kpi rotulo="Gasto (sem a rolagem da dívida)" valor={gasto} formato={rs} anterior={ant("gasto")} serie={serieCheia("despesa")} ano={ano} dica={`despesa liquidada ${periodo}`} />
+          <Kpi rotulo="Pego emprestado (dívida nova)" valor={divida} formato={rs} anterior={ant("divida")} serie={serieCheia("divida_nova")} ano={ano} dica={`${pc(gasto ? divida / gasto : null, 0)} do que foi gasto`} />
+          <Kpi rotulo="Pago de juros da dívida" valor={juros} formato={rs} anterior={ant("juros")} serie={serieCheia("juros")} ano={ano} dica={`${pc(impostos ? juros / impostos : null, 0)} do arrecadado em impostos`} />
         </div>
+        <p className="small muted">{d.anterior_mesmo_periodo ? `As setas comparam com ${d.parcial ? `janeiro a ${d.periodo.mes_nome} de ${d.ano - 1}` : d.ano - 1}, sem descontar a inflação.` : ""} A linha pequena mostra os anos completos.</p>
         <nav className="fin-indice" aria-label="Nesta página">
-          <a href="#sinais" onClick={irPara("sinais")}>Sinais</a><a href="#arrecadacao" onClick={irPara("arrecadacao")}>Arrecadação</a>
+          <a href="#arrecadacao" onClick={irPara("arrecadacao")}>Arrecadação</a>
           <a href="#quem-pagou" onClick={irPara("quem-pagou")}>Quem pagou</a><a href="#destino" onClick={irPara("destino")}>Para onde vai</a>
           <a href="#poderes" onClick={irPara("poderes")}>Poderes</a><a href="#cargos" onClick={irPara("cargos")}>Cargos</a>
-          <a href="#programas" onClick={irPara("programas")}>Programas</a><a href="#anos" onClick={irPara("anos")}>Ano a ano</a>
+          <a href="#programas" onClick={irPara("programas")}>Programas</a><a href="#anos" onClick={irPara("anos")}>Ano a ano</a><a href="#sinais" onClick={irPara("sinais")}>Sinais</a>
         </nav>
       </section>
 
-      <Sinais d={d} />
       <Arrecadou d={d} propria={propria} />
-      <QuemPagou d={d} />
-      <Destino d={d} />
+      <QuemPagou d={d} idx={idx} />
+      <Destino d={d} idx={idx} />
       <Poderes d={d} />
       <Cargos d={d} />
       <Programas d={d} />
-      <AnoAAno idx={idx} />
+      <AnoAAno idx={idx} ano={ano} setAno={setEscolhido} />
+      <Sinais d={d} idx={idx} />
       <Ligacoes d={d} />
       <Fontes d={d} idx={idx} />
       <AvisosFim secao="financas">
@@ -165,14 +177,44 @@ function valorKpi(k: Kpi): string {
   return pc(k.valor);
 }
 
-function Sinais({ d }: { d: Ano }) {
+/** Linha pequena do sinal nos anos: cada ponto tem a cor do sinal naquele ano, e o texto diz se melhorou ou piorou. */
+function Tendencia({ serie }: { serie: { ano: string; valor: number; nivel: Nivel }[] }) {
+  const s = serie.filter((x) => x.valor != null && isFinite(x.valor));
+  if (s.length < 2) return null;
+  const W = 140, H = 34, p = 5;
+  const vs = s.map((x) => x.valor), max = Math.max(...vs), min = Math.min(...vs);
+  const x = (i: number) => p + (i * (W - 2 * p)) / (s.length - 1);
+  const y = (v: number) => H - p - ((v - min) / (max - min || 1)) * (H - 2 * p);
+  const cor: Record<Nivel, string> = { verde: "var(--flag-g)", amarelo: "var(--flag-y)", vermelho: "var(--flag-r)", sem_dados: "var(--c-outros)" };
+  const ult = s[s.length - 1], ant = s[s.length - 2];
+  const dif = ORDEM_NIVEL[ult.nivel] - ORDEM_NIVEL[ant.nivel];
+  const texto = ult.nivel === "sem_dados" || ant.nivel === "sem_dados" ? null
+    : dif > 0 ? `Melhorou: era ${NIVEL_NOME[ant.nivel].toLowerCase()} em ${ant.ano}` : dif < 0 ? `Piorou: era ${NIVEL_NOME[ant.nivel].toLowerCase()} em ${ant.ano}` : `Mesmo sinal de ${ant.ano}`;
+  return (
+    <div className="fin-tendencia">
+      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label={s.map((z) => `${z.ano}: ${NIVEL_NOME[z.nivel]}`).join("; ")}>
+        <polyline points={s.map((z, i) => `${x(i).toFixed(1)},${y(z.valor).toFixed(1)}`).join(" ")} fill="none" stroke="var(--muted)" strokeWidth={1.5} />
+        {s.map((z, i) => <circle key={z.ano} cx={x(i)} cy={y(z.valor)} r={i === s.length - 1 ? 5 : 3.5} fill={cor[z.nivel]} stroke="var(--surface)" strokeWidth={1.5}><title>{`${z.ano}: ${NIVEL_NOME[z.nivel]}`}</title></circle>)}
+      </svg>
+      <span className="small">{texto && <span className={`fin-tend ${dif > 0 ? "melhor" : dif < 0 ? "pior" : ""}`}>{dif > 0 ? "▲ " : dif < 0 ? "▼ " : ""}{texto}</span>}
+        <span className="muted"> · {s[0].ano} a {ult.ano}</span></span>
+    </div>
+  );
+}
+
+function Sinais({ d, idx }: { d: Ano; idx: Indice }) {
   const [filtro, setFiltro] = useState<Nivel | "">("");
+  const [ref, visivel] = useVisivel<HTMLElement>();
+  const todos = useTodosAnos(idx, visivel);
+  const historico = (id: string) => Object.values(todos).sort((a, b) => a.ano - b.ano)
+    .map((x) => { const k = x.kpis?.find((y) => y.id === id); return k && k.valor != null ? { ano: String(x.ano), valor: k.valor, nivel: k.nivel } : null; })
+    .filter((z): z is { ano: string; valor: number; nivel: Nivel } => !!z);
   const ks = d.kpis.slice().sort((a, b) => ORDEM_NIVEL[a.nivel] - ORDEM_NIVEL[b.nivel]);
   const conta = (n: Nivel) => ks.filter((k) => k.nivel === n).length;
   const vis = ks.filter((k) => !filtro || k.nivel === filtro);
   return (
-    <section id="sinais">
-      <h2>Sinais: onde olhar primeiro</h2>
+    <section id="sinais" ref={ref}>
+      <h2>Sinais: onde olhar</h2>
       <Explain>
         Indicadores calculados com os dados oficiais desta página para achar onde o gasto pode estar alto demais.
         <strong> Vermelho</strong> pede atenção já, <strong>amarelo</strong> merece acompanhamento, <strong>verde</strong> está dentro do esperado.
@@ -189,6 +231,7 @@ function Sinais({ d }: { d: Ano }) {
           <article key={k.id} className={`card fin-kpi ${k.nivel}`} data-testid="kpi">
             <div className="fin-kpi-topo"><Sinal nivel={k.nivel} /><span className="fin-kpi-valor num">{valorKpi(k)}</span></div>
             <h3>{k.titulo}</h3>
+            <Tendencia serie={historico(k.id)} />
             {k.formato === "pct_limite" && k.valor != null && (
               <div className="fin-barra" aria-hidden="true"><span style={{ width: `${Math.min(100, k.valor * 100)}%` }} /><i style={{ left: "90%" }} /><i style={{ left: "95%" }} /></div>
             )}
@@ -220,21 +263,41 @@ function Arrecadou({ d, propria }: { d: Ano; propria: number }) {
         Separamos o dinheiro que o governo arrecadou ({rs(propria)}) do dinheiro que ele pegou emprestado, que vira dívida e é pago com juros.
       </Explain>
       <h3 className="fin-sub">Dinheiro arrecadado</h3>
-      <Barras itens={prop.map((r) => ({
-        label: <span title={r.explica}>{r.nome}</span>, valor: r.valor, cor: "var(--s3)",
+      <Barras formato={rs} rosca={{ titulo: `Dinheiro arrecadado ${d.parcial ? `até ${d.periodo.mes_nome}` : "no ano"}, por tipo` }} itens={prop.map((r) => ({
+        nome: r.nome, label: <span title={r.explica}>{r.nome}</span>, valor: r.valor, cor: "var(--s3)",
         nota: `${r.explica}${ant?.[r.id] ? ` Mesmo período de ${d.ano - 1}: ${rs(ant[r.id])}.` : ""}`,
       }))} />
       <h3 className="fin-sub">Dinheiro emprestado</h3>
-      <Barras itens={div.map((r) => ({ label: r.nome, valor: r.valor, nota: r.explica, cor: r.tipo === "divida" ? "var(--esq)" : "var(--c-outros)" }))} />
+      <Barras formato={rs} itens={div.map((r) => ({ label: r.nome, valor: r.valor, nota: r.explica, cor: r.tipo === "divida" ? "var(--esq)" : "var(--c-outros)" }))} />
       <p className="small muted">Valores realizados {d.parcial ? `até ${d.periodo.mes_nome}` : "no ano"}, sem as receitas intraorçamentárias (quando um órgão federal paga outro). <Fonte href={d.fontes_ano.rreo1}>RREO, Anexo 1, na API do Tesouro</Fonte></p>
     </section>
   );
 }
 
-function QuemPagou({ d }: { d: Ano }) {
+/** Todos os anos da página, baixados só quando a pessoa rola até a seção que compara os anos. */
+function useTodosAnos(idx: Indice, ligado: boolean): Record<string, Ano> {
+  const caminhos = ligado ? idx.anos.map((a) => `financas/${a}.json`) : null;
+  const r = useVarios<Ano>(caminhos);
+  return Object.fromEntries(Object.values(r).map((x) => [String(x.ano), x]));
+}
+/** Nome do ano nos gráficos de comparação: o ano em andamento diz até quando vai. */
+const rotuloAno = (x: Ano, ateMes?: number) => (x.parcial || (ateMes && ateMes < 12) ? `${x.ano} (até ${MES[ateMes || x.periodo.mes].slice(0, 3)})` : String(x.ano));
+
+function QuemPagou({ d, idx }: { d: Ano; idx: Indice }) {
   const a = d.arrecadacao;
   const s = d.setores;
   const [aberto, setAberto] = useState<string | null>(null);
+  const [ativo, setAtivo] = useState<string | null>(null);
+  const [ref, visivel] = useVisivel<HTMLDivElement>();
+  const todos = useTodosAnos(idx, visivel);
+  const porUf = useMemo(() => {
+    const r: Record<string, Record<string, number>> = {};
+    Object.values(todos).forEach((x) => { if (x.arrecadacao?.por_uf.length) r[rotuloAno(x, x.arrecadacao.ate_mes)] = Object.fromEntries(x.arrecadacao.por_uf); });
+    if (a && !Object.keys(r).length) r[rotuloAno(d, a.ate_mes)] = Object.fromEntries(a.por_uf);
+    return r;
+  }, [todos, a, d]);
+  const fatiasGrupos = a ? prepararFatias(a.grupos.slice().sort((x, y) => y.valor - x.valor).map((g) => ({ nome: g.nome, valor: g.valor }))) : [];
+  const corGrupo = (n: string) => fatiasGrupos.find((f) => f.nome === n)?.cor || "var(--c-outros)";
   if (!a && !s) {
     return <section id="quem-pagou"><h2>Quem pagou</h2><div className="empty">A Receita Federal não tem dados de arrecadação por imposto para {d.ano}.</div></section>;
   }
@@ -249,16 +312,17 @@ function QuemPagou({ d }: { d: Ano }) {
       {a && (
         <>
           <h3 className="fin-sub">Sobre o que o imposto foi cobrado · {rs(a.total)}</h3>
+          <ComRosca fatias={fatiasGrupos} titulo="Imposto arrecadado, pelo que foi cobrado" formato={rs} ativo={ativo} onAtivo={setAtivo}>
           <div className="bars">
             {a.grupos.slice().sort((x, y) => y.valor - x.valor).map((g) => (
               <Fragment key={g.id}>
-                <div className="bar-row">
+                <div className={`bar-row ${ativo && ativo !== g.nome ? "apagado" : ""}`} onMouseEnter={() => setAtivo(g.nome)} onMouseLeave={() => setAtivo(null)}>
                   <div style={{ minWidth: 0 }}>
                     <button className="link fin-abrir" aria-expanded={aberto === g.id} onClick={() => setAberto(aberto === g.id ? null : g.id)}>{g.nome}</button>
                     <div className="muted small">{g.explica} {pc(g.valor / a.total)} do total.</div>
                   </div>
                   <div className="num">{rs(g.valor)}</div>
-                  <div className="track" aria-hidden="true"><div className="fill" style={{ width: `${(g.valor / Math.max(...a.grupos.map((x) => x.valor))) * 100}%`, background: "var(--s1)" }} /></div>
+                  <div className="track" aria-hidden="true"><div className="fill" style={{ width: `${(g.valor / Math.max(...a.grupos.map((x) => x.valor))) * 100}%`, background: corGrupo(g.nome) }} /></div>
                 </div>
                 {aberto === g.id && (
                   <div className="fin-detalhe small">
@@ -268,21 +332,23 @@ function QuemPagou({ d }: { d: Ano }) {
               </Fragment>
             ))}
           </div>
+          </ComRosca>
         </>
       )}
       {s && s.setores.length > 0 && (
         <>
           <h3 className="fin-sub">Por setor da economia{s.ate_mes ? ` (até ${MES[s.ate_mes]})` : ""}</h3>
-          <Barras itens={s.setores.slice(0, 14).map((x) => ({ label: x.nome, valor: x.valor, cor: x.secao === "PF" ? "var(--c7)" : "var(--c4)",
+          <Barras formato={rs} rosca={{ titulo: "Imposto arrecadado por setor da economia", total: s.total, paleta: true }} itens={s.setores.slice(0, 14).map((x) => ({ label: x.nome, valor: x.valor,
             nota: `${pc(x.valor / s.total)} do total · mais pagos: ${x.impostos.slice(0, 3).map(([n]) => n).join(", ")}` }))} />
         </>
       )}
       {a && (
-        <>
+        <div ref={ref}>
           <h3 className="fin-sub">Por estado</h3>
-          <p className="small muted">O imposto entra no estado onde a empresa recolhe, em geral a sede. Por isso São Paulo, Rio e o Distrito Federal (sede de bancos e estatais) aparecem bem acima da sua população.</p>
-          <Barras itens={a.por_uf.slice(0, 27).map(([uf, v]) => ({ label: uf, valor: v, cor: "var(--s2)", nota: pc(v / a.total) }))} />
-        </>
+          <MapaAnos porAno={porUf} titulo="Imposto federal arrecadado por estado" formato={rs} anoInicial={rotuloAno(d, a.ate_mes)}
+            explica="O imposto entra no estado onde a empresa recolhe, em geral a sede. Por isso São Paulo, Rio e o Distrito Federal (sede de bancos e estatais) aparecem bem acima da sua população. Toque em “Ver os anos passando” para ver cada ano no mapa."
+            porQue="Ano em andamento: vai só até o último mês publicado pela Receita, por isso o valor é menor que o de um ano inteiro." />
+        </div>
       )}
       <p className="small muted"><Fonte href={linkSeguro("https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/dados-abertos/receitadata/arrecadacao")}>Dados abertos de arrecadação da Receita Federal</Fonte>. O Simples Nacional inclui a parte de estados e municípios, que a Receita repassa.</p>
     </section>
@@ -291,12 +357,30 @@ function QuemPagou({ d }: { d: Ano }) {
 
 /* ------------------------------------------------------------------ destino */
 
-function Destino({ d }: { d: Ano }) {
+function Destino({ d, idx }: { d: Ano; idx: Indice }) {
   const [abertas, setAbertas] = useState<string | null>(null);
+  const [ativo, setAtivo] = useState<string | null>(null);
+  const [ref, visivel] = useVisivel<HTMLDivElement>();
+  const todos = useTodosAnos(idx, visivel);
+  const funcoesAnos = useMemo(() => {
+    const r: Record<string, Fatia[]> = {};
+    Object.values(todos).forEach((x) => { if (x.funcoes?.funcoes.length) r[rotuloAno(x)] = x.funcoes.funcoes.map((f) => ({ nome: f.nome, valor: f.liquidado })); });
+    return r;
+  }, [todos]);
+  const tiposAnos = useMemo(() => {
+    const r: Record<string, Fatia[]> = {};
+    Object.values(todos).forEach((x) => { r[rotuloAno(x)] = x.rreo.despesas.filter((y) => y.id !== "AmortizacaoRefinanciamentoDaDivida").map((y) => ({ nome: y.nome, valor: y.liquidado })); });
+    return r;
+  }, [todos]);
   const ant = d.anterior_mesmo_periodo;
   const fator = ant?.ipca_fator || null;
   const desp = d.rreo.despesas.filter((x) => x.liquidado || x.dotacao);
   const f = d.funcoes;
+  const fatiasTipo = prepararFatias(desp.filter((x) => x.id !== "AmortizacaoRefinanciamentoDaDivida" && x.liquidado > 0).sort((a, b) => b.liquidado - a.liquidado).map((x) => ({ nome: x.nome, valor: x.liquidado })));
+  const fatiasFuncao = f ? prepararFatias(f.funcoes.filter((x) => x.liquidado > 0).map((x) => ({ nome: x.nome, valor: x.liquidado }))) : [];
+  const corFuncao = (n: string) => fatiasFuncao.find((x) => x.nome === n)?.cor || "var(--c-outros)";
+  const donoFuncao = (n: string) => (fatiasFuncao.some((x) => x.nome === n) ? n : "Outros");
+  const nota = "O ano em andamento vai só até o último relatório do Tesouro, por isso parece menor. Valores sem descontar a inflação.";
   return (
     <section id="destino">
       <h2>Para onde foi o dinheiro</h2>
@@ -305,6 +389,7 @@ function Destino({ d }: { d: Ano }) {
         {fator && <> Entre parênteses, a variação contra o mesmo período de {d.ano - 1}, já descontada a inflação (IPCA).</>}
       </Explain>
       <h3 className="fin-sub">Por tipo de gasto</h3>
+      <ComRosca fatias={fatiasTipo} titulo="Gasto por tipo, sem a rolagem da dívida" formato={rs}>
       <div className="table-wrap">
         <table className="fin-tabela">
           <thead><tr><th>Gasto</th><th className="r">{d.parcial ? `Até ${d.periodo.mes_nome}` : "No ano"}</th><th className="r">Autorizado no ano</th></tr></thead>
@@ -325,20 +410,22 @@ function Destino({ d }: { d: Ano }) {
           </tbody>
         </table>
       </div>
+      </ComRosca>
       {f && f.funcoes.length > 0 && (
         <>
           <h3 className="fin-sub">Por área (função de governo)</h3>
           <p className="small muted">Toque numa área para ver em que ela gastou. "Administração geral" é o custo de manter os órgãos daquela área funcionando.</p>
+          <ComRosca fatias={fatiasFuncao} titulo="Gasto por área de governo" formato={rs} ativo={ativo} onAtivo={setAtivo}>
           <div className="bars">
             {f.funcoes.filter((x) => x.liquidado > 0).map((x) => (
               <Fragment key={x.nome}>
-                <div className="bar-row">
+                <div className={`bar-row ${ativo && ativo !== donoFuncao(x.nome) ? "apagado" : ""}`} onMouseEnter={() => setAtivo(donoFuncao(x.nome))} onMouseLeave={() => setAtivo(null)}>
                   <div style={{ minWidth: 0 }}>
                     <button className="link fin-abrir" aria-expanded={abertas === x.nome} onClick={() => setAbertas(abertas === x.nome ? null : x.nome)}>{x.nome}</button>
                     {x.explica && <div className="muted small">{x.explica}</div>}
                   </div>
                   <div className="num">{rs(x.liquidado)}</div>
-                  <div className="track" aria-hidden="true"><div className="fill" style={{ width: `${(x.liquidado / f.funcoes[0].liquidado) * 100}%`, background: x.nome === "Encargos Especiais" ? "var(--esq)" : "var(--s1)" }} /></div>
+                  <div className="track" aria-hidden="true"><div className="fill" style={{ width: `${(x.liquidado / f.funcoes[0].liquidado) * 100}%`, background: corFuncao(x.nome) }} /></div>
                 </div>
                 {abertas === x.nome && (
                   <div className="fin-detalhe small">
@@ -349,9 +436,14 @@ function Destino({ d }: { d: Ano }) {
               </Fragment>
             ))}
           </div>
+          </ComRosca>
           <p className="small muted"><Fonte href={d.fontes_ano.rreo2}>RREO, Anexo 2, na API do Tesouro</Fonte>. Encargos especiais incluem os juros e a rolagem da dívida e os repasses obrigatórios a estados e municípios.</p>
         </>
       )}
+      <div ref={ref} className="secao-graficos">
+        <CompararAnos porAno={funcoesAnos} titulo="Como o gasto por área mudou de um ano para outro" formato={rs} anoInicial={rotuloAno(d)} nota={nota} />
+        <CompararAnos porAno={tiposAnos} titulo="Como o gasto por tipo mudou" formato={rs} anoInicial={rotuloAno(d)} nota={nota} />
+      </div>
     </section>
   );
 }
@@ -410,7 +502,7 @@ function Poderes({ d }: { d: Ano }) {
             (custeio das áreas de gestão: aluguéis, terceirizados, diárias, passagens, TI, consultorias) do custeio de serviços que chegam à população.
             Para o Legislativo e o Judiciário, os dados abertos trazem o gasto com pessoal (acima) e o gasto por área, na seção anterior.
           </p>
-          <Barras itens={ex.categorias.filter((c) => c.realizado > 0).sort((a, b) => b.realizado - a.realizado).map((c) => ({
+          <Barras formato={rs} rosca={{ titulo: "Gasto do Executivo por tipo", paleta: true }} itens={ex.categorias.filter((c) => c.realizado > 0).sort((a, b) => b.realizado - a.realizado).map((c) => ({
             label: c.nome, valor: c.realizado, cor: COR_CAT[c.id] || "var(--s1)", nota: `${c.explica} ${pc(c.realizado / ex.total)} do total.`,
           }))} />
           {ex.maquina_por_tipo.length > 0 && (
@@ -460,6 +552,8 @@ function Cargos({ d }: { d: Ano }) {
       {ex ? (
         <>
           <h3 className="fin-sub">Executivo federal · servidores civis em {MES[ex.mes]} de {ex.ano}</h3>
+          <ComRosca fatias={prepararFatias(ex.grupos.slice().sort((a, b) => b.pessoas - a.pessoas).map((g) => ({ nome: g.nome, valor: g.pessoas })))} titulo="Servidores civis do Executivo por tipo de vínculo"
+            formato={(v) => `${numero(v)} pessoas`} centroRotulo="Servidores" centro={numero(ex.pessoas)}>
           <div className="table-wrap">
             <table className="fin-tabela">
               <thead><tr><th>Grupo</th><th className="r">Pessoas</th><th className="r">Folha do mês</th></tr></thead>
@@ -474,6 +568,7 @@ function Cargos({ d }: { d: Ano }) {
               </tbody>
             </table>
           </div>
+          </ComRosca>
           <p className="small muted">Folha bruta do mês (salário, gratificações, férias e 13º, já com o abate-teto), sem auxílios e indenizações. Não inclui militares nem empregados de estatais que não dependem do Tesouro. Quem tem dois vínculos conta uma vez, no grupo de confiança.</p>
           {ex.funcoes.length > 0 && (
             <details className="small fin-mais" open>
@@ -498,7 +593,7 @@ function Cargos({ d }: { d: Ano }) {
           {cam && (
             <article className="card">
               <h3>Câmara dos Deputados · hoje</h3>
-              <Barras itens={cam.grupos.filter((g) => g.pessoas).map((g) => ({ label: g.nome, valor: g.pessoas, nota: g.explica,
+              <Barras formato={(v) => `${numero(v)} pessoas`} rosca={{ titulo: "Funcionários da Câmara por vínculo", centroRotulo: "Pessoas", paleta: true }} itens={cam.grupos.filter((g) => g.pessoas).map((g) => ({ label: g.nome, valor: g.pessoas, nota: g.explica,
                 cor: g.id === "secretario" || g.id === "cne" ? "var(--esq)" : g.id === "parlamentar" ? "var(--c-outros)" : "var(--s3)" }))} max={undefined} />
               <p className="small muted">Valores em pessoas, não em reais. Dos concursados, {num(cam.efetivos_com_funcao)} têm função comissionada.
                 {cam.verba_gabinete ? <> Os secretários parlamentares são pagos pela verba de gabinete, que somou {rs(cam.verba_gabinete)} em {d.ano}: veja quanto cada deputado usou em <Link to="/politicos">Políticos</Link>.</> : null}
@@ -606,31 +701,21 @@ const METRICAS: { k: keyof Serie; nome: string; cor: string }[] = [
   { k: "investimentos", nome: "Investimentos", cor: "var(--c4)" },
 ];
 
-function AnoAAno({ idx }: { idx: Indice }) {
+function AnoAAno({ idx, ano, setAno }: { idx: Indice; ano: string; setAno: (a: string) => void }) {
   const [m, setM] = useState<keyof Serie>("impostos");
   const met = METRICAS.find((x) => x.k === m)!;
   const serie = idx.serie;
-  const tip = useTip();
   const vals = serie.map((s) => (s[m] as number | null) || 0);
-  const max = Math.max(1, ...vals);
   const soma = vals.reduce((a, b) => a + b, 0);
   return (
     <section id="anos">
       <h2>Ano a ano</h2>
-      <Explain>Cada ano separado, sem correção pela inflação. O ano em andamento vai só até o último relatório publicado e por isso aparece com a barra clara.</Explain>
-      <label className="fin-escolha"><span className="muted small">Mostrar</span>
-        <select value={m as string} onChange={(e) => setM(e.target.value as keyof Serie)}>{METRICAS.map((x) => <option key={x.k as string} value={x.k as string}>{x.nome}</option>)}</select>
-      </label>
-      <div className="fin-colunas" role="img" aria-label={`${met.nome} por ano`}>
-        {serie.map((s, i) => (
-          <div key={s.ano} className="fin-coluna" onMouseMove={(e) => tip.show(e, `${s.ano}${s.parcial ? ` (até ${s.ate})` : ""}: ${rs(vals[i])}`)} onMouseLeave={tip.hide}>
-            <span className="fin-coluna-valor num">{rs(vals[i])}</span>
-            <div className="fin-coluna-barra" style={{ height: `${(vals[i] / max) * 100}%`, background: met.cor, opacity: s.parcial ? 0.5 : 1 }} />
-            <span className="fin-coluna-ano">{s.ano}{s.parcial && <small>até {s.ate.slice(0, 3)}</small>}</span>
-          </div>
-        ))}
+      <Explain>Cada ano separado, sem correção pela inflação. A seta mostra quanto mudou contra o ano anterior. O ano em andamento vai só até o último relatório publicado e por isso aparece com a barra clara. Toque num ano para ver a página daquele ano.</Explain>
+      <div className="toggle graf-anos" role="group" aria-label="Mostrar">
+        {METRICAS.map((x) => <button key={x.k as string} aria-pressed={x.k === m} onClick={() => setM(x.k)}>{x.nome}</button>)}
       </div>
-      {tip.el}
+      <ColunasAnos serie={serie.map((s, i) => [String(s.ano), vals[i]])} titulo={met.nome} formato={rs} cor={met.cor}
+        parcial={new Set(serie.filter((s) => s.parcial).map((s) => String(s.ano)))} ano={ano} setAno={(a) => { setAno(a); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
       <div className="table-wrap">
         <table className="fin-tabela fin-tabela-anos">
           <thead><tr><th></th>{serie.map((s) => <th key={s.ano} className="r">{s.ano}{s.parcial ? "*" : ""}</th>)}</tr></thead>

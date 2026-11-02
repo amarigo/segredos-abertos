@@ -1,4 +1,10 @@
-# Regras do projeto
+# Segredos Abertos: guia do projeto
+
+Portal de transparência sobre o dinheiro público no Brasil: gastos da cota parlamentar, votações, emendas
+parlamentares, arrecadação e gastos da União, incentivos a empresas e projetos em andamento (tramitação).
+Sites irmãos no mesmo repositório: Minas Nossa (`/mg/`), Eleição 2026 (`/eleicao2026/`), Terras Raras em Minas
+(`/terras-raras/`), painel de análises (`/analises/`) e painel de status (`/status/`).
+Publicado em https://amarigo.github.io/segredos-abertos/. Visão geral em [README.md](README.md).
 
 ## Fontes de dados: API primeiro
 
@@ -14,3 +20,106 @@ Ordem de preferência:
 3. Ler páginas HTML, só quando não há nenhuma das opções acima.
 
 Ao usar a opção 2 ou 3, deixe escrito no código por que a API não serviu.
+
+## Tecnologia
+
+- Coleta (ETL): Python 3.12 (`etl/sa_etl`, `mg/etl/mg_etl`, `eleicao2026/etl/el_etl`). Dependências fixas em
+  `etl/requirements.txt` (`requests`, `numpy`). Não há backend nem servidor: o resultado da coleta são arquivos JSON.
+- Site e app: React 18 + TypeScript + Vite (`site/`), instalável no celular como PWA. O Minas Nossa é o mesmo site,
+  montado com `--mode mg`. Eleição 2026 (`eleicao2026/site/`), Terras Raras (`terras-raras/gerar_pagina.py`) e o
+  painel de status (`status/`) são páginas próprias, sem React.
+- Dados: arquivos JSON gerados em `site/public/data/` e `site/public-mg/data/` (fora do git). Downloads e consultas
+  de CNPJ ficam em `etl/.cache/`, guardado entre execuções pelo cache do GitHub Actions. Dados escritos à mão ficam
+  em `terras-raras/dados/*.csv` e `site/src/corrupcao/dados.ts`, cada item com link da fonte.
+- Hospedagem e publicação: GitHub Pages, publicado pelo workflow
+  [`dados-e-site.yml`](.github/workflows/dados-e-site.yml) (job `publicar`).
+
+## Atualização
+
+- Todo dia às **3h17 de Brasília** (`cron: "17 6 * * *"`, UTC) o workflow "Dados e site" roda os testes, coleta,
+  confere, verifica com a segunda fonte, monta todos os sites e publica. Também roda a cada push no `main`.
+- Se uma fonte oficial falhar, a coleta usa a última cópia boa, mostra aviso com a data dela, e
+  [`tentar-de-novo.yml`](.github/workflows/tentar-de-novo.yml) tenta de novo a cada 2 horas até tudo responder.
+- Para atualizar na hora: Actions > Dados e site > Run workflow (branch `main`). Opções `ignorar_queda` e
+  `ignorar_barreira` só quando a queda ou a diferença for real e entendida.
+
+## Fontes de dados
+
+Todas as áreas abaixo são coletadas todo dia, na execução das 3h17 (os dados de origem mudam no ritmo de cada fonte).
+
+| Área | Fonte (API primeiro) | Coletor |
+|---|---|---|
+| Gastos: cota dos deputados (CEAP) | API da Câmara (`/deputados`); notas pelo arquivo anual `camara.leg.br/cotas/Ano-{ano}.csv.zip` (volume); passagens e página oficial do deputado para completar | `etl/sa_etl/camara.py`, `passagens.py`, `recursos.py` |
+| Gastos: cota dos senadores (CEAPS) | API administrativa do Senado (`adm.senado.gov.br/adm-dadosabertos/api/v1/senadores/despesas_ceaps/{ano}`) | `etl/sa_etl/senado.py` |
+| Gastos: servidores do Executivo, da Câmara e do Senado | Portal da Transparência, arquivo mensal do SIAPE (a API só consulta servidor por servidor); arquivo de funcionários da Câmara; API de servidores do Senado | `etl/sa_etl/fin_pessoal.py` |
+| Empresas e donos | Base CNPJ da Receita Federal, via Minha Receita | `etl/sa_etl/cnpj.py` |
+| Votações | Câmara: arquivos de votações em CSV, conferidos com a API (`/votacoes/{id}/votos`); Senado: API `/votacao` | `etl/sa_etl/camara.py`, `senado.py`, `temas.py`, `ideologia.py` |
+| Emendas | Portal da Transparência, arquivo completo de emendas (ZIP); pagamentos pelos arquivos diários de despesas | `etl/sa_etl/emendas.py`, `pagamentos.py` |
+| Arrecadação e gastos da União | API do Siconfi (Tesouro): RREO anexos 1 e 2, RGF anexo 1; Receita Federal, CSV de arrecadação (sem API); Portal da Transparência, orçamento da despesa (arquivo anual); IPCA pela API do SIDRA/IBGE | `etl/sa_etl/fin_tesouro.py`, `fin_receita.py`, `fin_orcamento.py`, `financas.py` |
+| Incentivos | Renúncia fiscal pela API do Portal da Transparência (`renuncias-valor`, chave no secret `PORTAL_TRANSPARENCIA_CHAVE`), arquivos como reserva; pagamentos a empresas pelos arquivos diários de despesas | `etl/sa_etl/incentivos.py`, `renuncias.py` |
+| Tramitação | API da Câmara (`/eventos`, `/eventos/{id}/pauta`, `/proposicoes`) e API do Senado (`/plenario/agenda`, `/comissao/agenda`, `/processo`) | `etl/sa_etl/tramitacao.py` |
+| Minas Gerais | ALMG (API e dados abertos), TSE, Dados MG, Siconfi, Portal da Transparência | `mg/etl/mg_etl/` (veja `mg/README.md`) |
+| Eleição 2026 | Resultados e boletins de urna do TSE | `eleicao2026/etl/el_etl/` (veja `eleicao2026/README.md`) |
+| Terras Raras | Sem API que junte os dados: planilhas à mão em `terras-raras/dados/`, cada linha com fonte e data | `terras-raras/gerar_pagina.py` (veja `terras-raras/COMO_ATUALIZAR.md`) |
+
+O ponto de entrada da coleta nacional é `etl/sa_etl/build.py`. A tabela completa com links está no README.
+
+## Regras de ouro
+
+1. **Precisão dos dados primeiro.** Nunca publique um número que não foi conferido com a fonte oficial. Sempre dados
+   reais, coerentes e com link para o original.
+2. **Não causar dano a terceiros.** Não publique dado pessoal além do que a fonte oficial já torna público (CPF sempre
+   mascarado; `validar.py` bloqueia CPF à mostra). Nunca exponha segredos: chaves ficam em variáveis de ambiente ou
+   secrets do GitHub, nunca no repositório nem no chat.
+3. Todo número mostrado numa página mostra a fonte e a data da última atualização.
+4. Não escreva valores fixos no código; eles vêm dos arquivos de dados.
+
+## Convenções
+
+- Idioma: o site está em português (padrão), com inglês e espanhol traduzidos no navegador por
+  `site/public/i18n/tradutor.js`, com dicionários em `site/public/i18n/en.json` e `es.json` (Eleição 2026:
+  `eleicao2026/site/i18n/`). Dados oficiais (nomes, partidos, categorias) não são traduzidos. Código, comentários,
+  commits e documentação do repositório são escritos em português, em linguagem simples.
+- Componentes comuns do site em `site/src/components/` (`ui.tsx`: `Barras`, `GastoMensal`, `Espectro`, `VotoBarra`,
+  `LinkNota`, `Explain`...; `Selo.tsx`: selo da verificação). Reaproveite antes de criar um componente só para uma página.
+- Visual: padrão de site público brasileiro (gov.br): faixa azul-escura no topo com fio verde e amarelo, azul gov.br
+  nos links e números, letra Raleway. As cores são variáveis CSS em `site/src/styles.css` (`:root`), incluindo a paleta
+  validada das séries (`--s1`...`--c8`) e as cores de voto (`--sim`, `--nao`). Os gráficos do site são componentes
+  próprios em SVG (`ui.tsx`); o painel de análises usa Apache ECharts (`analises/painel.html`, ajudantes `barras`,
+  `linhas`, `rosca`, `desenhar`). Para mudar o painel, siga a skill `.claude/skills/painel-analises/`.
+
+## Comandos
+
+- Coletar dados localmente (precisa de internet):
+  `cd etl && pip install -r requirements.txt -r requirements-dev.txt && python -m sa_etl.build --saida ../site/public/data --cache .cache --anos 2025 2026`
+- Rodar o site: `cd site && npm install && npm run dev` (Minas Nossa: `npm run build:mg && npm run preview:mg`)
+- Testes do coletor: `python -m pytest -q etl/tests` (também `mg/etl/tests`, `eleicao2026/etl/tests`, `analises/tests`)
+- Testes do site: `cd site && npm test`; no navegador: `npm run test:e2e` (e `test:e2e:mg`, `test:e2e:eleicao`),
+  depois de gerar dados fictícios com `python etl/tests/gerar_dados_teste.py site/public/data`
+- Conferência dos dados (bloqueia a publicação se algo não bater):
+  `cd etl && python -m sa_etl.validar ../site/public/data`
+- Verificação com a segunda fonte oficial: `cd etl && python -m sa_etl.verificar ../site/public/data --cache .cache`
+- Painel de status: não precisa de comando. `status/index.html` e `status/painel.js` leem tudo na hora pela API do
+  GitHub Actions e pelos arquivos publicados. Testes das contas: `node --test status/painel.test.mjs`. O motivo de cada
+  problema chega como anotação do Actions, escrita por `etl/anotar.py`.
+- Painel de análises: `python analises/publicar.py --nacional site/public/data --mg site/public-mg/data --eleicao eleicao2026/dados/tse --terras terras-raras/dados --saida /tmp/analises`
+
+## Conferência
+
+- Estratégia de testes, riscos e engenharia de caos em [TESTES.md](TESTES.md). Cada risco tem testes e uma trava em
+  produção; cada fonte tem testes contra o governo simulado (`etl/tests/fakegov*.py`).
+- `etl/sa_etl/validar.py` confere somas, votos repetidos, CPFs, links e quedas maiores que 20%; se falhar, o site no
+  ar continua com a versão anterior.
+- `etl/sa_etl/verificar.py` sorteia números do site e confere cada um numa segunda fonte oficial. Mais de 2% de
+  diferenças sem motivo numa seção (com 20 ou mais conferidos) barra a publicação.
+- Diferenças com motivo entendido ficam registradas em `etl/sa_etl/oficial.py` (`MOTIVOS`), e não são investigadas de
+  novo do zero. Diferenças sem motivo vão para o relatório de conferência manual `revisao-manual.md` e
+  `revisao-manual.csv`, publicados junto dos dados (`data/`), onde a conclusão é anotada.
+
+## Trabalho em threads
+
+- Uma thread por funcionalidade; a cada etapa concluída, comece uma nova com uma passagem curta (o que foi feito, o
+  que está aberto, arquivos tocados).
+- Trabalho mecânico (tradução, atualizações de versão, testes, pequenos ajustes de tela) → Sonnet. Lógica de dados e
+  arquitetura → Opus.
+- O coordenador delega; não implementa.

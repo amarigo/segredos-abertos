@@ -99,3 +99,11 @@ def campo(alinh: float | None) -> str:
     if alinh <= 0.35:
         return "Oposição"
     return "Independente"
+
+
+def lado(pos: float | None) -> str:
+    """Esquerda, centro ou direita, juntando centro-esquerda com esquerda e centro-direita com direita (para somas simples)."""
+    if pos is None:
+        return "sem"
+    r = rotulo(pos)
+    return "esquerda" if "esquerda" in r.lower() else "direita" if "direita" in r.lower() else "centro"

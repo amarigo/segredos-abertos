@@ -1,13 +1,15 @@
 import { AtuacaoPolitico } from "./Atuacao";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Barras, COR_GRUPO, Espectro, Explain, GastoMensal, LinkNota, Loading, ResultadoChip, VotoChip, useAno, useData } from "../components/ui";
+import { CompararAnos, Kpi, Variacao, type Fatia } from "../components/graficos";
+import { Abrir, Barras, COR_GRUPO, Espectro, Explain, GastoMensal, LinkNota, Loading, ResultadoChip, VotoChip, useAno, useData } from "../components/ui";
 import {
   GRUPO_CURTO, GRUPO_EXPLICA, cnpjFmt, dataBR, linkSeguro, pct, proposicaoNome, reais,
   type Grupo, type Meta, type Politico, type Recursos, type Resumo, type VotacaoResumo,
-  MESES_LONGOS, descricaoCurta, tipoVotacao, type AnoDetalhe,
+  MESES_LONGOS, descricaoCurta, tipoVotacao, type AnoDetalhe, type Pessoa,
 } from "../data";
 import { AvisosFim, EmRevisao } from "../components/Selo";
+import { norm } from "./Home";
 
 export default function PoliticoPage() {
   const { id = "" } = useParams();
@@ -60,17 +62,19 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
     { label: "Cota parlamentar", valor: d.total, nota: "Reembolsos com nota fiscal: viagens, escritório, divulgação.", cor: "var(--s2)" },
     { label: "Outros gastos do mandato", valor: d.outros_gastos || 0, nota: "Fora da cota: correios, diárias e passagens de viagens oficiais.", cor: "var(--gold)" },
   ].filter((x) => x.valor > 0);
+  const anos = Object.keys(p.anos).sort();
+  const anoAntes = anos[anos.indexOf(ano) - 1];
+  const serieDe = (k: "custo_total" | "total"): [string, number][] => anos.filter((a) => p.anos[a]?.[k]).map((a) => [a, p.anos[a][k]]);
+  const categoriasAnos: Record<string, Fatia[]> = Object.fromEntries(anos.map((a) => [a, p.anos[a].categorias.map((c) => ({ nome: c.categoria, valor: c.valor }))]));
   return (
     <>
       <section className="grid">
-        <div className="card stat">
-          <span className="label">Custo conhecido em {ano}</span>
-          <span className="value">{reais(d.custo_total)}</span>
-          <span className="hint">Soma de salário, equipe, cota e outros gastos informados pelos sites oficiais.</span>
-        </div>
-        <div className="card stat">
+        <Kpi rotulo={`Custo conhecido em ${ano}`} valor={d.custo_total} formato={(v) => reais(v)} serie={serieDe("custo_total")} ano={ano}
+          dica="Soma de salário, equipe, cota e outros gastos informados pelos sites oficiais." />
+        <div className="card stat kpi">
           <span className="label">Cota parlamentar em {ano}</span>
           <span className="value">{reais(d.total)}</span>
+          {anoAntes && <Variacao de={p.anos[anoAntes]?.total} para={d.total} rotulo={anoAntes} />}
           {media > 0 && <span className="hint">{vezes >= 1.05 ? `${vezes.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}× a média` : vezes <= 0.95 ? `${Math.round((1 - vezes) * 100)}% abaixo da média` : "Na média"} {p.casa === "camara" ? "dos deputados" : "dos senadores"} ({reais(media)})</span>}
         </div>
         {d.n_pessoal != null && <div className="card stat"><span className="label">Pessoas na equipe em {ano}</span><span className="value">{d.n_pessoal}</span><span className="hint">Inclui quem entrou ou saiu durante o ano.</span></div>}
@@ -79,7 +83,7 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
       {partes.length > 1 && (
         <section>
           <h2>Para onde foi o dinheiro em {ano}</h2>
-          <Barras itens={partes.map((x) => ({ label: <strong>{x.label}</strong>, nota: x.nota, valor: x.valor, cor: x.cor }))} />
+          <Barras rosca={{ titulo: `Custo conhecido de ${p.nome} em ${ano}` }} itens={partes.map((x) => ({ nome: x.label, label: <strong>{x.label}</strong>, nota: x.nota, valor: x.valor, cor: x.cor }))} />
         </section>
       )}
 
@@ -102,19 +106,18 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
       </section>
 
       <section>
-        <h2>Cota por mês em {ano}</h2>
-        <GastoMensal meses={d.meses} ano={ano} cor="var(--s2)" />
-      </section>
-
-      <section>
         <h2>Em que gastou a cota</h2>
-        <Barras itens={d.categorias.slice(0, todas ? 99 : 8).map((c) => ({ label: c.categoria, valor: c.valor, cor: COR_GRUPO[c.grupo] }))} />
+        <Barras rosca={{ titulo: `Cota de ${p.nome} em ${ano}, por tipo de gasto`, total: d.total, paleta: true }} itens={d.categorias.slice(0, todas ? 99 : 8).map((c) => ({ label: c.categoria, valor: c.valor }))} />
         {d.categorias.length > 8 && <button className="link" onClick={() => setTodas(!todas)}>{todas ? "Mostrar menos" : `Mostrar todas as ${d.categorias.length} categorias`}</button>}
+        <CompararAnos porAno={categoriasAnos} titulo="Como a cota mudou de um ano para outro" anoInicial={ano} limite={8}
+          nota="Cada tipo de gasto da cota, ano a ano. O ano em andamento vai só até a última nota publicada." />
       </section>
 
       <section>
+        <div className="grid grid-2 lado-a-lado">
+        <div>
         <h2>Quem recebeu o dinheiro da cota</h2>
-        <Explain>Empresas e pessoas que emitiram as notas fiscais. Clique numa empresa para ver quem são os donos e se eles têm outras empresas que também recebem de parlamentares.</Explain>
+        <p className="muted small">Empresas e pessoas que emitiram as notas fiscais. Clique numa empresa para ver quem são os donos e se eles têm outras empresas que também recebem de parlamentares.</p>
         <div className="table-wrap">
           <table>
             <thead><tr><th>Fornecedor e donos</th><th className="r">Valor</th></tr></thead>
@@ -130,29 +133,31 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
             </tbody>
           </table>
         </div>
-      </section>
-
-      <ForaDoTotal d={d} ano={ano} />
-
-      <section>
+        </div>
+        <div>
         <h2>Maiores notas fiscais de {ano}</h2>
+        <p className="muted small">As notas de maior valor, cada uma com o link para a nota no site oficial.</p>
         <div className="table-wrap">
           <table>
-            <thead><tr><th className="so-largo">Data</th><th>Fornecedor e tipo de gasto</th><th className="r">Valor</th><th className="so-largo">Documento</th></tr></thead>
+            <thead><tr><th>Fornecedor e tipo de gasto</th><th className="r">Valor</th></tr></thead>
             <tbody>
               {d.maiores_notas.map((n, i) => (
                 <tr key={i}>
-                  <td className="num so-largo">{dataBR(n.data)}</td>
                   <td>{/^\d{14}$/.test(n.doc) ? <Link to={`/e/${n.doc}`}>{n.fornecedor}</Link> : n.fornecedor}<div className="small muted">{n.categoria}</div>{n.detalhe && <div className="small">{n.detalhe}</div>}
-                    <div className="small so-celular"><span className="num muted">{dataBR(n.data)}</span> · <LinkNota url={n.url} link={n.link || (n.url ? "nota" : "")} /></div></td>
+                    <div className="small"><span className="num muted">{dataBR(n.data)}</span> · <LinkNota url={n.url} link={n.link || (n.url ? "nota" : "")} /></div></td>
                   <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(n.valor, true)}</td>
-                  <td className="small so-largo"><LinkNota url={n.url} link={n.link || (n.url ? "nota" : "")} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        </div>
+        </div>
+        <h2>Cota por mês em {ano}</h2>
+        <GastoMensal meses={d.meses} ano={ano} cor="var(--s2)" />
       </section>
+
+      <ForaDoTotal d={d} ano={ano} />
     </>
   );
 }
@@ -265,19 +270,7 @@ function Equipe({ p, r, ano }: { p: Politico; r: Recursos; ano: string }) {
         <h3>Verba de gabinete por mês</h3>
         <GastoMensal meses={r.verba_meses} ano={ano} cor="var(--s3)" />
       </>}
-      {equipe.length > 0 && <>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Nome</th><th>Cargo</th><th>Período</th></tr></thead>
-            <tbody>
-              {equipe.slice(0, todos ? 999 : 15).map((x, i) => (
-                <tr key={i}><td>{x.nome}</td><td className="small">{x.grupo}<div className="muted">{x.cargo}</div></td><td className="small num">{x.periodo}</td></tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {equipe.length > 15 && <button className="link" onClick={() => setTodos(!todos)}>{todos ? "Mostrar menos" : `Mostrar as ${equipe.length} linhas`}</button>}
-      </>}
+      {equipe.length > 0 && <EquipePorCargo equipe={equipe} todos={todos} setTodos={setTodos} />}
     </section>
   );
 }
@@ -399,6 +392,39 @@ function SemNota({ d, ano }: { d: AnoDetalhe; ano: string }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** A equipe do gabinete em gráfico por cargo; cada cargo abre a lista de nomes, e cada nome mostra o detalhe */
+function EquipePorCargo({ equipe, todos, setTodos }: { equipe: Pessoa[]; todos: boolean; setTodos: (v: boolean) => void }) {
+  const [busca, setBusca] = useState("");
+  const porCargo = Object.entries(equipe.reduce((acc, x) => { (acc[x.grupo || "Sem cargo informado"] ||= []).push(x); return acc; }, {} as Record<string, Pessoa[]>))
+    .sort((a, b) => b[1].length - a[1].length);
+  const achados = busca ? equipe.filter((x) => norm(`${x.nome} ${x.cargo} ${x.grupo}`).includes(norm(busca))) : [];
+  return (
+    <>
+      <h3>Quem trabalha no gabinete, por cargo</h3>
+      <Barras fmt={(v) => `${v} pessoa${v === 1 ? "" : "s"}`} itens={porCargo.map(([g, l]) => ({ label: g, valor: l.length, cor: "var(--s3)" }))} />
+      <div className="search"><input id="busca-equipe" aria-label="Procurar na equipe" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Procurar um nome ou cargo" /></div>
+      {busca ? <ListaEquipe lista={achados} /> : porCargo.slice(0, todos ? 99 : 6).map(([g, l]) => (
+        <Abrir key={g} titulo={<>{g} · {l.length} pessoa{l.length === 1 ? "" : "s"}</>}><ListaEquipe lista={l} /></Abrir>
+      ))}
+      {!busca && porCargo.length > 6 && <button className="link" onClick={() => setTodos(!todos)}>{todos ? "Mostrar menos" : `Mostrar os ${porCargo.length} cargos`}</button>}
+    </>
+  );
+}
+
+function ListaEquipe({ lista }: { lista: Pessoa[] }) {
+  if (!lista.length) return <p className="small muted">Ninguém com esse nome ou cargo.</p>;
+  return (
+    <div className="table-wrap">
+      <table className="small">
+        <thead><tr><th>Nome</th><th>Cargo e nível</th><th>Período</th></tr></thead>
+        <tbody>{lista.map((x, i) => (
+          <tr key={i}><td>{x.nome}</td><td>{x.grupo}<div className="muted">{x.cargo}</div></td><td className="num">{x.periodo}</td></tr>
+        ))}</tbody>
+      </table>
     </div>
   );
 }

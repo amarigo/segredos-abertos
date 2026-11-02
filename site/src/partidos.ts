@@ -11,3 +11,9 @@ export function ladoPelosVotos(pos: number): Lado {
   if (pos < 0.5) return "Centro-direita";
   return "Direita";
 }
+
+/** Cor de cada lado nos gráficos: vermelho (esquerda), cinza (centro), azul (direita); os lados de centro, mais claros. */
+export const COR_LADO: Record<string, string> = {
+  Esquerda: "var(--esq)", "Centro-esquerda": "color-mix(in oklab, var(--esq) 55%, var(--centro))", Centro: "var(--centro)",
+  "Centro-direita": "color-mix(in oklab, var(--dir) 55%, var(--centro))", Direita: "var(--dir)", "Sem posição": "var(--c-outros)",
+};
