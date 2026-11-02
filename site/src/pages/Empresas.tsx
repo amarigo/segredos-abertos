@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Explain, Loading, useAno, useData } from "../components/ui";
+import { Abrir, Barras, Explain, Loading, OndeVer, useAno, useData } from "../components/ui";
 import { cnpjFmt, cotaNoAno, reais, type EmpresaResumo } from "../data";
 import { norm } from "./Home";
 import { AvisosFim } from "../components/Selo";
@@ -24,6 +24,9 @@ export default function Empresas() {
       <h1>Empresas</h1>
       <Explain>As empresas que mais receberam dinheiro da cota parlamentar{porAno ? <> em <strong>{ano}</strong> (troque o ano no topo da página)</> : null}. Em cada uma você vê quem são os donos (pela Receita Federal) e quais parlamentares pagaram.</Explain>
       <div className="search"><input id="busca-empresa" aria-label="Buscar empresa" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nome ou CNPJ" /></div>
+      {lista.length > 1 && <Abrir aberto titulo={`Gráfico: as 15 empresas que mais receberam${porAno ? ` em ${ano}` : ""}`}>
+        <Barras itens={lista.slice(0, 15).map((e) => ({ label: <Link to={`/e/${e.cnpj}`}>{e.nome}</Link>, nota: `${cotaNoAno(e, ano)?.n_politicos ?? e.n_politicos} parlamentares`, valor: valor(e), cor: "var(--s1)" }))} />
+      </Abrir>}
       {porAno && !lista.length && !q ? <div className="empty">Nenhuma empresa recebeu da cota em {ano} até agora. Escolha outro ano no topo da página.</div> :
       <div className="table-wrap">
         <table>
@@ -41,6 +44,11 @@ export default function Empresas() {
           </tbody>
         </table>
       </div>}
+      <OndeVer links={[
+        { nome: "Gastos da cota parlamentar na Câmara", url: "https://www.camara.leg.br/transparencia/gastos-parlamentares", explica: "as notas pagas a cada empresa" },
+        { nome: "Dados abertos do Senado", url: "https://www12.senado.leg.br/dados-abertos", explica: "os gastos dos senadores" },
+        { nome: "Donos e endereço de cada empresa (Minha Receita)", url: "https://minhareceita.org", explica: "a base de CNPJ da Receita Federal" },
+      ]} />
       <AvisosFim secao="empresas" />
     </section>
   );

@@ -166,8 +166,15 @@ test.describe("jornada", () => {
     await expect(page.locator("main")).toContainText(`quem recebe como governador é ${g.nome}`);
     await expect(page.locator("main")).toContainText(brl(g.bruto));
     const sec = gov.equipe.pessoas.find((p: { cargo: string; viagens: unknown }) => /^Secretario/i.test(p.cargo) && p.viagens);
-    await page.getByRole("button", { name: "Ver viagens" }).first().click();
-    await expect(page.locator(".lista-viagens").last()).toContainText(sec.viagens.ultimas[0].destinos[0]);
+    await page.getByRole("row", { name: new RegExp(sec.nome) }).getByRole("button", { name: "Abrir detalhes" }).click();
+    const ano = sec.viagens.anos[0];
+    await page.locator("tr.linha-aberta summary", { hasText: `de ${ano.ano}` }).click();
+    // a lista completa vem do arquivo da pessoa (estado/viagens/<id>.json), lido só ao abrir o ano
+    const det = dados(`estado/viagens/${sec.viagens.id}.json`);
+    const doAno = det.viagens.filter((v: { inicio: string }) => v.inicio.startsWith(`${ano.ano}`));
+    await expect(page.locator("tr.linha-aberta details.abrir[open] tbody tr")).toHaveCount(doAno.length);
+    await expect(page.locator("tr.linha-aberta details.abrir[open] tbody")).toContainText(doAno[0].destinos[0]);
+    await expect(page.getByRole("link", { name: /Viagens e diárias do governo no Portal da Transparência/ })).toHaveAttribute("href", /transparencia\.mg\.gov\.br/);
     expect(erros).toEqual([]);
   });
 

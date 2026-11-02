@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Explain, Loading, useData } from "../components/ui";
+import { Explain, Loading, OndeVer, useData } from "../components/ui";
 import { corPartido, partidoComHoje, type CidadeResumo } from "../data";
 
 export default function Cidades() {
@@ -23,6 +23,11 @@ export default function Cidades() {
         ))}
       </div>
       <p className="muted small">Começamos por Itajubá e Paraisópolis. Outras cidades de Minas entram nas próximas etapas.</p>
+      <OndeVer links={[
+        { nome: "Resultados das eleições no TSE", url: "https://dadosabertos.tse.jus.br/dataset/?groups=resultados", explica: "prefeitos, vereadores e votos desde 1996" },
+        { nome: "Contas das prefeituras no SICONFI (Tesouro Nacional)", url: "https://siconfi.tesouro.gov.br/siconfi/pages/public/declaracao/declaracao_list.jsf", explica: "o que cada prefeitura arrecada e gasta" },
+        { nome: "Emendas estaduais na ALMG", url: "https://www.almg.gov.br/atividade-parlamentar/emendas-parlamentares/inicial/", explica: "dinheiro indicado pelos deputados estaduais para cada cidade" },
+      ]} />
     </section>
   );
 }

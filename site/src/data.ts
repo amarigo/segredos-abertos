@@ -320,8 +320,12 @@ export interface Governo {
 export interface ViagensPessoa {
   nome: string; cargo: string; anos: { ano: number; viagens: number; diarias: number; passagens: number }[];
   destinos: { nome: string; vezes: number }[];
-  ultimas: { inicio: string; fim: string; destinos: string[]; valor: number; motivo: string }[];
+  ultimas: Viagem[];
+  /** Arquivo com todas as viagens dos anos mostrados (estado/viagens/<id>.json) e quantas são */
+  id?: string; n_todas?: number;
 }
+export interface Viagem { inicio: string; fim: string; destinos: string[]; valor: number; diarias?: number; passagens?: number; motivo: string }
+export interface ViagensDetalhe { nome: string; cargo: string; viagens: Viagem[]; fonte: string; portal: string }
 export interface PessoaEquipe {
   nome: string; cargo: string; orgao: string; bruto: number; abate_teto: number; ferias_13: number; eventual: number; jetons: number;
   descontos: number; liquido: number; viagens: ViagensPessoa | null;

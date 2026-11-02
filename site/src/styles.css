@@ -570,3 +570,17 @@ details > summary { padding-block: 10px; }
 .pizza .leg { max-width: 460px; }
 /* Barra dos projetos no celular: o último link não encosta na borda da tela */
 @media (max-width: 699px) { .projetos .wrap::after { content: ""; flex: 0 0 4px; } }
+
+/* Aberturas (detalhe que abre e fecha) e o quadro "onde ver tudo" */
+details.abrir { border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; margin: 8px 0; background: var(--surface); }
+details.abrir > summary { color: var(--accent); font-weight: 600; }
+details.abrir[open] > summary { border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.abrir-corpo { padding-bottom: 10px; }
+.onde-ver { border-left: 3px solid var(--accent); padding: 8px 12px; margin: 16px 0; }
+.onde-ver ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.onde-ver li { font-size: .9rem; }
+.colunas .legend { margin-bottom: 6px; }
+.colunas g { cursor: default; }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 24px; }
+tr.linha-aberta > td { background: var(--tint); }
+.pessoa-detalhe { padding: 4px 0 8px; }

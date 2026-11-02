@@ -85,6 +85,8 @@ def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[
     gov = _seguro("Governo de MG (TSE)", lambda: governo.coletar(cache)) or {"eleicoes": [], "links": governo.LINKS,
                                                                             "fonte_tse": governo.FONTE_TSE}
     gov["equipe"] = _seguro("Salários e viagens do governo de MG", lambda: equipe.coletar(cache))
+    for vid, det in ((gov["equipe"] or {}).pop("viagens_detalhe", None) or {}).items():
+        util.write_json(saida / "estado" / "viagens" / f"{vid}.json", det)
     util.write_json(saida / "estado" / "governo.json", gov)
     cont["governo"] = len(gov["eleicoes"])
     cont["equipe_governo"] = len((gov["equipe"] or {}).get("pessoas") or [])
