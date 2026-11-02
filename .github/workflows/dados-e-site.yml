@@ -66,6 +66,8 @@ jobs:
         working-directory: site
       - run: npm test
         working-directory: site
+      - name: Painel de status (contas)
+        run: node --test status/painel.test.mjs
       # paginas: uma página HTML simples por político, empresa e votação (PT/EN/ES), sitemap e llms.txt, para buscadores e IAs
       - run: npm run build && npm run paginas && npm run build:mg && npm run paginas:mg
         working-directory: site
@@ -142,11 +144,17 @@ jobs:
           # https://portaldatransparencia.gov.br/api-de-dados/cadastrar-email). Sem ela, a renúncia fiscal só vem
           # pelos arquivos de download, que o Portal às vezes recusa.
           PORTAL_TRANSPARENCIA_CHAVE: ${{ secrets.PORTAL_TRANSPARENCIA_CHAVE }}
-        run: python -m sa_etl.build --saida ../site/public/data --cache .cache 2>&1 | tee coleta.log
+        # Se quebrar, a última linha do registro (o erro) vira anotação para o painel de status (/status/)
+        run: |
+          python -m sa_etl.build --saida ../site/public/data --cache .cache 2>&1 | tee coleta.log || {
+            python anotar.py erro "Coleta dos dados" "A coleta parou com erro: $(grep -v '^\s*$' coleta.log | tail -n 1 | cut -c1-300)"
+            exit 1
+          }
       - name: Resumo da coleta
         run: |
           grep -E "INFO|WARNING|ERROR" etl/coleta.log | cut -c1-240 | tail -n 60
           python etl/resumo.py site/public/data | tee -a "$GITHUB_STEP_SUMMARY"
+          python etl/anotar.py avisos site/public/data/meta.json "Aviso da coleta"
       - name: Conferir os dados (se algo não bater, não publica e o site continua com a versão anterior)
         working-directory: etl
         env:
@@ -174,10 +182,10 @@ jobs:
           rc=$?
           cat verificacao.md | tee -a "$GITHUB_STEP_SUMMARY"
           if [ "$rc" = 3 ]; then
-            echo "::error::Diferenças sem motivo conhecido acima do limite: publicação barrada (veja o resumo)."
+            python anotar.py barreira ../site/public/data/verificacao.json
             exit 1
           fi
-          [ "$rc" = 0 ] || echo "::warning::A verificação não terminou (código $rc); o site publica sem selo de conferido."
+          [ "$rc" = 0 ] || echo "::warning title=Verificação com a segunda fonte::A verificação não terminou (código $rc); o site publica sem selo de conferido."
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -219,7 +227,7 @@ jobs:
           CONFERIDO: ${{ steps.mg_conf.outcome }}
         run: |
           if [ "$CONFERIDO" = "success" ]; then echo "ok=1" >> "$GITHUB_OUTPUT"; exit 0; fi
-          echo "::warning::Minas Nossa: a coleta ou a conferência falhou; usando a última versão publicada"
+          echo "::warning title=Minas Nossa::A coleta ou a conferência de MG falhou; o Minas Nossa ficou com a última versão publicada"
           rm -rf site/public-mg/data && mkdir -p site/public-mg/data
           if curl -fsSL --retry 3 -o "$RUNNER_TEMP/dados-mg.zip" https://amarigo.github.io/segredos-abertos/mg/dados-mg.zip \
              && unzip -q "$RUNNER_TEMP/dados-mg.zip" -d site/public-mg/data; then
@@ -241,6 +249,7 @@ jobs:
       # Eleição 2026 (/eleicao2026/): boletins de urna do TSE guardados em eleicao2026/dados. Só entra no site se a soma
       # das urnas bater com o resultado oficial, voto por voto. Uma falha aqui não trava o site nacional.
       - name: "Eleição 2026: conferir e montar o site em /eleicao2026/"
+        id: eleicao
         continue-on-error: true
         working-directory: eleicao2026/etl
         run: |
@@ -249,8 +258,26 @@ jobs:
       # Terras Raras em Minas (/terras-raras/): planilhas escritas à mão em terras-raras/dados, cada linha com fonte e
       # data (não há API oficial que junte projetos, donos e licenças). Uma falha aqui não trava o site nacional.
       - name: "Terras Raras: montar o site em /terras-raras/"
+        id: terras
         continue-on-error: true
         run: python terras-raras/gerar_pagina.py --site site/dist/terras-raras/index.html | tee -a "$GITHUB_STEP_SUMMARY"
+      # Painel de status (/status/): página estática que lê a situação das coletas na API do GitHub Actions
+      - name: Painel de status
+        run: mkdir -p site/dist/status && cp status/index.html status/painel.js site/dist/status/
+      # Partes com continue-on-error não aparecem como falha na API do GitHub; o aviso deixa o motivo no painel de status
+      - name: Avisos das partes que falharam
+        if: always()
+        env:
+          MG: ${{ steps.mg.outcome }}
+          MG_CONF: ${{ steps.mg_conf.outcome }}
+          ELEICAO: ${{ steps.eleicao.outcome }}
+          TERRAS: ${{ steps.terras.outcome }}
+        run: |
+          [ "$MG" != "failure" ] || python etl/anotar.py falhou "Minas Nossa" "A montagem dos dados de MG falhou (veja a etapa 'Minas Nossa: montar os dados de MG')"
+          [ "$MG_CONF" != "failure" ] || python etl/anotar.py falhou "Minas Nossa" "A conferência dos dados de MG não passou (veja a etapa 'Minas Nossa: conferir os dados')"
+          [ "$ELEICAO" != "failure" ] || python etl/anotar.py falhou "Eleição 2026" "A conferência das urnas com o resultado oficial ou a montagem do site falhou (veja a etapa 'Eleição 2026: conferir e montar')"
+          [ "$TERRAS" != "failure" ] || python etl/anotar.py falhou "Terras Raras" "A página de Terras Raras não foi montada (veja a etapa 'Terras Raras: montar')"
+          python etl/anotar.py avisos site/public-mg/data/meta.json "Minas Nossa: aviso da coleta" || true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist

@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import re
+import sys
 import time
 import unicodedata
 import zipfile
@@ -172,6 +173,22 @@ def avisar(msg: str) -> None:
     """Registra um problema da coleta que o site deve mostrar (dados faltando, cópia antiga em uso...)."""
     if msg not in AVISOS:
         AVISOS.append(msg)
+
+
+def _esc_anotacao(t: str, propriedade: bool = False) -> str:
+    t = str(t).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+    return t.replace(":", "%3A").replace(",", "%2C") if propriedade else t
+
+
+def anotar(nivel: str, titulo: str, msg: str) -> None:
+    """Imprime uma anotação do GitHub Actions (nivel "error" ou "warning") para o motivo aparecer no painel de status.
+
+    As anotações podem ser lidas sem senha pela API do GitHub (check-runs/{id}/annotations); é assim que a página
+    /status/ mostra por que uma coleta não publicou. Fora do GitHub Actions não imprime nada. O GitHub guarda até
+    10 anotações de cada nível por etapa."""
+    if os.environ.get("GITHUB_ACTIONS"):
+        # stderr: o GitHub lê comandos da saída de erro também, e assim eles não entram no resumo (tee)
+        print(f"::{nivel} title={_esc_anotacao(titulo, True)}::{_esc_anotacao(msg)[:900]}", file=sys.stderr, flush=True)
 
 
 # ---------------------------------------------------------------- segurança dos dados publicados

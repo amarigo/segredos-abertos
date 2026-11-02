@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Painel de status</title>
+<meta name="description" content="Se a coleta diária dos dados oficiais rodou, quando o site foi atualizado e, se algo parou, por quê.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="../icon.svg">
+<style>
+:root{
+  --bg:#f6f6f3; --surface:#fcfcfb; --ink:#1b1b19; --muted:#5d5d58; --line:#e1e0d9; --axis:#c3c2b7;
+  --primary:#1f5fbf; --soft:#eef3fb;
+  --good:#0ca30c; --good-ink:#006300; --warning:#fab219; --warn-ink:#8a5a00; --critical:#d03b3b; --crit-ink:#b02a2a;
+  --neutral:#c9c8c0; --bar:#4a78c2; --shadow:0 1px 2px rgba(0,0,0,.06),0 1px 1px rgba(0,0,0,.04);
+  --f:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif; --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121211; --surface:#1a1a19; --ink:#ecebe6; --muted:#a6a59e; --line:#2c2c2a; --axis:#383835;
+  --primary:#8ab4f8; --soft:#1d2533; --good-ink:#0ca30c; --warn-ink:#fab219; --crit-ink:#ef7a7a; --neutral:#3b3b38; --bar:#6b98e0;
+  --shadow:none; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121211; --surface:#1a1a19; --ink:#ecebe6; --muted:#a6a59e; --line:#2c2c2a; --axis:#383835;
+  --primary:#8ab4f8; --soft:#1d2533; --good-ink:#0ca30c; --warn-ink:#fab219; --crit-ink:#ef7a7a; --neutral:#3b3b38; --bar:#6b98e0;
+  --shadow:none; color-scheme:dark}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 var(--f)}
+a{color:var(--primary)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left)) 48px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:18px 0 10px}
+header h1{font-size:22px;margin:0;flex:1 1 auto}
+header .acoes{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:13px}
+button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{background:var(--soft)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+section{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0;box-shadow:var(--shadow)}
+section h2{font-size:16px;margin:0 0 4px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 12px}
+.hero{display:flex;gap:14px;align-items:flex-start;border-left:6px solid var(--neutral)}
+.hero.ok{border-left-color:var(--good)} .hero.atencao{border-left-color:var(--warning)} .hero.critico{border-left-color:var(--critical)}
+.hero .icone{flex:0 0 auto;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:24px;font-weight:700;color:#fff;background:var(--neutral)}
+.hero.ok .icone{background:var(--good)} .hero.atencao .icone{background:var(--warning);color:#0b0b0b} .hero.critico .icone{background:var(--critical)}
+.hero h2{font-size:20px;margin:0}
+.hero p{margin:4px 0 0}
+.motivo{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--soft)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:14px 0}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+.tile .rot{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.tile .val{font-size:24px;font-weight:700;margin:2px 0;font-variant-numeric:tabular-nums}
+.tile .det{font-size:13px;color:var(--muted)}
+.estado{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.estado i{flex:0 0 auto;font-style:normal;width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;color:#fff;background:var(--neutral)}
+.estado.ok i,.estado.publicada i{background:var(--good)} .estado.ok,.estado.publicada{color:var(--good-ink)}
+.estado.aviso i,.estado.rodando i{background:var(--warning);color:#0b0b0b} .estado.aviso{color:var(--warn-ink)}
+.estado.erro i,.estado.falhou i{background:var(--critical)} .estado.erro,.estado.falhou{color:var(--crit-ink)}
+.estado.nao_rodou,.estado.cancelada,.estado.sem{color:var(--muted)}
+.estado.rodando{color:var(--primary)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rolar{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media (max-width:640px){
+  table.cartoes thead{display:none}
+  table.cartoes,table.cartoes tbody,table.cartoes tr,table.cartoes td{display:block;width:100%}
+  table.cartoes tr{border-bottom:1px solid var(--line);padding:8px 0}
+  table.cartoes td{border:0;padding:2px 0;text-align:left}
+  table.cartoes td[data-rot]::before{content:attr(data-rot) ": ";color:var(--muted);font-size:12px}
+}
+.barras{display:grid;grid-template-columns:minmax(90px,38%) 1fr;gap:6px 10px;align-items:center;font-size:13px}
+.barras .nome{color:var(--muted);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.barras .trilho{display:flex;align-items:center;gap:6px;min-width:0}
+.barras .barra{height:14px;border-radius:0 4px 4px 0;background:var(--bar);min-width:2px}
+.barras .valor{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.motivos{margin:4px 0 0;padding-left:18px;color:var(--muted);font-size:13px}
+.grade{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grade>section{margin:0}
+@media (max-width:820px){.grade{grid-template-columns:1fr}}
+.sites{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.site{border:1px solid var(--line);border-radius:10px;padding:12px}
+.site h3{margin:0 0 4px;font-size:15px}
+.site p{margin:4px 0;font-size:13px;color:var(--muted)}
+.legenda{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin:8px 0 0}
+.legenda span{display:inline-flex;align-items:center;gap:6px}
+.legenda b{width:12px;height:12px;border-radius:3px;display:inline-block}
+svg text{fill:var(--muted);font:12px var(--f)}
+svg .grid{stroke:var(--line);stroke-width:1}
+svg .base{stroke:var(--axis);stroke-width:1}
+.cal{display:grid;grid-template-columns:repeat(30,1fr);gap:3px}
+.cal div{aspect-ratio:1;border-radius:4px;display:grid;place-items:center;font-size:10px;font-weight:700;color:#fff;cursor:default;min-width:0}
+.cal .publicada{background:var(--good)} .cal .falhou{background:var(--critical)} .cal .rodando{background:var(--warning);color:#0b0b0b}
+.cal .sem{background:var(--neutral);color:var(--muted)} .cal .fora{background:transparent;border:1px dashed var(--line)}
+@media (max-width:560px){.cal{grid-template-columns:repeat(15,1fr)} .cal div{font-size:9px}}
+.cal-dias{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:4px}
+#dica{position:fixed;pointer-events:none;z-index:10;max-width:300px;background:var(--ink);color:var(--bg);font-size:13px;padding:8px 10px;border-radius:8px;opacity:0;transition:opacity .1s}
+#dica.on{opacity:1}
+.erro-carga{border-left:6px solid var(--critical)}
+.pequeno{font-size:13px;color:var(--muted)}
+details summary{cursor:pointer;color:var(--primary);font-size:14px}
+footer{color:var(--muted);font-size:13px;margin-top:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Painel de status das atualizações</h1>
+    <div class="acoes"><span id="lido">Carregando…</span><button id="recarregar" type="button">Atualizar agora</button></div>
+  </header>
+  <p class="pequeno" style="margin:0">Se a coleta diária dos dados oficiais rodou, quando cada site foi atualizado e, se algo parou, por quê.
+    Volte para o <a href="../">Segredos Abertos</a> · <a href="../mg/">Minas Nossa</a> · <a href="../eleicao2026/">Eleição 2026</a> · <a href="../terras-raras/">Terras Raras</a></p>
+  <main id="painel"><section><p>Carregando a situação das coletas…</p></section></main>
+  <footer>
+    Dados lidos agora, no seu navegador, da <a href="https://docs.github.com/pt/rest/actions">API oficial do GitHub Actions</a>
+    (<a href="https://github.com/amarigo/segredos-abertos/actions">todas as execuções</a>) e dos arquivos publicados no site
+    (<a href="../data/meta.json">meta.json</a>, <a href="../data/verificacao.json">verificacao.json</a>, <a href="../mg/data/meta.json">Minas Nossa</a>).
+    Para atualizar os dados na hora: <a href="https://github.com/amarigo/segredos-abertos/actions/workflows/dados-e-site.yml">Actions › Dados e site › Run workflow</a>.
+  </footer>
+</div>
+<div id="dica" role="tooltip"></div>
+<script type="module">
+import {
+  carregar, saude, calendario, ultimaVezOk, dataHora, haQuanto, duracaoTexto, proximaAgendada, PARTES, ACTIONS,
+} from "./painel.js";
+
+const $ = (s) => document.querySelector(s);
+const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const num = (n) => (typeof n === "number" ? n.toLocaleString("pt-BR") : "—");
+const link = (url, txt) => (url && /^https:\/\//.test(url) ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(txt)}</a>` : esc(txt));
+const BASE = new URL("../", location.href);
+const CHAVE = "painel-status-v1";
+const VALIDADE = 5 * 60 * 1000; // a API do GitHub aceita 60 consultas por hora sem senha; guardamos por 5 minutos
+
+const ROTULO = {
+  ok: ["✓", "Funcionou"], aviso: ["!", "Com aviso"], erro: ["✕", "Falhou"], rodando: ["…", "Rodando agora"],
+  nao_rodou: ["–", "Não rodou"], cancelada: ["–", "Cancelada"],
+  publicada: ["✓", "Publicada"], falhou: ["✕", "Não publicou"], sem: ["–", "Sem coleta"], fora: ["", "Sem registro lido"],
+};
+const estado = (e, texto) => `<span class="estado ${esc(e)}"><i aria-hidden="true">${ROTULO[e]?.[0] ?? "?"}</i>${esc(texto || ROTULO[e]?.[1] || e)}</span>`;
+const SITU_VERIF = { conferido: "ok", explicado: "ok", divergente: "erro", parcial: "aviso", nao_conferido: "aviso", sem_segunda_fonte: "nao_rodou" };
+const ROT_VERIF = { conferido: "Conferido", explicado: "Diferenças explicadas", divergente: "Divergente", parcial: "Parcial", nao_conferido: "Não conferido", sem_segunda_fonte: "Sem segunda fonte" };
+
+function lerCache() {
+  try { const c = JSON.parse(localStorage.getItem(CHAVE)); return c && Date.now() - new Date(c.lido_em) < VALIDADE ? c : null; } catch { return null; }
+}
+function guardar(d) { try { localStorage.setItem(CHAVE, JSON.stringify(d)); } catch { /* sem armazenamento: só não guarda */ } }
+
+async function iniciar(forcar = false) {
+  $("#lido").textContent = "Carregando…";
+  let d = forcar ? null : lerCache();
+  try {
+    if (!d) { d = await carregar(BASE); guardar(d); }
+    desenhar(d);
+    $("#lido").textContent = `Lido ${haQuanto(d.lido_em)} (${dataHora(d.lido_em)})`;
+  } catch (e) {
+    const volta = e.volta ? ` Tente de novo depois de ${dataHora(new Date(e.volta).toISOString())}.` : " Tente de novo em alguns minutos.";
+    $("#painel").innerHTML = `<section class="erro-carga"><h2>Não consegui ler a situação no GitHub</h2>
+      <p>${e.limite ? "O GitHub limita a 60 consultas por hora sem login, e esse limite acabou para a sua conexão." : `Erro: ${esc(e.message)}.`}${volta}</p>
+      <p>Enquanto isso, a lista completa está em ${link(ACTIONS, "GitHub › Actions")}.</p></section>`;
+    $("#lido").textContent = "Sem dados";
+  }
+}
+
+function desenhar(d) {
+  const agora = Date.now();
+  const execs = d.execs;
+  const ultima = d.detalhes[0] || null; // execução mais recente não cancelada, aberta etapa por etapa
+  const ultimaFim = d.detalhes.find((x) => x.exec.situacao !== "rodando") || null;
+  const avisosPub = [...(d.meta?.avisos || []), ...(d.metaMg?.avisos || [])];
+  const s = saude({ execs, ultimaDetalhe: ultimaFim, avisosPublicados: avisosPub, agora });
+  const ultimos30 = execs.filter((e) => agora - new Date(e.inicio) < 30 * 86400000);
+  const fin30 = ultimos30.filter((e) => e.situacao === "publicada" || e.situacao === "falhou");
+  const pub30 = fin30.filter((e) => e.situacao === "publicada").length;
+  const cal = calendario(execs, 30, new Date(agora), execs.length < 100);
+  const diasPub = cal.filter((c) => c.situacao === "publicada").length;
+  const ultFim = execs.find((e) => e.situacao === "publicada" || e.situacao === "falhou");
+  const rep = d.repetir?.[0];
+  const h = [];
+
+  // 1. A resposta: está funcionando?
+  const icone = { ok: "✓", atencao: "!", critico: "✕" }[s.nivel];
+  h.push(`<section class="hero ${s.nivel}" aria-live="polite"><div class="icone" aria-hidden="true">${icone}</div><div>
+    <h2>${esc(s.titulo)}</h2><p>${esc(s.frase)}</p>
+    ${s.motivo ? `<div class="motivo"><b>Por quê:</b> ${esc(s.motivo.texto)} <span class="pequeno">(${esc(s.motivo.parte)} · ${link(s.motivo.url, "ver o registro")})</span></div>` : ""}
+    ${s.rodando ? `<p class="pequeno">Uma coleta está rodando agora: começou ${esc(haQuanto(s.rodando.inicio, agora))} (${link(s.rodando.url, "acompanhar")}). Costuma levar de 40 a 60 minutos.</p>` : ""}
+  </div></section>`);
+
+  // 2. Números principais
+  const tile = (rot, val, det) => `<div class="tile"><div class="rot">${esc(rot)}</div><div class="val">${val}</div><div class="det">${det}</div></div>`;
+  h.push(`<div class="tiles">
+    ${tile("Última publicação", esc(s.ultimaPublicacao ? haQuanto(s.ultimaPublicacao.fim, agora).replace("há ", "") : "—"), esc(s.ultimaPublicacao ? dataHora(s.ultimaPublicacao.fim) : "nenhuma nas últimas 100 execuções"))}
+    ${tile("Última coleta", ultFim ? estado(ultFim.situacao) : "—", ultFim ? `${esc(dataHora(ultFim.fim))} · ${link(ultFim.url, "registro")}` : "")}
+    ${tile("Dias com publicação", `${diasPub} <small style="font-size:14px;color:var(--muted)">de 30</small>`, `${pub30} de ${fin30.length} coletas terminadas publicaram`)}
+    ${tile("Duração da última coleta", esc(duracaoTexto(ultFim?.duracao)), "da largada à publicação")}
+    ${tile("Próxima coleta automática", esc(dataHora(proximaAgendada(new Date(agora))).split(" ")[1] || ""), esc(dataHora(proximaAgendada(new Date(agora))).split(" ")[0]?.replace(",", "") || ""))}
+    ${tile("Tentar de novo", rep ? estado(rep.situacao === "publicada" ? "ok" : rep.situacao === "falhou" ? "erro" : rep.situacao) : "—", rep ? `checou ${esc(haQuanto(rep.inicio, agora))} · ${link(rep.url, "registro")}` : "a cada 2 horas, se faltou algum dado")}
+  </div>`);
+
+  // 3. Calendário dos últimos 30 dias
+  h.push(`<section><h2>Últimos 30 dias</h2><p class="sub">Um quadrado por dia (horário de Brasília). Verde: alguma coleta publicou os dados. Vermelho: houve coleta, mas nenhuma publicou. Cinza: nenhuma coleta terminou.</p>
+    <div class="cal" role="img" aria-label="Calendário de ${diasPub} dias com publicação nos últimos 30">${cal.map((c) => {
+      const dica = `${c.dia.split("-").reverse().join("/")}: ${ROTULO[c.situacao][1]}` + (c.execucoes.length ? ` — ${c.execucoes.map((e) => `${ROTULO[e.situacao][1].toLowerCase()} (${e.comoComecou.toLowerCase()})`).join("; ")}` : "");
+      return `<div class="${c.situacao}" data-dica="${esc(dica)}" tabindex="0" aria-label="${esc(dica)}">${ROTULO[c.situacao][0]}</div>`;
+    }).join("")}</div>
+    <div class="cal-dias"><span>${esc(cal[0].dia.split("-").reverse().slice(0, 2).join("/"))}</span><span>hoje</span></div>
+    <div class="legenda"><span><b style="background:var(--good)"></b>✓ Publicou</span><span><b style="background:var(--critical)"></b>✕ Não publicou</span><span><b style="background:var(--neutral)"></b>– Sem coleta</span>${cal.some((c) => c.situacao === "fora") ? `<span><b style="border:1px dashed var(--line)"></b>Antes do histórico lido</span>` : ""}</div>
+  </section>`);
+
+  // 4. Cada parte da última coleta
+  if (ultima) {
+    const linhas = ultima.partes.map((p) => {
+      const ok = ultimaVezOk(d.detalhes, p.id);
+      const quando = p.estado === "ok" || p.estado === "aviso" ? "nesta coleta" : ok ? `${haQuanto(ok, agora)} (${dataHora(ok)})` : `não nas últimas ${d.detalhes.length} coletas`;
+      const mot = p.motivos.length ? `<ul class="motivos">${p.motivos.slice(0, 4).map((m) => `<li>${esc(m.texto)}</li>`).join("")}${p.motivos.length > 4 ? `<li>e mais ${p.motivos.length - 4}</li>` : ""}</ul>` : "";
+      return `<tr><td><b>${esc(p.nome)}</b>${mot}</td><td>${estado(p.estado)}</td><td data-rot="Última vez que funcionou">${esc(quando)}</td><td class="num" data-rot="Tempo">${esc(duracaoTexto(p.duracao))}</td><td>${link(p.url, "registro")}</td></tr>`;
+    }).join("");
+    h.push(`<section><h2>Cada parte da coleta mais recente</h2>
+      <p class="sub">Execução nº ${esc(ultima.exec.numero)} · ${esc(ultima.exec.comoComecou)} · começou ${esc(dataHora(ultima.exec.inicio))} · ${estado(ultima.exec.situacao)} · ${link(ultima.exec.url, "abrir no GitHub")}</p>
+      <div class="rolar"><table class="cartoes"><thead><tr><th>Parte</th><th>Situação</th><th>Última vez que funcionou</th><th class="num">Tempo</th><th>Registro</th></tr></thead><tbody>${linhas}</tbody></table></div>
+    </section>`);
+  }
+
+  // 5. Gráficos: tempo de cada parte e duração das coletas
+  h.push(`<div class="grade">
+    <section><h2>Onde a coleta gasta o tempo</h2><p class="sub">Minutos de cada parte na coleta mais recente</p>${ultima ? barrasPartes(ultima.partes) : "<p>—</p>"}</section>
+    <section><h2>Duração das últimas coletas</h2><p class="sub">Minutos, da mais antiga (esquerda) para a mais nova</p>${colunasDuracao(execs.filter((e) => e.situacao === "publicada" || e.situacao === "falhou").slice(0, 20).reverse())}
+      <div class="legenda"><span><b style="background:var(--good)"></b>✓ Publicou</span><span><b style="background:var(--critical)"></b>✕ Não publicou</span></div></section>
+  </div>`);
+
+  // 6. Os sites publicados
+  const parte = (id) => ultimaFim?.partes.find((p) => p.id === id);
+  const site = (nome, href, dataDados, avisos, p) => `<div class="site"><h3><a href="${esc(href)}">${esc(nome)}</a></h3>
+    ${p ? estado(p.estado, p.estado === "erro" && ultimaFim?.exec.situacao === "publicada" ? "Falhou (ficou a versão anterior)" : undefined) : ""}
+    ${dataDados ? `<p>Dados coletados em <b>${esc(dataDados)}</b></p>` : ""}
+    <p>No ar desde ${esc(s.ultimaPublicacao ? dataHora(s.ultimaPublicacao.fim) : "—")}</p>
+    ${avisos?.length ? `<p>${estado("aviso", `${avisos.length} ${avisos.length === 1 ? "aviso" : "avisos"} da coleta`)}</p>` : ""}</div>`;
+  const dataBr = (x) => (x ? String(x).slice(0, 10).split("-").reverse().join("/") : "");
+  h.push(`<section><h2>Os sites no ar</h2><p class="sub">Os quatro sites são publicados juntos, na mesma etapa. A situação é a da última coleta terminada.</p><div class="sites">
+    ${site("Segredos Abertos (Brasil)", "../", dataBr(d.meta?.atualizado_em), d.meta?.avisos, parte("site"))}
+    ${site("Minas Nossa", "../mg/", dataBr(d.metaMg?.atualizado_em), d.metaMg?.avisos, parte("mg"))}
+    ${site("Eleição 2026", "../eleicao2026/", "", null, parte("eleicao"))}
+    ${site("Terras Raras em Minas", "../terras-raras/", "", null, parte("terras"))}
+  </div></section>`);
+
+  // 7. Avisos da versão no ar
+  const listaAvisos = (titulo, avisos) => avisos?.length ? `<h3 style="font-size:14px;margin:10px 0 4px">${esc(titulo)}</h3><ul class="motivos" style="color:var(--ink)">${avisos.map((a) => `<li>${esc(a)}</li>`).join("")}</ul>` : "";
+  h.push(`<section><h2>Avisos da versão que está no ar</h2>
+    <p class="sub">Quando um site oficial não responde, a coleta usa a última cópia que tem, avisa aqui e no site, e o “Tentar de novo” roda a coleta outra vez a cada 2 horas.</p>
+    ${avisosPub.length ? listaAvisos("Segredos Abertos", d.meta?.avisos) + listaAvisos("Minas Nossa", d.metaMg?.avisos) : `<p>${estado("ok", "Nenhum aviso: todas as fontes oficiais responderam")}</p>`}
+    ${!d.meta ? `<p class="pequeno">Não consegui ler o <a href="../data/meta.json">meta.json</a> publicado.</p>` : ""}
+  </section>`);
+
+  // 8. Verificação com a segunda fonte oficial
+  if (d.verif?.secoes) {
+    const linhas = Object.values(d.verif.secoes).map((x) => {
+      const a = x.acumulado || {};
+      return `<tr><td><b>${esc(x.titulo)}</b>${x.barrar ? `<ul class="motivos"><li>Barrou a publicação: diferenças sem motivo conhecido acima do limite</li></ul>` : ""}${x.motivo ? `<ul class="motivos"><li>${esc(x.motivo)}</li></ul>` : ""}</td>
+        <td>${estado(SITU_VERIF[x.status] || "nao_rodou", ROT_VERIF[x.status] || x.status)}</td>
+        <td class="num" data-rot="Conferidos hoje">${esc(num(x.hoje?.conferidos))}</td><td class="num" data-rot="Diferentes">${esc(num(x.hoje?.divergentes))}</td>
+        <td class="num" data-rot="Acumulado">${esc(num(a.conferidos))}${a.dias ? ` <span class="pequeno">(${esc(a.dias)} dias)</span>` : ""}</td>
+        <td class="num" data-rot="Pelo menos certos (95%)">${a.certos_min != null ? esc((a.certos_min * 100).toFixed(2).replace(".", ",") + "%") : "—"}</td></tr>`;
+    }).join("");
+    h.push(`<section><h2>Verificação com a segunda fonte oficial</h2>
+      <p class="sub">Da versão no ar (${esc(dataBr(d.verif.data))}). Uma amostra de números do site é conferida todo dia numa fonte oficial diferente. Se as diferenças sem motivo passarem de ${esc(Math.round((d.verif.limite_sem_motivo || 0) * 100))}% numa seção, a publicação é barrada. <a href="../como-conferimos">Como conferimos</a></p>
+      <div class="rolar"><table class="cartoes"><thead><tr><th>Seção</th><th>Situação</th><th class="num">Conferidos hoje</th><th class="num">Diferentes</th><th class="num">Acumulado</th><th class="num">Pelo menos certos (95%)</th></tr></thead><tbody>${linhas}</tbody></table></div>
+    </section>`);
+  }
+
+  // 9. Histórico das execuções
+  const motivoDe = (id) => d.detalhes.find((x) => x.exec.id === id)?.motivo;
+  const hist = execs.slice(0, 20).map((e) => {
+    const m = motivoDe(e.id);
+    const obs = e.situacao === "cancelada" ? "Substituída por uma execução mais nova" : m ? `${m.parte}: ${m.texto}` : e.situacao === "falhou" ? "Abra o registro para ver o motivo" : "";
+    return `<tr><td class="num">${esc(dataHora(e.inicio))}</td><td>${esc(e.comoComecou)}</td><td>${estado(e.situacao)}</td><td class="num" data-rot="Duração">${esc(duracaoTexto(e.duracao))}</td><td class="pequeno">${esc(obs)}</td><td>${link(e.url, "nº " + e.numero)}</td></tr>`;
+  }).join("");
+  h.push(`<section><h2>Histórico das execuções</h2><p class="sub">As 20 mais recentes do “Dados e site” no branch principal</p>
+    <div class="rolar"><table class="cartoes"><thead><tr><th>Quando</th><th>Como começou</th><th>Resultado</th><th class="num">Duração</th><th>Por quê</th><th>Registro</th></tr></thead><tbody>${hist}</tbody></table></div>
+    <details style="margin-top:10px"><summary>O que cada parte faz</summary><ul class="motivos" style="color:var(--ink)">
+      <li><b>Testes do código</b>: confere o coletor e o site com dados fictícios antes de buscar os dados reais.</li>
+      <li><b>Coleta</b>: baixa os dados oficiais (Câmara, Senado, Portal da Transparência, Receita, Tesouro, IBGE).</li>
+      <li><b>Conferência</b>: vê se os arquivos batem entre si (somas, votos repetidos, quedas grandes). Se não bater, não publica.</li>
+      <li><b>Verificação com a 2ª fonte</b>: confere uma amostra numa fonte oficial diferente. Diferença sem motivo acima do limite barra a publicação.</li>
+      <li><b>Minas Nossa, Eleição 2026 e Terras Raras</b>: se falharem, o site nacional publica mesmo assim e esses ficam com a versão anterior.</li>
+      <li><b>Publicação</b>: coloca tudo no ar no GitHub Pages.</li>
+    </ul></details>
+  </section>`);
+
+  $("#painel").innerHTML = h.join("");
+}
+
+// Barras horizontais em HTML (se ajustam à largura do celular): minutos de cada parte. Uma série só, sem legenda.
+function barrasPartes(partes) {
+  const ps = partes.filter((p) => p.duracao != null && p.id !== "seguranca");
+  const max = Math.max(1 / 60, ...ps.map((p) => p.duracao));
+  return `<div class="barras" role="img" aria-label="Minutos de cada parte da coleta">${ps.map((p) => {
+    const dica = `${p.nome}: ${duracaoTexto(p.duracao)} — ${ROTULO[p.estado]?.[1] || p.estado}`;
+    return `<div class="nome" title="${esc(p.nome)}">${esc(p.nome)}</div><div class="trilho" data-dica="${esc(dica)}">
+      <div class="barra" style="width:${((p.duracao / max) * 82).toFixed(1)}%"></div><span class="valor">${esc(duracaoTexto(p.duracao))}</span></div>`;
+  }).join("")}</div>`;
+}
+
+// Colunas: duração de cada coleta terminada; a cor diz se publicou (com ícone na dica e legenda abaixo)
+function colunasDuracao(es) {
+  if (!es.length) return "<p>—</p>";
+  const max = Math.max(10, ...es.map((e) => e.duracao || 0));
+  const topo = Math.ceil(max / 30) * 30;
+  const W = Math.round(Math.min(520, Math.max(300, (document.querySelector("main")?.clientWidth || 520) - 34))), H = 200, E = 34, B = 24, larg = W - E - 8, passo = larg / es.length, bw = Math.max(4, Math.min(18, passo - 2));
+  const y = (v) => H - B - (v / topo) * (H - B - 10);
+  const ticks = [0, topo / 2, topo];
+  return `<div class="rolar"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Duração das últimas ${es.length} coletas, em minutos">
+    ${ticks.map((t) => `<line class="grid" x1="${E}" x2="${W}" y1="${y(t)}" y2="${y(t)}"/><text x="${E - 6}" y="${y(t) + 4}" text-anchor="end">${t}</text>`).join("")}
+    ${es.map((e, i) => {
+      const x = E + i * passo + (passo - bw) / 2, v = e.duracao || 0, top = y(v), alt = Math.max(2, H - B - top);
+      const cor = e.situacao === "publicada" ? "var(--good)" : "var(--critical)";
+      const dica = `${dataHora(e.inicio)} · ${duracaoTexto(e.duracao)} · ${ROTULO[e.situacao][0]} ${ROTULO[e.situacao][1]} (${e.comoComecou.toLowerCase()})`;
+      const r = Math.min(4, bw / 2, alt);
+      return `<g data-dica="${esc(dica)}"><rect x="${E + i * passo}" y="0" width="${passo}" height="${H - B}" fill="transparent"/>
+        <path d="M${x},${H - B} v-${alt - r} a${r},${r} 0 0 1 ${r},-${r} h${bw - 2 * r} a${r},${r} 0 0 1 ${r},${r} v${alt - r} z" fill="${cor}"/></g>`;
+    }).join("")}
+    <line class="base" x1="${E}" x2="${W}" y1="${H - B}" y2="${H - B}"/>
+    <text x="${E}" y="${H - 6}">${esc(dataHora(es[0].inicio).split(" ")[0].replace(",", "").slice(0, 5))}</text>
+    <text x="${W}" y="${H - 6}" text-anchor="end">${esc(dataHora(es[es.length - 1].inicio).split(" ")[0].replace(",", "").slice(0, 5))}</text></svg></div>`;
+}
+
+// Dica ao passar o mouse ou tocar
+const dica = $("#dica");
+function mostrar(ev) {
+  const alvo = ev.target.closest?.("[data-dica]");
+  if (!alvo) { dica.classList.remove("on"); return; }
+  dica.textContent = alvo.getAttribute("data-dica");
+  const r = alvo.getBoundingClientRect();
+  const x = ev.clientX ?? r.left + r.width / 2, yy = ev.clientY ?? r.top;
+  dica.style.left = Math.min(window.innerWidth - dica.offsetWidth - 8, Math.max(8, x + 12)) + "px";
+  dica.style.top = Math.max(8, yy - dica.offsetHeight - 12) + "px";
+  dica.classList.add("on");
+}
+document.addEventListener("pointermove", mostrar);
+document.addEventListener("pointerdown", mostrar);
+document.addEventListener("focusin", (ev) => mostrar({ target: ev.target }));
+document.addEventListener("pointerleave", () => dica.classList.remove("on"));
+
+$("#recarregar").addEventListener("click", () => iniciar(true));
+iniciar();
+</script>
+</body>
+</html>
