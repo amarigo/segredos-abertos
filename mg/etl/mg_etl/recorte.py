@@ -101,7 +101,7 @@ def _empresas(nacional: Path, saida: Path, ids: set[str]) -> list[dict]:
     lista = []
     # Lado (esquerda, centro, direita) e partido de cada político, para as somas por empresa
     quem = {p["id"]: (ideologia.lado(p.get("posicao")), p.get("partido") or "") for p in _ler(nacional / "politicos.json")}
-    for e in _ler(nacional / "empresas.json"):
+    for e in _todas_empresas(nacional):
         f = nacional / "e" / f"{e['cnpj']}.json"
         if not f.exists():
             continue
@@ -144,7 +144,39 @@ def _empresas(nacional: Path, saida: Path, ids: set[str]) -> list[dict]:
         write_json(saida / "e" / f"{c}.json", d)
         lista.append({**e, "total": total, "n_politicos": len(pag), "n_mesmo_endereco": 0, "por_ano": d["por_ano"]})
     lista.sort(key=lambda x: -x["total"])
-    write_json(saida / "empresas.json", lista)
+    write_json(saida / "empresas.json", lista[:MAX_LISTA])
+    return lista
+
+
+# Toda empresa paga por político de MG ganha página; a lista (busca e ranking do site) fica com as maiores,
+# para o arquivo não pesar no celular
+MAX_LISTA = 3000
+
+
+def _todas_empresas(nacional: Path) -> list[dict]:
+    """Todas as empresas com página no nacional, não só as da lista dele (que guarda só as 1.000 maiores).
+
+    Sem isso, quem abria um deputado de MG e clicava numa empresa menor (um posto, um restaurante) caía numa
+    página vazia. Para as que não estão na lista, o resumo vem da própria página da empresa.
+    """
+    lista = _ler(nacional / "empresas.json")
+    na_lista = {e["cnpj"] for e in lista}
+    pasta = nacional / "e"
+    for f in sorted(pasta.glob("*.json")) if pasta.exists() else []:
+        if f.stem in na_lista:
+            continue
+        try:
+            d = _ler(f)
+        except (OSError, ValueError):
+            continue
+        r = {k: d[k] for k in ("cnpj", "nome", "total", "n_politicos", "tem_socios", "tem_holding", "n_mesmo_endereco") if k in d}
+        if "cnpj" not in r:
+            continue
+        for k in ("emendas", "governo", "renuncia"):  # na página são o detalhe; na lista, só o total
+            v = d.get(k)
+            if isinstance(v, dict) and v.get("total"):
+                r[k] = v["total"]
+        lista.append(r)
     return lista
 
 

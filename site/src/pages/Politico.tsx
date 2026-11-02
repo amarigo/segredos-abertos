@@ -143,7 +143,7 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
             <tbody>
               {d.maiores_notas.map((n, i) => (
                 <tr key={i}>
-                  <td>{n.doc.length === 14 ? <Link to={`/e/${n.doc}`}>{n.fornecedor}</Link> : n.fornecedor}<div className="small muted">{n.categoria}</div>{n.detalhe && <div className="small">{n.detalhe}</div>}
+                  <td>{/^\d{14}$/.test(n.doc) ? <Link to={`/e/${n.doc}`}>{n.fornecedor}</Link> : n.fornecedor}<div className="small muted">{n.categoria}</div>{n.detalhe && <div className="small">{n.detalhe}</div>}
                     <div className="small"><span className="num muted">{dataBR(n.data)}</span> · <LinkNota url={n.url} link={n.link || (n.url ? "nota" : "")} /></div></td>
                   <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(n.valor, true)}</td>
                 </tr>
@@ -203,7 +203,7 @@ function ForaDoTotal({ d, ano }: { d: AnoDetalhe; ano: string }) {
             {ft.notas.map((n, i) => (
               <tr key={i}>
                 <td className="num">{dataBR(n.data)}</td>
-                <td>{n.doc.length === 14 ? <Link to={`/e/${n.doc}`}>{n.fornecedor}</Link> : n.fornecedor}{n.detalhe && <div className="small">{n.detalhe}</div>}</td>
+                <td>{/^\d{14}$/.test(n.doc) ? <Link to={`/e/${n.doc}`}>{n.fornecedor}</Link> : n.fornecedor}{n.detalhe && <div className="small">{n.detalhe}</div>}</td>
                 <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(n.valor, true)}</td>
                 <td className="small"><LinkNota url={n.url} link={n.url ? "nota" : ""} /></td>
               </tr>

@@ -260,6 +260,37 @@ def test_buscar_socias_busca_por_niveis(tmp_path, monkeypatch):
     assert set(cnpj.buscar_socias(emps, tmp_path)) == {"22222222000122", "33333333000133"}
 
 
+def test_ampliar_cresce_a_cada_coleta_sem_repetir_consultas(tmp_path, monkeypatch):
+    """Além das maiores, cada coleta busca só `limite` empresas novas; as já guardadas vêm do cache."""
+    import os
+    import time
+    consultas = []
+
+    def fetch(c, cache, dias=cnpj.DIAS_CACHE):
+        f = cache / f"{c}.json"
+        if f.exists() and time.time() - f.stat().st_mtime < dias * 86400:
+            return json.loads(f.read_text())
+        consultas.append(c)
+        f.write_text(json.dumps({"razao_social": c, "socios": []}))
+        return {"razao_social": c, "socios": []}
+    monkeypatch.setattr(cnpj, "_fetch", fetch)
+    todas = [f"{i:014d}" for i in range(1, 8)]
+    assert set(cnpj.ampliar(todas, tmp_path, limite=3)) == set(todas[:3])
+    assert sorted(consultas) == todas[:3]
+    consultas.clear()
+    assert set(cnpj.ampliar(todas, tmp_path, limite=3)) == set(todas[:6]), "as 3 de antes continuam, sem nova consulta"
+    assert sorted(consultas) == todas[3:6]
+    # Cópia vencida: volta para a fila depois das que faltam, e a antiga fica enquanto isso
+    velho = time.time() - (cnpj.DIAS_CACHE + 5) * 86400
+    os.utime(tmp_path / f"{todas[0]}.json", (velho, velho))
+    consultas.clear()
+    assert set(cnpj.ampliar(todas, tmp_path, limite=1)) == set(todas)
+    assert consultas == [todas[6]]
+    consultas.clear()
+    cnpj.ampliar(todas, tmp_path, limite=1)
+    assert consultas == [todas[0]]
+
+
 def test_socio_empresa_so_com_raiz_do_cnpj():
     s = {"nome": "AEROTUR HOLDING LTDA", "doc": "07575651", "qualificacao": "Sócio"}
     assert cnpj.tipo_socio(s) == "empresa"

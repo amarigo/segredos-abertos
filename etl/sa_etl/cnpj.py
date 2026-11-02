@@ -23,6 +23,10 @@ URL = "https://minhareceita.org/{cnpj}"
 # Por isso cada empresa é consultada de novo depois de DIAS_CACHE; se a consulta nova falhar, fica a cópia antiga.
 DIAS_CACHE = 30
 
+# Além das maiores fornecedoras (consultadas sempre), quantas empresas a mais cada coleta busca na Receita.
+# As respostas ficam no cache entre coletas, então a cobertura cresce a cada dia até chegar a todas.
+NOVAS_POR_COLETA = 1000
+
 
 def parse_empresa(d: dict) -> dict:
     socios = []
@@ -90,6 +94,34 @@ def empresas(cnpjs: list[str], cache: Path, workers: int = 6) -> dict[str, dict]
             if emp:
                 out[cnpj] = emp
     log.info("Receita: dados de %d de %d empresas", len(out), len(cnpjs))
+    return out
+
+
+def ampliar(cnpjs: list[str], cache: Path, limite: int, workers: int = 6) -> dict[str, dict]:
+    """Empresas além das maiores, para a cobertura crescer a cada coleta sem pesar na Receita.
+
+    As já guardadas no cache entram sem consulta nenhuma. Depois, até `limite` consultas: primeiro as empresas que
+    ainda não temos (na ordem recebida, que é a do valor), depois as cópias vencidas, das mais antigas para as mais
+    novas. Como o cache fica guardado entre coletas, cada coleta acrescenta até `limite` empresas novas.
+    """
+    out: dict[str, dict] = {}
+    faltam: list[str] = []
+    vencidas: list[tuple[float, str]] = []
+    for c in cnpjs:
+        f = cache / f"{c}.json"
+        try:
+            out[c] = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            faltam.append(c)
+            continue
+        idade = time.time() - f.stat().st_mtime
+        if idade >= DIAS_CACHE * 86400:
+            vencidas.append((-idade, c))
+    buscar = (faltam + [c for _, c in sorted(vencidas)])[:max(0, limite)]
+    novas = empresas(buscar, cache, workers) if buscar else {}
+    out.update(novas)
+    log.info("Receita: %d empresas além das maiores (%d guardadas, %d consultadas agora, %d ainda na fila)",
+             len(out), len(cnpjs) - len(faltam), len(buscar), max(0, len(faltam) - len(buscar)))
     return out
 
 
