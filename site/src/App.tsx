@@ -1,31 +1,48 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState, type ComponentType } from "react";
 import { NavLink, Route, Routes, Link, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
-import Politicos from "./pages/Politicos";
-import PoliticoPage from "./pages/Politico";
-import Empresas from "./pages/Empresas";
-import EmpresaPage from "./pages/Empresa";
-import Votacoes from "./pages/Votacoes";
-import VotacaoPage from "./pages/Votacao";
-import TramitacaoPage from "./pages/Tramitacao";
-import Sobre from "./pages/Sobre";
-import VerificacaoPage from "./pages/Verificacao";
-import Partidos from "./pages/Partidos";
-import Emendas from "./pages/Emendas";
-import Incentivos from "./pages/Incentivos";
-import Financas from "./pages/Financas";
-import Cidades from "./pages/Cidades";
-import CidadePage from "./pages/Cidade";
-import Assembleia from "./pages/Assembleia";
-import DeputadoEstadualPage from "./pages/DeputadoEstadual";
-import GovernoPage from "./pages/Governo";
-import DinheiroMinas from "./pages/DinheiroMinas";
-import EmendasEstaduais from "./pages/EmendasEstaduais";
-import Corrupcao from "./pages/Corrupcao";
-import CasoCorrupcao from "./pages/CasoCorrupcao";
 import { MG, SITE } from "./recorte";
-import { AnoCtx, AnoSeletor, ErroNaPagina, useData } from "./components/ui";
+import { AnoCtx, AnoSeletor, ErroNaPagina, Loading, useData } from "./components/ui";
 import { dataBR, type Meta } from "./data";
+
+/* Cada página vira um arquivo separado, baixado só quando a pessoa abre a página: o início carrega bem menos código
+   (no celular, com internet fraca, faz diferença). A página inicial continua no arquivo principal.
+   Depois de uma publicação nova, os arquivos antigos deixam de existir; quem estava com o site aberto recarrega uma
+   vez para pegar os novos, em vez de ver a mensagem de erro. */
+function pagina<T extends ComponentType>(carregar: () => Promise<{ default: T }>) {
+  return lazy(() => carregar().then((m) => {
+    try { sessionStorage.removeItem("recarregou"); } catch { /* sem armazenamento */ }
+    return m;
+  }, (erro) => {
+    let ja = true;
+    try { ja = sessionStorage.getItem("recarregou") === "1"; if (!ja) sessionStorage.setItem("recarregou", "1"); } catch { /* sem armazenamento */ }
+    if (!ja) { location.reload(); return new Promise<{ default: T }>(() => {}); }
+    throw erro;
+  }));
+}
+
+const Politicos = pagina(() => import("./pages/Politicos"));
+const PoliticoPage = pagina(() => import("./pages/Politico"));
+const Empresas = pagina(() => import("./pages/Empresas"));
+const EmpresaPage = pagina(() => import("./pages/Empresa"));
+const Votacoes = pagina(() => import("./pages/Votacoes"));
+const VotacaoPage = pagina(() => import("./pages/Votacao"));
+const TramitacaoPage = pagina(() => import("./pages/Tramitacao"));
+const Sobre = pagina(() => import("./pages/Sobre"));
+const VerificacaoPage = pagina(() => import("./pages/Verificacao"));
+const Partidos = pagina(() => import("./pages/Partidos"));
+const Emendas = pagina(() => import("./pages/Emendas"));
+const Incentivos = pagina(() => import("./pages/Incentivos"));
+const Financas = pagina(() => import("./pages/Financas"));
+const Cidades = pagina(() => import("./pages/Cidades"));
+const CidadePage = pagina(() => import("./pages/Cidade"));
+const Assembleia = pagina(() => import("./pages/Assembleia"));
+const DeputadoEstadualPage = pagina(() => import("./pages/DeputadoEstadual"));
+const GovernoPage = pagina(() => import("./pages/Governo"));
+const DinheiroMinas = pagina(() => import("./pages/DinheiroMinas"));
+const EmendasEstaduais = pagina(() => import("./pages/EmendasEstaduais"));
+const Corrupcao = pagina(() => import("./pages/Corrupcao"));
+const CasoCorrupcao = pagina(() => import("./pages/CasoCorrupcao"));
 
 /* Os projetos do Segredos Abertos, publicados lado a lado no mesmo site (/, /mg/, /eleicao2026/ e /terras-raras/).
    Links relativos: funcionam no GitHub Pages e numa cópia local de site/dist. */
@@ -111,6 +128,7 @@ export default function App() {
       </header>
       <main className="wrap">
         <ErroNaPagina key={pathname}>
+        <Suspense fallback={<Loading />}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/politicos" element={<Politicos />} />
@@ -137,6 +155,7 @@ export default function App() {
           {!MG && <Route path="/verificacao" element={<VerificacaoPage />} />}
           <Route path="*" element={<div className="empty">Página não encontrada. <Link to="/">Voltar ao início</Link></div>} />
         </Routes>
+        </Suspense>
         </ErroNaPagina>
       </main>
       <footer>
