@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, NavLink, useSearchParams } from "react-router-dom";
-import { Explain, Loading, ResultadoChip, useData } from "../components/ui";
+import { Abrir, Colunas, Explain, Loading, OndeVer, ResultadoChip, useData } from "../components/ui";
 import { TEMAS, casaNome, dataBR, descricaoCurta, proposicaoNome, tipoVotacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 import { MG } from "../recorte";
@@ -40,6 +40,11 @@ export default function Votacoes() {
       anos: Object.entries(anos).sort() as [string, number][],
     };
   }, [lista]);
+  const porMes = useMemo(() => {
+    const m: Record<string, number[]> = {};
+    lista.forEach((v) => { const k = (v.data || "").slice(0, 7); if (k.length === 7) { const x = (m[k] ||= [0, 0]); x[v.aprovada ? 0 : 1] += 1; } });
+    return Object.keys(m).sort().slice(-12).map((k) => ({ label: `${k.slice(5)}/${k.slice(2, 4)}`, valores: m[k] }));
+  }, [lista]);
   if (!data) return <Loading error={error} />;
   const fmtN = (v: number) => `${numero(v)} votaç${v === 1 ? "ão" : "ões"}`;
   return (
@@ -70,6 +75,10 @@ export default function Votacoes() {
           {graf.anos.length > 1 && <div><h3 className="graf-titulo">Votações por ano</h3><ColunasAnos serie={graf.anos} titulo="Votações nominais por ano" formato={numero} /></div>}
         </div>
       )}
+      {porMes.length > 1 && <Abrir titulo="Gráfico: votações por mês">
+        <Colunas rotulo="Votações por mês, aprovadas e rejeitadas" fmt={(v) => v.toLocaleString("pt-BR")}
+          partes={[{ nome: "Aprovadas", cor: "var(--sim)" }, { nome: "Rejeitadas", cor: "var(--nao)" }]} itens={porMes} />
+      </Abrir>}
       <div className="table-wrap">
         <table>
           <thead><tr><th>Data</th><th>Casa</th><th>O que foi votado</th><th className="r">Sim</th><th className="r">Não</th>{MG && <th>Bancada de MG</th>}<th>Resultado</th></tr></thead>
@@ -91,6 +100,10 @@ export default function Votacoes() {
           </tbody>
         </table>
       </div>
+      <OndeVer links={[
+        { nome: "Votações na Câmara (dados abertos)", url: "https://dadosabertos.camara.leg.br/swagger/api.html#/Vota%C3%A7%C3%B5es/votos", explica: "o voto de cada deputado" },
+        { nome: "Votações no Senado (dados abertos)", url: "https://legis.senado.leg.br/dadosabertos/docs/", explica: "o voto de cada senador" },
+      ]} />
       <AvisosFim secao="votacoes" />
     </section>
   );

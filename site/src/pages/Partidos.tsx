@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Barras, Explain, Loading, useAno, useData } from "../components/ui";
+import { Barras, Explain, Loading, OndeVer, useAno, useData } from "../components/ui";
+import { MG } from "../recorte";
 import { casaNome, corPartido, reais, reaisCurto, type Casa, type Partido } from "../data";
 import { CompararAnos, Rosca, prepararFatias, type Fatia, type FatiaPronta } from "../components/graficos";
 import { COR_LADO, LADOS, ladoPelosVotos } from "../partidos";
@@ -78,7 +79,12 @@ export default function Partidos() {
       <Bancadas partidos={data} />
       <GastoPartidos partidos={data} ano={ano} />
       <PartidosAnos partidos={data} ano={ano} />
-      <p className="muted small">Conta cada parlamentar no partido atual. Quem mudou de partido aparece no partido de hoje, com todos os gastos do ano.</p>
+      <p className="muted small">Conta cada parlamentar no partido atual. Quem mudou de partido aparece no partido de hoje, com todos os gastos do ano. Para ver cada parlamentar de um partido, use o filtro de partido em <Link to="/politicos">{MG ? "Federais" : "Políticos"}</Link>.</p>
+      <OndeVer links={[
+        { nome: "Gastos da cota parlamentar na Câmara", url: "https://www.camara.leg.br/transparencia/gastos-parlamentares", explica: "cada nota de cada deputado federal" },
+        { nome: "Dados abertos da Câmara", url: "https://dadosabertos.camara.leg.br/swagger/api.html", explica: "a API oficial de deputados, despesas e votações" },
+        { nome: "Dados abertos do Senado", url: "https://www12.senado.leg.br/dados-abertos", explica: "senadores, gastos (CEAPS) e votações" },
+      ]} />
     </>
   );
 }

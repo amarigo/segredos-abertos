@@ -363,3 +363,28 @@ def test_almg_em_andamento_so_projetos_vivos_e_recentes():
     assert por["PL 11/2026"]["grupos"] == ["andamento"] and por["PL 11/2026"]["etapa"] == 2
     assert por["PL 10/2026"]["autores"][0]["nome"] == "Fulano Estadual 01"
     assert por["PL 10/2026"]["url"].startswith("https://www.almg.gov.br/")
+
+
+def test_todas_as_viagens_num_arquivo_por_pessoa(estado, tmp_path):
+    e = equipe.coletar(tmp_path, hoje=HOJE)
+    det = e["viagens_detalhe"]
+    gov = e["pessoas"][0]["viagens"]
+    assert gov["id"] == "governadora-de-teste" and gov["id"] in det
+    lista = det[gov["id"]]["viagens"]
+    assert gov["n_todas"] == len(lista) and "todas" not in gov, "a lista completa não vai no governo.json"
+    assert sum(v["viagens"] for v in gov["anos"]) == len(lista)
+    assert sum(v["valor"] for v in lista) == pytest.approx(sum(a["diarias"] + a["passagens"] for a in gov["anos"]))
+    assert all(v["valor"] == pytest.approx(v["diarias"] + v["passagens"]) for v in lista)
+    assert [v["inicio"] for v in lista] == sorted((v["inicio"] for v in lista), reverse=True)
+    assert equipe.id_pessoa("Mateus Simões de Almeida", {}) == "mateus-simoes-de-almeida"
+    assert equipe.id_pessoa("Ana", {"ana": 1}) == "ana-2"
+
+
+def test_nota_tem_numero_e_nunca_cpf():
+    dados = {"list": [{"descTipoDespesa": "Combustível", "listaDetalheVerba": [
+        {"valorReembolsado": 10, "cpfCnpj": "11222333000181", "nomeEmitente": "POSTO", "descDocumento": " 0002 7092 "},
+        {"valorReembolsado": 5, "cpfCnpj": "52998224725", "nomeEmitente": "JOSE", "descDocumento": "529.982.247-25"},
+        {"valorReembolsado": 7, "cpfCnpj": "11222333000181", "nomeEmitente": "POSTO", "descDocumento": "NF 529.982.247-25"}]}]}
+    n = almg.notas_do_mes(dados)
+    assert n[0]["numero"] == "0002 7092"
+    assert n[1]["numero"] == "" and n[2]["numero"] == "", "número com cara de CPF (ou de pessoa física) não sai"

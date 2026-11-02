@@ -106,8 +106,11 @@ def coletar(meses: list[tuple[str, str, int, int]], existentes: list[dict], falt
         pid, nu, ano, mes = item
         f = cache / f"{pid}-{ano}-{mes:02d}-v{VERSAO}.json"
         falhou = f.with_suffix(".falhou")
-        antigo = (hoje.year - ano) * 12 + hoje.month - mes > 2  # meses recentes ainda podem mudar
-        if antigo and (linhas := do_cache(f)) is not None:
+        meses_atras = (hoje.year - ano) * 12 + hoje.month - mes
+        antigo = meses_atras > 2  # meses recentes ainda podem mudar
+        # Devoluções e remarcações ainda entram na lista meses depois; até um ano, a cópia guardada vale 30 dias
+        fresco = f.exists() and (meses_atras > 12 or time.time() - f.stat().st_mtime < 30 * 86400)
+        if antigo and fresco and (linhas := do_cache(f)) is not None:
             return item, linhas
         if antigo and falhou.exists() and time.time() - falhou.stat().st_mtime < 7 * 86400:
             return item, None

@@ -20,6 +20,7 @@ import shutil
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from sa_etl import ideologia
 from sa_etl.util import write_json
 
 log = logging.getLogger("mg_etl.recorte")
@@ -98,6 +99,8 @@ def _votacoes(nacional: Path, saida: Path, ids: set[str]) -> list[dict]:
 
 def _empresas(nacional: Path, saida: Path, ids: set[str]) -> list[dict]:
     lista = []
+    # Lado (esquerda, centro, direita) e partido de cada político, para as somas por empresa
+    quem = {p["id"]: (ideologia.lado(p.get("posicao")), p.get("partido") or "") for p in _ler(nacional / "politicos.json")}
     for e in _ler(nacional / "empresas.json"):
         f = nacional / "e" / f"{e['cnpj']}.json"
         if not f.exists():
@@ -126,10 +129,18 @@ def _empresas(nacional: Path, saida: Path, ids: set[str]) -> list[dict]:
         })
         por_ano: dict[str, list] = {}
         for x in d["por_mes"]:
-            v = por_ano.setdefault(str(x["ano"]), [0.0, set()])
+            v = por_ano.setdefault(str(x["ano"]), [0.0, set(), {}, {}])
             v[0] += x["valor"]
             v[1].add(x["politico"])
-        d["por_ano"] = {a: {"valor": round(v, 2), "n_politicos": len(ps)} for a, (v, ps) in sorted(por_ano.items())}
+            lado, partido = quem.get(x["politico"], ("sem", ""))
+            la = v[2].setdefault(lado, [set(), 0.0])
+            la[0].add(x["politico"])
+            la[1] += x["valor"]
+            v[3][partido or "Sem partido"] = v[3].get(partido or "Sem partido", 0.0) + x["valor"]
+        d["por_ano"] = {a: {"valor": round(v, 2), "n_politicos": len(ps),
+                            "lados": {k: [len(y[0]), round(y[1], 2)] for k, y in la.items()},
+                            "partidos": [[k, round(y, 2)] for k, y in sorted(pa.items(), key=lambda kv: -kv[1])]}
+                        for a, (v, ps, la, pa) in sorted(por_ano.items())}
         write_json(saida / "e" / f"{c}.json", d)
         lista.append({**e, "total": total, "n_politicos": len(pag), "n_mesmo_endereco": 0, "por_ano": d["por_ano"]})
     lista.sort(key=lambda x: -x["total"])

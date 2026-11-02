@@ -29,7 +29,7 @@ test("situação de cada execução", () => {
 });
 
 test("como a execução começou", () => {
-  assert.equal(comoComecou(run()), "Agendada (todo dia às 6h)");
+  assert.equal(comoComecou(run()), "Agendada (todo dia às 3h17)");
   assert.equal(comoComecou(run({ event: "workflow_dispatch", triggering_actor: { login: "github-actions[bot]" } })), "Tentar de novo (automático)");
   assert.equal(comoComecou(run({ event: "workflow_dispatch", triggering_actor: { login: "amarigo" } })), "Manual");
   assert.equal(comoComecou(run({ event: "push" })), "Mudança no código");
@@ -132,8 +132,8 @@ test("última vez que cada parte funcionou", () => {
 });
 
 test("próxima coleta agendada e durações", () => {
-  assert.equal(proximaAgendada(new Date("2026-11-02T08:00:00Z")), "2026-11-02T09:00:00.000Z");
-  assert.equal(proximaAgendada(new Date("2026-11-02T09:30:00Z")), "2026-11-03T09:00:00.000Z");
+  assert.equal(proximaAgendada(new Date("2026-11-02T05:00:00Z")), "2026-11-02T06:17:00.000Z");
+  assert.equal(proximaAgendada(new Date("2026-11-02T06:30:00Z")), "2026-11-03T06:17:00.000Z");
   assert.equal(duracaoTexto(0.5), "30 s");
   assert.equal(duracaoTexto(46.2), "46 min");
   assert.equal(duracaoTexto(75), "1 h 15 min");

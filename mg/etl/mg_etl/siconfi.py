@@ -123,12 +123,25 @@ def resumir_ano(dados: list[dict]) -> dict | None:
             "instituicao": sorted(i for i in instituicoes if i)[:1][0] if instituicoes - {""} else ""}
 
 
+# Código do estado de Minas Gerais no IBGE (e no SICONFI, que usa o mesmo código para o governo estadual)
+COD_MG = 31
+
+
+def contas_estado(cache: Path, hoje: dt.date | None = None) -> dict | None:
+    """Despesas do governo de Minas por área, ano a ano: o mesmo anexo da DCA que as prefeituras entregam."""
+    return contas_do_ente(COD_MG, "o estado de Minas Gerais", cache, hoje)
+
+
 def contas(nome: str, uf: str, cache: Path, hoje: dt.date | None = None) -> dict | None:
-    hoje = hoje or dt.date.today()
     cod = codigo_ibge(nome, uf, cache)
     if not cod:
         avisar(f"SICONFI: não achamos {nome} na lista do Tesouro; as contas da prefeitura ficaram de fora")
         return None
+    return contas_do_ente(cod, nome, cache, hoje)
+
+
+def contas_do_ente(cod: int, nome: str, cache: Path, hoje: dt.date | None = None) -> dict | None:
+    hoje = hoje or dt.date.today()
     anos, falhas = [], 0
     for ano in range(hoje.year - 1, PRIMEIRO_ANO - 1, -1):
         dados = itens(ano, cod, cache, hoje)

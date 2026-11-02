@@ -85,6 +85,91 @@ export function Explain({ children }: { children: ReactNode }) {
   return <p className="explain">{children}</p>;
 }
 
+/* Abertura: um bloco que abre e fecha para mostrar o detalhe (a lista de viagens de um ano, as indicações de um deputado...).
+   O conteúdo só é montado quando a pessoa abre, então pode carregar um arquivo sob demanda. */
+export function Abrir({ titulo, children, aberto = false }: { titulo: ReactNode; children: ReactNode; aberto?: boolean }) {
+  const [open, setOpen] = useState(aberto);
+  return (
+    <details className="abrir" open={open} onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary>{titulo}</summary>
+      {open && <div className="abrir-corpo">{children}</div>}
+    </details>
+  );
+}
+
+/* "Onde ver tudo": os links das páginas e arquivos oficiais de onde vêm os dados de uma seção */
+export function OndeVer({ links, titulo = "Onde ver tudo nos sites oficiais" }: { links: { nome: string; url: string; explica?: string }[]; titulo?: string }) {
+  const ok = links.filter((l) => linkSeguro(l.url));
+  if (!ok.length) return null;
+  return (
+    <div className="onde-ver">
+      <strong className="small">{titulo}</strong>
+      <ul>{ok.map((l) => (
+        <li key={l.url + l.nome}><a href={linkSeguro(l.url)} target="_blank" rel="noreferrer">{l.nome} ↗</a>{l.explica && <span className="muted"> · {l.explica}</span>}</li>
+      ))}</ul>
+    </div>
+  );
+}
+
+/* Colunas por categoria (por ano, por exemplo), com uma ou mais partes empilhadas (diárias + passagens, pago + a pagar).
+   Embaixo, uma abertura com a tabela de valores, para quem não enxerga o gráfico ou quer o número exato. */
+export function Colunas({ itens, partes, rotulo, fmt = (v: number) => reais(v, true) }: { itens: { label: string; valores: number[] }[]; partes: { nome: string; cor: string }[]; rotulo: string; fmt?: (v: number) => string }) {
+  const tip = useTip();
+  if (!itens.length) return null;
+  const W = 640, H = 200, padL = 56, padB = 24, padT = 8;
+  const total = (v: number[]) => v.reduce((a, b) => a + b, 0);
+  const max = Math.max(...itens.map((i) => total(i.valores)));
+  const passo = niceStep(max);
+  const topo = Math.ceil(max / passo) * passo || 1;
+  const bw = Math.min(90, (W - padL) / itens.length);
+  const x0 = padL + ((W - padL) - bw * itens.length) / 2;
+  const y = (v: number) => padT + (H - padT - padB) * (1 - v / topo);
+  const ticks = Array.from({ length: Math.round(topo / passo) + 1 }, (_, i) => i * passo);
+  const curto = (t: number) => (t >= 1e9 ? `${(t / 1e9).toLocaleString("pt-BR")} bi` : t >= 1e6 ? `${(t / 1e6).toLocaleString("pt-BR")} mi` : t >= 1000 ? `${Math.round(t / 1000)} mil` : `${t}`);
+  return (
+    <div className="gm colunas" style={{ overflowX: "auto" }}>
+      {partes.length > 1 && <div className="legend">{partes.map((p) => <span key={p.nome}><i style={{ background: p.cor }} />{p.nome}</span>)}</div>}
+      {/* Com poucas colunas o gráfico encolhe no celular; com muitas, rola para o lado dentro do quadro */}
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={rotulo} style={itens.length <= 6 ? { minWidth: 0 } : undefined}>
+        {ticks.map((t) => (
+          <g key={t}>
+            <line x1={padL} x2={W} y1={y(t)} y2={y(t)} stroke="var(--grid)" />
+            <text x={padL - 6} y={y(t) + 4} textAnchor="end">{curto(t)}</text>
+          </g>
+        ))}
+        {itens.map((it, i) => {
+          const x = x0 + i * bw + 4;
+          let base = 0;
+          const texto = `${it.label}: ${fmt(total(it.valores))}${partes.length > 1 ? ` (${partes.map((p, k) => `${p.nome.toLowerCase()} ${fmt(it.valores[k] || 0)}`).join(", ")})` : ""}`;
+          return (
+            <g key={it.label} onMouseMove={(e) => tip.show(e, texto)} onMouseLeave={tip.hide}>
+              {it.valores.map((v, k) => {
+                const r = <rect key={k} x={x} y={y(base + v)} width={Math.max(1, bw - 8)} height={Math.max(0, y(base) - y(base + v))} fill={partes[k]?.cor || "var(--s1)"} />;
+                base += v;
+                return r;
+              })}
+              <text x={x + (bw - 8) / 2} y={H - 6} textAnchor="middle">{it.label}</text>
+            </g>
+          );
+        })}
+        <line x1={padL} x2={W} y1={y(0)} y2={y(0)} stroke="var(--muted)" />
+      </svg>
+      {tip.el}
+      <details className="small">
+        <summary>Ver os valores</summary>
+        <div className="table-wrap" style={{ maxWidth: 520, marginTop: 8 }}>
+          <table>
+            <thead><tr><th></th>{partes.length > 1 && partes.map((p) => <th key={p.nome} className="r">{p.nome}</th>)}<th className="r">Total</th></tr></thead>
+            <tbody>{itens.map((it) => (
+              <tr key={it.label}><td>{it.label}</td>{partes.length > 1 && partes.map((p, k) => <td key={p.nome} className="r num">{fmt(it.valores[k] || 0)}</td>)}<td className="r num">{fmt(total(it.valores))}</td></tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  );
+}
+
 /* Dica flutuante usada pelos gráficos */
 export function useTip() {
   const [tip, setTip] = useState<{ x: number; y: number; text: string } | null>(null);
@@ -97,13 +182,15 @@ export const COR_GRUPO: Record<Grupo, string> = { pessoal: "var(--s1)", escritor
 /* Barras horizontais com rótulo e valor.
    rosca: quando as barras são partes de um todo, mostra a lista de um lado e a rosca (pizza) do outro, com as mesmas
    cores; passar o mouse numa barra acende a fatia e vice-versa. total: o todo, quando a lista mostra só as maiores. */
-export function Barras({ itens, cor, max, rosca, formato }: {
+export function Barras({ itens, cor, max, rosca, formato, fmt: fmtAntigo }: {
   itens: { label: ReactNode; valor: number; cor?: string; nota?: string; nome?: string }[]; cor?: string; max?: number;
   rosca?: { titulo: string; total?: number; centroRotulo?: string; maxFatias?: number; paleta?: boolean }; formato?: (v: number) => string;
+  /** o mesmo que formato (nome usado nas páginas do Minas Nossa) */
+  fmt?: (v: number) => string;
 }) {
   const [ativo, setAtivo] = useState<string | null>(null);
   const m = max ?? Math.max(1, ...itens.map((i) => i.valor));
-  const fmt = formato || ((v: number) => reais(v));
+  const fmt = formato || fmtAntigo || ((v: number) => reais(v));
   // Uma cor só na lista: cada parte ganha a sua, na ordem da paleta. Cores com sentido (partido, lado, grupo) ficam.
   const umaCor = !!rosca?.paleta || new Set(itens.map((i) => i.cor || cor)).size <= 1;
   const nomeDe = (i: { label: ReactNode; nome?: string }, k: number) => i.nome || (typeof i.label === "string" ? i.label : textoDe(i.label)) || `Item ${k + 1}`;
@@ -129,7 +216,7 @@ export function Barras({ itens, cor, max, rosca, formato }: {
     </div>
   );
   if (!rosca || fatias.length < 2) return lista;
-  return <ComRosca fatias={fatias} titulo={rosca.titulo} centroRotulo={rosca.centroRotulo} formato={formato} ativo={ativo} onAtivo={setAtivo}>{lista}</ComRosca>;
+  return <ComRosca fatias={fatias} titulo={rosca.titulo} centroRotulo={rosca.centroRotulo} formato={formato || fmtAntigo} ativo={ativo} onAtivo={setAtivo}>{lista}</ComRosca>;
 }
 
 /** Texto de um rótulo em JSX (para o nome da fatia da rosca) */

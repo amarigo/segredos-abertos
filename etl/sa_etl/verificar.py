@@ -143,6 +143,7 @@ class Checagem:
         self.motivo = ""  # por que a checagem inteira não rodou
         self.completados = 0  # só na comparação com a página oficial: meses que o site completou com ela
         self.sem_motivo = 0  # divergências sem motivo conhecido (oficial.classificar)
+        self.revisar: list[dict] = []  # todas as sem motivo, para o relatório de conferência manual
 
     def bateu(self, ok: bool, item: dict) -> None:
         self.n += 1
@@ -153,10 +154,13 @@ class Checagem:
             self.k += 1
             # Por que é diferente? Motivo conhecido (oficial.MOTIVOS) ou None: "em revisão"
             item = {**item, "motivo": oficial.classificar(self.id, item)}
+            notas = item.get("_notas")
             for k in [k for k in item if k.startswith("_")]:
                 item.pop(k)
             if item["motivo"] is None:
                 self.sem_motivo += 1
+                if len(self.revisar) < 2000:
+                    self.revisar.append({**item, **({"notas": notas} if notas else {})})
             if len(self.divergencias) < 20 or item["motivo"] is None and len(self.divergencias) < 60:
                 self.divergencias.append(item)
 
@@ -214,6 +218,21 @@ def _num(pid: str) -> str:
 
 # ---------------------------------------------------------------- cota da Câmara
 
+def legislatura(ano: int, mes: int) -> int:
+    """Número da legislatura da Câmara num mês. Cada uma dura 4 anos e começa em 1º de fevereiro (a 57ª em 2023)."""
+    return 57 + (ano - 2023 - (mes == 1)) // 4
+
+
+def legislaturas(ano: int, mes: int) -> list[int]:
+    """Legislaturas a pedir à API num mês. Na virada (janeiro a março do ano em que uma começa), as notas do mesmo mês
+    ficam divididas entre a legislatura que sai e a que entra (conferido com o arquivo anual de 2023: só a soma das
+    duas bate), então pedimos as duas."""
+    if (ano - 2023) % 4 == 0 and mes <= 3:
+        nova = 57 + (ano - 2023) // 4
+        return [nova - 1, nova]
+    return [legislatura(ano, mes)]
+
+
 class DespesasCamara:
     """Despesas de um deputado num mês, pela API da Câmara (com cache, para as duas checagens da cota)."""
 
@@ -222,27 +241,33 @@ class DespesasCamara:
         self.cache: dict[tuple[str, int, int], list[dict] | None] = {}
         self.com_dados = 0  # quantas respostas vieram com alguma despesa
 
-    def url(self, num: str, ano: int, mes: int) -> str:
-        return f"{API_CAMARA}/deputados/{num}/despesas?ano={ano}&mes={mes}&itens=100&ordem=ASC&ordenarPor=dataDocumento"
+    def url(self, num: str, ano: int, mes: int, leg: int | None = None) -> str:
+        # idLegislatura é obrigatório na prática: sem ele, a API passou a responder "dados": [] para qualquer ano e mês
+        # (visto em novembro de 2026; com o mesmo pedido mais idLegislatura=57, as notas vêm). Foi isso que deixou as
+        # duas checagens da cota "não conferidas" com a mensagem de API fora do ar.
+        return (f"{API_CAMARA}/deputados/{num}/despesas?idLegislatura={leg or legislatura(ano, mes)}&ano={ano}&mes={mes}"
+                f"&itens=100&ordem=ASC&ordenarPor=dataDocumento")
 
     def mes(self, num: str, ano: int, mes: int) -> list[dict]:
         k = (num, ano, mes)
         if k not in self.cache:
-            linhas: list[dict] = []
-            url: str | None = self.url(num, ano, mes)
-            paginas = 0
-            while url:
-                d = self.buscar(url, timeout=60)
-                if not isinstance(d, dict) or not isinstance(d.get("dados"), list):
-                    raise ValueError("resposta inesperada da API da Câmara")
-                linhas += d["dados"]
-                self.com_dados += bool(d["dados"])
-                url = next((l["href"] for l in d.get("links") or [] if l.get("rel") == "next"), None)
-                paginas += 1
-                if paginas > 30:
-                    raise ValueError("paginação da API da Câmara não terminou")
-            self.cache[k] = linhas
+            self.cache[k] = [x for leg in legislaturas(ano, mes) for x in self._paginas(self.url(num, ano, mes, leg))]
         return self.cache[k]
+
+    def _paginas(self, url: str | None) -> list[dict]:
+        linhas: list[dict] = []
+        paginas = 0
+        while url:
+            d = self.buscar(url, timeout=60)
+            if not isinstance(d, dict) or not isinstance(d.get("dados"), list):
+                raise ValueError("resposta inesperada da API da Câmara")
+            linhas += d["dados"]
+            self.com_dados += bool(d["dados"])
+            url = next((l["href"] for l in d.get("links") or [] if l.get("rel") == "next"), None)
+            paginas += 1
+            if paginas > 30:
+                raise ValueError("paginação da API da Câmara não terminou")
+        return linhas
 
 
 def cota_camara(saida: Path, pols: list[dict], rng: random.Random, prazo: Prazo, hoje: dt.date,
@@ -251,8 +276,9 @@ def cota_camara(saida: Path, pols: list[dict], rng: random.Random, prazo: Prazo,
         "cota_camara_mes", "cota", "Total do mês de cada deputado",
         f"Sorteamos deputados e meses e somamos, na API oficial da Câmara, todas as despesas daquele mês. A soma tem de "
         f"ser igual à do site. Só meses que terminaram há mais de {DIAS_MES_FECHADO} dias (antes disso a Câmara ainda "
-        f"lança notas atrasadas). A parte que o site completa com a página oficial do deputado (passagens compradas pela "
-        f"própria Câmara) não está na API e fica de fora da comparação.",
+        f"lança notas atrasadas). Ficam de fora da comparação só as notas que a API não lista: as sem data do arquivo "
+        f"anual (telefonia paga pela Câmara e complementação do auxílio-moradia) e o valor que o site completa com a "
+        f"página oficial do deputado sem nota.",
         "https://dadosabertos.camara.leg.br/swagger/api.html#/Deputados/despesasDeputado")
     c_emp = Checagem(
         "cota_camara_empresa", "cota", "Quanto cada empresa recebeu de cada deputado no mês",
@@ -279,7 +305,7 @@ def cota_camara(saida: Path, pols: list[dict], rng: random.Random, prazo: Prazo,
             detalhes[pid] = _ler(saida / "p" / f"{pid}.json") or {}
         a = (detalhes[pid].get("anos") or {}).get(str(ano)) or {}
         m = next((x for x in a.get("meses") or [] if x["mes"] == mes), {"valor": 0.0})
-        nosso = round(m["valor"] - (m.get("fora_dados_abertos") or 0), 2)
+        nosso = round(m["valor"] - (m.get("fora_api") or 0), 2)
         try:
             linhas = api.mes(_num(pid), ano, mes)
         except Exception as e:  # noqa: BLE001
@@ -304,7 +330,7 @@ def cota_camara(saida: Path, pols: list[dict], rng: random.Random, prazo: Prazo,
         if prazo.acabou():
             c_emp.falhou("tempo da verificação acabou")
             break
-        nosso = round(x["valor"] - (x.get("fora_dados_abertos") or 0), 2)
+        nosso = round(x["valor"] - (x.get("fora_api") or 0), 2)
         try:
             linhas = api.mes(_num(x["politico"]), x["ano"], x["mes"])
         except Exception as e:  # noqa: BLE001
@@ -367,7 +393,8 @@ def cota_camara_pagina(saida: Path, pols: list[dict], hoje: dt.date) -> Checagem
                     continue
                 c.bateu(abs(m["valor"] - pm["valor"]) <= 1.0, {
                     "o_que": f"{p['nome']}, {pm['mes']:02d}/{ano}", "politico": p["id"], "site": round(m["valor"], 2),
-                    "oficial": pm["valor"], "fonte": PAGINA_CAMARA_MES.format(id=_num(p["id"]), ano=ano)})
+                    "oficial": pm["valor"], "fonte": PAGINA_CAMARA_MES.format(id=_num(p["id"]), ano=ano),
+                    "_notas": DespesasCamara().url(_num(p["id"]), int(ano), pm["mes"])})
     if c.n == 0:
         c.motivo = "Sem os gastos mensais das páginas oficiais dos deputados nesta coleta"
     c.completados = completados
@@ -753,6 +780,9 @@ def verificar(saida: Path, anterior: dict | None = None, minutos: float = 20, se
         "limite_sem_motivo": oficial.LIMITE_SEM_MOTIVO, "min_amostra": oficial.MIN_AMOSTRA,
     }
     out["barradas"] = [sid for sid, sec in out["secoes"].items() if sec.get("barrar")]
+    # Só para o relatório de conferência manual (main grava à parte e tira daqui antes de gravar verificacao.json)
+    out["revisao_manual"] = [{"id": c.id, "titulo": c.titulo, "como": c.como, "itens": c.revisar,
+                              "nao_conferidos": c.falhas, "motivo": c.motivo if c.n == 0 else ""} for c in cs]
     return out
 
 
@@ -777,6 +807,75 @@ def _fmt(x: Any) -> str:
     return f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if isinstance(x, (int, float)) else str(x)
 
 
+SITE = "https://amarigo.github.io/segredos-abertos/"
+
+
+def _data_br(iso: str) -> str:
+    return "/".join(reversed(iso.split("-")))
+
+
+def _link_site(item: dict) -> str:
+    if item.get("cnpj"):
+        return f"{SITE}#/e/{item['cnpj']}"
+    if item.get("politico"):
+        return f"{SITE}#/p/{item['politico']}"
+    if item.get("votacao"):
+        return f"{SITE}#/v/{item['votacao']}"
+    return ""
+
+
+def _diferenca(item: dict) -> float | None:
+    a, b = item.get("site"), item.get("oficial")
+    return round(a - b, 2) if isinstance(a, (int, float)) and isinstance(b, (int, float)) else None
+
+
+def revisao_manual_linhas(v: dict) -> list[dict]:
+    """Uma linha por diferença sem motivo conhecido, com tudo o que uma pessoa precisa para conferir à mão."""
+    out = []
+    for c in v.get("revisao_manual") or []:
+        for it in c["itens"]:
+            out.append({"data": v.get("data", ""), "checagem": c["titulo"], "o_que": it["o_que"], "no_site": it["site"],
+                        "na_fonte_oficial": it["oficial"], "diferenca": _diferenca(it), "fonte_oficial": it["fonte"],
+                        "notas_na_api": it.get("notas", ""), "pagina_no_site": _link_site(it),
+                        "conferido_por": "", "conclusao": ""})
+    return out
+
+
+def revisao_manual_md(v: dict) -> str:
+    """Relatório em português simples das diferenças que a verificação não conseguiu explicar sozinha."""
+    linhas = [f"# Conferência manual: diferenças sem motivo conhecido ({_data_br(v.get('data') or '')})", "",
+              "A verificação automática compara os números do site com uma segunda fonte oficial. As diferenças abaixo "
+              "não têm um motivo conhecido (etl/sa_etl/oficial.py) e precisam de uma pessoa. Para cada uma: abra a fonte "
+              "oficial, confira o valor, e anote a conclusão na planilha `revisao-manual.csv` (colunas `conferido_por` e "
+              "`conclusao`). Se descobrir o motivo, registre-o em `oficial.py` para a verificação passar a explicá-lo.", ""]
+    total = 0
+    for c in v.get("revisao_manual") or []:
+        if not c["itens"] and not c["nao_conferidos"] and not c["motivo"]:
+            continue
+        linhas += [f"## {c['titulo']}", "", c["como"], ""]
+        if c["motivo"]:
+            linhas += [f"**Não conferido hoje:** {c['motivo']}", ""]
+        if c["itens"]:
+            total += len(c["itens"])
+            linhas += ["| # | O que | No site | Na fonte oficial | Diferença | Conferir |", "| --- | --- | --- | --- | --- | --- |"]
+            for i, it in enumerate(c["itens"], 1):
+                links = [f"[fonte oficial]({it['fonte']})"]
+                if it.get("notas"):
+                    links.append(f"[notas do mês na API]({it['notas']})")
+                if _link_site(it):
+                    links.append(f"[no site]({_link_site(it)})")
+                d = _diferenca(it)
+                linhas.append(f"| {i} | {it['o_que']} | {_fmt(it['site'])} | {_fmt(it['oficial'])} | "
+                              f"{_fmt(d) if d is not None else '-'} | {' · '.join(links)} |")
+            linhas.append("")
+        if c["nao_conferidos"]:
+            linhas += [f"<details><summary>{len(c['nao_conferidos'])} itens que a fonte não respondeu</summary>", ""]
+            linhas += [f"- {x}" for x in c["nao_conferidos"]] + ["", "</details>", ""]
+    if not total:
+        linhas += ["Nenhuma diferença sem motivo conhecido hoje.", ""]
+    return "\n".join(linhas)
+
+
 def relatorio(v: dict) -> str:
     rot = {"conferido": "conferido", "explicado": "diferenças explicadas", "divergente": "DIVERGENTE", "parcial": "parcial", "nao_conferido": "não conferido",
            "sem_segunda_fonte": "sem segunda fonte"}
@@ -796,11 +895,30 @@ def relatorio(v: dict) -> str:
         for d in sorted(c["divergencias"], key=lambda d: d.get("motivo") is not None)[:8]:
             m = v.get("motivos", {}).get(d.get("motivo") or "sem_motivo", {}).get("titulo", "")
             linhas.append(f"  - {d['o_que']}: site {_fmt(d['site'])}, fonte {_fmt(d['oficial'])} ({d['fonte']}) — {m}")
+    rm = v.get("revisao_manual")
+    n = rm.get("diferencas") if isinstance(rm, dict) else len(revisao_manual_linhas(v))
+    if n:
+        linhas += ["", f"**Conferência manual:** {n} diferenças sem motivo conhecido, com links para a fonte oficial, em "
+                       f"{SITE}data/revisao-manual.md (planilha: {SITE}data/revisao-manual.csv)."]
     if v.get("barradas"):
         linhas += ["", f"**Publicação barrada**: diferenças sem motivo conhecido acima de "
                        f"{v['limite_sem_motivo'] * 100:.0f}% em: {', '.join(v['secoes'][s]['titulo'] for s in v['barradas'])}. "
                        "Entenda o motivo, registre em etl/sa_etl/oficial.py e rode de novo."]
     return "\n".join(linhas)
+
+
+def gravar_revisao_manual(saida: Path, v: dict) -> None:
+    """Grava revisao-manual.md e .csv junto dos dados (publicados no site) e tira a lista de verificacao.json."""
+    import csv
+    (saida / "revisao-manual.md").write_text(revisao_manual_md(v), encoding="utf-8")
+    linhas = revisao_manual_linhas(v)
+    campos = ["data", "checagem", "o_que", "no_site", "na_fonte_oficial", "diferenca", "fonte_oficial", "notas_na_api",
+              "pagina_no_site", "conferido_por", "conclusao"]
+    with open(saida / "revisao-manual.csv", "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=campos)
+        w.writeheader()
+        w.writerows(linhas)
+    v["revisao_manual"] = {"diferencas": len(linhas), "md": "revisao-manual.md", "csv": "revisao-manual.csv"}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -818,6 +936,7 @@ def main(argv: list[str] | None = None) -> int:
     logging.getLogger("sa_etl").setLevel(logging.ERROR)  # novas tentativas de download não poluem o resumo
     v = verificar(a.saida, _baixar_anterior(a.anterior), a.minutos, a.semente,
                   cache_cnpj=a.cache / "cnpj" if a.cache else None)
+    gravar_revisao_manual(a.saida, v)
     write_json(a.saida / "verificacao.json", v)
     print(relatorio(v))
     # Diferença com motivo conhecido não barra: o site já usa o número oficial e explica. Diferença sem motivo, acima

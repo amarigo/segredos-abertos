@@ -19,6 +19,7 @@ import CidadePage from "./pages/Cidade";
 import Assembleia from "./pages/Assembleia";
 import DeputadoEstadualPage from "./pages/DeputadoEstadual";
 import GovernoPage from "./pages/Governo";
+import DinheiroMinas from "./pages/DinheiroMinas";
 import EmendasEstaduais from "./pages/EmendasEstaduais";
 import Corrupcao from "./pages/Corrupcao";
 import CasoCorrupcao from "./pages/CasoCorrupcao";
@@ -90,6 +91,7 @@ export default function App() {
           <Link to="/" className="brand"><img src="./icon.svg" alt="" /><span>{SITE.nome} <span style={{ color: "var(--gold)" }}>{SITE.destaque}</span></span></Link>
           <nav className="nav" aria-label="Principal">
             {!MG && <NavLink to="/dinheiro">Arrecadação e gastos</NavLink>}
+            {MG && <NavLink to="/dinheiro">Dinheiro</NavLink>}
             {MG && <NavLink to="/governo">Governo</NavLink>}
             {MG && <NavLink to="/assembleia">Deputados estaduais</NavLink>}
             <NavLink to="/politicos">{MG ? "Federais" : "Políticos"}</NavLink>
@@ -126,6 +128,7 @@ export default function App() {
           {!MG && <Route path="/corrupcao/:id" element={<CasoCorrupcao />} />}
           {MG && <Route path="/cidades" element={<Cidades />} />}
           {MG && <Route path="/cidade/:id" element={<CidadePage />} />}
+          {MG && <Route path="/dinheiro" element={<DinheiroMinas />} />}
           {MG && <Route path="/governo" element={<GovernoPage />} />}
           {MG && <Route path="/assembleia" element={<Assembleia />} />}
           {MG && <Route path="/deputado-estadual/:id" element={<DeputadoEstadualPage />} />}
