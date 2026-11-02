@@ -25,6 +25,7 @@ from collections import Counter
 from pathlib import Path
 
 from sa_etl import validar as nacional
+from sa_etl.util import anotar
 from sa_etl.validar import Resultado, _baixar_anterior, _ler, _perto
 
 # Valores de produção. MG tem 53 deputados federais e 3 senadores; os testes usam números menores.
@@ -259,6 +260,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"- {len(r.erros)} erros, {len(r.alertas)} alertas\n")
     for e in r.erros[:60]:
         print(f"- ERRO: {e}")
+    for e in r.erros[:8]:  # o motivo também vai para o painel de status (/status/)
+        anotar("error", "Minas Nossa: conferência", e)
     for x in r.alertas[:60]:
         print(f"- alerta: {x}")
     return 0 if r.ok else 1
