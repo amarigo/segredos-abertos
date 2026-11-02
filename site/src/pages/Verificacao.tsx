@@ -63,6 +63,14 @@ export default function VerificacaoPage() {
         Com <em>n</em> números conferidos e nenhuma diferença, dá para afirmar, com 95% de confiança, que pelo menos 1 − 0,05<sup>1/n</sup> dos números estão certos. Para dizer "pelo menos 99,99% certos" é preciso conferir cerca de <strong>{v.para_99_99.toLocaleString("pt-BR")}</strong> números sem nenhum erro. Por isso as conferências se somam dia a dia (últimos {v.dias_historico} dias). Uma seção só aparece como conferida se todas as suas checagens rodaram e nenhuma achou diferença. Cada diferença é investigada: quando o motivo é conhecido, o site mostra o número oficial e explica; quando ainda não é, o número fica marcado "em revisão" e, se forem mais de {Math.round((v.limite_sem_motivo ?? 0.02) * 100)}% dos conferidos de uma seção, a atualização do site é barrada até entendermos o motivo. A cota só é conferida em meses que terminaram há mais de {v.dias_mes_fechado} dias, porque antes disso a Câmara e o Senado ainda lançam notas atrasadas.
       </p>
       <p className="small muted">Última verificação: {dataBR(v.data)}.</p>
+      {!!v.revisao_manual?.diferencas && (
+        <p className="small" data-revisao-manual>
+          {v.revisao_manual.diferencas.toLocaleString("pt-BR")} {v.revisao_manual.diferencas === 1 ? "diferença ainda sem motivo conhecido está" : "diferenças ainda sem motivo conhecido estão"} na
+          lista para conferência manual, cada uma com o nosso número, o oficial e o link para a fonte:{" "}
+          <a href={`./data/${v.revisao_manual.md}`} target="_blank" rel="noreferrer">relatório</a> ·{" "}
+          <a href={`./data/${v.revisao_manual.csv}`} download>planilha (CSV)</a>.
+        </p>
+      )}
       {Object.entries(v.secoes).map(([id, s]) => (
         <div key={id} id={id} className="secao-verificada">
           <h2>{s.titulo}</h2>

@@ -4,7 +4,10 @@ on:
   push:
   pull_request:
   schedule:
-    - cron: "0 9 * * *" # todo dia às 6h de Brasília
+    # Todo dia às 3h17 de Brasília (6h17 UTC): madrugada é o horário com menos tráfego nas APIs do governo, e elas
+    # deixam de responder menos. O minuto 17 foge do pico de agendamentos do próprio GitHub na hora cheia, que atrasa a
+    # partida. Se mudar aqui, mude também HORA_AGENDADA_UTC e MINUTO_AGENDADO_UTC em status/painel.js.
+    - cron: "17 6 * * *"
   workflow_dispatch:
     inputs:
       ignorar_queda:

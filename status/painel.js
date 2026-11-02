@@ -16,7 +16,8 @@ export const API = `https://api.github.com/repos/${REPO}`;
 export const ACTIONS = `https://github.com/${REPO}/actions`;
 export const FLUXO = "dados-e-site.yml";
 export const FLUXO_REPETIR = "tentar-de-novo.yml";
-export const HORA_AGENDADA_UTC = 9; // cron "0 9 * * *": 6h de Brasília
+export const HORA_AGENDADA_UTC = 6; // cron "17 6 * * *": 3h17 de Brasília (madrugada, menos tráfego nas APIs)
+export const MINUTO_AGENDADO_UTC = 17;
 export const DETALHAR = 6; // quantas execuções recentes são abertas etapa por etapa (cada uma custa 2 consultas)
 const FUSO = "America/Sao_Paulo";
 
@@ -72,7 +73,7 @@ export function duracaoTexto(min) {
 }
 
 export function proximaAgendada(agora = new Date()) {
-  const p = new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), agora.getUTCDate(), HORA_AGENDADA_UTC));
+  const p = new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), agora.getUTCDate(), HORA_AGENDADA_UTC, MINUTO_AGENDADO_UTC));
   if (p <= agora) p.setUTCDate(p.getUTCDate() + 1);
   return p.toISOString();
 }
@@ -80,7 +81,7 @@ export function proximaAgendada(agora = new Date()) {
 // ------------------------------------------------------------------ execuções
 
 export function comoComecou(run) {
-  if (run.event === "schedule") return "Agendada (todo dia às 6h)";
+  if (run.event === "schedule") return "Agendada (todo dia às 3h17)";
   if (run.event === "push") return "Mudança no código";
   if (run.event === "workflow_dispatch") {
     const quem = run.triggering_actor?.login || run.actor?.login || "";

@@ -186,6 +186,8 @@ export interface Verificacao {
   gerado_em: string; data: string; confianca: number; dias_mes_fechado: number; dias_historico: number; para_99_99: number;
   secoes: Record<string, SecaoVerificada>; checagens: Checagem[];
   motivos?: Record<string, MotivoDiferenca>; limite_sem_motivo?: number; min_amostra?: number; barradas?: string[];
+  /** Relatório para conferência manual das diferenças sem motivo conhecido (arquivos ao lado de verificacao.json) */
+  revisao_manual?: { diferencas: number; md: string; csv: string };
 }
 
 export interface Meta {

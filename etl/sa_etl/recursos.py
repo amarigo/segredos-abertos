@@ -14,6 +14,7 @@ import html
 import json
 import logging
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -246,6 +247,22 @@ def senado_ano(cod: str, ano: int) -> dict | None:
 
 # ---------------------------------------------------------------- todos
 
+DIAS_CACHE_ANO_ANTERIOR = 7
+
+
+def _cache_vale(ano: int, atual: int, mtime: float, agora: float | None = None) -> bool:
+    """A página de um ano já acabado pode ser guardada, mas a do ano anterior só por uma semana.
+
+    A Câmara continua lançando notas (e devoluções de passagens) de novembro e dezembro até março do ano seguinte, e a
+    página oficial do deputado muda junto. Guardada para sempre desde janeiro, a página ficava com o total antigo e a
+    verificação acusava "notas maiores que a página" nesses meses (diferença em revisão)."""
+    if ano >= atual:
+        return False
+    if ano < atual - 1:
+        return True
+    return ((agora if agora is not None else time.time()) - mtime) < DIAS_CACHE_ANO_ANTERIOR * 86400
+
+
 def coletar(politicos: list[dict], anos: list[int], cache: Path, workers: int = 6) -> dict[str, dict[int, dict]]:
     """Devolve {politico_id: {ano: recursos}}."""
     atual = dt.date.today().year
@@ -255,7 +272,7 @@ def coletar(politicos: list[dict], anos: list[int], cache: Path, workers: int = 
     def um(pa):
         p, ano = pa
         f = cache / f"{p['id']}-{ano}-v{VERSAO}.json"
-        if ano < atual and f.exists():
+        if f.exists() and _cache_vale(ano, atual, f.stat().st_mtime):
             try:
                 return json.loads(f.read_text(encoding="utf-8"))
             except ValueError:
