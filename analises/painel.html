@@ -1,0 +1,741 @@
+<title>Análises Segredos Abertos</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Todas as análises do Segredos Abertos, Minas Nossa e Eleição 2026 em gráficos, com as tabelas para baixar e o link de cada dado na fonte oficial.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400..900&display=swap" rel="stylesheet">
+<!--
+  Painel de análises do Segredos Abertos.
+  Gráficos: Apache ECharts (https://github.com/apache/echarts, licença Apache 2.0), carregado do jsDelivr.
+  Dados: as tabelas CSV em ./tabelas/, geradas por analises/tabelas.py a partir dos mesmos arquivos do site.
+  O mesmo arquivo serve para o GitHub Pages (/analises/) e para o painel publicado no Claude.
+-->
+<style>
+/* Layout: faixa azul gov.br no topo, abas que rolam de lado, cartões de gráfico em grade de 1 a 2 colunas */
+:root {
+  --bg: #f8f8f8; --surface: #ffffff; --ink: #1b2533; --ink-2: #333f4f; --muted: #5f6a7a; --line: #dcdfe5;
+  --navy: #071d41; --hot: #1351b4; --accent: #1351b4; --amarelo: #ffcd07; --grid: #e8ebf0; --tint: #edf5ff;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --c4: #eda100; --c5: #e87ba4; --c6: #008300; --c7: #6250d6; --c8: #e34948; --outro: #b9b6ac;
+  --sim: #1baf7a; --nao: #eb6834; --esq: #d03b3b; --dir: #2a78d6; --centro: #a9a69c;
+  --alert-bg: #fff5c2; --alert-ink: #5c4300; --foco: #071d41;
+  --display: "Raleway", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --body: "Raleway", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --raio: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1220; --surface: #131c2e; --ink: #eef2f8; --ink-2: #c5cedd; --muted: #93a0b5; --line: #26324a;
+    --navy: #13284f; --hot: #5992ed; --accent: #7fb0ff; --grid: #1f2a40; --tint: #16233b;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --c4: #c98500; --c5: #d55181; --c6: #2f9e3f; --c7: #9085e9; --c8: #e66767; --outro: #4a4f5c;
+    --sim: #199e70; --nao: #d95926; --esq: #e66767; --dir: #3987e5; --centro: #5c6070;
+    --alert-bg: #33290a; --alert-ink: #ffe28a; --foco: #ffcd07; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1220; --surface: #131c2e; --ink: #eef2f8; --ink-2: #c5cedd; --muted: #93a0b5; --line: #26324a;
+  --navy: #13284f; --hot: #5992ed; --accent: #7fb0ff; --grid: #1f2a40; --tint: #16233b;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --c4: #c98500; --c5: #d55181; --c6: #2f9e3f; --c7: #9085e9; --c8: #e66767; --outro: #4a4f5c;
+  --sim: #199e70; --nao: #d95926; --esq: #e66767; --dir: #3987e5; --centro: #5c6070;
+  --alert-bg: #33290a; --alert-ink: #ffe28a; --foco: #ffcd07; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); font-variant-numeric: lining-nums tabular-nums; margin: 0; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--navy); }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+.faixa { background: var(--navy); color: #fff; }
+.faixa .dentro { padding-block: 22px 0; }
+.dentro { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.marca { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+.marca h1 { font-family: var(--display); font-size: clamp(1.5rem, 3.6vw, 2.2rem); font-weight: 800; margin: 0; letter-spacing: -.01em; }
+.marca .ponto { color: var(--amarelo); }
+.marca p { margin: 0; color: #c9d4e8; font-size: .95rem; }
+.atualizado { font-size: .85rem; color: #c9d4e8; margin: 6px 0 0; }
+nav.abas { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--navy); border-bottom: 1px solid #ffffff22; }
+nav.abas .dentro { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: thin; padding-block: 14px 0; }
+nav.abas a { color: #dfe7f5; text-decoration: none; padding: 9px 12px 11px; white-space: nowrap; font-weight: 600; font-size: .92rem; border-bottom: 3px solid transparent; }
+nav.abas a[aria-current="page"] { color: #fff; border-bottom-color: var(--amarelo); }
+nav.abas a:hover { color: #fff; }
+main .dentro { padding-block: 24px 48px; display: grid; gap: 20px; }
+.cabeca { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px; }
+.cabeca h2 { font-family: var(--display); font-size: clamp(1.3rem, 2.8vw, 1.7rem); font-weight: 800; margin: 0; text-wrap: balance; }
+.cabeca p { margin: 4px 0 0; color: var(--muted); max-width: 68ch; }
+.filtros { display: flex; flex-wrap: wrap; gap: 10px; }
+.filtros label { display: grid; gap: 2px; font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+select, input[type="search"] { font: inherit; font-size: .95rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; min-width: 0; max-width: 100%; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio); padding: 14px 16px; display: grid; gap: 2px; }
+.kpi span { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+.kpi strong { font-family: var(--display); font-size: 1.6rem; font-weight: 800; color: var(--hot); line-height: 1.15; }
+.kpi small { color: var(--muted); font-size: .82rem; }
+.grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 16px; align-items: start; }
+.cartao { background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio); padding: 16px; min-width: 0; display: grid; gap: 8px; align-content: start; }
+.cartao h3 { margin: 0; font-size: 1.02rem; font-weight: 700; line-height: 1.25; }
+.cartao .nota { margin: 0; color: var(--muted); font-size: .85rem; }
+.graf { width: 100%; height: 360px; }
+.graf.alto { height: 520px; }
+.rolagem { overflow-x: auto; max-height: 460px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { position: sticky; top: 0; background: var(--surface); font-size: .76rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); z-index: 1; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+td a { white-space: nowrap; }
+.fonte { font-size: .82rem; color: var(--muted); margin: 0; }
+.vazio { background: var(--tint); border-radius: 6px; padding: 14px; color: var(--ink-2); font-size: .92rem; }
+.aviso { background: var(--alert-bg); color: var(--alert-ink); border-radius: 6px; padding: 10px 14px; font-size: .9rem; }
+.baixar { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: .88rem; text-decoration: none; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; background: var(--surface); }
+.baixar:hover { border-color: var(--accent); }
+.chip { display: inline-block; font-size: .75rem; font-weight: 700; padding: 1px 8px; border-radius: 99px; background: var(--grid); color: var(--ink-2); }
+.chip.sim { background: color-mix(in srgb, var(--sim) 22%, transparent); }
+.chip.nao { background: color-mix(in srgb, var(--nao) 22%, transparent); }
+footer { color: var(--muted); font-size: .85rem; }
+footer .dentro { padding-block: 0 40px; display: grid; gap: 6px; }
+@media (max-width: 600px) { .graf { height: 300px; } .graf.alto { height: 440px; } .kpi strong { font-size: 1.35rem; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<header class="faixa">
+  <div class="dentro">
+    <div class="marca">
+      <h1>Segredos Abertos<span class="ponto">.</span> Análises</h1>
+      <p>Todos os dados do projeto em gráficos, com a fonte oficial de cada número e as tabelas para baixar.</p>
+    </div>
+    <p class="atualizado" id="atualizado">Carregando a data da última atualização…</p>
+  </div>
+</header>
+<nav class="abas" aria-label="Seções">
+  <div class="dentro" id="abas"></div>
+</nav>
+<main>
+  <div class="dentro" id="conteudo" aria-live="polite"></div>
+</main>
+<footer>
+  <div class="dentro">
+    <p>Dados oficiais da Câmara, do Senado, do Portal da Transparência, do Tesouro Nacional, da Receita Federal, da ALMG e do TSE, coletados pelas APIs oficiais sempre que elas existem. Cada tabela tem o link do dado original.</p>
+    <p>Código aberto em <a href="https://github.com/amarigo/segredos-abertos/tree/main/analises" target="_blank" rel="noopener">github.com/amarigo/segredos-abertos</a>. Gráficos feitos com <a href="https://github.com/apache/echarts" target="_blank" rel="noopener">Apache ECharts</a> (licença Apache 2.0).</p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+<script>
+"use strict";
+// Endereço público das tabelas: os links de download apontam sempre para o GitHub Pages, que é atualizado todo dia.
+const PUBLICO = "https://amarigo.github.io/segredos-abertos/analises/tabelas/";
+const LOCAL = "tabelas/";
+
+// ------------------------------------------------------------ leitura das tabelas
+
+let CATALOGO = null;
+const cache = new Map();
+
+function lerCSV(texto) {
+  const linhas = []; let campo = ""; let linha = []; let aspas = false;
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto[i];
+    if (aspas) {
+      if (c === '"') { if (texto[i + 1] === '"') { campo += '"'; i++; } else aspas = false; }
+      else campo += c;
+    } else if (c === '"') aspas = true;
+    else if (c === ",") { linha.push(campo); campo = ""; }
+    else if (c === "\n") { linha.push(campo); linhas.push(linha); linha = []; campo = ""; }
+    else if (c !== "\r") campo += c;
+  }
+  if (campo !== "" || linha.length) { linha.push(campo); linhas.push(linha); }
+  return linhas;
+}
+
+async function catalogo() {
+  if (!CATALOGO) {
+    CATALOGO = fetch(LOCAL + "catalogo.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .catch(() => ({ tabelas: [], atualizado_em: null }));
+  }
+  return CATALOGO;
+}
+
+async function tabela(nome) {
+  if (cache.has(nome)) return cache.get(nome);
+  const p = (async () => {
+    const cat = await catalogo();
+    const info = cat.tabelas.find((t) => t.nome === nome);
+    const tipos = Object.fromEntries((info?.colunas || []).map((c) => [c.nome, c.tipo]));
+    let texto;
+    try { const r = await fetch(LOCAL + nome + ".csv"); if (!r.ok) return []; texto = await r.text(); } catch { return []; }
+    const [cab, ...corpo] = lerCSV(texto);
+    if (!cab) return [];
+    return corpo.filter((l) => l.length > 1 || l[0] !== "").map((l) => {
+      const o = {};
+      cab.forEach((k, i) => {
+        const v = l[i] ?? ""; const t = tipos[k];
+        if (t === "inteiro" || t === "decimal") o[k] = v === "" ? null : Number(v);
+        else if (t === "logico") o[k] = v === "true";
+        else o[k] = v;
+      });
+      return o;
+    });
+  })();
+  cache.set(nome, p);
+  return p;
+}
+
+// ------------------------------------------------------------ formatação
+
+const nf = new Intl.NumberFormat("pt-BR");
+const nf1 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
+function reais(v) { return v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }); }
+function reaisCurto(v) {
+  if (v == null) return "—";
+  const a = Math.abs(v);
+  if (a >= 1e12) return "R$ " + nf1.format(v / 1e12) + " tri";
+  if (a >= 1e9) return "R$ " + nf1.format(v / 1e9) + " bi";
+  if (a >= 1e6) return "R$ " + nf1.format(v / 1e6) + " mi";
+  if (a >= 1e3) return "R$ " + nf1.format(v / 1e3) + " mil";
+  return "R$ " + nf.format(Math.round(v));
+}
+function pct(v) { return v == null ? "—" : nf1.format(v * 100) + "%"; }
+function dataBR(s) { return s && s.length >= 10 ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : (s || "—"); }
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function linkSeguro(u) { return /^https:\/\//.test(u || "") ? u : ""; }
+function soma(rows, chave, valor) {
+  const m = new Map();
+  for (const r of rows) { const k = typeof chave === "function" ? chave(r) : r[chave]; if (k == null || k === "") continue; m.set(k, (m.get(k) || 0) + (r[valor] || 0)); }
+  return [...m.entries()].sort((a, b) => b[1] - a[1]);
+}
+function total(rows, k) { return rows.reduce((s, r) => s + (r[k] || 0), 0); }
+function anosDe(rows) { return [...new Set(rows.map((r) => r.ano).filter((a) => a != null))].sort((a, b) => b - a); }
+
+// ------------------------------------------------------------ cores e gráficos
+
+function cor(nome) { return getComputedStyle(document.documentElement).getPropertyValue("--" + nome).trim(); }
+const SERIES = ["s1", "s2", "s3", "c4", "c5", "c6", "c7", "c8"];
+const LADO = { "Esquerda": "esq", "Centro-esquerda": "esq", "Centro": "centro", "Centro-direita": "dir", "Direita": "dir", "Sem posição": "outro" };
+let graficos = [];
+
+function base() {
+  return {
+    color: SERIES.map(cor), textStyle: { fontFamily: "Raleway, system-ui, sans-serif", color: cor("ink-2") },
+    grid: { left: 8, right: 32, top: 28, bottom: 8, containLabel: true },
+    tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: cor("surface"), borderColor: cor("line"), textStyle: { color: cor("ink") } },
+    legend: { textStyle: { color: cor("ink-2") }, top: 0, type: "scroll" },
+  };
+}
+function eixoValor(fmt) { return { type: "value", splitNumber: 4, axisLabel: { color: cor("muted"), formatter: fmt || reaisCurto, hideOverlap: true }, splitLine: { lineStyle: { color: cor("grid") } } }; }
+function eixoCat(dados, extra) { return { type: "category", data: dados, axisLabel: { color: cor("ink-2"), width: 180, overflow: "truncate", ...(extra || {}) }, axisLine: { lineStyle: { color: cor("line") } }, axisTick: { show: false } }; }
+
+function desenhar(el, opcao) {
+  const g = echarts.init(el, null, { renderer: "canvas" });
+  const b = base();
+  g.setOption({ ...b, ...opcao, tooltip: { ...b.tooltip, ...(opcao.tooltip || {}) }, grid: { ...b.grid, ...(opcao.grid || {}) }, legend: opcao.legend === false ? { show: false } : { ...b.legend, ...(opcao.legend || {}) } });
+  graficos.push({ g, el, opcao });
+  return g;
+}
+function barras(el, pares, { fmt = reaisCurto, corBarra, n = 15, rotulo = true } = {}) {
+  const top = pares.slice(0, n).reverse();
+  el.style.height = Math.max(240, top.length * 26 + 60) + "px";
+  return desenhar(el, {
+    legend: false, xAxis: { ...eixoValor(fmt), axisLabel: { show: !rotulo } }, yAxis: eixoCat(top.map((p) => p[0])),
+    tooltip: { valueFormatter: fmt },
+    series: [{ type: "bar", data: top.map((p) => p[1]), itemStyle: { color: corBarra ? cor(corBarra) : cor("s1"), borderRadius: [0, 3, 3, 0] }, barMaxWidth: 22,
+      label: rotulo ? { show: true, position: "right", formatter: (p) => fmt(p.value), color: cor("muted"), fontSize: 11 } : undefined }],
+    grid: { right: rotulo ? 70 : 16 },
+  });
+}
+function linhas(el, x, series, { fmt = reaisCurto, area = false } = {}) {
+  return desenhar(el, {
+    xAxis: eixoCat(x, { width: 80 }), yAxis: eixoValor(fmt), tooltip: { valueFormatter: fmt }, grid: { top: 40 },
+    series: series.map((s, i) => ({ type: "line", name: s.nome, data: s.dados, smooth: false, symbolSize: 6, connectNulls: true,
+      lineStyle: { width: 2.5 }, itemStyle: { color: cor(s.cor || SERIES[i % SERIES.length]) }, areaStyle: area ? { opacity: .12 } : undefined })),
+  });
+}
+function rosca(el, pares, { fmt = reaisCurto, cores } = {}) {
+  return desenhar(el, {
+    tooltip: { trigger: "item", valueFormatter: fmt }, legend: { bottom: 0, top: "auto" },
+    series: [{ type: "pie", radius: ["45%", "72%"], center: ["50%", "45%"], itemStyle: { borderColor: cor("surface"), borderWidth: 2 },
+      label: { color: cor("ink-2"), formatter: "{b}\n{d}%" },
+      data: pares.map((p, i) => ({ name: p[0], value: p[1], itemStyle: cores ? { color: cor(cores(p[0], i)) } : undefined })) }],
+  });
+}
+
+window.addEventListener("resize", () => graficos.forEach((x) => x.g.resize()));
+const tema = window.matchMedia("(prefers-color-scheme: dark)");
+function redesenhar() { mostrar(location.hash.slice(1) || "inicio", true); }
+tema.addEventListener?.("change", redesenhar);
+new MutationObserver(redesenhar).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+// ------------------------------------------------------------ peças da página
+
+function h(tag, attrs, ...filhos) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) { if (k === "html") el.innerHTML = v; else if (v != null) el.setAttribute(k, v); }
+  for (const f of filhos.flat()) if (f != null) el.append(f instanceof Node ? f : document.createTextNode(String(f)));
+  return el;
+}
+function cartao(titulo, nota, ...corpo) { return h("section", { class: "cartao" }, h("h3", {}, titulo), nota ? h("p", { class: "nota" }, nota) : null, ...corpo); }
+function areaGrafico(alto) { return h("div", { class: "graf" + (alto ? " alto" : ""), role: "img" }); }
+function vazio(msg) { return h("div", { class: "vazio" }, msg || "Esta tabela ainda não tem linhas nesta cópia dos dados. Ela aparece aqui quando a coleta diária trouxer o dado."); }
+function baixar(nome, rotulo) {
+  return h("a", { class: "baixar", href: PUBLICO + nome + ".csv", target: "_blank", rel: "noopener", download: nome + ".csv" }, "Baixar " + (rotulo || nome + ".csv") + " ↓");
+}
+function fontes(...nomes) {
+  return h("p", { class: "fonte" }, "Tabelas: ", ...nomes.flatMap((n, i) => [i ? ", " : "", h("a", { href: PUBLICO + n + ".csv", target: "_blank", rel: "noopener" }, n + ".csv")]));
+}
+function kpis(lista) {
+  return h("div", { class: "kpis" }, lista.map((k) => h("div", { class: "kpi" }, h("span", {}, k.rot), h("strong", {}, k.valor), k.nota ? h("small", {}, k.nota) : null)));
+}
+/** Tabela com colunas [{k, rot, tipo: "reais"|"num"|"pct"|"data"|"link"|"texto"|fn}] */
+function grade(rows, cols, limite = 200) {
+  if (!rows.length) return vazio("Nada registrado para esta escolha.");
+  const fmt = (r, c) => {
+    const v = r[c.k];
+    if (typeof c.tipo === "function") return c.tipo(r);
+    if (c.tipo === "reais") return reais(v);
+    if (c.tipo === "num") return v == null ? "—" : nf.format(v);
+    if (c.tipo === "pct") return pct(v);
+    if (c.tipo === "data") return dataBR(v);
+    if (c.tipo === "link") { const u = linkSeguro(v); return u ? h("a", { href: u, target: "_blank", rel: "noopener" }, c.texto || "abrir ↗") : "—"; }
+    return v ?? "";
+  };
+  const num = (c) => ["reais", "num", "pct"].includes(c.tipo);
+  return h("div", { class: "rolagem" }, h("table", {},
+    h("thead", {}, h("tr", {}, cols.map((c) => h("th", { class: num(c) ? "num" : null, scope: "col" }, c.rot)))),
+    h("tbody", {}, rows.slice(0, limite).map((r) => h("tr", {}, cols.map((c) => h("td", { class: num(c) ? "num" : null }, fmt(r, c))))))));
+}
+function seletor(id, rotulo, opcoes, valor, aoMudar) {
+  const s = h("select", { id }, opcoes.map((o) => { const op = h("option", { value: String(o[0]) }, o[1]); if (String(o[0]) === String(valor)) op.selected = true; return op; }));
+  s.addEventListener("change", () => aoMudar(s.value));
+  return h("label", { for: id }, rotulo, s);
+}
+function cabeca(titulo, texto, ...filtros) {
+  return h("div", { class: "cabeca" }, h("div", {}, h("h2", {}, titulo), texto ? h("p", {}, texto) : null), filtros.length ? h("div", { class: "filtros" }, filtros) : null);
+}
+
+// estado dos filtros de cada aba (só na memória da página)
+const filtro = { ano: null, casa: "todas", votacao: null, empresa: null, turno: 2 };
+
+// ------------------------------------------------------------ abas
+
+const ABAS = [
+  { id: "inicio", nome: "Resumo", fn: abaInicio },
+  { id: "politicos", nome: "Gastos dos políticos", fn: abaPoliticos },
+  { id: "votacoes", nome: "Votações", fn: abaVotacoes },
+  { id: "partidos", nome: "Partidos e lados", fn: abaPartidos },
+  { id: "empresas", nome: "Empresas e donos", fn: abaEmpresas },
+  { id: "emendas", nome: "Emendas", fn: abaEmendas },
+  { id: "incentivos", nome: "Incentivos", fn: abaIncentivos },
+  { id: "brasil", nome: "Dinheiro do Brasil", fn: abaBrasil },
+  { id: "projetos", nome: "Projetos", fn: abaProjetos },
+  { id: "minas", nome: "Minas Gerais", fn: abaMinas },
+  { id: "eleicao", nome: "Eleição 2026", fn: abaEleicao },
+  { id: "terras", nome: "Terras raras", fn: abaTerras },
+  { id: "tabelas", nome: "Baixar tabelas", fn: abaTabelas },
+];
+
+let gen = 0;
+async function mostrar(id, manter) {
+  const aba = ABAS.find((a) => a.id === id) || ABAS[0];
+  document.querySelectorAll("nav.abas a").forEach((a) => { if (a.dataset.id === aba.id) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+  const meu = ++gen;
+  graficos.forEach((x) => x.g.dispose()); graficos = [];
+  const c = document.getElementById("conteudo");
+  if (!manter) window.scrollTo({ top: 0 });
+  c.replaceChildren(h("p", { class: "nota" }, "Carregando…"));
+  try {
+    const partes = await aba.fn();
+    if (meu !== gen) return;
+    c.replaceChildren(...partes.filter(Boolean));
+    pendentes.forEach((f) => f()); pendentes = [];
+  } catch (e) {
+    c.replaceChildren(h("div", { class: "aviso" }, "Não deu para montar esta aba: " + e.message));
+  }
+}
+// gráficos só podem ser desenhados depois que o elemento está na página
+let pendentes = [];
+function depois(f) { pendentes.push(f); }
+function comGrafico(el, f) { depois(() => f(el)); return el; }
+
+function anoPadrao(anos) { return filtro.ano && anos.includes(Number(filtro.ano)) ? Number(filtro.ano) : anos[0]; }
+function filtroAno(anos, valor) { return seletor("f-ano", "Ano", anos.map((a) => [a, a]), valor, (v) => { filtro.ano = Number(v); mostrar(location.hash.slice(1)); }); }
+
+// ---- Resumo
+async function abaInicio() {
+  const [at, pol, emp, vot, em, fin] = await Promise.all([tabela("atualizacao"), tabela("politicos"), tabela("empresas"), tabela("votacoes"), tabela("emendas_autores"), tabela("brasil_serie")]);
+  const nac = at.find((a) => a.site === "Segredos Abertos");
+  const ultFin = [...fin].sort((a, b) => b.ano - a.ano)[0];
+  const anoEm = anosDe(em)[0];
+  const lado = soma(pol, "lado", "gasto_cota_total");
+  return [
+    cabeca("O que o dinheiro público paga, em um lugar só", "Escolha uma seção acima. Cada gráfico diz de qual tabela veio, e cada tabela tem o link do dado na fonte oficial."),
+    kpis([
+      pol.length && { rot: "Gasto da cota parlamentar", valor: reaisCurto(nac?.total_gasto_cota ?? total(pol, "gasto_cota_total")), nota: `${nf.format(pol.length)} deputados federais e senadores` },
+      vot.length && { rot: "Votações nominais", valor: nf.format(vot.length), nota: "com o voto de cada um" },
+      emp.length && { rot: "Empresas acompanhadas", valor: nf.format(emp.length), nota: "com sócios e outras empresas dos donos" },
+      em.length && { rot: "Emendas pagas em " + anoEm, valor: reaisCurto(total(em.filter((r) => r.ano === anoEm), "pago")) },
+      ultFin && { rot: "Despesa federal em " + ultFin.ano, valor: reaisCurto(ultFin.despesa), nota: ultFin.ano_parcial ? "ano ainda em andamento" : "" },
+    ].filter(Boolean)),
+    h("div", { class: "grade" },
+      cartao("Quem mais gastou da cota parlamentar", "Soma de todos os anos coletados.",
+        pol.length ? comGrafico(areaGrafico(), (el) => barras(el, pol.map((p) => [`${p.nome} (${p.partido}-${p.uf})`, p.gasto_cota_total || 0]).sort((a, b) => b[1] - a[1]), { n: 12 })) : vazio(), fontes("politicos")),
+      cartao("Gasto da cota por lado político", "Esquerda, centro e direita segundo a pesquisa de Bolognesi, Ribeiro e Codato (2023).",
+        lado.length ? comGrafico(areaGrafico(), (el) => rosca(el, lado, { cores: (n) => LADO[n] || "outro" })) : vazio(), fontes("politicos"))),
+  ];
+}
+
+// ---- Gastos dos políticos
+async function abaPoliticos() {
+  const [pol, custos, cat, mes, forn, notas] = await Promise.all([tabela("politicos"), tabela("custos_ano"), tabela("gastos_categoria"), tabela("gastos_mes"), tabela("fornecedores"), tabela("maiores_notas")]);
+  const anos = anosDe(custos); const ano = anoPadrao(anos);
+  const casaOk = (id) => { const p = porId.get(id); return filtro.casa === "todas" || p?.casa === filtro.casa; };
+  const porId = new Map(pol.map((p) => [p.politico_id, p]));
+  const nome = (id) => { const p = porId.get(id); return p ? `${p.nome} (${p.partido}-${p.uf})` : id; };
+  const c = custos.filter((r) => r.ano === ano && casaOk(r.politico_id));
+  const ranking = c.map((r) => [nome(r.politico_id), r.custo_total || r.cota_total || 0]).sort((a, b) => b[1] - a[1]);
+  const meses = mes.filter((r) => r.ano === ano && casaOk(r.politico_id));
+  const porMes = Array.from({ length: 12 }, (_, i) => total(meses.filter((r) => r.mes === i + 1), "valor"));
+  const fAno = forn.filter((r) => r.ano === ano && casaOk(r.politico_id));
+  const topForn = soma(fAno, (r) => r.fornecedor + (r.cnpj ? "" : ""), "valor");
+  const notasAno = notas.filter((r) => r.ano === ano && casaOk(r.politico_id)).sort((a, b) => b.valor - a.valor);
+  return [
+    cabeca("Quanto cada um gasta", "Cota parlamentar (passagens, escritório, divulgação), salário e verba para pagar a equipe do gabinete.",
+      anos.length ? filtroAno(anos, ano) : null,
+      seletor("f-casa", "Casa", [["todas", "Câmara e Senado"], ["camara", "Câmara"], ["senado", "Senado"]], filtro.casa, (v) => { filtro.casa = v; mostrar("politicos"); })),
+    kpis([
+      { rot: "Cota parlamentar em " + (ano ?? "—"), valor: reaisCurto(total(c, "cota_total")) },
+      { rot: "Custo total (cota, salário, gabinete)", valor: reaisCurto(total(c, "custo_total")) },
+      { rot: "Média por parlamentar", valor: reaisCurto(c.length ? total(c, "cota_total") / c.length : null), nota: `${nf.format(c.length)} parlamentares` },
+    ]),
+    h("div", { class: "grade" },
+      cartao("Quem mais custou no ano", "Custo total: cota parlamentar mais salário e verba de gabinete, quando a Casa publica.",
+        ranking.length ? comGrafico(areaGrafico(true), (el) => barras(el, ranking, { n: 20 })) : vazio(), fontes("custos_ano", "politicos")),
+      cartao("Em que a cota foi gasta", "Soma por tipo de despesa.",
+        cat.length ? comGrafico(areaGrafico(), (el) => barras(el, soma(cat.filter((r) => r.ano === ano && casaOk(r.politico_id)), "categoria", "valor"), { n: 14, corBarra: "s2" })) : vazio(), fontes("gastos_categoria")),
+      cartao("Gasto mês a mês", null,
+        meses.length ? comGrafico(areaGrafico(), (el) => linhas(el, ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"], [{ nome: "Cota parlamentar", dados: porMes }], { area: true })) : vazio(), fontes("gastos_mes")),
+      cartao("Fornecedores que mais receberam", "Empresas e pessoas pagas com a cota no ano.",
+        topForn.length ? comGrafico(areaGrafico(), (el) => barras(el, topForn, { n: 15, corBarra: "c7" })) : vazio(), fontes("fornecedores"))),
+    cartao("Maiores notas fiscais do ano", "Clique em “nota” para ver o documento original na Câmara ou no Senado.",
+      grade(notasAno, [{ k: "data", rot: "Data", tipo: "data" }, { k: "politico_id", rot: "Quem", tipo: (r) => nome(r.politico_id) }, { k: "fornecedor", rot: "Fornecedor" },
+        { k: "categoria", rot: "Tipo" }, { k: "valor", rot: "Valor", tipo: "reais" }, { k: "nota_original", rot: "Original", tipo: "link", texto: "nota ↗" }], 150),
+      fontes("maiores_notas")),
+  ];
+}
+
+// ---- Votações
+async function abaVotacoes() {
+  const [vot, votos, lado, ori, pol] = await Promise.all([tabela("votacoes"), tabela("votos"), tabela("votos_por_lado"), tabela("orientacoes"), tabela("politicos")]);
+  const lista = [...vot].sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+  if (!lista.length) return [cabeca("Votações", null), vazio()];
+  const sel = lista.find((v) => v.votacao_id === filtro.votacao) || lista[0];
+  const vs = votos.filter((v) => v.votacao_id === sel.votacao_id);
+  const partidos = [...new Set(vs.map((v) => v.partido))];
+  const votosTipos = ["Sim", "Não", ...new Set(vs.map((v) => v.voto).filter((x) => x !== "Sim" && x !== "Não"))];
+  const contagem = (lista, p, t) => lista.filter((v) => v.partido === p && v.voto === t).length;
+  partidos.sort((a, b) => vs.filter((v) => v.partido === b).length - vs.filter((v) => v.partido === a).length);
+  const ladoSel = lado.filter((l) => l.votacao_id === sel.votacao_id);
+  const lados = ["Esquerda", "Centro-esquerda", "Centro", "Centro-direita", "Direita", "Sem posição"].filter((l) => ladoSel.some((x) => x.lado === l));
+  const corVoto = (t) => (t === "Sim" ? "sim" : t === "Não" ? "nao" : "outro");
+  const porId = new Map(pol.map((p) => [p.politico_id, p]));
+  return [
+    cabeca("Como cada um votou", "Escolha uma votação para ver o voto por partido, por lado político e de cada parlamentar.",
+      seletor("f-votacao", "Votação", lista.slice(0, 400).map((v) => [v.votacao_id, `${dataBR(v.data)} · ${v.proposta || v.descricao.slice(0, 60)}`]), sel.votacao_id, (v) => { filtro.votacao = v; mostrar("votacoes"); })),
+    kpis([
+      { rot: "Resultado", valor: sel.aprovada ? "Aprovada" : "Rejeitada", nota: `${sel.casa === "senado" ? "Senado" : "Câmara"} · ${dataBR(sel.data)}` },
+      { rot: "Sim", valor: nf.format(sel.placar_oficial_sim ?? sel.sim ?? 0) },
+      { rot: "Não", valor: nf.format(sel.placar_oficial_nao ?? sel.nao ?? 0) },
+    ]),
+    cartao(sel.proposta || "Votação", sel.ementa || sel.descricao,
+      h("p", { class: "fonte" }, linkSeguro(sel.proposta_original) ? h("a", { href: sel.proposta_original, target: "_blank", rel: "noopener" }, "Proposta na fonte oficial ↗") : "", " ",
+        linkSeguro(sel.fonte_oficial) ? h("a", { href: sel.fonte_oficial, target: "_blank", rel: "noopener" }, "Votação na API oficial ↗") : "")),
+    h("div", { class: "grade" },
+      cartao("Votos por partido", null, partidos.length ? comGrafico(areaGrafico(true), (el) => {
+        el.style.height = Math.max(260, partidos.length * 26 + 70) + "px";
+        desenhar(el, { xAxis: eixoValor((v) => nf.format(v)), yAxis: eixoCat([...partidos].reverse()), grid: { top: 36 },
+          series: votosTipos.map((t) => ({ type: "bar", stack: "v", name: t, itemStyle: { color: cor(corVoto(t)) }, data: [...partidos].reverse().map((p) => contagem(vs, p, t)) })) });
+      }) : vazio(), fontes("votos")),
+      cartao("Votos por lado político", "Esquerda, centro e direita segundo a pesquisa de Bolognesi, Ribeiro e Codato (2023).", lados.length ? comGrafico(areaGrafico(), (el) =>
+        desenhar(el, { xAxis: eixoCat(lados, { width: 90, interval: 0, rotate: 0 }), yAxis: eixoValor((v) => nf.format(v)), grid: { top: 36 },
+          series: [...new Set(ladoSel.map((x) => x.voto))].map((t) => ({ type: "bar", stack: "v", name: t, itemStyle: { color: cor(corVoto(t)) },
+            data: lados.map((l) => ladoSel.filter((x) => x.lado === l && x.voto === t).reduce((s, x) => s + x.quantidade, 0)) })) })) : vazio(), fontes("votos_por_lado")),
+      cartao("Como cada partido e o governo mandaram votar", null,
+        grade(ori.filter((o) => o.votacao_id === sel.votacao_id), [{ k: "partido_ou_bloco", rot: "Partido ou bloco" }, { k: "orientacao", rot: "Orientação" }]), fontes("orientacoes")),
+      cartao("Voto de cada parlamentar", null,
+        grade(vs.map((v) => ({ ...v, nome: porId.get(v.politico_id)?.nome || v.politico_id, lado: porId.get(v.politico_id)?.lado || "" })).sort((a, b) => a.nome.localeCompare(b.nome)),
+          [{ k: "nome", rot: "Nome" }, { k: "partido", rot: "Partido" }, { k: "uf", rot: "UF" }, { k: "lado", rot: "Lado" },
+            { k: "voto", rot: "Voto", tipo: (r) => h("span", { class: "chip " + (r.voto === "Sim" ? "sim" : r.voto === "Não" ? "nao" : "") }, r.voto) }], 700), fontes("votos"))),
+  ];
+}
+
+// ---- Partidos
+async function abaPartidos() {
+  const [par, pano, pol] = await Promise.all([tabela("partidos"), tabela("partidos_ano"), tabela("politicos")]);
+  const casa = filtro.casa === "senado" ? "senado" : "camara";
+  const p = par.filter((x) => x.casa === casa && x.posicao_esquerda_direita != null);
+  const anos = anosDe(pano); const ano = anoPadrao(anos);
+  const blocos = soma(pol.filter((x) => x.casa === casa && x.bloco), "bloco", "n_votos").map(([b]) => [b, pol.filter((x) => x.casa === casa && x.bloco === b).length]);
+  return [
+    cabeca("Partidos, blocos e lados", "Onde cada partido fica entre esquerda e direita, quanto vota com o governo e quanto gasta por membro.",
+      seletor("f-casa2", "Casa", [["camara", "Câmara"], ["senado", "Senado"]], casa, (v) => { filtro.casa = v; mostrar("partidos"); }),
+      anos.length ? filtroAno(anos, ano) : null),
+    h("div", { class: "grade" },
+      cartao("Esquerda ou direita, governo ou oposição", "Cada bolha é um partido; o tamanho é o número de membros. Para a esquerda do gráfico, mais à esquerda nas votações; para cima, mais votos com o governo.",
+        p.length ? comGrafico(areaGrafico(true), (el) => desenhar(el, {
+          legend: false, tooltip: { trigger: "item", formatter: (x) => `<b>${esc(x.data[3])}</b><br>Posição: ${nf1.format(x.data[0])}<br>Com o governo: ${pct(x.data[1])}<br>${x.data[2]} membros` },
+          xAxis: { type: "value", min: 0, max: 1, name: "esquerda → direita", nameLocation: "middle", nameGap: 26, nameTextStyle: { color: cor("muted") }, axisLabel: { color: cor("muted") }, splitLine: { lineStyle: { color: cor("grid") } } },
+          yAxis: { type: "value", min: 0, max: 1, name: "votos com o governo", nameTextStyle: { color: cor("muted") }, axisLabel: { color: cor("muted"), formatter: (v) => pct(v) }, splitLine: { lineStyle: { color: cor("grid") } } },
+          grid: { bottom: 30, top: 36 },
+          series: [{ type: "scatter", data: p.map((x) => [x.posicao_esquerda_direita, x.alinhamento_governo ?? 0, x.membros, x.partido]),
+            symbolSize: (d) => 8 + Math.sqrt(d[2]) * 4, label: { show: true, formatter: (x) => x.data[3], position: "top", color: cor("ink-2"), fontSize: 11 },
+            itemStyle: { color: (x) => cor(x.data[0] < .4 ? "esq" : x.data[0] > .6 ? "dir" : "centro"), opacity: .85 } }],
+        })) : vazio(), fontes("partidos")),
+      cartao("Gasto da cota por membro em " + (ano ?? "—"), null,
+        pano.length ? comGrafico(areaGrafico(), (el) => barras(el, pano.filter((x) => x.casa === casa && x.ano === ano).map((x) => [x.partido, x.cota_por_membro || 0]).sort((a, b) => b[1] - a[1]), { n: 25, corBarra: "c4" })) : vazio(), fontes("partidos_ano")),
+      cartao("Fidelidade ao partido", "Quantas vezes os membros votaram como o partido orientou.",
+        p.length ? comGrafico(areaGrafico(), (el) => barras(el, p.filter((x) => x.fidelidade != null).map((x) => [x.partido, x.fidelidade]).sort((a, b) => b[1] - a[1]), { n: 25, fmt: pct, corBarra: "s3" })) : vazio(), fontes("partidos")),
+      cartao("Blocos (coalizões) e quantos parlamentares têm", null,
+        blocos.length ? comGrafico(areaGrafico(), (el) => barras(el, blocos.sort((a, b) => b[1] - a[1]), { fmt: (v) => nf.format(v), corBarra: "c7" })) : vazio("A Casa não informou blocos nesta cópia dos dados."), fontes("politicos"))),
+  ];
+}
+
+// ---- Empresas
+async function abaEmpresas() {
+  const [emp, soc, outras, donos, pag, mesmo] = await Promise.all([tabela("empresas"), tabela("socios"), tabela("socios_outras_empresas"), tabela("donos_finais"), tabela("empresa_pagadores"), tabela("empresas_mesmo_endereco")]);
+  const tot = (e) => (e.recebido_cota || 0) + (e.recebido_emendas || 0) + (e.recebido_governo || 0) + (e.renuncia_fiscal || 0);
+  const top = [...emp].sort((a, b) => tot(b) - tot(a));
+  if (!top.length) return [cabeca("Empresas e donos", null), vazio()];
+  const sel = emp.find((e) => e.cnpj === filtro.empresa) || top[0];
+  const t20 = top.slice(0, 20).reverse();
+  const busca = h("input", { type: "search", id: "f-busca", placeholder: "Nome ou CNPJ", list: "lista-emp" });
+  const lista = h("datalist", { id: "lista-emp" }, top.slice(0, 1500).map((e) => h("option", { value: e.cnpj }, e.nome)));
+  busca.addEventListener("change", () => { const v = busca.value.replace(/\D/g, ""); const achou = emp.find((e) => e.cnpj === v) || emp.find((e) => e.nome?.toLowerCase().includes(busca.value.toLowerCase())); if (achou) { filtro.empresa = achou.cnpj; mostrar("empresas"); } });
+  return [
+    cabeca("Quem recebe e quem são os donos", "Empresas pagas com a cota parlamentar, com emendas, pelo governo federal ou que deixaram de pagar impostos. Veja os sócios e as outras empresas dos mesmos donos.",
+      h("label", { for: "f-busca" }, "Procurar empresa", busca, lista)),
+    cartao("As 20 que mais receberam dinheiro público", "Cota parlamentar, emendas, pagamentos do governo federal e renúncia fiscal somados.",
+      comGrafico(areaGrafico(true), (el) => { el.style.height = (t20.length * 28 + 80) + "px"; desenhar(el, {
+        xAxis: eixoValor(), yAxis: eixoCat(t20.map((e) => e.nome)), grid: { top: 36 }, tooltip: { valueFormatter: reaisCurto },
+        series: [["recebido_cota", "Cota parlamentar", "s1"], ["recebido_emendas", "Emendas", "c4"], ["recebido_governo", "Governo federal", "s3"], ["renuncia_fiscal", "Renúncia fiscal", "c8"]]
+          .map(([k, n, c]) => ({ type: "bar", stack: "t", name: n, itemStyle: { color: cor(c) }, data: t20.map((e) => e[k] || 0) })) });
+        el._g = graficos[graficos.length - 1].g; el._g.on("click", (p) => { filtro.empresa = t20[p.dataIndex].cnpj; mostrar("empresas"); }); }),
+      fontes("empresas")),
+    h("div", { class: "grade" },
+      cartao(sel.nome, `CNPJ ${sel.cnpj}${sel.atividade ? " · " + sel.atividade : ""}${sel.municipio ? " · " + sel.municipio + "-" + sel.uf : ""}${sel.abertura ? " · aberta em " + dataBR(sel.abertura) : ""}`,
+        kpis([{ rot: "Cota parlamentar", valor: reaisCurto(sel.recebido_cota) }, { rot: "Emendas", valor: reaisCurto(sel.recebido_emendas) },
+          { rot: "Governo federal", valor: reaisCurto(sel.recebido_governo) }, { rot: "Renúncia fiscal", valor: reaisCurto(sel.renuncia_fiscal) }]),
+        sel.alertas ? h("div", { class: "aviso" }, sel.alertas) : null,
+        h("p", { class: "fonte" }, h("a", { href: sel.portal_da_transparencia, target: "_blank", rel: "noopener" }, "Portal da Transparência ↗"), " ",
+          linkSeguro(sel.pagina_no_site) ? h("a", { href: sel.pagina_no_site, target: "_blank", rel: "noopener" }, "Página no Segredos Abertos ↗") : "")),
+      cartao("Sócios", "CPF mascarado, como a Receita Federal publica.",
+        grade(soc.filter((s) => s.cnpj === sel.cnpj), [{ k: "socio", rot: "Sócio" }, { k: "qualificacao", rot: "Qualificação" }, { k: "entrada", rot: "Entrada", tipo: "data" }, { k: "outras_empresas", rot: "Outras empresas", tipo: "num" }]),
+        fontes("socios")),
+      cartao("Dono final", "Seguindo a cadeia de empresas que são sócias de outras.",
+        grade(donos.filter((s) => s.cnpj === sel.cnpj), [{ k: "dono_final", rot: "Dono final" }, { k: "pais", rot: "País" }, { k: "camadas", rot: "Camadas", tipo: "num" }, { k: "cadeia", rot: "Cadeia" }]),
+        fontes("donos_finais")),
+      cartao("Outras empresas dos mesmos donos", null,
+        grade(outras.filter((s) => s.cnpj === sel.cnpj).sort((a, b) => (b.outra_recebeu_cota + b.outra_recebeu_emendas + b.outra_recebeu_governo) - (a.outra_recebeu_cota + a.outra_recebeu_emendas + a.outra_recebeu_governo)),
+          [{ k: "socio", rot: "Dono" }, { k: "outra_nome", rot: "Empresa" }, { k: "outra_recebeu_cota", rot: "Cota", tipo: "reais" }, { k: "outra_recebeu_emendas", rot: "Emendas", tipo: "reais" },
+            { k: "outra_recebeu_governo", rot: "Governo", tipo: "reais" }, { k: "portal_da_transparencia", rot: "Fonte", tipo: "link" }]),
+        fontes("socios_outras_empresas")),
+      cartao("Políticos que pagaram com a cota", null,
+        grade(pag.filter((s) => s.cnpj === sel.cnpj).sort((a, b) => b.valor - a.valor), [{ k: "nome", rot: "Nome" }, { k: "partido", rot: "Partido" }, { k: "uf", rot: "UF" }, { k: "valor", rot: "Valor", tipo: "reais" }]),
+        fontes("empresa_pagadores")),
+      cartao("Empresas no mesmo endereço", null,
+        grade(mesmo.filter((s) => s.cnpj === sel.cnpj), [{ k: "outra_nome", rot: "Empresa" }, { k: "mesmos_socios", rot: "Mesmos sócios?", tipo: (r) => (r.mesmos_socios ? "sim" : "não") }, { k: "outra_recebeu_cota", rot: "Recebeu da cota", tipo: "reais" }]),
+        fontes("empresas_mesmo_endereco"))),
+  ];
+}
+
+// ---- Emendas
+async function abaEmendas() {
+  const [aut, area, tipo, par, fav, mun] = await Promise.all([tabela("emendas_autores"), tabela("emendas_area"), tabela("emendas_tipo"), tabela("emendas_partido"), tabela("emendas_favorecidos"), tabela("emendas_municipios")]);
+  const anos = anosDe(aut.length ? aut : area); const ano = anoPadrao(anos);
+  const f = (r) => r.ano === ano;
+  const a = aut.filter(f);
+  return [
+    cabeca("Emendas parlamentares", "Dinheiro do Orçamento que deputados e senadores mandam para cidades, entidades e obras. Empenhado é o reservado; pago é o que saiu de fato.", anos.length ? filtroAno(anos, ano) : null),
+    kpis([{ rot: "Empenhado", valor: reaisCurto(total(tipo.filter(f), "empenhado")) }, { rot: "Pago", valor: reaisCurto(total(tipo.filter(f), "pago")) },
+      { rot: "Pago como emenda Pix", valor: reaisCurto(total(a, "pago_emenda_pix")), nota: "dinheiro que cai direto no caixa, sem dizer em que será usado" }]),
+    h("div", { class: "grade" },
+      cartao("Quem mais mandou dinheiro (pago)", null, a.length ? comGrafico(areaGrafico(true), (el) => barras(el, a.map((x) => [x.autor + (x.partido ? ` (${x.partido}-${x.uf})` : ""), x.pago || 0]).sort((p, q) => q[1] - p[1]), { n: 20, corBarra: "c4" })) : vazio(), fontes("emendas_autores")),
+      cartao("Para quais áreas", null, area.length ? comGrafico(areaGrafico(), (el) => barras(el, area.filter(f).map((x) => [x.area, x.pago || 0]).sort((p, q) => q[1] - p[1]), { n: 14, corBarra: "s3" })) : vazio(), fontes("emendas_area")),
+      cartao("Por tipo de emenda", null, tipo.length ? comGrafico(areaGrafico(), (el) => rosca(el, tipo.filter(f).map((x) => [x.tipo, x.pago || 0]))) : vazio(), fontes("emendas_tipo")),
+      cartao("Por partido", null, par.length ? comGrafico(areaGrafico(), (el) => barras(el, par.filter(f).map((x) => [x.partido, x.pago || 0]).sort((p, q) => q[1] - p[1]), { n: 20 })) : vazio(), fontes("emendas_partido")),
+      cartao("Municípios que mais receberam", null, mun.length ? comGrafico(areaGrafico(), (el) => barras(el, mun.filter(f).map((x) => [`${x.municipio}-${x.uf}`, x.valor || 0]).sort((p, q) => q[1] - p[1]), { n: 15, corBarra: "c7" })) : vazio(), fontes("emendas_municipios")),
+      cartao("Quem recebeu o dinheiro", null,
+        grade(fav.filter(f).sort((p, q) => q.valor - p.valor), [{ k: "favorecido", rot: "Favorecido" }, { k: "natureza", rot: "Tipo" }, { k: "municipio", rot: "Cidade" }, { k: "uf", rot: "UF" },
+          { k: "valor", rot: "Valor", tipo: "reais" }, { k: "portal_da_transparencia", rot: "Fonte", tipo: "link" }]), fontes("emendas_favorecidos", "emendas_pagamentos"))),
+  ];
+}
+
+// ---- Incentivos
+async function abaIncentivos() {
+  const [gov, org, ren, ben, set] = await Promise.all([tabela("governo_pagamentos"), tabela("governo_orgaos"), tabela("renuncia_empresas"), tabela("renuncia_beneficios"), tabela("renuncia_setores")]);
+  const anosG = anosDe(gov); const anoG = anoPadrao(anosG);
+  const anosR = anosDe(ren); const anoR = anosR.includes(anoG) ? anoG : anosR[0];
+  const parcial = ren.find((r) => r.ano === anoR)?.ano_parcial;
+  return [
+    cabeca("Quem mais recebe do governo e quem deixa de pagar imposto", "Pagamentos do governo federal a empresas e entidades, e a renúncia fiscal (impostos que a empresa não paga por causa de um benefício).",
+      anosG.length ? filtroAno([...new Set([...anosG, ...anosR])].sort((a, b) => b - a), anoG) : null),
+    parcial ? h("div", { class: "aviso" }, `A renúncia fiscal de ${anoR} ainda está incompleta na fonte oficial.`) : null,
+    h("div", { class: "grade" },
+      cartao("Empresas e entidades que mais receberam do governo federal em " + (anoG ?? "—"), null,
+        gov.length ? comGrafico(areaGrafico(true), (el) => barras(el, gov.filter((x) => x.ano === anoG).map((x) => [x.nome, x.valor || 0]).sort((p, q) => q[1] - p[1]), { n: 20, corBarra: "s3" })) : vazio(), fontes("governo_pagamentos")),
+      cartao("Órgãos que mais pagaram", null,
+        org.length ? comGrafico(areaGrafico(), (el) => barras(el, org.filter((x) => x.ano === anoG).map((x) => [x.orgao, x.valor || 0]).sort((p, q) => q[1] - p[1]), { n: 15 })) : vazio(), fontes("governo_orgaos")),
+      cartao("Empresas com mais renúncia fiscal em " + (anoR ?? "—"), null,
+        ren.length ? comGrafico(areaGrafico(true), (el) => barras(el, ren.filter((x) => x.ano === anoR).map((x) => [x.nome, x.valor || 0]).sort((p, q) => q[1] - p[1]), { n: 20, corBarra: "c8" })) : vazio(), fontes("renuncia_empresas")),
+      cartao("Renúncia por benefício", null,
+        ben.length ? comGrafico(areaGrafico(), (el) => barras(el, ben.filter((x) => x.ano === anoR).map((x) => [`${x.beneficio} (${x.tributo})`, x.valor || 0]).sort((p, q) => q[1] - p[1]), { n: 15, corBarra: "c5" })) : vazio(), fontes("renuncia_beneficios")),
+      cartao("Renúncia por setor da economia", null,
+        set.length ? comGrafico(areaGrafico(), (el) => barras(el, set.filter((x) => x.ano === anoR).map((x) => [x.setor, x.valor || 0]).sort((p, q) => q[1] - p[1]), { n: 15, corBarra: "c7" })) : vazio(), fontes("renuncia_setores")),
+      cartao("Detalhe: quem recebeu e quem são os donos", null,
+        grade(gov.filter((x) => x.ano === anoG).sort((p, q) => q.valor - p.valor), [{ k: "nome", rot: "Nome" }, { k: "uf", rot: "UF" }, { k: "valor", rot: "Valor", tipo: "reais" }, { k: "donos", rot: "Donos" },
+          { k: "outras_empresas_dos_donos", rot: "Outras empresas dos donos", tipo: "num" }, { k: "portal_da_transparencia", rot: "Fonte", tipo: "link" }]), fontes("governo_pagamentos"))),
+  ];
+}
+
+// ---- Dinheiro do Brasil
+async function abaBrasil() {
+  const [serie, func, trib, uf, org, ind] = await Promise.all([tabela("brasil_serie"), tabela("brasil_funcoes"), tabela("brasil_tributos"), tabela("brasil_arrecadacao_uf"), tabela("brasil_orgaos"), tabela("brasil_indicadores")]);
+  const s = [...serie].sort((a, b) => a.ano - b.ano);
+  const anos = anosDe(func.length ? func : serie); const ano = anoPadrao(anos);
+  const corInd = { verde: "s3", amarelo: "c4", vermelho: "c8" };
+  return [
+    cabeca("Quanto o governo federal arrecada e gasta", "Dados do Tesouro Nacional (Siconfi), da Receita Federal e do Portal da Transparência.", anos.length ? filtroAno(anos, ano) : null),
+    cartao("Arrecadação e gastos, ano a ano", "Valores nominais. Juros são os juros da dívida; INSS são os benefícios da Previdência.",
+      s.length ? comGrafico(areaGrafico(), (el) => linhas(el, s.map((x) => String(x.ano) + (x.ano_parcial ? "*" : "")), [
+        { nome: "Impostos", dados: s.map((x) => x.impostos), cor: "s3" }, { nome: "Despesa total", dados: s.map((x) => x.despesa), cor: "s1" },
+        { nome: "INSS", dados: s.map((x) => x.inss), cor: "c7" }, { nome: "Juros", dados: s.map((x) => x.juros), cor: "c8" },
+        { nome: "Pessoal", dados: s.map((x) => x.pessoal), cor: "c4" }, { nome: "Investimentos", dados: s.map((x) => x.investimentos), cor: "s2" }])) : vazio(),
+      fontes("brasil_serie")),
+    h("div", { class: "grade" },
+      cartao("Gasto por área em " + (ano ?? "—"), "Despesa liquidada por função do Orçamento.",
+        func.length ? comGrafico(areaGrafico(true), (el) => barras(el, func.filter((x) => x.ano === ano).map((x) => [x.funcao, x.liquidado || 0]).sort((p, q) => q[1] - p[1]), { n: 28 })) : vazio(), fontes("brasil_funcoes")),
+      cartao("Arrecadação por imposto", null,
+        trib.length ? comGrafico(areaGrafico(true), (el) => barras(el, soma(trib.filter((x) => x.ano === ano), "tributo", "valor"), { n: 20, corBarra: "s3" })) : vazio(), fontes("brasil_tributos")),
+      cartao("Arrecadação federal por estado", null,
+        uf.length ? comGrafico(areaGrafico(true), (el) => barras(el, uf.filter((x) => x.ano === ano).map((x) => [x.uf, x.arrecadacao || 0]).sort((p, q) => q[1] - p[1]), { n: 27, corBarra: "c7" })) : vazio(), fontes("brasil_arrecadacao_uf")),
+      cartao("Ministérios e órgãos que mais gastaram", null,
+        org.length ? comGrafico(areaGrafico(), (el) => barras(el, org.filter((x) => x.ano === ano).map((x) => [x.orgao, x.realizado || 0]).sort((p, q) => q[1] - p[1]), { n: 15, corBarra: "c4" })) : vazio(), fontes("brasil_orgaos"))),
+    cartao("Sinais de alerta das contas", "Verde está dentro do esperado; amarelo pede atenção; vermelho passou do limite.",
+      grade(ind.filter((x) => x.ano === ano), [{ k: "situacao", rot: "Situação", tipo: (r) => h("span", { class: "chip", style: `background:color-mix(in srgb, var(--${corInd[r.situacao] || "outro"}) 30%, transparent)` }, r.situacao) },
+        { k: "indicador", rot: "Pergunta" }, { k: "explicacao", rot: "O que mostra" }, { k: "fonte_oficial", rot: "Fonte", tipo: "link" }]), fontes("brasil_indicadores")),
+  ];
+}
+
+// ---- Projetos
+async function abaProjetos() {
+  const [proj] = await Promise.all([tabela("projetos_andamento")]);
+  const casaNome = { camara: "Câmara", senado: "Senado", almg: "ALMG" };
+  const p = [...proj].sort((a, b) => (a.proxima_pauta || "9999").localeCompare(b.proxima_pauta || "9999"));
+  return [
+    cabeca("Projetos em andamento", "Projetos de lei, PECs e medidas provisórias que estão andando agora, com a próxima data na pauta."),
+    h("div", { class: "grade" },
+      cartao("Por tipo de proposta", null, p.length ? comGrafico(areaGrafico(), (el) => barras(el, soma(p.map((x) => ({ ...x, um: 1 })), "tipo", "um"), { fmt: (v) => nf.format(v), corBarra: "c7" })) : vazio(), fontes("projetos_andamento")),
+      cartao("Onde estão", null, p.length ? comGrafico(areaGrafico(), (el) => barras(el, soma(p.map((x) => ({ ...x, um: 1 })), (x) => `${casaNome[x.casa] || x.casa}: ${x.onde_esta}`, "um"), { fmt: (v) => nf.format(v), n: 12 })) : vazio(), fontes("projetos_andamento"))),
+    cartao("Lista", null,
+      grade(p, [{ k: "proxima_pauta", rot: "Na pauta em", tipo: "data" }, { k: "casa", rot: "Casa", tipo: (r) => casaNome[r.casa] || r.casa }, { k: "proposta", rot: "Proposta" },
+        { k: "ementa", rot: "O que propõe" }, { k: "primeiro_autor", rot: "Autor" }, { k: "situacao", rot: "Situação" }, { k: "proposta_original", rot: "Fonte", tipo: "link" }], 500),
+      fontes("projetos_andamento", "projetos_autores")),
+  ];
+}
+
+// ---- Minas Gerais
+async function abaMinas() {
+  const [dep, dano, eMun, eAut, equipe, gov, cid] = await Promise.all([tabela("mg_deputados_estaduais"), tabela("mg_deputados_ano"), tabela("mg_emendas_municipios"), tabela("mg_emendas_autores"), tabela("mg_governo_equipe"), tabela("mg_governo_eleicoes"), tabela("mg_cidades")]);
+  const nome = new Map(dep.map((d) => [d.deputado_id, `${d.nome} (${d.partido})`]));
+  const anos = anosDe(dano); const ano = anoPadrao(anos);
+  const anosE = anosDe(eMun); const anoE = anosE.includes(ano) ? ano : anosE[0];
+  return [
+    cabeca("Minas Gerais", "Deputados estaduais, governo do estado, emendas estaduais e cidades acompanhadas pelo Minas Nossa.", anos.length ? filtroAno(anos, ano) : null),
+    h("div", { class: "grade" },
+      cartao("Verba indenizatória dos deputados estaduais", "Reembolso de gastos do gabinete, por deputado.",
+        dano.length ? comGrafico(areaGrafico(true), (el) => barras(el, dano.filter((x) => x.ano === ano).map((x) => [nome.get(x.deputado_id) || x.deputado_id, x.verba_indenizatoria || 0]).sort((p, q) => q[1] - p[1]), { n: 20 })) : vazio(), fontes("mg_deputados_ano")),
+      cartao("Emendas estaduais pagas por deputado em " + (anoE ?? "—"), null,
+        eAut.length ? comGrafico(areaGrafico(true), (el) => barras(el, eAut.filter((x) => x.ano === anoE).map((x) => [x.autor, x.pago || 0]).sort((p, q) => q[1] - p[1]), { n: 20, corBarra: "c4" })) : vazio(), fontes("mg_emendas_autores")),
+      cartao("Municípios que mais receberam emendas estaduais", null,
+        eMun.length ? comGrafico(areaGrafico(), (el) => barras(el, eMun.filter((x) => x.ano === anoE).map((x) => [x.municipio, x.pago || 0]).sort((p, q) => q[1] - p[1]), { n: 15, corBarra: "s3" })) : vazio(), fontes("mg_emendas_municipios")),
+      cartao("Governador, vice e secretários: salário", null,
+        grade([...equipe].sort((a, b) => b.salario_bruto - a.salario_bruto), [{ k: "nome", rot: "Nome" }, { k: "cargo", rot: "Cargo" }, { k: "salario_bruto", rot: "Bruto", tipo: "reais" },
+          { k: "salario_liquido", rot: "Líquido", tipo: "reais" }, { k: "gasto_viagens", rot: "Viagens", tipo: "reais" }, { k: "fonte_oficial", rot: "Fonte", tipo: "link" }]), fontes("mg_governo_equipe")),
+      cartao("Eleições para governador", null,
+        grade([...gov].sort((a, b) => b.eleicao - a.eleicao || b.votos - a.votos), [{ k: "eleicao", rot: "Eleição" }, { k: "candidato", rot: "Candidato" }, { k: "partido", rot: "Partido" },
+          { k: "votos", rot: "Votos", tipo: "num" }, { k: "eleito", rot: "Eleito", tipo: (r) => (r.eleito ? "sim" : "") }]), fontes("mg_governo_eleicoes")),
+      cartao("Cidades acompanhadas", null,
+        grade(cid, [{ k: "cidade", rot: "Cidade" }, { k: "prefeito", rot: "Prefeito" }, { k: "partido_prefeito", rot: "Partido" }, { k: "vereadores", rot: "Vereadores", tipo: "num" }, { k: "pagina_no_site", rot: "Página", tipo: "link" }]),
+        fontes("mg_cidades", "mg_cidades_contas", "mg_cidades_emendas_federais"))),
+  ];
+}
+
+// ---- Eleição 2026
+async function abaEleicao() {
+  const [cand, comp] = await Promise.all([tabela("eleicao2026_candidatos"), tabela("eleicao2026_comparecimento")]);
+  const turno = Number(filtro.turno) || 2;
+  const br = cand.filter((c) => c.turno === turno && c.uf === "BR").sort((a, b) => b.votos - a.votos);
+  const cb = comp.find((c) => c.turno === turno && c.uf === "BR");
+  const dois = br.slice(0, 2);
+  const ufs = [...new Set(cand.filter((c) => c.turno === turno && c.uf !== "BR" && c.uf !== "ZZ").map((c) => c.uf))];
+  const pctUf = (uf, nomeC) => cand.find((c) => c.turno === turno && c.uf === uf && c.candidato === nomeC)?.pct_validos ?? 0;
+  ufs.sort((a, b) => pctUf(b, dois[0]?.candidato) - pctUf(a, dois[0]?.candidato));
+  const corCand = (p) => ({ PT: "esq", PL: "dir" }[p] || "outro");
+  return [
+    cabeca("Eleição 2026 para presidente", "Resultado oficial do TSE, por estado e turno.",
+      seletor("f-turno", "Turno", [[1, "1º turno"], [2, "2º turno"]], turno, (v) => { filtro.turno = Number(v); mostrar("eleicao"); })),
+    kpis([...dois.map((c) => ({ rot: `${c.candidato} (${c.partido})`, valor: nf1.format(c.pct_validos) + "%", nota: `${nf.format(c.votos)} votos · ${c.situacao}` })),
+      { rot: "Comparecimento", valor: cb ? pct(cb.compareceram / cb.eleitores) : "—", nota: cb ? `${nf.format(cb.abstencoes)} abstenções` : "" },
+      { rot: "Brancos e nulos", valor: cb ? nf.format(cb.brancos + cb.nulos) : "—" }]),
+    h("div", { class: "grade" },
+      cartao("Votos válidos no Brasil", null, br.length ? comGrafico(areaGrafico(), (el) => barras(el, br.map((c) => [`${c.candidato} (${c.partido})`, c.pct_validos]), { fmt: (v) => nf1.format(v) + "%" })) : vazio(), fontes("eleicao2026_candidatos")),
+      cartao("Por estado", "Porcentagem dos votos válidos dos dois mais votados.", ufs.length && dois.length ? comGrafico(areaGrafico(true), (el) => {
+        el.style.height = (ufs.length * 22 + 80) + "px";
+        desenhar(el, { xAxis: { ...eixoValor((v) => v + "%"), max: 100 }, yAxis: eixoCat([...ufs].reverse()), grid: { top: 36 }, tooltip: { valueFormatter: (v) => nf1.format(v) + "%" },
+          series: dois.map((c) => ({ type: "bar", stack: "p", name: c.candidato, itemStyle: { color: cor(corCand(c.partido)) }, data: [...ufs].reverse().map((u) => pctUf(u, c.candidato)) })) });
+      }) : vazio(), fontes("eleicao2026_candidatos"))),
+    cartao("Comparecimento por estado", null,
+      grade(comp.filter((c) => c.turno === turno).sort((a, b) => b.eleitores - a.eleitores), [{ k: "uf", rot: "UF" }, { k: "eleitores", rot: "Eleitores", tipo: "num" }, { k: "compareceram", rot: "Votaram", tipo: "num" },
+        { k: "abstencoes", rot: "Abstenções", tipo: "num" }, { k: "brancos", rot: "Brancos", tipo: "num" }, { k: "nulos", rot: "Nulos", tipo: "num" }, { k: "fonte_oficial", rot: "TSE", tipo: "link" }]),
+      fontes("eleicao2026_comparecimento")),
+  ];
+}
+
+// ---- Terras raras
+async function abaTerras() {
+  const [proj, emp, lic, num, not] = await Promise.all([tabela("terras_raras_projetos"), tabela("terras_raras_empresas"), tabela("terras_raras_licencas"), tabela("terras_raras_numeros"), tabela("terras_raras_noticias")]);
+  const graf = num.filter((n) => n.valor_grafico && !isNaN(Number(n.valor_grafico)));
+  return [
+    cabeca("Terras raras em Minas", "Quem explora terras raras em Minas Gerais, licenças, dinheiro e notícias. Planilhas conferidas à mão, cada linha com a fonte."),
+    h("div", { class: "grade" },
+      cartao("Números dos projetos", "Valores em R$ milhões, como estão na planilha.", graf.length ? comGrafico(areaGrafico(true), (el) => barras(el, graf.map((n) => [n.indicador, Number(n.valor_grafico)]).sort((a, b) => b[1] - a[1]), { n: 20, fmt: (v) => "R$ " + nf.format(v) + " mi", corBarra: "c4" })) : vazio(), fontes("terras_raras_numeros")),
+      cartao("Projetos", null, grade(proj, [{ k: "projeto", rot: "Projeto" }, { k: "empresa", rot: "Empresa" }, { k: "pais_do_controlador", rot: "País" }, { k: "municipios", rot: "Municípios" }, { k: "fase", rot: "Fase" }, { k: "fonte_url", rot: "Fonte", tipo: "link" }]), fontes("terras_raras_projetos")),
+      cartao("Empresas e donos", null, grade(emp, [{ k: "nome", rot: "Empresa" }, { k: "pais_sede", rot: "País" }, { k: "donos_acionistas_controle", rot: "Donos" }, { k: "fonte_url", rot: "Fonte", tipo: "link" }]), fontes("terras_raras_empresas")),
+      cartao("Licenças pendentes", null, grade(lic, [{ k: "projeto", rot: "Projeto" }, { k: "o_que_esta_pendente", rot: "Pendente" }, { k: "orgao", rot: "Órgão" }, { k: "status", rot: "Situação" }, { k: "fonte_url", rot: "Fonte", tipo: "link" }]), fontes("terras_raras_licencas"))),
+    cartao("Processos e notícias", null, grade([...not].sort((a, b) => (b.data || "").localeCompare(a.data || "")), [{ k: "data", rot: "Data", tipo: "data" }, { k: "titulo", rot: "Título" }, { k: "status", rot: "Situação" }, { k: "fonte_url", rot: "Fonte", tipo: "link" }]), fontes("terras_raras_noticias")),
+  ];
+}
+
+// ---- Baixar tabelas
+async function abaTabelas() {
+  const cat = await catalogo();
+  const grupos = [...new Set(cat.tabelas.map((t) => t.grupo))];
+  return [
+    cabeca("Baixar as tabelas", "Todas as tabelas usadas nos gráficos, em CSV (abre no Excel, LibreOffice e Google Planilhas). São atualizadas todo dia junto com o site."),
+    h("p", {}, h("a", { class: "baixar", href: PUBLICO.replace(/tabelas\/$/, "") + "tabelas.zip", target: "_blank", rel: "noopener" }, "Baixar todas as tabelas (.zip) ↓"), " ",
+      h("a", { class: "baixar", href: PUBLICO + "catalogo.json", target: "_blank", rel: "noopener" }, "Dicionário de dados (catalogo.json) ↓")),
+    ...grupos.map((g) => cartao(g.replace(/^\d+\s*/, ""), null,
+      grade(cat.tabelas.filter((t) => t.grupo === g), [{ k: "nome", rot: "Tabela", tipo: (t) => baixar(t.nome, t.arquivo) }, { k: "descricao", rot: "O que tem" },
+        { k: "linhas", rot: "Linhas", tipo: "num" }, { k: "fonte", rot: "Fonte oficial", tipo: "link" }], 100))),
+  ];
+}
+
+// ------------------------------------------------------------ início
+
+document.getElementById("abas").replaceChildren(...ABAS.map((a) => h("a", { href: "#" + a.id, "data-id": a.id }, a.nome)));
+window.addEventListener("hashchange", () => mostrar(location.hash.slice(1)));
+catalogo().then((c) => {
+  document.getElementById("atualizado").textContent = c.atualizado_em ? `Dados atualizados em ${dataBR(c.atualizado_em)}.` : "Dados das tabelas publicadas pelo projeto.";
+  const linhas = (n) => c.tabelas.find((t) => t.nome === n)?.linhas || 0;
+  if (c.tabelas.length && !linhas("politicos")) {
+    document.querySelector("main .dentro").before(h("div", { class: "dentro" }, h("div", { class: "aviso", style: "margin-top:16px" },
+      "Esta cópia do painel ainda não tem os dados de políticos, empresas, emendas e Minas Gerais. O painel completo, atualizado todo dia, fica em ",
+      h("a", { href: "https://amarigo.github.io/segredos-abertos/analises/", target: "_blank", rel: "noopener" }, "amarigo.github.io/segredos-abertos/analises"), ".")));
+  }
+});
+if (!window.echarts) document.getElementById("conteudo").prepend(h("div", { class: "aviso" }, "A biblioteca de gráficos não carregou. Verifique a conexão e recarregue a página."));
+mostrar(location.hash.slice(1) || "inicio");
+</script>

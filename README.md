@@ -10,6 +10,7 @@ site/         site e app (React + Vite, instalável no celular como PWA)
 mg/           Minas Nossa, o recorte de Minas Gerais (/mg/)
 eleicao2026/  Eleição 2026 Aberta: presidente, 1º e 2º turno, urna por urna, com dados do TSE (/eleicao2026/)
 terras-raras/ Terras Raras em Minas: quem explora terras raras em MG, licenças, dinheiro, leis e propostas (/terras-raras/)
+analises/     Painel de análises: todos os dados em gráficos e em tabelas CSV para baixar (/analises/)
 ```
 
 Um GitHub Action roda todo dia: baixa os dados, gera os JSON em `site/public/data/`, monta o site e publica no GitHub Pages.
@@ -60,6 +61,14 @@ a direita e a Justiça, e um placar por partido. Não existe API oficial que jun
 o conteúdo é escrito à mão em `site/src/corrupcao/dados.ts`, cada item com o link da fonte original, e conferido na data
 de `ATUALIZADO_EM`. Esquerda, centro ou direita vêm da pesquisa de Bolognesi, Ribeiro e Codato (revista Dados, 2023).
 Os testes em `site/tests/corrupcao.test.ts` exigem fonte https em tudo e conferem as contas do placar.
+
+## Painel de análises (/analises/)
+
+Todos os dados dos sites (gastos, votações, partidos, empresas e donos, emendas, incentivos, contas do Brasil,
+projetos, Minas Gerais, Eleição 2026 e terras raras) em um painel com gráficos e 71 tabelas CSV para baixar, cada
+uma com o link da fonte oficial. Os gráficos usam o [Apache ECharts](https://github.com/apache/echarts) (licença
+Apache 2.0). O painel é montado todo dia junto com o site e não faz coleta nova. Detalhes em
+[analises/README.md](analises/README.md).
 
 ## Terras Raras em Minas (/terras-raras/)
 
