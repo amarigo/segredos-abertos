@@ -111,9 +111,11 @@ class Oficial:
         for site in self.fora_do_ar:
             if site in url:
                 raise RuntimeError(f"Não foi possível baixar {url}: 503")
-        if m := re.search(r"/deputados/(\d+)/despesas\?ano=(\d+)&mes=(\d+)", url):
+        if m := re.search(r"/deputados/(\d+)/despesas\?.*\bano=(\d+)&mes=(\d+)", url):
             k = (m.group(1), int(m.group(2)), int(m.group(3)))
-            return {"dados": [] if self.despesas_vazias else self.mes.get(k, []), "links": []}
+            # Como a API real desde nov/2026: sem idLegislatura, responde sem nenhuma despesa
+            sem_leg = f"idLegislatura={vf.legislatura(k[1], k[2])}" not in url
+            return {"dados": [] if self.despesas_vazias or sem_leg else self.mes.get(k, []), "links": []}
         if m := re.search(r"/votacoes/([^/]+)/votos$", url):
             d = _ler(self.s / "v" / f"cd-{m.group(1)}.json")
             dados = [{"tipoVoto": x["voto"], "deputado_": {"id": int(x["politico"].removeprefix("dep-"))}} for x in d["votos"]]
@@ -185,6 +187,32 @@ def test_divergencia_aparece_com_link(saida):
     assert v["secoes"]["votacoes"]["status"] == "divergente"
     assert _checagem(v, "cota_senado_ano")["status"] == "divergente"
     assert v["secoes"]["cota"]["status"] == "divergente"
+
+
+def test_diferenca_sem_motivo_vai_para_a_conferencia_manual(saida):
+    """Toda diferença sem motivo conhecido sai num relatório (md e csv) com o valor do site, o oficial e os links."""
+    import csv
+    of = Oficial(saida)
+    of.voto_trocado = "Obstrução"
+    v = _rodar(saida, of)
+    vf.gravar_revisao_manual(saida, v)
+    md = (saida / "revisao-manual.md").read_text(encoding="utf-8")
+    linhas = list(csv.DictReader(open(saida / "revisao-manual.csv", encoding="utf-8-sig")))
+    sem_motivo = sum(c["sem_motivo"] for c in v["checagens"])
+    assert sem_motivo and len(linhas) == sem_motivo == v["revisao_manual"]["diferencas"]
+    assert all(x["fonte_oficial"].startswith("https://") for x in linhas)
+    assert all(x["conferido_por"] == "" for x in linhas)  # para a pessoa preencher
+    assert "Voto de cada deputado" in md or "voto" in md.lower()
+    assert "[fonte oficial](https://" in md
+    json.dumps(v)  # sem a lista inteira no verificacao.json, só o resumo
+    assert "itens" not in json.dumps(v["revisao_manual"])
+
+
+def test_sem_diferenca_relatorio_diz_que_nao_ha():
+    v = {"data": "2026-10-27", "revisao_manual": [{"id": "x", "titulo": "X", "como": "", "itens": [],
+                                                    "nao_conferidos": [], "motivo": ""}]}
+    assert "Nenhuma diferença sem motivo conhecido" in vf.revisao_manual_md(v)
+    assert vf.revisao_manual_linhas(v) == []
 
 
 def test_api_sem_dados_nunca_vira_conferido(saida):
@@ -284,3 +312,41 @@ def test_placar_oficial_da_camara_vem_do_arquivo():
     assert vs[0]["placar_oficial"] == {"sim": 300, "nao": 100}
     vs, _ = camara.parse_votacoes([{**vot[0], "votosSim": ""}], votos, [], [], {"dep-10"})
     assert "placar_oficial" not in vs[0]
+
+
+def test_legislatura_da_camara():
+    """A API de despesas só responde com idLegislatura; a legislatura começa em 1º de fevereiro."""
+    assert vf.legislatura(2023, 1) == 56
+    assert vf.legislatura(2023, 2) == 57
+    assert vf.legislatura(2026, 12) == 57
+    assert vf.legislatura(2027, 1) == 57
+    assert vf.legislatura(2027, 2) == 58
+
+
+def test_pagina_do_ano_anterior_nao_fica_guardada_para_sempre():
+    """Notas de novembro e dezembro chegam até março: a página do ano anterior precisa ser baixada de novo."""
+    from sa_etl import recursos
+    agora = 1_800_000_000.0
+    dia = 86400
+    assert recursos._cache_vale(2024, 2026, agora - 400 * dia, agora)  # dois anos atrás: vale
+    assert recursos._cache_vale(2025, 2026, agora - 2 * dia, agora)  # ano anterior, cópia recente: vale
+    assert not recursos._cache_vale(2025, 2026, agora - 30 * dia, agora)  # ano anterior, cópia velha: baixa de novo
+    assert not recursos._cache_vale(2026, 2026, agora, agora)  # ano corrente: sempre baixa
+
+
+def test_legislaturas_na_virada():
+    """Jan a mar de 2023: as notas ficam divididas entre a 56ª e a 57ª legislatura; a API precisa das duas."""
+    assert vf.legislaturas(2023, 1) == [56, 57]
+    assert vf.legislaturas(2023, 3) == [56, 57]
+    assert vf.legislaturas(2023, 4) == [57]
+    assert vf.legislaturas(2025, 1) == [57]
+    assert vf.legislaturas(2027, 2) == [57, 58]
+
+
+def test_o_que_a_api_da_camara_nao_lista():
+    from sa_etl.build import nao_esta_na_api
+    assert nao_esta_na_api({"politico": "dep-1", "data": "", "categoria": "Telefonia"})  # sem data no arquivo anual
+    assert nao_esta_na_api({"politico": "dep-1", "data": "2025-09-01", "sem_nota": True})  # completado com a página
+    assert not nao_esta_na_api({"politico": "dep-1", "data": "2025-09-02", "fonte_lista": True})  # SIGEPA: está na API
+    assert not nao_esta_na_api({"politico": "dep-1", "data": "2025-09-02"})
+    assert not nao_esta_na_api({"politico": "sen-1", "data": ""})  # só Câmara
