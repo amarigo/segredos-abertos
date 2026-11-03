@@ -742,7 +742,7 @@ def main() -> None:
                     help="não monta a lista de projetos em andamento (pauta, novas e medidas provisórias)")
     ap.add_argument("--sem-tribunais", action="store_true",
                     help="não lê os julgamentos do STF (como cada ministro votou no Plenário Virtual)")
-    ap.add_argument("--minutos-tribunais", type=float, default=15,
+    ap.add_argument("--minutos-tribunais", type=float, default=10,
                     help="tempo máximo, por execução, para ler as sessões do STF ainda não guardadas")
     ap.add_argument("--minutos-pagamentos-gerais", type=float, default=40,
                     help="tempo máximo, por execução, para completar os dias antigos dos pagamentos a empresas")
@@ -764,7 +764,7 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
              com_emendas: bool = True, com_incentivos: bool = True, minutos_pagamentos: float = 45,
              minutos_gerais: float = 40, com_financas: bool = True, com_tramitacao: bool = True,
              novas_empresas: int = cnpj.NOVAS_POR_COLETA, minutos_transferegov: float = 15,
-             com_tribunais: bool = True, minutos_tribunais: float = 15) -> None:
+             com_tribunais: bool = True, minutos_tribunais: float = 10) -> None:
     """A coleta inteira, na ordem certa (usada também pelos testes)."""
     # A renúncia vem antes dos arquivos diários: o Portal passa a recusar downloads (HTTP 405) depois de muitos
     # pedidos seguidos, e os arquivos de renúncia são poucos (e ficam uma semana no cache)

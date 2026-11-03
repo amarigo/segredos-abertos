@@ -123,8 +123,8 @@ export default function App() {
             {!MG && <NavLink to="/corrupcao">Corrupção</NavLink>}
             <NavLink to="/sobre">Como funciona</NavLink>
           </nav>
-          {/* A página de arrecadação tem os próprios anos (do Tesouro) e a de corrupção não depende de ano: o seletor só confundiria */}
-          {pathname !== "/dinheiro" && !pathname.startsWith("/corrupcao") && <AnoSeletor />}
+          {/* A página de arrecadação tem os próprios anos (do Tesouro); corrupção e julgamentos do STF não dependem de ano: o seletor só confundiria */}
+          {pathname !== "/dinheiro" && !pathname.startsWith("/corrupcao") && pathname !== "/votacoes/tribunais" && <AnoSeletor />}
         </div>
       </header>
       <main className="wrap">

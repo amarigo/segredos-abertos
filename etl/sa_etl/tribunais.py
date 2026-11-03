@@ -40,6 +40,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+import requests
+
 from .util import avisar, get_json, id_seguro, url_segura, write_json
 
 log = logging.getLogger("sa_etl.tribunais")
@@ -322,6 +324,14 @@ def ler_sessao(ini: str, fim: str, limite: float) -> tuple[list[dict], bool, int
                 return out, False, falhas
             try:
                 out += votos_do_processo(p, ini, fim)
+            except requests.HTTPError as e:
+                # 404: o STF não tem placar virtual desse processo (conferido em 03/11/2026: acontece com processos
+                # antigos e alguns recursos). Não muda tentando de novo, então não conta como falha.
+                if e.response is not None and e.response.status_code == 404:
+                    log.info("STF: %s sem placar no serviço de votação (404)", chave)
+                    continue
+                log.warning("STF: votos de %s não lidos (%s)", chave, e)
+                falhas += 1
             except Exception as e:  # noqa: BLE001  um processo com erro não derruba a sessão inteira
                 log.warning("STF: votos de %s não lidos (%s)", chave, e)
                 falhas += 1

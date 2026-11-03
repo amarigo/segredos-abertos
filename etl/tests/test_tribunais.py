@@ -124,3 +124,13 @@ def test_stf_fora_do_ar_sem_copia(tmp_path, monkeypatch):
     instalar(monkeypatch, FakeGov(anos=[2025]).falhar("stf.jus.br", "html"))
     out = t.coletar(tmp_path / "saida", tmp_path / "cache")
     assert out["situacao_fontes"]["stf"] == "faltando" and out["julgamentos"] == []
+
+
+def test_processo_sem_placar_404_nao_trava_a_sessao(tmp_path, monkeypatch):
+    monkeypatch.setattr(t, "DIAS_RELER", 0)
+    util.AVISOS.clear()
+    instalar(monkeypatch, FakeGov(anos=[2025]).falhar("sessaoVirtual=7000001", "404"))
+    monkeypatch.setattr(t, "PAUSA", 0)
+    out = t.coletar(tmp_path / "saida", tmp_path / "cache")
+    assert out["situacao_fontes"]["stf"] == "ok" and "ADI 7001" not in [j["processo"] for j in out["julgamentos"]]
+    assert list((tmp_path / "cache" / "tribunais" / "stf").glob("sessao-*.json"))  # encerrada guardada de vez
