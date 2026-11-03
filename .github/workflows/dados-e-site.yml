@@ -132,24 +132,6 @@ jobs:
         working-directory: site
         run: npm audit --omit=dev --audit-level=high
 
-  # TEMPORÁRIO (sai antes do merge): confere o coletor das emendas Pix com a API real do Transferegov
-  sondar-transferegov:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-      - run: pip install -r etl/requirements.txt
-      - uses: actions/cache@v4
-        with:
-          path: /tmp/tg-cache
-          key: sonda-tg-${{ github.run_id }}
-          restore-keys: sonda-tg-
-      - run: python etl/sondas/sondar_transferegov.py /tmp/tg-saida /tmp/tg-cache 30 2>&1 | tee sonda.log | grep -v " INFO sa_etl.util" | tail -n 80
-
   coletar:
     needs: [testes-coletor, testes-site]
     if: github.event_name != 'pull_request'

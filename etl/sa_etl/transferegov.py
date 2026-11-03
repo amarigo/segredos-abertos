@@ -27,6 +27,7 @@ import datetime as dt
 import gzip
 import json
 import logging
+import re
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -242,9 +243,14 @@ def _relatorios_dos_planos(t: dict) -> list[int]:
 
 def codigo_emenda(p: dict) -> str:
     """O número da emenda como no Portal da Transparência (ano + autor + sequencial, 12 dígitos)."""
-    c = digits(p.get("codigo_emenda_parlamentar_formatado_plano_acao"))
+    # a API traz "202027070006-Iracema Portella": só os dígitos do começo (o nome pode ter números)
+    m = re.match(r"\s*([\d.\s/-]*\d)", str(p.get("codigo_emenda_parlamentar_formatado_plano_acao") or ""))
+    c = digits(m.group(1)) if m else ""
     if c:
         return c
+    n = digits(str(p.get("numero_emenda_parlamentar_plano_acao") or ""))
+    if len(n) >= 8:  # na API real o número já vem completo (ano + autor + sequencial)
+        return n
     ano, autor, num = p.get("ano_emenda_parlamentar_plano_acao"), p.get("codigo_parlamentar_emenda_plano_acao"), p.get("numero_emenda_parlamentar_plano_acao")
     if ano and autor and num:
         return f"{int(ano)}{int(autor):04d}{int(num):04d}"

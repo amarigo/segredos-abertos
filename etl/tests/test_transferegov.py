@@ -107,6 +107,10 @@ def test_ano_errado_fica_de_fora(gov, tmp_path):
 
 
 def test_codigo_da_emenda():
+    # formato real da API (conferido na sonda de 03/11/2026)
+    assert transferegov.codigo_emenda({"codigo_emenda_parlamentar_formatado_plano_acao": "202027070006-Iracema Portella"}) == "202027070006"
+    assert transferegov.codigo_emenda({"codigo_emenda_parlamentar_formatado_plano_acao": "202027070006-Deputado 2 Vezes"}) == "202027070006"
+    assert transferegov.codigo_emenda({"numero_emenda_parlamentar_plano_acao": 202027070006}) == "202027070006"
     assert transferegov.codigo_emenda({"codigo_emenda_parlamentar_formatado_plano_acao": "2025.4415.0001"}) == "202544150001"
     assert transferegov.codigo_emenda({"ano_emenda_parlamentar_plano_acao": 2025, "codigo_parlamentar_emenda_plano_acao": 4415,
                                        "numero_emenda_parlamentar_plano_acao": 1}) == "202544150001"
