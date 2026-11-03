@@ -71,7 +71,7 @@ export function AtuacaoPolitico({ p }: { p: Politico }) {
     <>
       <section>
         <h2>Atuação em {ano}</h2>
-        <Explain>Números oficiais {p.casa === "camara" ? "da Câmara" : "do Senado"}, comparados com os outros {Math.max(colegas.length - 1, 0)} {quem} em exercício hoje que também tinham mandato em {ano}. Quantidade não mede qualidade: um projeto importante pode valer mais que dezenas de requerimentos. Mas mostra quem aparece para trabalhar e quem participa.</Explain>
+        <Explain>Números oficiais {p.casa === "camara" ? "da Câmara" : "do Senado"}, comparados com os outros {Math.max(colegas.length - 1, 0)} {quem} que tiveram mandato (inclusive quem já saiu do cargo) em {ano}. Quantidade não mede qualidade: um projeto importante pode valer mais que dezenas de requerimentos. Mas mostra quem aparece para trabalhar e quem participa.</Explain>
       </section>
 
       <section>

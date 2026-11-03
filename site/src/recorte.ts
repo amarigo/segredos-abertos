@@ -13,7 +13,7 @@ export const SITE = MG
   }
   : {
     nome: "Segredos Abertos", destaque: "Brasil", titulo: "Segredos Abertos Brasil",
-    quem: "deputados federais e senadores em exercício",
+    quem: "deputados federais e senadores desta legislatura",
     busca: "Procure seu deputado ou senador",
     buscaExemplo: "Nome, partido ou estado (ex.: SP)",
     fontes: "Dados oficiais da Câmara dos Deputados, do Senado Federal, da Receita Federal e do Portal da Transparência",

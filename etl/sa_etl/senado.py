@@ -1,4 +1,4 @@
-"""Senado Federal: senadores em exercício, cota (CEAPS) e votações nominais do plenário.
+"""Senado Federal: senadores (em exercício e os que já saíram na legislatura), cota (CEAPS) e votações nominais do plenário.
 
 Fontes:
 - https://legis.senado.leg.br/dadosabertos/senador/lista/atual.json
@@ -16,7 +16,7 @@ from pathlib import Path
 
 from .camara import normaliza_voto
 from .categorias import categoria_curta, grupo_de
-from .util import avisar, data_do_arquivo, digits, get_json, norm_name, to_float, url_segura
+from .util import avisar, com_copia, data_do_arquivo, fora_da_lista, digits, get_json, norm_name, to_float, url_segura
 
 log = logging.getLogger("sa_etl.senado")
 
@@ -61,9 +61,74 @@ def parse_senadores(data: dict) -> list[dict]:
     return out
 
 
-def senadores() -> list[dict]:
+def _uf_do_mandato(p: dict, leg: int) -> str:
+    for m in _as_list((p.get("Mandatos") or {}).get("Mandato")):
+        legs = {str((m.get(k) or {}).get("NumeroLegislatura")) for k in ("PrimeiraLegislaturaDoMandato", "SegundaLegislaturaDoMandato")}
+        if str(leg) in legs and m.get("UfParlamentar"):
+            return m["UfParlamentar"]
+    return ""
+
+
+def _ultimo_exercicio(p: dict, leg: int) -> dict:
+    """Último período no cargo dentro dos mandatos da legislatura (para dizer desde quando está fora)."""
+    ex = [e for m in _as_list((p.get("Mandatos") or {}).get("Mandato"))
+          for e in _as_list((m.get("Exercicios") or {}).get("Exercicio"))]
+    ex = [e for e in ex if e.get("DataInicio")]
+    return max(ex, key=lambda e: e.get("DataFim") or "9999") if ex else {}
+
+
+def parse_senadores_legislatura(data: dict, leg: int, ja: set[str]) -> list[dict]:
+    """Senadores que exerceram o mandato na legislatura e não estão em `ja` (os em exercício hoje)."""
+    lista = data.get("ListaParlamentarLegislatura", {}).get("Parlamentares", {}).get("Parlamentar", [])
+    out = []
+    for p in _as_list(lista):
+        ident = p.get("IdentificacaoParlamentar", {})
+        cod = str(ident.get("CodigoParlamentar") or "").strip()
+        if not cod.isdigit() or pid(cod) in ja:
+            continue
+        ult = _ultimo_exercicio(p, leg)
+        inicio = f"{2023 + (leg - 57) * 4}-02-01"  # 1º de fevereiro do primeiro ano da legislatura (a 57ª em 2023)
+        if ult.get("DataFim") and ult["DataFim"][:10] < inicio:
+            continue  # saiu antes de a legislatura começar (por exemplo, morreu no mandato anterior)
+        x = {
+            "id": pid(cod),
+            "casa": "senado",
+            "cargo": "Senador(a)",
+            "nome": (ident.get("NomeParlamentar") or "").strip(),
+            "partido": ident.get("SiglaPartidoParlamentar") or "",
+            "uf": ident.get("UfParlamentar") or _uf_do_mandato(p, leg),
+            "foto": url_segura(ident.get("UrlFotoParlamentar")),
+            "bloco": "",
+            "fonte": url_segura(ident.get("UrlPaginaParlamentar")) or f"https://www25.senado.leg.br/web/senadores/senador/-/perfil/{cod}",
+            "em_exercicio": False,
+            "situacao": f"Fora do exercício: {ult['DescricaoCausaAfastamento'].strip()}" if (ult.get("DescricaoCausaAfastamento") or "").strip()
+            else "Fora do exercício",
+        }
+        if (ult.get("DataFim") or "")[:10]:
+            x["situacao_desde"] = ult["DataFim"][:10]
+        ja.add(x["id"])
+        out.append(x)
+    return out
+
+
+def senadores(legislaturas: list[int] | None = None, cache: Path | None = None) -> list[dict]:
+    """Senadores em exercício hoje e, com `legislaturas`, também os que exerceram o mandato nelas e já saíram.
+
+    A lista atual (senador/lista/atual) só traz quem está no cargo hoje: suplente que devolveu a vaga, quem se
+    licenciou, renunciou ou morreu sumia do site, com os gastos e os votos. A lista da legislatura com exercicio=S
+    traz todos que estiveram no cargo nela."""
     out = parse_senadores(get_json(f"{LEGIS}/senador/lista/atual.json"))
+    for s in out:
+        s["em_exercicio"] = True
     log.info("Senado: %d senadores em exercício", len(out))
+    ja = {s["id"] for s in out}
+    for leg in legislaturas or []:
+        data = com_copia((cache or Path(".cache")) / "senado-senadores" / f"legislatura-{leg}.json",
+                         lambda leg=leg: get_json(f"{LEGIS}/senador/lista/legislatura/{leg}.json", params={"exercicio": "S"}),
+                         f"Senadores da {leg}ª legislatura")
+        extra = parse_senadores_legislatura(data, leg, ja)
+        log.info("Senado: %d senadores que passaram pela %dª legislatura e não estão no cargo hoje", len(extra), leg)
+        out += extra
     return out
 
 
@@ -86,6 +151,8 @@ def parse_ceaps(rows: list[dict], ids: set[str]) -> list[dict]:
     for r in rows:
         p = pid(r.get("codSenador", ""))
         if p not in ids:
+            if str(r.get("codSenador") or "").strip().isdigit() and to_float(r.get("valorReembolsado")):
+                fora_da_lista("cota do Senado", p, to_float(r.get("valorReembolsado")))
             continue
         valor = to_float(r.get("valorReembolsado"))
         if valor == 0:
@@ -192,6 +259,8 @@ def parse_votacoes(items: list[dict], ids: set[str]) -> tuple[list[dict], list[d
                 if o in ("Sim", "Não"):
                     orient["Governo (voto do líder)"] = o
             p = pid(x.get("codigoParlamentar", ""))
+            if p not in ids and str(x.get("codigoParlamentar") or "").strip().isdigit():
+                fora_da_lista("votos do Senado", p)
             if p in ids and p not in ja:
                 ja.add(p)
                 vs.append({"votacao": vid, "politico": p,

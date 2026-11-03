@@ -55,6 +55,25 @@ test.describe("jornada", () => {
     expect(erros).toEqual([]);
   });
 
+  test("quem saiu do cargo no meio do mandato aparece, também pelo nome antigo", async ({ page }) => {
+    // Caso da deputada Dayany Bittencourt (antes "Dayany do Capitão"): suplente que devolveu a vaga ao titular
+    const erros = vigiar(page);
+    const p = pols.find((x) => (x as { em_exercicio?: boolean }).em_exercicio === false && x.casa === "camara")!;
+    const antigo: string = dados(`p/${p.id}.json`).outros_nomes[0];
+    await page.goto("./");
+    await page.getByLabel("Procure seu deputado ou senador").fill(antigo);
+    await page.locator(".list a", { hasText: p.nome }).first().click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(p.nome);
+    await expect(page.locator(".profile")).toContainText("Fora do cargo hoje");
+    await expect(page.locator("main")).toContainText(sp(brl(dados(`p/${p.id}.json`).anos[ANO].total)));
+    await page.goto("./#/politicos");
+    await page.locator("#filtro-situacao").selectOption("fora");
+    await expect(page.locator(".list .person", { hasText: p.nome })).toBeVisible();
+    await page.locator("#filtro-situacao").selectOption("exercicio");
+    await expect(page.locator(".list .person", { hasText: p.nome })).toHaveCount(0);
+    expect(erros).toEqual([]);
+  });
+
   test("votação mostra o placar do arquivo", async ({ page }) => {
     const erros = vigiar(page);
     const v = vots[0];

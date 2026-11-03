@@ -731,3 +731,6 @@ tr.linha-aberta > td { background: var(--tint); }
 .passos li::marker { font-weight: 800; color: var(--accent); }
 .destaque-card { border-color: var(--accent); }
 .lado-a-lado { align-items: start; }
+
+/* quem passou pela legislatura e não está no cargo hoje (suplente que devolveu a vaga, licenciado...) */
+.fora-cargo { color: var(--ink-2); font-weight: 600; }

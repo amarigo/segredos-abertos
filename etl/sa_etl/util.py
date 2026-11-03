@@ -169,10 +169,47 @@ def chave_portal() -> str:
     return achadas[0] if achadas else bruto
 
 
+# Linhas da fonte (nota da cota, voto) de parlamentar que não está na nossa lista. Cada uma é gasto ou voto que
+# sumiria do site sem ninguém perceber; validar.py barra a publicação se houver alguma (meta.json, fora_da_lista).
+FORA_DA_LISTA: dict[str, dict] = {}
+
+
+def fora_da_lista(fonte: str, politico: str, valor: float = 0.0) -> None:
+    x = FORA_DA_LISTA.setdefault(fonte, {"ids": set(), "linhas": 0, "valor": 0.0})
+    x["ids"].add(politico)
+    x["linhas"] += 1
+    x["valor"] += valor
+
+
+def resumo_fora_da_lista() -> dict:
+    return {f: {"parlamentares": len(x["ids"]), "linhas": x["linhas"], "valor": round(x["valor"], 2),
+                "exemplos": sorted(x["ids"])[:10]} for f, x in sorted(FORA_DA_LISTA.items())}
+
+
 def avisar(msg: str) -> None:
     """Registra um problema da coleta que o site deve mostrar (dados faltando, cópia antiga em uso...)."""
     if msg not in AVISOS:
         AVISOS.append(msg)
+
+
+def com_copia(dest: Path, buscar, descricao: str, max_horas: float = 20) -> Any:
+    """Resultado de `buscar()` guardado em `dest` (JSON). Uma cópia com menos de `max_horas` é usada sem perguntar à
+    fonte. Se a fonte falhar, usa a última cópia boa e avisa com a data dela; sem cópia, o erro sobe."""
+    if dest.exists() and dest.stat().st_size > 0 and (time.time() - dest.stat().st_mtime) / 3600 < max_horas:
+        try:
+            return json.loads(dest.read_text(encoding="utf-8"))
+        except ValueError:
+            pass
+    try:
+        dados = buscar()
+    except Exception as e:  # noqa: BLE001
+        if not (dest.exists() and dest.stat().st_size > 0):
+            raise
+        log.warning("%s: fonte fora do ar (%s); usando a cópia de %s", descricao, e, data_do_arquivo(dest))
+        avisar(f"{descricao}: a fonte oficial não respondeu; usando a cópia de {data_do_arquivo(dest)}")
+        return json.loads(dest.read_text(encoding="utf-8"))
+    write_json(dest, dados)
+    return dados
 
 
 def _esc_anotacao(t: str, propriedade: bool = False) -> str:

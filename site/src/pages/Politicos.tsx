@@ -18,6 +18,7 @@ export default function Politicos() {
   const [params] = useSearchParams();
   const [uf, setUf] = useState(params.get("uf") || "");
   const [partido, setPartido] = useState(params.get("partido") || "");
+  const [situacao, setSituacao] = useState("");
   const [ordem, setOrdem] = useState<Ordem>("total");
   const { ano } = useAno();
   const t = (p: Resumo) => p.por_ano[ano]?.total || 0;
@@ -41,14 +42,16 @@ export default function Politicos() {
   const partidos = useMemo(() => [...new Set((data || []).map((p) => p.partido))].sort(), [data]);
   const lista = useMemo(() => {
     let l = (data || []).filter((p) => (!casa || p.casa === casa) && (!uf || p.uf === uf) && (!partido || p.partido === partido)
-      && (!q || norm(p.nome).includes(norm(q))));
+      && (!situacao || (situacao === "exercicio") === (p.em_exercicio !== false))
+      && (!q || [p.nome, ...(p.outros_nomes || [])].some((n) => norm(n).includes(norm(q)))));
     l = l.slice().sort((a, b) => ordem === "nome" ? a.nome.localeCompare(b.nome)
       : ordem === "posicao" ? (a.posicao ?? 9) - (b.posicao ?? 9) : ordem === "total" ? t(b) - t(a) : atu(b) - atu(a) || a.nome.localeCompare(b.nome));
     return l;
-  }, [data, q, casa, uf, partido, ordem, ano]);
+  }, [data, q, casa, uf, partido, situacao, ordem, ano]);
 
   // Para os gráficos: os mesmos filtros, menos o de estado (o mapa mostra todos os estados)
-  const semUf = useMemo(() => (data || []).filter((p) => (!casa || p.casa === casa) && (!partido || p.partido === partido)), [data, casa, partido]);
+  const semUf = useMemo(() => (data || []).filter((p) => (!casa || p.casa === casa) && (!partido || p.partido === partido)
+    && (!situacao || (situacao === "exercicio") === (p.em_exercicio !== false))), [data, casa, partido, situacao]);
   const mediaUf = useMemo(() => {
     const s: Record<string, [number, number]> = {};
     semUf.forEach((p) => { const v = t(p); if (v > 0) { const x = (s[p.uf] ||= [0, 0]); x[0] += v; x[1] += 1; } });
@@ -90,6 +93,10 @@ export default function Politicos() {
         <select id="filtro-partido" aria-label="Partido" value={partido} onChange={(e) => setPartido(e.target.value)}>
           <option value="">Todos os partidos</option>{partidos.map((u) => <option key={u}>{u}</option>)}
         </select>
+        <select id="filtro-situacao" aria-label="Situação" value={situacao} onChange={(e) => setSituacao(e.target.value)}>
+          <option value="">No cargo hoje e quem já saiu</option><option value="exercicio">Só quem está no cargo hoje</option>
+          <option value="fora">Só quem saiu do cargo</option>
+        </select>
         <select id="filtro-ordem" aria-label="Ordenar" value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)}>
           <option value="total">Maior gasto de cota em {ano}</option><option value="nome">Nome</option><option value="posicao">Da esquerda para a direita</option>
           <option value="presenca">Maior presença no Plenário em {ano}</option><option value="autoria">Mais propostas apresentadas em {ano}</option>
@@ -101,7 +108,7 @@ export default function Politicos() {
           label: <Link to={`/p/${p.id}`}>{p.nome}</Link>, nota: `${p.partido}-${p.uf} · ${p.casa === "senado" ? "senador" : "deputado federal"}`, valor: t(p), cor: corPartido(p.partido) }))} />
         <p className="muted small">Os 15 maiores gastos com os filtros escolhidos acima. Clique no nome para abrir cada gasto, nota por nota.</p>
       </Abrir>}
-      <p className="muted small">{lista.length} resultado{lista.length === 1 ? "" : "s"}</p>
+      <p className="muted small">{lista.length} resultado{lista.length === 1 ? "" : "s"}. A lista traz todos que tiveram mandato nesta legislatura, inclusive suplentes que já devolveram a vaga e quem se licenciou: os gastos e votos do período no cargo continuam contando.</p>
       <div className="list">
         {lista.map((p) => <PessoaLinha key={p.id} p={p} extra={extra(p)} />)}
       </div>
