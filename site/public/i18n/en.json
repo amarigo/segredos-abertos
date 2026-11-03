@@ -1980,5 +1980,17 @@
 "Órgãos federais, universidades e institutos": "Federal agencies, universities and institutes",
 "é dono(a) por meio de": "is an owner through",
 "órgãos": "agencies",
-"◀ Esquerda": "◀ Left"
+"◀ Esquerda": "◀ Left",
+"No cargo hoje e quem já saiu": "In office today and those who left",
+"Só quem está no cargo hoje": "Only those in office today",
+"Só quem saiu do cargo": "Only those who left office",
+"fora do cargo hoje": "out of office today",
+"Fora do cargo hoje": "Out of office today",
+"{0} resultados. A lista traz todos que tiveram mandato nesta legislatura, inclusive suplentes que já devolveram a vaga e quem se licenciou: os gastos e votos do período no cargo continuam contando.": "{0} results. The list includes everyone who held a seat in this legislature, including alternates who have already returned the seat and those on leave: spending and votes from their time in office still count.",
+"{0} resultado. A lista traz todos que tiveram mandato nesta legislatura, inclusive suplentes que já devolveram a vaga e quem se licenciou: os gastos e votos do período no cargo continuam contando.": "{0} result. The list includes everyone who held a seat in this legislature, including alternates who have already returned the seat and those on leave: spending and votes from their time in office still count.",
+"Os gastos e votos abaixo são do período em que esteve no cargo nesta legislatura.": "The spending and votes below are from the time they held office in this legislature.",
+"Também aparece nos dados oficiais como": "Also appears in the official data as",
+"que tiveram mandato (inclusive quem já saiu do cargo) em": "who held a seat (including those who have left office) in",
+"desde": "since",
+"deputados federais e senadores desta legislatura": "federal deputies and senators of this legislature"
 }

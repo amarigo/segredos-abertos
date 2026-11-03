@@ -69,6 +69,8 @@ DEFEITOS = {
     "incentivos por categoria": lambda s: _mudar(s, "incentivos/2025.json", lambda x: x["pagamentos"]["por_categoria"][0].update(valor=1)),
     "renúncia por estado": lambda s: _mudar(s, "incentivos/renuncia-2024.json", lambda x: x["por_uf"][0].__setitem__(1, 1)),
     "renúncia na empresa": lambda s: _mudar(s, f"e/{_com(s, 'renuncia')}.json", lambda x: x["renuncia"].update(total=1)),
+    "gasto de quem ficou fora da lista": lambda s: _mudar(s, "meta.json", lambda x: x.update(fora_da_lista={
+        "cota da Câmara": {"parlamentares": 1, "linhas": 3, "valor": 900.0, "exemplos": ["dep-220659"]}})),
     "arquivo faltando": lambda s: (s / "partidos.json").unlink(),
     "JSON quebrado": lambda s: (s / "votacoes.json").write_text("[{", encoding="utf-8"),
     "nome de arquivo": lambda s: shutil.copy(s / "meta.json", s / "p" / "x.y.json"),

@@ -25,8 +25,10 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
     """cnpjs_emendas: empresas pagas com emendas, para buscar os donos junto com as fornecedoras da cota.
     novas_empresas: quantas fornecedoras além das `max_empresas` maiores buscar na Receita nesta coleta."""
     util.AVISOS.clear()
-    deps = sem_repetidos(camara.deputados(), "id")
-    sens = sem_repetidos(senado.senadores(), "id")
+    util.FORA_DA_LISTA.clear()
+    # Todos que tiveram mandato nos anos pedidos, não só quem está no cargo hoje: quem saiu no meio também gastou e votou
+    deps = sem_repetidos(camara.deputados(anos, cache), "id")
+    sens = sem_repetidos(senado.senadores(camara.legislaturas(anos), cache), "id")
     if not deps or not sens:
         # Sem a lista de parlamentares não há site: melhor falhar e manter no ar a versão anterior
         raise RuntimeError(f"Lista de parlamentares vazia (Câmara: {len(deps)}, Senado: {len(sens)})")
@@ -59,7 +61,8 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
         log.warning("Não foi possível conferir os links das notas: %s", e)
     return {"politicos": politicos, "despesas": despesas, "votacoes": vc + vs,
             "votos": votos_c + votos_s, "empresas": emps,
-            "empresas_socias": socias, "recursos": rec, "autorias": aut}
+            "empresas_socias": socias, "recursos": rec, "autorias": aut,
+            "fora_da_lista": util.resumo_fora_da_lista()}
 
 
 SEM_NOTA = "Despesas sem nota nos dados abertos"
@@ -467,6 +470,7 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
 
     write_json(saida / "meta.json", {
         "atualizado_em": hoje, "anos": anos, "avisos": list(util.AVISOS), "grupos": GRUPOS, "medias": medias,
+        "fora_da_lista": dados.get("fora_da_lista") or {},
         "contagens": {"politicos": len(politicos), "despesas": len(despesas), "votacoes": len(votacoes),
                       "empresas_com_socios": len(emps)},
         "total_gasto": round(sum(d["valor"] for d in despesas), 2),

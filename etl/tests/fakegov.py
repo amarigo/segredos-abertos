@@ -56,6 +56,7 @@ class FakeGov:
         self.api_chave = "chave-de-teste"  # a API de dados do Portal pede a chave no cabeçalho chave-api-dados
         self.api_exige_uf = False  # a consulta sem filtro pode não ser aceita
         self.repetir_linhas = False  # caos de dados: arquivos com linhas repetidas
+        self.legislatura_so_atuais = False  # a lista da legislatura sem quem saiu (o defeito que escondia gente)
         rng = self.rng
 
         # ---------- parlamentares
@@ -64,6 +65,10 @@ class FakeGov:
                           for i in range(n_dep)]
         self.senadores = [{"cod": 5000 + i, "nome": f"Senador Ficticio {i:02d}", "partido": PARTIDOS_SEN[i % len(PARTIDOS_SEN)],
                            "uf": ["SP", "MG", "RJ"][i % 3]} for i in range(n_sen)]
+        # Quem passou pela legislatura e não está no cargo hoje (suplente que devolveu a vaga): some da lista atual,
+        # mas gastou e votou no ano. Como a deputada Dayany Bittencourt, que a lista atual da Câmara deixou de trazer.
+        self.dep_fora = {self.deputados[-1]["id"]} if n_dep >= 3 else set()
+        self.sen_fora = {self.senadores[-1]["cod"]} if n_sen >= 3 else set()
         self.lider = "Senador Ficticio 01"  # do PT: faz o papel do líder do governo
 
         # ---------- empresas: fornecedoras, holdings (com cadeia e ciclo) e mesmo endereço
@@ -269,15 +274,31 @@ class FakeGov:
             return tra
 
         if u.netloc == "dadosabertos.camara.leg.br" and path == "/api/v2/deputados":
-            if "idLegislatura" in q:  # emendas: deputados da legislatura
-                return self._json({"dados": [{"nome": "Ex Deputado Ficticio", "siglaPartido": "PP", "siglaUf": "PE"}], "links": []})
+            if "idLegislatura" in q:  # todos que passaram pela legislatura; a pessoa se repete a cada nome que usou
+                ds = [{"id": d["id"], "nome": d["nome"], "siglaPartido": d["siglaPartido"], "siglaUf": d["siglaUf"],
+                       "urlFoto": d["urlFoto"]} for d in self.deputados
+                      if not (self.legislatura_so_atuais and d["id"] in self.dep_fora)]
+                ds += [{**x, "nome": x["nome"].replace("Deputado", "Deputada do Capitao")} for x in ds if x["id"] in self.dep_fora]
+                return self._json({"dados": sorted(ds, key=lambda x: x["nome"])
+                                   + [{"nome": "Ex Deputado Ficticio", "siglaPartido": "PP", "siglaUf": "PE"}], "links": []})
             pagina = int(q.get("pagina", 1))
-            ds = self.deputados
+            ds = [d for d in self.deputados if d["id"] not in self.dep_fora]
             meio = len(ds) // 2
             fatia = ds[:meio + 1] if pagina == 1 else ds[meio:]  # o último da página 1 se repete na 2 (acontece ao paginar)
             links = [{"rel": "next", "href": "https://dadosabertos.camara.leg.br/api/v2/deputados?pagina=2"}] if pagina == 1 else []
             return self._json({"dados": [{"id": d["id"], "nome": d["nome"], "siglaPartido": d["siglaPartido"],
                                           "siglaUf": d["siglaUf"], "urlFoto": d["urlFoto"]} for d in fatia], "links": links})
+
+        m = re.match(r"^/api/v2/deputados/(\d+)$", path)
+        if u.netloc == "dadosabertos.camara.leg.br" and m:
+            d = next((d for d in self.deputados if str(d["id"]) == m.group(1)), None)
+            if not d:
+                return 404, b"", "application/json"
+            fora = d["id"] in self.dep_fora
+            return self._json({"dados": {"id": d["id"], "ultimoStatus": {
+                "id": d["id"], "nome": d["nome"], "nomeEleitoral": d["nome"], "siglaPartido": d["siglaPartido"],
+                "siglaUf": d["siglaUf"], "urlFoto": d["urlFoto"], "data": "2025-07-09" if fora else "2023-02-01",
+                "situacao": "Suplência" if fora else "Exercício", "condicaoEleitoral": "Suplente" if fora else "Titular"}}})
 
         m = re.match(r"^/cotas/Ano-(\d{4})\.csv\.zip$", path)
         if u.netloc == "www.camara.leg.br" and m:
@@ -317,11 +338,20 @@ class FakeGov:
                                               "SiglaPartidoParlamentar": s["partido"], "UfParlamentar": s["uf"],
                                               "UrlFotoParlamentar": f"https://www.senado.leg.br/senadores/img/fotos/{s['cod']}.jpg",
                                               "UrlPaginaParlamentar": f"https://www25.senado.leg.br/web/senadores/senador/-/perfil/{s['cod']}"}}
-                for s in self.senadores]}}})
+                for s in self.senadores if s["cod"] not in self.sen_fora]}}})
 
         if u.netloc == "legis.senado.leg.br" and path.startswith("/dadosabertos/senador/lista/legislatura/"):
+            leg = path.rsplit("/", 1)[1].removesuffix(".json")
+            # como a API: a UF fica no mandato; quem saiu tem o fim do exercício e o motivo
             return self._json({"ListaParlamentarLegislatura": {"Parlamentares": {"Parlamentar": [
-                {"IdentificacaoParlamentar": {"NomeParlamentar": "Ex Senador Ficticio", "SiglaPartidoParlamentar": "PP", "UfParlamentar": "AL"}}]}}})
+                {"IdentificacaoParlamentar": {"NomeParlamentar": "Ex Senador Ficticio", "SiglaPartidoParlamentar": "PP", "UfParlamentar": "AL"}}]
+                + [{"IdentificacaoParlamentar": {"CodigoParlamentar": str(s["cod"]), "NomeParlamentar": s["nome"],
+                                                 "SiglaPartidoParlamentar": s["partido"]},
+                    "Mandatos": {"Mandato": [{"UfParlamentar": s["uf"], "PrimeiraLegislaturaDoMandato": {"NumeroLegislatura": leg},
+                                              "Exercicios": {"Exercicio": [{"DataInicio": "2025-01-10", "DataFim": "2025-09-30",
+                                                                            "DescricaoCausaAfastamento": "Retorno do titular"}]
+                                                             if s["cod"] in self.sen_fora else []}}]}}
+                   for s in self.senadores]}}})
 
         m = re.match(r"^/adm-dadosabertos/api/v1/senadores/despesas_ceaps/(\d{4})$", path)
         if u.netloc == "adm.senado.gov.br" and m:
