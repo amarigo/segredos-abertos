@@ -530,3 +530,11 @@ def test_autorias_sem_resposta_usa_o_resumo_anterior(tmp_path, monkeypatch):
     assert autorias.camara([2023, 2024], tmp_path) == {("dep-10", 2023): {"projetos": 4, "projetos_apoio": 1, "requerimentos": 0}}
     pols = [{"id": "dep-10", "casa": "camara"}, {"id": "sen-1", "casa": "senado", "nome": "Fulano"}]
     assert autorias.coletar(pols, [2023], tmp_path) == {"dep-10": {2023: {"projetos": 4, "projetos_apoio": 1, "requerimentos": 0}}}
+
+
+def test_legislaturas_dos_anos():
+    """A legislatura começa em 1º de fevereiro: janeiro de 2023 ainda é da 56ª."""
+    from sa_etl import camara
+    assert camara.legislaturas([2025, 2026]) == [57]
+    assert camara.legislaturas([2023]) == [56, 57]
+    assert camara.legislaturas([2026, 2027]) == [57, 58]

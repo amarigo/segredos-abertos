@@ -1,7 +1,7 @@
-"""Câmara dos Deputados: deputados em exercício, cota parlamentar (CEAP) e votações nominais do plenário.
+"""Câmara dos Deputados: deputados (em exercício e os que já saíram na legislatura), cota parlamentar (CEAP) e votações nominais do plenário.
 
 Fontes:
-- API: https://dadosabertos.camara.leg.br/api/v2/deputados
+- API: https://dadosabertos.camara.leg.br/api/v2/deputados (e ?idLegislatura=N, /deputados/{id})
 - Cota anual: https://www.camara.leg.br/cotas/Ano-{ano}.csv.zip
 - Votações: https://dadosabertos.camara.leg.br/arquivos/votacoes*/csv/*-{ano}.csv
 """
@@ -14,7 +14,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from .categorias import categoria_curta, grupo_de
-from .util import avisar, digits, download, eh_csv, eh_zip, get_json, id_seguro, read_csv_file, to_float, url_segura
+from .util import avisar, com_copia, digits, fora_da_lista, download, eh_csv, eh_zip, get_json, id_seguro, read_csv_file, to_float, url_segura
 
 log = logging.getLogger("sa_etl.camara")
 
@@ -33,29 +33,92 @@ def pid(dep_id: str | int) -> str:
     return f"dep-{dep_id}"
 
 
-def deputados() -> list[dict]:
+def legislatura(ano: int, mes: int) -> int:
+    """Número da legislatura num mês. Cada uma dura 4 anos e começa em 1º de fevereiro (a 57ª em 2023; Constituição,
+    art. 44). Vale para a Câmara e para o Senado."""
+    return 57 + (ano - 2023 - (mes == 1)) // 4
+
+
+def legislaturas(anos: list[int]) -> list[int]:
+    """Legislaturas que têm algum mês nos anos pedidos."""
+    return sorted({legislatura(a, m) for a in anos for m in (1, 12)})
+
+
+def _paginas(url: str, params: dict | None) -> list[dict]:
     out: list[dict] = []
-    url = f"{API}/deputados"
-    params: dict | None = {"itens": 100, "ordem": "ASC", "ordenarPor": "nome"}
     while url:
         data = get_json(url, params=params)
-        for d in data.get("dados", []):
-            if not str(d.get("id", "")).isdigit():
-                log.warning("Câmara: deputado com id inválido ignorado: %r", d.get("id"))
-                continue
-            out.append({
-                "id": pid(d["id"]),
-                "casa": "camara",
-                "cargo": "Deputado(a) Federal",
-                "nome": d.get("nome", "").strip(),
-                "partido": d.get("siglaPartido") or "",
-                "uf": d.get("siglaUf") or "",
-                "foto": url_segura(d.get("urlFoto")),
-                "fonte": f"https://www.camara.leg.br/deputados/{d['id']}",
-            })
+        out += data.get("dados", [])
         url = next((l["href"] for l in data.get("links", []) if l.get("rel") == "next"), None)
         params = None
+    return out
+
+
+def _deputado(d: dict, em_exercicio: bool = True) -> dict | None:
+    if not str(d.get("id", "")).isdigit():
+        log.warning("Câmara: deputado com id inválido ignorado: %r", d.get("id"))
+        return None
+    return {
+        "id": pid(d["id"]),
+        "casa": "camara",
+        "cargo": "Deputado(a) Federal",
+        "nome": (d.get("nomeEleitoral") or d.get("nome") or "").strip(),
+        "partido": d.get("siglaPartido") or "",
+        "uf": d.get("siglaUf") or "",
+        "foto": url_segura(d.get("urlFoto")),
+        "fonte": f"https://www.camara.leg.br/deputados/{d['id']}",
+        "em_exercicio": em_exercicio,
+    }
+
+
+def deputados(anos: list[int] | None = None, cache: Path | None = None) -> list[dict]:
+    """Deputados em exercício hoje e, com `anos`, também todos que tiveram mandato nas legislaturas desses anos.
+
+    A lista sem filtro da API (/deputados) só traz quem está no cargo hoje. Quem saiu no meio do mandato (suplente
+    que devolveu a vaga ao titular, licenciado, cassado, quem renunciou ou morreu) não aparece nela, e os gastos e
+    votos dessa pessoa sumiam do site. Por isso pedimos também /deputados?idLegislatura=N, que traz todos que
+    passaram pela legislatura, e /deputados/{id} de quem não está mais no cargo, para o nome, o partido e a situação
+    de hoje (a lista da legislatura repete a pessoa uma vez por nome ou partido que ela já usou)."""
+    out: list[dict] = []
+    vistos: set[str] = set()
+    for d in _paginas(f"{API}/deputados", {"itens": 100, "ordem": "ASC", "ordenarPor": "nome"}):
+        x = _deputado(d)
+        if x and x["id"] not in vistos:
+            vistos.add(x["id"])
+            out.append(x)
     log.info("Câmara: %d deputados em exercício", len(out))
+    if not anos:
+        return out
+    pasta = (cache or Path(".cache")) / "camara-deputados"
+    linhas: dict[str, list[dict]] = defaultdict(list)  # id -> linhas da lista da legislatura
+    for leg in legislaturas(anos):
+        lista = com_copia(pasta / f"legislatura-{leg}.json",
+                          lambda leg=leg: _paginas(f"{API}/deputados", {"idLegislatura": leg, "itens": 100,
+                                                                        "ordem": "ASC", "ordenarPor": "nome"}),
+                          f"Deputados da {leg}ª legislatura")
+        for d in lista:
+            if str(d.get("id", "")).isdigit() and pid(d["id"]) not in vistos:
+                linhas[pid(d["id"])].append(d)
+    for i, ls in sorted(linhas.items()):
+        num = i.removeprefix("dep-")
+        try:
+            st = com_copia(pasta / f"{num}.json", lambda num=num: get_json(f"{API}/deputados/{num}")["dados"],
+                           f"Deputado {num}").get("ultimoStatus") or {}
+        except Exception as e:  # noqa: BLE001 - sem o detalhe, fica o último nome e partido da lista da legislatura
+            log.warning("Câmara: detalhe do deputado %s indisponível (%s)", num, e)
+            st = {}
+        x = _deputado({**ls[-1], **{k: v for k, v in st.items() if v}, "id": num}, em_exercicio=False)
+        if not x:
+            continue
+        x["situacao"] = (st.get("situacao") or "Fora do exercício").strip()
+        if st.get("data"):
+            x["situacao_desde"] = str(st["data"])[:10]
+        outros = sorted({(d.get("nome") or "").strip() for d in ls} - {x["nome"], ""})
+        if outros:
+            x["outros_nomes"] = outros
+        vistos.add(i)
+        out.append(x)
+    log.info("Câmara: %d deputados que passaram pela legislatura e não estão no cargo hoje", len(linhas))
     return out
 
 
@@ -90,10 +153,14 @@ def parse_cota(rows, ids: set[str]) -> list[dict]:
     out = []
     for r in rows:
         # ideCadastro é o mesmo id da API; nuDeputadoId é um número interno diferente
-        dep = (r.get("ideCadastro") or "").strip()
+        ide = dep = (r.get("ideCadastro") or "").strip()
         if not dep or pid(dep) not in ids:
             dep = (r.get("nuDeputadoId") or "").strip()
         if not dep or pid(dep) not in ids:
+            # Sem ideCadastro é nota de liderança de partido, não de deputado. Com ideCadastro, é um deputado que
+            # faltou na lista: o gasto sumiria do site.
+            if ide.isdigit() and to_float(r.get("vlrLiquido")):
+                fora_da_lista("cota da Câmara", pid(ide), to_float(r.get("vlrLiquido")))
             continue
         valor = to_float(r.get("vlrLiquido"))
         if valor == 0:
@@ -184,6 +251,9 @@ def parse_votacoes(votacoes_rows, votos_rows, orient_rows, prop_rows, ids: set[s
             continue
         vistas.add(vid)
         vs = [v for v in votos_por[vid] if v["politico"] in ids]
+        for v in votos_por[vid]:
+            if v["politico"] not in ids:
+                fora_da_lista("votos da Câmara", v["politico"])
         if not vs:
             continue
         sim, nao = (r.get("votosSim") or "").strip(), (r.get("votosNao") or "").strip()

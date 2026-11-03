@@ -34,6 +34,37 @@ def test_deputado_repetido_na_paginacao_aparece_uma_vez(coleta):
     assert len(pols) == len({p["id"] for p in pols}) == len(gov.deputados) + len(gov.senadores)
 
 
+def test_quem_saiu_do_cargo_aparece_com_gastos_e_votos(coleta):
+    """Suplente que devolveu a vaga (caso da deputada Dayany Bittencourt): não está na lista de quem está no cargo
+    hoje, mas gastou e votou no ano. Tem de aparecer, com todos os gastos, os votos e a situação de hoje."""
+    gov = coleta.usar(FakeGov(anos=(2025,)))
+    saida = coleta.rodar()
+    (dep,), (sen,) = gov.dep_fora, gov.sen_fora
+    pols = {p["id"]: p for p in coleta.ler(saida, "politicos.json")}
+    d, s = pols[f"dep-{dep}"], pols[f"sen-{sen}"]
+    assert d["em_exercicio"] is False and d["situacao"] == "Suplência" and d["situacao_desde"] == "2025-07-09"
+    assert d["outros_nomes"] == [d["nome"].replace("Deputado", "Deputada do Capitao")]
+    assert s["em_exercicio"] is False and s["situacao"] == "Fora do exercício: Retorno do titular" and s["uf"]
+    assert sum(p["em_exercicio"] for p in pols.values()) == len(pols) - 2
+    fonte = sum(float(l[9]) for l in gov.cota[2025] if l[1] == dep)
+    assert abs(d["por_ano"]["2025"]["total"] - fonte) < 0.01
+    fonte = sum(x["valorReembolsado"] for x in gov.ceaps[2025] if x["codSenador"] == sen)
+    assert abs(s["por_ano"]["2025"]["total"] - fonte) < 0.01
+    assert d["n_votos"] == 30 and s["n_votos"] > 0
+    assert coleta.ler(saida, "meta.json")["fora_da_lista"] == {}
+
+
+def test_gasto_de_quem_ficou_fora_da_lista_barra_a_publicacao(coleta):
+    """Se a lista de parlamentares voltar a esquecer alguém, a nota e o voto dessa pessoa não podem sumir calados."""
+    gov = coleta.usar(FakeGov(anos=(2025,)))
+    gov.legislatura_so_atuais = True
+    saida = coleta.rodar()
+    (dep,) = gov.dep_fora
+    fora = coleta.ler(saida, "meta.json")["fora_da_lista"]
+    assert fora["cota da Câmara"]["exemplos"] == [f"dep-{dep}"] and fora["votos da Câmara"]["linhas"] == 30
+    assert any("cota da Câmara" in e and f"dep-{dep}" in e for e in coleta.validar(saida).erros)
+
+
 def test_cpf_de_fornecedor_nunca_aparece_aberto(coleta):
     coleta.usar(FakeGov())
     saida = coleta.rodar()

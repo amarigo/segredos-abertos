@@ -120,6 +120,13 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
         if por_casa[casa] < minimos[casa]:
             r.erro(f"Poucos parlamentares da casa {casa}: {por_casa[casa]} (mínimo {minimos[casa]})")
     por_id = {p["id"]: p for p in pols}
+    # Nota da cota ou voto de alguém que não está em politicos.json: o gasto ou o voto sumiu do site. Aconteceu com
+    # quem saiu do cargo no meio do mandato (suplente que devolveu a vaga, licenciado), quando a lista só trazia
+    # quem estava em exercício no dia da coleta.
+    for fonte, x in (meta.get("fora_da_lista") or {}).items():
+        r.erro(f"{fonte}: {x.get('linhas')} linha(s) de {x.get('parlamentares')} parlamentar(es) fora da lista de "
+               f"parlamentares (R$ {x.get('valor', 0):.2f}), ex.: {', '.join(x.get('exemplos') or [])}. "
+               "Os gastos e votos dessas pessoas ficariam fora do site.")
 
     soma_ano = Counter()
     for p in pols:

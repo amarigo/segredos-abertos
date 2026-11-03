@@ -49,7 +49,8 @@ export default function Home() {
   const topEmps = (emps || []).map((e) => ({ e, v: cotaNoAno(e, ano) || { valor: e.total, n_politicos: e.n_politicos } }))
     .filter((x) => x.v.valor > 0).sort((a, b) => b.v.valor - a.v.valor).slice(0, 8);
   const resultados = q.trim().length >= 2 && pols
-    ? pols.filter((p) => norm(`${p.nome} ${p.partido} ${p.uf}`).includes(norm(q))).slice(0, 8) : [];
+    ? pols.filter((p) => norm(`${p.nome} ${p.partido} ${p.uf}`).includes(norm(q))
+      || (p.outros_nomes || []).some((n) => norm(n).includes(norm(q)))).slice(0, 8) : [];
 
   return (
     <>
@@ -207,7 +208,7 @@ export function PessoaLinha({ p, extra }: { p: Resumo; extra?: React.ReactNode }
       {linkSeguro(p.foto) ? <img src={linkSeguro(p.foto)} alt="" loading="lazy" /> : <span className="avatar" />}
       <div style={{ minWidth: 0 }}>
         <div className="pname">{p.nome}</div>
-        <div className="meta">{p.cargo} · {p.partido}-{p.uf}</div>
+        <div className="meta">{p.cargo} · {p.partido}-{p.uf}{p.em_exercicio === false && <> · <span className="fora-cargo">fora do cargo hoje</span></>}</div>
       </div>
       <div className="num">{extra ?? reaisCurto(p.total)}</div>
     </Link>

@@ -62,6 +62,8 @@ export interface Resumo {
   bloco?: string; fonte: string; total: number; por_ano: Record<string, AnoResumo>;
   posicao: number | null; rotulo: string; alinhamento_governo: number | null; campo: string | null;
   fidelidade_partido: number | null; n_votos: number;
+  /** false para quem passou pela legislatura e não está no cargo hoje (suplente que devolveu a vaga, licenciado...) */
+  em_exercicio?: boolean; situacao?: string; situacao_desde?: string; outros_nomes?: string[];
 }
 export interface Pessoa { nome: string; grupo: string; cargo: string; periodo: string }
 export interface Recursos {

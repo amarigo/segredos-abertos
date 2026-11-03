@@ -32,6 +32,13 @@ export default function PoliticoPage() {
             {p.campo && <span className="chip">{p.campo}</span>}
             <a className="chip" href={linkSeguro(p.fonte)} target="_blank" rel="noreferrer">Página oficial ↗</a>
           </div>
+          {p.em_exercicio === false && <p className="small muted" role="note">
+            <strong className="fora-cargo">Fora do cargo hoje</strong>
+            {p.situacao && <> · <span>{p.situacao.replace(/^Fora do exercício:?\s*/i, "")}</span></>}
+            {p.situacao_desde && <> <span>desde</span> {dataBR(p.situacao_desde)}</>}
+            <br /><span>Os gastos e votos abaixo são do período em que esteve no cargo nesta legislatura.</span>
+          </p>}
+          {p.outros_nomes?.length ? <p className="small muted"><span>Também aparece nos dados oficiais como</span> {p.outros_nomes.join(", ")}</p> : null}
         </div>
       </section>
       <div className="tabs" role="tablist">
