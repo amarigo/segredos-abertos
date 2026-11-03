@@ -49,3 +49,46 @@ def test_pessoas_e_gasto_medio_por_poder(tmp_path, monkeypatch):
     assert e["pessoas"]["media_ativo"] == 10000.0 and e["pessoas"]["media_inativo"] == 5000.0
     assert l["pessoas"]["ativos"] == 20000 and l["pessoas"]["media_ativo"] == 150000.0  # sem o TCU nas duas pontas
     assert "pessoas" not in j  # sem fonte oficial aberta: não inventa
+
+
+def _trocar_rolagem(monkeypatch, ano, troca):
+    """O Tesouro simulado passa a publicar a conta da rolagem de outro jeito só em `ano`."""
+    original = ff.rreo
+
+    def rreo(a, per, anexo):
+        itens = original(a, per, anexo)
+        if a != ano:
+            return itens
+        out = []
+        for i in itens:
+            if i["cod_conta"] == "OperacoesDeCreditoRefinanciamento":
+                i = troca(dict(i))
+                if i is None:
+                    continue
+            out.append(i)
+        return out
+    monkeypatch.setattr(ff, "rreo", rreo)
+
+
+def test_rolagem_com_outro_codigo_e_achada_pelo_nome(tmp_path, monkeypatch):
+    """Causa do "R$ 0 e -100%" de 2022: a linha da rolagem não veio com o código esperado. Achamos pelo nome e
+    ficamos com a linha-mãe (a maior), nunca com as intraorçamentárias."""
+    def troca(i):
+        i["cod_conta"] = "RREO1OperacoesDeCreditoRefinanciamentoTotal"
+        i["conta"] = "OPERAÇÕES DE CRÉDITO - REFINANCIAMENTO (XI)"
+        return i
+    _trocar_rolagem(monkeypatch, 2022, troca)
+    instalar(monkeypatch, FakeGov())
+    d = fin_divida.coletar(tmp_path, ff.ANO)
+    a = next(x for x in d["anos"] if x["ano"] == 2022)
+    assert a["valores"]["rolagem"] == pytest.approx(ff.RECEITAS["OperacoesDeCreditoRefinanciamento"] * ff._fator(2022), rel=1e-6)
+
+
+def test_rolagem_que_nao_veio_fica_sem_dado_e_nao_zero(tmp_path, monkeypatch):
+    _trocar_rolagem(monkeypatch, 2022, lambda i: None)
+    instalar(monkeypatch, FakeGov())
+    d = fin_divida.coletar(tmp_path, ff.ANO)
+    a = next(x for x in d["anos"] if x["ano"] == 2022)
+    assert a["valores"]["rolagem"] is None
+    assert a["valores"]["novo"] > 0  # as outras contas do ano continuam
+    assert all(b["valores"]["rolagem"] is None for b in d["bimestres"] if b["ano"] == 2022)

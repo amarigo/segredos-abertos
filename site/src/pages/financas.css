@@ -73,3 +73,33 @@
 .fin-pessoas { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--grid); display: grid; gap: 4px; }
 .fin-divida { margin-top: 24px; }
 .fin-divida .toggle { flex-wrap: wrap; margin: 8px 0; }
+
+/* Pessoas da Câmara e do Senado: o mesmo cartão para as duas Casas */
+.casa-pessoas { display: grid; gap: 12px; align-content: start; }
+.casa-pessoas h3 { margin: 0; }
+.casa-numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px 14px; }
+.casa-numeros .fin-grande { font-size: 1.4rem; line-height: 1.1; }
+.casa-barra { display: flex; height: 34px; border-radius: 8px; overflow: hidden; gap: 2px; background: var(--surface); }
+.casa-barra button { flex-basis: 0; min-width: 6px; border: 0; padding: 0; color: #fff; font: 700 .78rem/1 var(--body); cursor: pointer; opacity: .55; transition: opacity .15s; }
+.casa-barra button[aria-pressed="true"], .casa-barra button:hover { opacity: 1; }
+.casa-barra button:focus-visible { outline: 3px solid var(--foco); outline-offset: -3px; }
+.casa-grupos { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.casa-grupo { width: 100%; display: grid; grid-template-columns: 12px minmax(0, 1fr) auto 3.2em; gap: 10px; align-items: center; text-align: left; background: none; border: 0; border-radius: 8px; padding: 8px; font: inherit; color: inherit; cursor: pointer; }
+.casa-grupo:hover { background: var(--grid); }
+.casa-grupo.ativo { background: var(--tint); }
+.casa-grupo.ativo .casa-nome { font-weight: 700; }
+.casa-cor { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.casa-qtd { font-weight: 700; }
+.casa-pc { text-align: right; }
+.casa-explica { margin: 2px 8px 6px 30px; color: var(--ink-2); }
+.casa-lado { margin-top: 12px; display: grid; gap: 14px; }
+.casa-lado h4 { margin: 0; }
+.casa-lado-linha { display: grid; gap: 4px; }
+.casa-lado-nome { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.casa-lado-barra { display: grid; grid-template-columns: 4.5em minmax(0, 1fr) 10.5em; gap: 8px; align-items: center; }
+.casa-lado-trilho { height: 12px; border-radius: 999px; background: var(--grid); overflow: hidden; display: block; }
+.casa-lado-trilho span { display: block; height: 100%; border-radius: 999px; }
+@media (prefers-reduced-motion: no-preference) { .casa-lado-trilho span { transition: width .6s cubic-bezier(.23, 1, .32, 1); } }
+.casa-barra .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.fin-casas:has(.casa-pessoas) { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+@media (max-width: 520px) { .casa-lado-barra { grid-template-columns: 4em minmax(0, 1fr) 8.5em; } }

@@ -508,20 +508,24 @@ export function CompararAnos({ porAno, titulo, formato = curto, limite = 10, ano
   );
 }
 
-/** Colunas, uma por ano, com a animação de passar pelos anos e a variação de cada ano contra o anterior. */
+/** Colunas, uma por ano, com a animação de passar pelos anos e a variação de cada ano contra o anterior.
+ * Valor `null` é ano sem dado na fonte: a coluna mostra "sem dado" e não entra na variação (nunca vira zero). */
 export function ColunasAnos({ serie, titulo, formato = curto, cor = "var(--hot)", parcial, ano, setAno }: {
-  serie: [string, number][]; titulo: string; formato?: (v: number) => string; cor?: string; parcial?: Set<string>; ano?: string; setAno?: (a: string) => void;
+  serie: [string, number | null][]; titulo: string; formato?: (v: number) => string; cor?: string; parcial?: Set<string>; ano?: string; setAno?: (a: string) => void;
 }) {
   const tip = useTip();
-  const max = Math.max(1, ...serie.map(([, v]) => v));
+  const max = Math.max(1, ...serie.map(([, v]) => v ?? 0));
+  const txt = (v: number | null) => (v == null ? "sem dado" : formato(v));
   return (
-    <div className="colunas-anos" role="img" aria-label={`${titulo}: ${serie.map(([a, v]) => `${a}: ${formato(v)}`).join("; ")}`}>
+    <div className="colunas-anos" role="img" aria-label={`${titulo}: ${serie.map(([a, v]) => `${a}: ${txt(v)}`).join("; ")}`}>
       {serie.map(([a, v], i) => (
-        <button key={a} type="button" className={`coluna-ano ${ano === a ? "ativa" : ""}`} onClick={() => setAno?.(a)} disabled={!setAno}
-          onMouseMove={(e) => tip.show(e, `${a}${parcial?.has(a) ? " (ano ainda em andamento)" : ""}: ${formato(v)}`)} onMouseLeave={tip.hide}>
-          <span className="coluna-valor num">{formato(v)}</span>
-          {i > 0 ? <Variacao de={serie[i - 1][1]} para={v} /> : <span className="variacao igual">&nbsp;</span>}
-          <span className="coluna-trilho"><span className="coluna-barra" style={{ height: `${(v / max) * 100}%`, background: cor, opacity: parcial?.has(a) ? 0.5 : 1 }} /></span>
+        <button key={a} type="button" className={`coluna-ano ${ano === a ? "ativa" : ""} ${v == null ? "sem-dado" : ""}`} onClick={() => setAno?.(a)} disabled={!setAno}
+          aria-pressed={setAno ? ano === a : undefined}
+          onMouseMove={(e) => tip.show(e, `${a}${parcial?.has(a) ? " (ano ainda em andamento)" : ""}: ${txt(v)}`)} onMouseLeave={tip.hide}>
+          <span className="coluna-valor num">{txt(v)}</span>
+          {/* A variação fica sempre num espaço próprio: sem ela (ano anterior zerado ou sem dado), a coluna não sobe */}
+          <span className="coluna-var">{i > 0 ? <Variacao de={serie[i - 1][1]} para={v} /> : null}</span>
+          <span className="coluna-trilho">{v != null && <span className="coluna-barra" style={{ height: `${(v / max) * 100}%`, background: cor, opacity: parcial?.has(a) ? 0.5 : 1 }} />}</span>
           <span className="coluna-rot">{a}{parcial?.has(a) ? "*" : ""}</span>
         </button>
       ))}

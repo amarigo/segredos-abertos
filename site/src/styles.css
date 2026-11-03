@@ -540,6 +540,16 @@ details > summary { cursor: pointer; font-weight: 700; }
 @media (max-width: 699px) { .proj-lados { grid-template-columns: 1fr; } }
 /* Como uma proposta vira lei: desenho e texto lado a lado */
 .caminho { display: grid; gap: 10px; }
+/* Seções recolhíveis (Como uma proposta vira lei; O que dizem a favor e contra): o título é o botão de abrir */
+details.recolhe > summary { list-style: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; cursor: pointer; padding-right: 34px; position: relative; min-height: 32px; }
+details.recolhe > summary::-webkit-details-marker { display: none; }
+details.recolhe > summary::after { content: ""; position: absolute; right: 6px; top: 50%; width: 9px; height: 9px; border-right: 2.5px solid var(--accent); border-bottom: 2.5px solid var(--accent); transform: translateY(-70%) rotate(45deg); transition: transform .2s; }
+details.recolhe[open] > summary::after { transform: translateY(-30%) rotate(-135deg); }
+details.recolhe > summary:hover .caminho-tit, details.recolhe > summary:hover .proj-debate-tit { color: var(--accent); }
+details.recolhe > summary:focus-visible { outline: 3px solid var(--foco); outline-offset: 3px; border-radius: 6px; }
+details.recolhe:not([open]) { gap: 0; }
+details.recolhe[open] > summary { margin-bottom: 4px; }
+.proj-conta.favor { color: var(--sim-ink); font-weight: 700; } .proj-conta.contra { color: var(--nao-ink); font-weight: 700; }
 .caminho-tit { margin: 0; font-size: 1.2rem; }
 .caminho-grade { display: grid; grid-template-columns: minmax(260px, 400px) 1fr; gap: 12px 28px; align-items: center; }
 .caminho-svg { width: 100%; height: auto; max-width: 400px; }
@@ -713,7 +723,11 @@ strong.sobe { color: var(--nao-ink); } strong.desce { color: var(--accent); }
 .colunas-anos { display: flex; align-items: stretch; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
 .coluna-ano { flex: 1 0 64px; display: grid; grid-template-rows: auto auto 160px auto; gap: 4px; justify-items: center; background: none; border: 0; padding: 6px 2px; border-radius: 10px; font: inherit; color: inherit; cursor: pointer; }
 .coluna-ano:disabled { cursor: default; }
-.coluna-ano.ativa { background: var(--tint); }
+.coluna-ano > * { min-width: 0; }
+.coluna-ano > .coluna-valor { grid-row: 1; } .coluna-ano > .coluna-var { grid-row: 2; min-height: 1.3em; } .coluna-ano > .coluna-trilho { grid-row: 3; } .coluna-ano > .coluna-rot { grid-row: 4; }
+.coluna-ano.ativa { background: var(--tint); box-shadow: inset 0 0 0 2px var(--accent); }
+.coluna-ano.sem-dado .coluna-valor { color: var(--muted); font-weight: 600; }
+.coluna-ano.sem-dado .coluna-trilho { border-bottom: 2px dashed var(--grid); }
 .coluna-valor { font-size: .78rem; font-weight: 700; }
 .coluna-trilho { width: 60%; max-width: 44px; height: 160px; display: flex; align-items: flex-end; }
 .coluna-barra { width: 100%; border-radius: 4px 4px 0 0; min-height: 2px; }

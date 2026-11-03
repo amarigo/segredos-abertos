@@ -281,8 +281,8 @@ function Arrecadou({ d, propria }: { d: Ano; propria: number }) {
 
 type ChaveDivida = "novo" | "rolagem" | "juros" | "amortizacao" | "amortizacao_rolagem";
 interface Divida {
-  anos: { ano: number; ate_bimestre: number; ate: string; parcial: boolean; valores: Record<ChaveDivida, number>; url: string }[];
-  bimestres: { ano: number; bimestre: number; ate: string; valores: Record<ChaveDivida, number>; url: string }[];
+  anos: { ano: number; ate_bimestre: number; ate: string; parcial: boolean; valores: Record<ChaveDivida, number | null>; url: string }[];
+  bimestres: { ano: number; bimestre: number; ate: string; valores: Record<ChaveDivida, number | null>; url: string }[];
   contas: Record<ChaveDivida, { nome: string; explica: string; tipo: "emprestimo" | "pagamento" }>;
 }
 const COR_DIVIDA: Record<ChaveDivida, string> = { novo: "var(--esq)", rolagem: "var(--c-outros)", juros: "var(--s2)", amortizacao: "var(--s1)", amortizacao_rolagem: "var(--c5)" };
@@ -300,6 +300,8 @@ function DividaDesde2018() {
   const bims = data.bimestres.filter((b) => String(b.ano) === sel);
   const primeiro = data.anos[0].ano, ultimo = data.anos[data.anos.length - 1];
   const soma = (c: ChaveDivida) => data.anos.reduce((t, x) => t + (x.valores[c] || 0), 0);
+  // Ano em que o relatório do Tesouro não trouxe a conta: aparece "sem dado" e fica fora das somas, com aviso
+  const semDado = data.anos.flatMap((x) => chaves.filter((c) => x.valores[c] == null).map((c) => `${data.contas[c].nome.toLowerCase()} em ${x.ano}`));
   return (
     <div className="fin-divida">
       <h3 className="fin-sub">Empréstimos e dívida paga desde {primeiro}</h3>
@@ -307,23 +309,25 @@ function DividaDesde2018() {
         De {primeiro} até {ultimo.parcial ? `${ultimo.ate} de ${ultimo.ano}` : ultimo.ano}, o governo federal pegou <strong>{rs(soma("novo"))}</strong> emprestado para pagar gastos
         e <strong>{rs(soma("rolagem"))}</strong> para pagar dívida velha. No mesmo período pagou <strong>{rs(soma("juros"))}</strong> de juros
         e <strong>{rs(soma("amortizacao") + soma("amortizacao_rolagem"))}</strong> de dívida que venceu.
+        {semDado.length > 0 && ` O relatório do Tesouro não trouxe ${semDado.join(", ")}: ${semDado.length > 1 ? "esses valores ficam" : "esse valor fica"} fora das somas.`}
       </p>
       <div className="toggle" role="group" aria-label="O que mostrar">
         {chaves.map((c) => <button key={c} type="button" aria-pressed={k === c} onClick={() => setK(c)}>{data.contas[c].nome}</button>)}
       </div>
       <p className="small muted">{data.contas[k].explica} Toque num ano para ver quando, bimestre a bimestre.</p>
-      <ColunasAnos serie={data.anos.map((x) => [String(x.ano), x.valores[k] || 0])} titulo={data.contas[k].nome} formato={rs} cor={COR_DIVIDA[k]}
+      <ColunasAnos serie={data.anos.map((x) => [String(x.ano), x.valores[k] ?? null])} titulo={data.contas[k].nome} formato={rs} cor={COR_DIVIDA[k]}
         parcial={new Set(data.anos.filter((x) => x.parcial).map((x) => String(x.ano)))} ano={sel} setAno={setAno} />
       {a && (
         <div className="grid grid-2">
           <div>
             <h4>{data.contas[k].nome} em {sel}, por bimestre</h4>
-            <Barras formato={rs} itens={bims.map((b) => ({ label: <Fonte href={b.url}>{BIM[b.bimestre]}</Fonte>, valor: Math.max(0, b.valores[k] || 0), cor: COR_DIVIDA[k],
+            {a.valores[k] == null && <p className="small muted">{`O relatório do Tesouro de ${sel} não trouxe esta conta. Veja o original no link ao lado.`}</p>}
+            <Barras formato={rs} itens={bims.filter((b) => b.valores[k] != null).map((b) => ({ label: <Fonte href={b.url}>{BIM[b.bimestre]}</Fonte>, valor: Math.max(0, b.valores[k] || 0), cor: COR_DIVIDA[k],
               nota: (b.valores[k] || 0) < 0 ? "Valor negativo: o Tesouro corrigiu o bimestre anterior." : undefined }))} />
           </div>
           <div>
             <h4>Tudo de {sel}{a.parcial ? ` (até ${a.ate})` : ""}</h4>
-            <Barras formato={rs} itens={chaves.map((c) => ({ label: <button className="link" onClick={() => setK(c)}>{data.contas[c].nome}</button>, valor: a.valores[c] || 0, cor: COR_DIVIDA[c] }))} />
+            <Barras formato={rs} itens={chaves.filter((c) => a.valores[c] != null).map((c) => ({ label: <button className="link" onClick={() => setK(c)}>{data.contas[c].nome}</button>, valor: a.valores[c] || 0, cor: COR_DIVIDA[c] }))} />
             <p className="small"><Fonte href={a.url}>RREO, Anexo 1, de {sel} na API do Tesouro</Fonte></p>
           </div>
         </div>
@@ -655,34 +659,116 @@ function Cargos({ d }: { d: Ano }) {
       ) : <div className="empty">Ainda sem os dados de servidores do Executivo para {d.ano}.</div>}
 
       {(cam || sen) && (
-        <div className="fin-casas">
-          {cam && (
-            <article className="card">
-              <h3>Câmara dos Deputados · hoje</h3>
-              <Barras formato={(v) => `${numero(v)} pessoas`} rosca={{ titulo: "Funcionários da Câmara por vínculo", centroRotulo: "Pessoas", paleta: true }} itens={cam.grupos.filter((g) => g.pessoas).map((g) => ({ label: g.nome, valor: g.pessoas, nota: g.explica,
-                cor: g.id === "secretario" || g.id === "cne" ? "var(--esq)" : g.id === "parlamentar" ? "var(--c-outros)" : "var(--s3)" }))} max={undefined} />
-              <p className="small muted">Valores em pessoas, não em reais. Dos concursados, {num(cam.efetivos_com_funcao)} têm função comissionada.
-                {cam.verba_gabinete ? <> Os secretários parlamentares são pagos pela verba de gabinete, que somou {rs(cam.verba_gabinete)} em {d.ano}: veja quanto cada deputado usou em <Link to="/politicos">Políticos</Link>.</> : null}
-              </p>
-              <p className="small"><Fonte href={cam.url}>Funcionários, dados abertos da Câmara</Fonte></p>
-            </article>
-          )}
-          {sen && (
-            <article className="card">
-              <h3>Senado Federal · hoje</h3>
-              <div className="fin-detalhe small">
-                {sen.grupos.filter((g) => g.pessoas).map((g) => (
-                  <div key={g.id} className="fin-linha"><span><strong>{g.nome}</strong><span className="muted"> · {g.explica}</span></span>
-                    <span className="num">{num(g.pessoas)} pessoas{g.folha_mes ? ` · ${rs(g.folha_mes)}/mês` : ""}</span></div>
-                ))}
-              </div>
-              <p className="small muted">Folha bruta de {sen.mes ? `${MES[sen.mes]} de ${sen.ano}` : "—"}, só de quem está na ativa. Dos concursados, {num(sen.efetivos_com_funcao)} têm função comissionada.</p>
-              <p className="small"><Fonte href={sen.url}>Servidores, API do Senado</Fonte>{sen.url_remuneracao && <> · <Fonte href={sen.url_remuneracao}>remuneração do mês</Fonte></>}</p>
-            </article>
-          )}
-        </div>
+        <>
+          <h3 className="fin-sub">Câmara e Senado · quem trabalha lá hoje</h3>
+          <p className="small muted">Toque numa parte da barra ou num grupo para ver o que ele é. Os números são de pessoas, não de reais.</p>
+          <div className="fin-casas">
+            {cam && (
+              <CasaPessoas titulo="Câmara dos Deputados" casa={cam} parlamentar="deputado"
+                nota={<>{`Dos concursados, ${num(cam.efetivos_com_funcao)} têm função comissionada.`}
+                  {cam.verba_gabinete ? <> Os secretários parlamentares são pagos pela verba de gabinete, que somou {rs(cam.verba_gabinete)} em {d.ano}: veja quanto cada deputado usou em <Link to="/politicos">Políticos</Link>.</> : null}</>}
+                fontes={<Fonte href={cam.url}>Funcionários, dados abertos da Câmara</Fonte>} />
+            )}
+            {sen && (
+              <CasaPessoas titulo="Senado Federal" casa={sen} parlamentar="senador"
+                nota={`Só quem está na ativa. Dos concursados, ${num(sen.efetivos_com_funcao)} têm função comissionada. O Senado publica a remuneração de cada servidor, mas sem o vínculo que permita somar a folha por grupo; por isso aqui só contamos pessoas.`}
+                fontes={<><Fonte href={sen.url}>Servidores, API do Senado</Fonte>{sen.url_remuneracao && <> · <Fonte href={sen.url_remuneracao}>remuneração do mês</Fonte></>}</>} />
+            )}
+          </div>
+          {cam && sen && <CasasLadoALado cam={cam} sen={sen} />}
+        </>
       )}
     </section>
+  );
+}
+
+/* Cada grupo de funcionários das duas Casas cai num destes tipos, para as duas mostrarem o mesmo desenho e as
+   mesmas cores e poderem ser comparadas. */
+type TipoCasa = "gabinete" | "sem_concurso" | "concursado" | "requisitado" | "parlamentar" | "outro";
+const TIPO_GRUPO: Record<string, TipoCasa> = {
+  secretario: "gabinete", cne: "sem_concurso", comissionado: "gabinete", efetivo: "concursado", requisitado: "requisitado", parlamentar: "parlamentar",
+};
+const COR_TIPO: Record<TipoCasa, string> = {
+  gabinete: "var(--s1)", sem_concurso: "var(--c6)", concursado: "var(--s3)", requisitado: "var(--c4)", parlamentar: "var(--s2)", outro: "var(--c-outros)",
+};
+const tipoDe = (id: string): TipoCasa => TIPO_GRUPO[id] || "outro";
+
+/** Cartão de uma Casa: total, barra das partes (cada parte é um botão) e a lista dos grupos, com o escolhido aberto. */
+function CasaPessoas({ titulo, casa, parlamentar, nota, fontes }: { titulo: string; casa: PessoalCasa; parlamentar: string; nota: ReactNode; fontes: ReactNode }) {
+  const grupos = casa.grupos.filter((g) => g.pessoas > 0).slice().sort((a, b) => b.pessoas - a.pessoas);
+  const total = grupos.reduce((t, g) => t + g.pessoas, 0);
+  const [sel, setSel] = useState<string>(grupos[0]?.id || "");
+  if (!total) return null;
+  const parl = grupos.find((g) => g.id === "parlamentar")?.pessoas || 0;
+  const semConcurso = grupos.filter((g) => ["gabinete", "sem_concurso"].includes(tipoDe(g.id))).reduce((t, g) => t + g.pessoas, 0);
+  const escolhido = grupos.find((g) => g.id === sel);
+  return (
+    <article className="card casa-pessoas">
+      <h3>{titulo} <span className="muted small">· hoje</span></h3>
+      <div className="casa-numeros">
+        <div><div className="fin-grande num">{num(total)}</div><div className="small muted">pessoas trabalhando</div></div>
+        {parl > 0 && <div><div className="fin-grande num">{num(Math.round((total - parl) / parl))}</div><div className="small muted">{`funcionários para cada ${parlamentar}`}</div></div>}
+        <div><div className="fin-grande num">{pc(semConcurso / total, 0)}</div><div className="small muted">sem concurso</div></div>
+      </div>
+      <div className="casa-barra" role="group" aria-label={`${titulo}: pessoas por vínculo`}>
+        {grupos.map((g) => {
+          const p = g.pessoas / total;
+          return (
+            <button key={g.id} type="button" aria-pressed={sel === g.id} onClick={() => setSel(g.id)} onMouseEnter={() => setSel(g.id)} onFocus={() => setSel(g.id)}
+              style={{ flexGrow: g.pessoas, background: COR_TIPO[tipoDe(g.id)] }} title={`${g.nome}: ${num(g.pessoas)} pessoas (${pc(p, 1)})`}>
+              {p >= 0.09 ? pc(p, 0) : <span className="sr-only">{g.nome} {pc(p, 0)}</span>}
+            </button>
+          );
+        })}
+      </div>
+      <ul className="casa-grupos">
+        {grupos.map((g) => (
+          <li key={g.id}>
+            <button type="button" className={`casa-grupo ${sel === g.id ? "ativo" : ""}`} aria-expanded={sel === g.id} onClick={() => setSel(g.id)}>
+              <span className="casa-cor" style={{ background: COR_TIPO[tipoDe(g.id)] }} aria-hidden="true" />
+              <span className="casa-nome">{g.nome}</span>
+              <span className="num casa-qtd">{num(g.pessoas)}</span>
+              <span className="num muted casa-pc">{pc(g.pessoas / total, 0)}</span>
+            </button>
+            {sel === g.id && escolhido?.explica && <p className="small casa-explica">{escolhido.explica}</p>}
+          </li>
+        ))}
+      </ul>
+      <p className="small muted">{nota}</p>
+      <p className="small">{fontes}</p>
+    </article>
+  );
+}
+
+/** As duas Casas na mesma régua: quanto de cada uma é sem concurso, concursado, requisitado e parlamentar. */
+function CasasLadoALado({ cam, sen }: { cam: PessoalCasa; sen: PessoalCasa }) {
+  const tipos: [TipoCasa[], string][] = [[["gabinete", "sem_concurso"], "Sem concurso (gabinetes, lideranças e órgãos)"], [["concursado"], "Concursados"],
+    [["requisitado"], "Requisitados de outros órgãos"], [["parlamentar"], "Deputados e senadores"]];
+  const parte = (c: PessoalCasa, ts: TipoCasa[]) => {
+    const tot = c.grupos.reduce((t, g) => t + g.pessoas, 0) || 1;
+    const n = c.grupos.filter((g) => ts.includes(tipoDe(g.id))).reduce((t, g) => t + g.pessoas, 0);
+    return { n, p: n / tot };
+  };
+  return (
+    <div className="casa-lado card">
+      <h4>Lado a lado: que parte de cada Casa é de cada grupo</h4>
+      {tipos.map(([ts, nome]) => {
+        const c = parte(cam, ts), s = parte(sen, ts);
+        if (!c.n && !s.n) return null;
+        return (
+          <div key={nome} className="casa-lado-linha">
+            <div className="casa-lado-nome"><span className="casa-cor" style={{ background: COR_TIPO[ts[0]] }} aria-hidden="true" />{nome}</div>
+            {([["Câmara", c], ["Senado", s]] as const).map(([casa, v]) => (
+              <div key={casa} className="casa-lado-barra">
+                <span className="small">{casa}</span>
+                <span className="casa-lado-trilho"><span style={{ width: `${v.p * 100}%`, background: COR_TIPO[ts[0]] }} /></span>
+                <span className="num small casa-lado-valor">{v.n ? <><b>{pc(v.p, 0)}</b> <span className="muted">{`· ${num(v.n)} pessoas`}</span></> : <span className="muted">nenhum</span>}</span>
+              </div>
+            ))}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

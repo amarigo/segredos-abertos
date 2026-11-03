@@ -83,15 +83,18 @@ export function Debate({ p }: { p: Projeto }) {
     </div>
   );
   return (
-    <div className="proj-debate">
-      <h4 className="proj-debate-tit">O que dizem a favor e contra</h4>
+    <details className="proj-debate recolhe">
+      <summary>
+        <h4 className="proj-debate-tit">O que dizem a favor e contra</h4>
+        <span className="recolhe-dica small"><span className="proj-conta favor">{`${d.favor.length} a favor`}</span> · <span className="proj-conta contra">{`${d.contra.length} contra`}</span></span>
+      </summary>
       <div className="proj-lados">
         {lado("A favor", "favor", d.favor, "Ainda não há documento oficial a favor nesta proposta (justificação do autor ou parecer pela aprovação).")}
         {lado("Contra", "contra", d.contra, "Ninguém registrou documento oficial contra até agora (parecer pela rejeição ou voto em separado). Pode haver quem discorde sem ter posto isso por escrito.")}
       </div>
       {temMais && <button className="link small" onClick={() => setTudo(!tudo)}>{tudo ? "Mostrar menos" : "Ver todos os trechos"}</button>}
       <p className="small muted">Frases copiadas dos documentos oficiais, sem mudar palavras: a justificação de quem propôs, o parecer dos relatores e os votos em separado. Escolhemos as frases que falam do efeito e do motivo; o documento completo está no link.</p>
-    </div>
+    </details>
   );
 }
 

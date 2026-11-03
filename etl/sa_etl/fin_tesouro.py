@@ -83,6 +83,47 @@ def valor(itens: list[dict], conta: str, coluna: str) -> float | None:
     return achados[0] if achados else None
 
 
+# Contas que já vieram com outro código ou com outro rótulo em algum ano: quando o código exato não aparece entre as
+# linhas "Padrão", procura o mesmo código em qualquer rótulo e, por fim, a linha pelo nome (todas as palavras, sem
+# acento, e nunca as intraorçamentárias). Entre várias linhas com o nome, fica a maior, que é a linha-mãe (as
+# outras são as partes dela, como "internas" e "externas").
+PARECIDAS = {
+    "OperacoesDeCreditoRefinanciamento": ("OPERAC", "CREDITO", "REFINANCIAMENTO"),
+    "AmortizacaoRefinanciamentoDaDivida": ("AMORTIZAC", "REFINANCIAMENTO"),
+}
+
+
+def _sem_acento(t: str) -> str:
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFD", t) if unicodedata.category(c) != "Mn").upper()
+
+
+def valor_conta(itens: list[dict], conta: str, coluna: str) -> float | None:
+    """Como `valor`, mas para as contas de PARECIDAS tenta também outro rótulo e o nome da linha.
+    `itens` são todas as linhas do relatório (sem filtrar o rótulo)."""
+    v = valor(_so_padrao(itens), conta, coluna)
+    if v is not None or conta not in PARECIDAS:
+        return v
+    v = valor(itens, conta, coluna)
+    if v is not None:
+        log.warning("Tesouro: %s só apareceu fora do rótulo Padrão", conta)
+        return v
+    palavras = PARECIDAS[conta]
+    achados = []
+    for i in itens:
+        nome = _sem_acento(f"{i.get('conta', '')} {i.get('cod_conta', '')}")
+        if "INTRA" in nome or not all(p in nome for p in palavras):
+            continue
+        if not str(i.get("coluna", "")).upper().startswith(coluna) or i.get("valor") is None:
+            continue
+        achados.append((i.get("rotulo") == "Padrão", float(i["valor"]), i.get("cod_conta")))
+    if not achados:
+        return None
+    _, v, cod = max(achados)
+    log.warning("Tesouro: %s não veio com esse código; usei a linha %s, achada pelo nome", conta, cod)
+    return v
+
+
 RECEITA = "ATÉ O BIMESTRE"
 DOTACAO = "DOTAÇÃO ATUALIZADA"
 LIQUIDADO = "DESPESAS LIQUIDADAS ATÉ O BIMESTRE"
@@ -136,17 +177,17 @@ def ler_rreo1(itens: list[dict]) -> dict:
     it = _so_padrao(itens)
     receitas = []
     for conta, nome, explica, tipo in RECEITAS:
-        v = valor(it, conta, RECEITA)
+        v = valor_conta(itens, conta, RECEITA)
         if v is None:
             continue
         receitas.append({"id": conta, "nome": nome, "explica": explica, "tipo": tipo, "valor": _num(v),
                          "previsto": _num(valor(it, conta, "PREVISÃO ATUALIZADA"))})
     despesas = []
     for conta, nome, explica in DESPESAS_GRUPO:
-        liq = valor(it, conta, LIQUIDADO)
+        liq = valor_conta(itens, conta, LIQUIDADO)
         if liq is None:
             continue
-        despesas.append({"id": conta, "nome": nome, "explica": explica, "liquidado": _num(liq), "pago": _num(valor(it, conta, PAGO)),
+        despesas.append({"id": conta, "nome": nome, "explica": explica, "liquidado": _num(liq), "pago": _num(valor_conta(itens, conta, PAGO)),
                          "empenhado": _num(valor(it, conta, EMPENHADO)), "dotacao": _num(valor(it, conta, DOTACAO))})
     return {
         "receitas": receitas,
