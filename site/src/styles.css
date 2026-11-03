@@ -518,6 +518,43 @@ details > summary { cursor: pointer; font-weight: 700; }
 .proj-etapas li.atual { color: var(--ink); font-weight: 800; }
 .proj-etapas span { overflow-wrap: anywhere; }
 .proj-col { display: grid; gap: 12px; }
+/* O que dizem a favor e contra (trechos dos documentos oficiais) */
+.proj-debate { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+.proj-debate-tit { margin: 0; font-size: 1rem; }
+.proj-lados { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
+.proj-lado { display: grid; gap: 12px; align-content: start; border-left: 4px solid var(--outro); padding-left: 12px; }
+.proj-lado.favor { border-color: var(--sim); }
+.proj-lado.contra { border-color: var(--nao); }
+.proj-lado h4 { margin: 0; font-size: .95rem; }
+.proj-lado.favor h4 { color: var(--sim-ink); }
+.proj-lado.contra h4 { color: var(--nao-ink); }
+.proj-arg { display: grid; gap: 4px; }
+.proj-arg p { margin: 0; }
+.proj-trecho { margin: 0; font-size: .92rem; line-height: 1.5; color: var(--ink-2); font-style: italic; }
+.proj-debate button.link { justify-self: start; }
+@media (max-width: 699px) { .proj-lados { grid-template-columns: 1fr; } }
+/* Como uma proposta vira lei: desenho e texto lado a lado */
+.caminho { display: grid; gap: 10px; }
+.caminho-tit { margin: 0; font-size: 1.2rem; }
+.caminho-grade { display: grid; grid-template-columns: minmax(260px, 400px) 1fr; gap: 12px 28px; align-items: center; }
+.caminho-svg { width: 100%; height: auto; max-width: 400px; }
+.caminho-texto { display: grid; gap: 4px; }
+.caminho-texto .proj-como { margin: 0; gap: 10px; }
+.caminho-linha { stroke: var(--line); stroke-width: 4; }
+.caminho-bola { fill: var(--navy); stroke: var(--surface); stroke-width: 3; }
+.caminho-num { fill: #fff; font: 800 15px var(--body); }
+.caminho-nome { fill: var(--ink); font: 800 15px var(--body); }
+.caminho-quem { fill: var(--muted); font: 500 12.5px var(--body); }
+.caminho-lei { fill: var(--verde); }
+.caminho-ok { fill: none; stroke: #fff; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.caminho-volta { fill: none; stroke: var(--hot); stroke-width: 2; stroke-dasharray: 4 3; }
+.caminho-ramo { stroke: var(--muted); stroke-width: 1.5; }
+.caminho-ponta { fill: var(--muted); }
+.caminho-pilula { fill: var(--surface); stroke-width: 2; }
+.caminho-pilula.nao { stroke: var(--nao); }
+.caminho-pilula.veto { stroke: var(--c4); }
+.caminho-pil-txt { fill: var(--ink); font: 700 11.5px var(--body); }
+@media (max-width: 799px) { .caminho-grade { grid-template-columns: 1fr; } .caminho-svg { justify-self: center; } }
 @media (max-width: 599px) { .proj-etapas span { display: none; } .proj-etapas { gap: 3px; } }
 
 /* ===== Acabamento (skills de design: impeccable, taste, Emil Kowalski). Só aparência: nenhum dado muda. ===== */

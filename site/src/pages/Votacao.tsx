@@ -38,7 +38,7 @@ export default function VotacaoPage() {
               ? <span className="chip">Placar oficial: Sim {v.placar_casa.sim} · Não {v.placar_casa.nao}</span>
               : <span className="chip">Sim {v.sim} · Não {v.nao}</span>}
           {linkSeguro(v.proposicao?.url) && <a className="chip" href={linkSeguro(v.proposicao?.url)} target="_blank" rel="noreferrer">Ver a proposta e as votações no site {v.casa === "camara" ? "da Câmara" : "do Senado"} ↗</a>}
-          {v.temas?.map((t) => <Link key={t} className="chip" to={`/votacoes?tema=${encodeURIComponent(t)}`}>{t}</Link>)}
+          {v.temas?.map((t) => <Link key={t} className="chip" to={`/votacoes/ja-votadas?tema=${encodeURIComponent(t)}`}>{t}</Link>)}
         </div>
       </section>
 

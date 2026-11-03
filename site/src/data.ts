@@ -369,7 +369,11 @@ export function cotaNoAno(e: { por_ano?: Record<string, { valor: number; n_polit
 }
 
 /* Projetos em andamento (tramitacao.json, gerado por etl/sa_etl/tramitacao.py; almg/tramitacao.json no Minas Nossa) */
-export interface AutorProjeto { nome: string; partido: string; uf: string; id: string }
+export interface AutorProjeto { nome: string; partido: string; uf: string; id: string; cargo?: string }
+/** Um documento oficial com argumentos (justificação do autor, parecer do relator ou voto em separado) e os trechos
+ * copiados dele, sem mudar palavras. */
+export interface ArgumentoProjeto { quem?: string; papel: string; casa?: string; data?: string; url: string; conclusao?: string; trechos: string[] }
+export interface DebateProjeto { favor: ArgumentoProjeto[]; contra: ArgumentoProjeto[]; documentos: number }
 export interface PautaProjeto { data: string; onde: string; url: string; urgencia: boolean; regime: string; relator: string; parecer?: string; terminativo?: boolean }
 export type GrupoProjeto = "pauta" | "mpv" | "nova" | "andamento";
 export interface Projeto {
@@ -379,7 +383,8 @@ export interface Projeto {
   situacao: string; fase?: string; onde: string; regime?: string; etapa: number; etapa_nome?: string;
   url: string; texto?: string; passos?: { data: string; onde: string; texto: string }[];
   pauta?: PautaProjeto[]; grupos: GrupoProjeto[]; temas?: string[]; proximo?: string;
-  prazo?: string; tranca_pauta?: string; suspenso?: boolean; veio_da_camara?: boolean; do_estado?: boolean;
+  prazo?: string; tranca_pauta?: string; suspenso?: boolean; veio_da_camara?: boolean; veio_do_senado?: boolean; do_estado?: boolean;
+  url_origem?: string; debate?: DebateProjeto;
 }
 export interface Tramitacao {
   atualizado_em: string; dias_pauta: number; dias_novas: number; etapas: string[]; o_que_e: Record<string, string>;
