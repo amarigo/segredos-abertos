@@ -28,6 +28,7 @@ const EmpresaPage = pagina(() => import("./pages/Empresa"));
 const Votacoes = pagina(() => import("./pages/Votacoes"));
 const VotacaoPage = pagina(() => import("./pages/Votacao"));
 const TramitacaoPage = pagina(() => import("./pages/Tramitacao"));
+const TribunaisPage = pagina(() => import("./pages/Tribunais"));
 const Sobre = pagina(() => import("./pages/Sobre"));
 const VerificacaoPage = pagina(() => import("./pages/Verificacao"));
 const Partidos = pagina(() => import("./pages/Partidos"));
@@ -122,8 +123,8 @@ export default function App() {
             {!MG && <NavLink to="/corrupcao">Corrupção</NavLink>}
             <NavLink to="/sobre">Como funciona</NavLink>
           </nav>
-          {/* A página de arrecadação tem os próprios anos (do Tesouro) e a de corrupção não depende de ano: o seletor só confundiria */}
-          {pathname !== "/dinheiro" && !pathname.startsWith("/corrupcao") && <AnoSeletor />}
+          {/* A página de arrecadação tem os próprios anos (do Tesouro); corrupção e julgamentos do STF não dependem de ano: o seletor só confundiria */}
+          {pathname !== "/dinheiro" && !pathname.startsWith("/corrupcao") && pathname !== "/votacoes/tribunais" && <AnoSeletor />}
         </div>
       </header>
       <main className="wrap">
@@ -137,6 +138,7 @@ export default function App() {
           <Route path="/e/:cnpj" element={<EmpresaPage />} />
           <Route path="/votacoes" element={<VotacoesInicio />} />
           <Route path="/votacoes/ja-votadas" element={<Votacoes />} />
+          {!MG && <Route path="/votacoes/tribunais" element={<TribunaisPage />} />}
           <Route path="/votacoes/em-andamento" element={<EmAndamentoAntigo />} />
           <Route path="/v/:id" element={<VotacaoPage />} />
           <Route path="/partidos" element={<Partidos />} />
