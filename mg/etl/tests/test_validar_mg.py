@@ -99,6 +99,9 @@ DEFEITOS = {
     "arquivo do deputado faltando": lambda s: (s / "almg" / "d" / "20003.json").unlink(),
     "deputado repetido": lambda s: _mudar(s, "almg/deputados.json", lambda x: x["deputados"].append(x["deputados"][0])),
     "id de deputado inseguro": lambda s: _mudar(s, "almg/deputados.json", lambda x: x["deputados"][0].update(id="../x")),
+    "projeto de deputado fora da lista": lambda s: _mudar(s, "almg/deputados.json", lambda x: x.update(
+        fora_da_lista={"Proposições (ALMG)": {"deputados": 1, "linhas": 2, "valor": 0, "exemplos": ["Fulana (1)"]}})),
+    "deputado sem dizer se está no cargo": lambda s: _mudar(s, "almg/deputados.json", lambda x: x["deputados"][0].pop("em_exercicio")),
     "emendas por deputado acima do total": lambda s: _mudar(s, "estado/emendas.json", lambda x: x["anos"]["2024"].update(indicado=1)),
     "CPF na descrição da emenda": lambda s: _mudar(s, "cidades/dinheiro/itajuba.json",
                                                    lambda x: x["estaduais"]["lista"][0].update(descricao="para 52998224725")),

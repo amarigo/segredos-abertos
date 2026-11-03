@@ -19,6 +19,7 @@ export default function Assembleia() {
   const { data, error } = useData<AlmgIndice>("almg/deputados.json");
   const [q, setQ] = useState("");
   const [partido, setPartido] = useState("");
+  const [situacao, setSituacao] = useState("");
   const [ordem, setOrdem] = useState<Ordem>("verba");
   const [anoSel, setAno] = useState("");
   const anos = data?.anos || [];
@@ -27,10 +28,14 @@ export default function Assembleia() {
   const lista = useMemo(() => {
     const v = (x: AlmgAno | undefined, k: Ordem) => (k === "nome" || !x ? 0 : x[k]);
     return (data?.deputados || [])
-      .filter((d) => (!partido || d.partido === partido) && (!q || norm(d.nome).includes(norm(q))))
+      .filter((d) => (!partido || d.partido === partido)
+        && (!situacao || (situacao === "exercicio") === (d.em_exercicio !== false))
+        && (!q || [d.nome, ...(d.outros_nomes || [])].some((n) => norm(n).includes(norm(q)))))
       .sort((a, b) => ordem === "nome" ? a.nome.localeCompare(b.nome) : v(b.por_ano[ano], ordem) - v(a.por_ano[ano], ordem) || a.nome.localeCompare(b.nome));
-  }, [data, q, partido, ordem, ano]);
+  }, [data, q, partido, situacao, ordem, ano]);
   if (!data) return <Loading error={error} />;
+  const noCargo = data.n_em_exercicio ?? data.deputados.filter((d) => d.em_exercicio !== false).length;
+  const sairam = data.deputados.length - noCargo;
   const med = data.medianas[ano];
   const dinheiro = ordem === "verba" || ordem === "emendas_indicado";
   const porPartido = ordem === "nome" ? [] : Object.values(lista.reduce((acc, d) => {
@@ -55,11 +60,18 @@ export default function Assembleia() {
   return (
     <section>
       <h1>Deputados estaduais</h1>
-      <Explain>Os {data.deputados.length} deputados em exercício na Assembleia Legislativa de Minas Gerais (ALMG). Eles fazem as leis do estado, aprovam o orçamento e fiscalizam o governador. Para cada um, mostramos quanto gastou da verba indenizatória (o reembolso de despesas do mandato), quantos projetos apresentou e quanto dinheiro do orçamento indicou em emendas, e para onde. "Acima" ou "abaixo da maioria" compara com o deputado do meio da lista.</Explain>
+      <Explain>Os {noCargo} deputados em exercício na Assembleia Legislativa de Minas Gerais (ALMG). Eles fazem as leis do estado, aprovam o orçamento e fiscalizam o governador. Para cada um, mostramos quanto gastou da verba indenizatória (o reembolso de despesas do mandato), quantos projetos apresentou e quanto dinheiro do orçamento indicou em emendas, e para onde. "Acima" ou "abaixo da maioria" compara com o deputado do meio da lista.</Explain>
+      {sairam > 0 && <p className="muted small">{sairam === 1
+        ? "Também está na lista 1 deputado que teve mandato nesta legislatura e já saiu do cargo (suplente que devolveu a vaga, quem renunciou ou se afastou). Use o filtro de situação para ver só um grupo."
+        : `Também estão na lista os ${sairam} deputados que tiveram mandato nesta legislatura e já saíram do cargo (suplentes que devolveram a vaga, quem renunciou ou se afastou). Use o filtro de situação para ver só um grupo.`}</p>}
       <div className="search">
         <input id="filtro-nome" aria-label="Nome" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nome do deputado" />
         <select id="filtro-partido" aria-label="Partido" value={partido} onChange={(e) => setPartido(e.target.value)}>
           <option value="">Todos os partidos</option>{partidos.map((p) => <option key={p}>{p}</option>)}
+        </select>
+        <select id="filtro-situacao" aria-label="Situação" value={situacao} onChange={(e) => setSituacao(e.target.value)}>
+          <option value="">No cargo hoje e quem já saiu</option><option value="exercicio">Só quem está no cargo hoje</option>
+          <option value="fora">Só quem saiu do cargo</option>
         </select>
         <select id="filtro-ordem" aria-label="Ordenar" value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)}>
           {ORDENS.map((o) => <option key={o.k} value={o.k}>{o.nome}</option>)}
@@ -76,17 +88,17 @@ export default function Assembleia() {
             itens={porPartido.map((p) => ({ label: p.partido, nota: `${p.n} deputado${p.n === 1 ? "" : "s"}`, valor: p.valor, cor: corPartido(p.partido) }))} />
         </Abrir>}
       </Abrir>}
-      {med && ordem !== "nome" && <p className="muted small">Deputado do meio da lista em {ano}: {valor(med)}.</p>}
-      <p className="muted small">{lista.length} deputado{lista.length === 1 ? "" : "s"}</p>
+      {med && ordem !== "nome" && <p className="muted small">Deputado do meio da lista em {ano} (entre os que estão no cargo hoje): {valor(med)}.</p>}
+      <p className="muted small">{lista.length} deputado{lista.length === 1 ? "" : "s"}. A lista traz todos que tiveram mandato nesta legislatura, inclusive quem já saiu do cargo: os gastos, projetos e emendas do período no cargo continuam contando.</p>
       <div className="list">
         {lista.map((d) => (
           <Link key={d.id} to={`/deputado-estadual/${d.id}`} className="person">
             <span className="avatar sigla-avatar" aria-hidden="true" style={{ background: corPartido(d.partido) }}>{d.partido.slice(0, 4)}</span>
             <div style={{ minWidth: 0 }}>
               <div className="pname">{d.nome}</div>
-              <div className="meta">Deputado estadual · {d.partido}</div>
+              <div className="meta">Deputado estadual · {d.partido}{d.em_exercicio === false && <> · <span className="fora-cargo">fora do cargo hoje</span></>}</div>
             </div>
-            <div className="num r-col">{valor(d.por_ano[ano])}<div>{lado(d.por_ano[ano])}</div></div>
+            <div className="num r-col">{valor(d.por_ano[ano])}<div>{d.em_exercicio !== false && lado(d.por_ano[ano])}</div></div>
           </Link>
         ))}
       </div>
