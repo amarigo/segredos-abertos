@@ -251,6 +251,9 @@ test("projetos em andamento: pauta, autor, próximo passo e link oficial", async
   // A aba Votações abre direto nos projetos em andamento; as já votadas ficam a um clique
   await page.goto("./#/votacoes");
   await expect(page.locator("h1")).toHaveText("Projetos em andamento");
+  // "Como uma proposta vira lei" começa recolhido e abre com um toque no título
+  await expect(page.locator(".caminho svg")).toBeHidden();
+  await page.locator(".caminho > summary").click();
   await expect(page.locator(".caminho svg")).toBeVisible();
   await expect(page.locator(".caminho")).toContainText("Outra Casa");
   const naPauta = tra.itens.filter((i) => i.grupos.includes("pauta"));
@@ -263,6 +266,10 @@ test("projetos em andamento: pauta, autor, próximo passo e link oficial", async
   await expect(cartao.locator(".proj-etapas")).toHaveAttribute("aria-label", "Etapa atual: Plenário");
   // A favor e contra: trechos dos documentos oficiais, com link
   const deb = cartao.locator(".proj-debate");
+  // recolhido, com a contagem dos dois lados no título; abre com um toque
+  await expect(deb.locator("summary")).toContainText("a favor");
+  await expect(deb.locator(".proj-lado.favor")).toBeHidden();
+  await deb.locator("summary").click();
   await expect(deb.locator(".proj-lado.favor")).toContainText("reduz em 60% o risco de morte");
   await expect(deb.locator(".proj-lado.contra")).toContainText("Deputado Ficticio 03");
   await expect(deb.locator(".proj-lado.contra a[href^='https://www.camara.leg.br/']")).toBeVisible();

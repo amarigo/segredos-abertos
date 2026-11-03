@@ -1,7 +1,8 @@
 import { MG } from "../recorte";
 
 /** Como uma proposta vira lei: desenho do caminho (à esquerda) e a explicação de cada etapa (à direita; no celular,
- * embaixo). Os números do desenho são os mesmos da lista e da barra de etapas de cada cartão. */
+ * embaixo). Os números do desenho são os mesmos da lista e da barra de etapas de cada cartão. Fica recolhido: quem
+ * já sabe o caminho vai direto aos projetos; quem não sabe abre com um toque. */
 const PASSOS = [
   { nome: "Apresentada", quem: "deputado, senador, presidente…", texto: "Um parlamentar, o presidente ou outro autor apresenta a proposta." },
   { nome: "Comissões", quem: "relator dá o parecer", texto: "Comissões temáticas estudam o texto. Um relator recomenda aprovar, mudar ou rejeitar." },
@@ -16,8 +17,8 @@ const PASSO = 78;
 export default function CaminhoLei() {
   const yLei = Y0 + PASSOS.length * PASSO;
   return (
-    <section className="card caminho" aria-labelledby="caminho-tit">
-      <h2 id="caminho-tit" className="caminho-tit">Como uma proposta vira lei</h2>
+    <details className="card caminho recolhe">
+      <summary><h2 className="caminho-tit">Como uma proposta vira lei</h2><span className="recolhe-dica small muted">{`${PASSOS.length} etapas, da apresentação à lei`}</span></summary>
       <div className="caminho-grade">
         <svg className="caminho-svg" viewBox={`0 0 432 ${yLei + 40}`} role="img"
           aria-label="Desenho do caminho: apresentada, comissões, plenário, outra Casa, sanção ou promulgação, e vira lei. Pode ser rejeitada no plenário, e o veto do presidente pode ser derrubado pelo Congresso.">
@@ -66,6 +67,6 @@ export default function CaminhoLei() {
           <p className="small muted">PL é projeto de lei, PLP é projeto de lei complementar, PEC muda a Constituição, MPV é medida provisória e PDL é projeto de decreto legislativo. Cada cartão explica o tipo em "Texto oficial e mais detalhes".</p>
         </div>
       </div>
-    </section>
+    </details>
   );
 }

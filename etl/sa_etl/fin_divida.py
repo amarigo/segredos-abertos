@@ -33,13 +33,20 @@ PAGAMENTOS = [
 
 
 def _acumulado(itens: list[dict]) -> dict[str, float | None]:
-    it = t._so_padrao(itens)
     out: dict[str, float | None] = {}
     for k, conta, _, _ in EMPRESTIMOS:
-        out[k] = t.valor(it, conta, t.RECEITA)
+        out[k] = t.valor_conta(itens, conta, t.RECEITA)
     for k, conta, _, _ in PAGAMENTOS:
-        out[k] = t.valor(it, conta, t.PAGO)
+        out[k] = t.valor_conta(itens, conta, t.PAGO)
     return out
+
+
+def _menos(v: float | None, antes: float | None) -> float | None:
+    """Valor do bimestre: acumulado de agora menos o do relatório anterior. Sem a conta em um dos dois, sem valor
+    (nunca vira zero, que o site mostraria como "R$ 0" e "-100%")."""
+    if v is None:
+        return None
+    return round(v - (antes or 0.0), 2)
 
 
 def _params(ano: int, bim: int) -> dict:
@@ -65,12 +72,16 @@ def coletar(cache: Path, ano_atual: int) -> dict | None:
             if all(v is None for v in acum.values()):
                 log.warning("Dívida: RREO %d bimestre %d sem as contas da dívida", ano, bim)
                 break
-            no_bim = {k: round((v or 0.0) - (anterior.get(k) or 0.0), 2) for k, v in acum.items()}
+            no_bim = {k: _menos(v, anterior.get(k)) if bim == 1 or anterior.get(k) is not None else None for k, v in acum.items()}
             bimestres.append({"ano": ano, "bimestre": bim, "ate": t.MESES_BIMESTRE[bim], "valores": no_bim,
                               "url": t.url_api("rreo", **_params(ano, bim))})
             anterior, ultimo = acum, bim
         if ultimo:
-            ac = {k: round(v or 0.0, 2) for k, v in anterior.items()}
+            ac = {k: None if v is None else round(v, 2) for k, v in anterior.items()}
+            faltam = [k for k, v in ac.items() if v is None]
+            if faltam:
+                log.warning("Dívida %d: o RREO do %dº bimestre não trouxe %s; o site mostra 'sem dado' em vez de zero",
+                            ano, ultimo, ", ".join(faltam))
             anos.append({"ano": ano, "ate_bimestre": ultimo, "ate": t.MESES_BIMESTRE[ultimo], "parcial": ultimo < 6, "valores": ac,
                          "url": t.url_api("rreo", **_params(ano, ultimo))})
     if not anos:
@@ -78,7 +89,10 @@ def coletar(cache: Path, ano_atual: int) -> dict | None:
     # Conferência: a soma dos bimestres tem que dar o acumulado do último relatório de cada ano
     for a in anos:
         for k, v in a["valores"].items():
-            soma = sum(b["valores"][k] for b in bimestres if b["ano"] == a["ano"])
+            partes = [b["valores"][k] for b in bimestres if b["ano"] == a["ano"]]
+            if v is None or any(x is None for x in partes):
+                continue
+            soma = sum(partes)
             if abs(soma - v) > 1:
                 log.warning("Dívida %d: bimestres de %s somam %.0f, o relatório diz %.0f", a["ano"], k, soma, v)
     contas = {k: {"nome": n, "explica": e, "conta": c, "tipo": "emprestimo"} for k, c, n, e in EMPRESTIMOS}
