@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, NavLink, useSearchParams } from "react-router-dom";
 import { Abrir, Colunas, Explain, Loading, OndeVer, ResultadoChip, useData } from "../components/ui";
-import { TEMAS, casaNome, dataBR, descricaoCurta, proposicaoNome, tipoVotacao, type VotacaoResumo } from "../data";
+import { MESES_LONGOS, TEMAS, casaNome, dataBR, descricaoCurta, proposicaoNome, tipoVotacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 import { MG } from "../recorte";
 import { AvisosFim } from "../components/Selo";
@@ -22,13 +22,20 @@ export default function Votacoes() {
   const [q, setQ] = useState("");
   const [casa, setCasa] = useState("");
   const [tipo, setTipo] = useState("");
+  const [mes, setMes] = useState("");
+  const [resultado, setResultado] = useState<"" | "sim" | "nao">("");
+  const [mostrar, setMostrar] = useState(200);
   const [params, setParams] = useSearchParams();
   const tema = params.get("tema") || "";
   const setTema = (t: string) => setParams(t ? { tema: t } : {}, { replace: true });
   const contTema = useMemo(() => { const c: Record<string, number> = {}; (data || []).forEach((v) => v.temas?.forEach((t) => (c[t] = (c[t] || 0) + 1))); return c; }, [data]);
   const tipos = useMemo(() => [...new Set((data || []).map((v) => v.proposicao?.sigla).filter(Boolean) as string[])].sort(), [data]);
+  const meses = useMemo(() => [...new Set((data || []).map((v) => (v.data || "").slice(0, 7)).filter((m) => m.length === 7))].sort().reverse(), [data]);
   const lista = useMemo(() => (data || []).filter((v) => (!casa || v.casa === casa) && (!tipo || v.proposicao?.sigla === tipo) && (!tema || !!v.temas?.includes(tema))
-    && (!q || norm(`${proposicaoNome(v.proposicao)} ${v.proposicao?.ementa || ""} ${v.descricao}`).includes(norm(q)))), [data, q, casa, tipo, tema]);
+    && (!mes || (mes.length === 4 ? v.data?.startsWith(mes) : v.data?.slice(0, 7) === mes))
+    && (!resultado || (resultado === "sim") === !!v.aprovada)
+    && (!q || norm(`${proposicaoNome(v.proposicao)} ${v.proposicao?.ementa || ""} ${v.descricao}`).includes(norm(q)))), [data, q, casa, tipo, tema, mes, resultado]);
+  const filtrado = !!(q || casa || tipo || tema || mes || resultado);
   const graf = useMemo(() => {
     const ap = lista.filter((v) => v.aprovada).length;
     const tipos: Record<string, number> = {};
@@ -61,6 +68,25 @@ export default function Votacoes() {
           <option value="">Todos os tipos</option>{tipos.map((t) => <option key={t}>{t}</option>)}
         </select>
       </div>
+      <div className="filtros">
+        <label className="graf-ano"><span className="muted small">Quando</span>
+          <select id="filtro-mes" aria-label="Mês" value={mes} onChange={(e) => { setMes(e.target.value); setMostrar(200); }}>
+            <option value="">Todos os meses</option>
+            {[...new Set(meses.map((m) => m.slice(0, 4)))].map((a) => (
+              <optgroup key={a} label={a}>
+                <option value={a}>{`Todo o ano de ${a}`}</option>
+                {meses.filter((m) => m.startsWith(a)).map((m) => <option key={m} value={m}>{`${MESES_LONGOS[Number(m.slice(5)) - 1]} de ${a}`}</option>)}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+        <fieldset><legend>Resultado</legend>
+          {([["", "Todas"], ["sim", "Aprovadas (Sim venceu)"], ["nao", "Rejeitadas (Não venceu)"]] as const).map(([k, n]) => (
+            <button key={k} className="fchip" aria-pressed={resultado === k} onClick={() => { setResultado(k); setMostrar(200); }}>{n}</button>
+          ))}
+        </fieldset>
+        {filtrado && <button className="link small" onClick={() => { setQ(""); setCasa(""); setTipo(""); setTema(""); setMes(""); setResultado(""); }}>Limpar filtros ✕</button>}
+      </div>
       <div className="row" style={{ flexWrap: "wrap", gap: 6, margin: "8px 0" }} role="group" aria-label="Temas">
         <button className={`chip ${!tema ? "ok" : ""}`} onClick={() => setTema("")}>Todos os temas</button>
         {TEMAS.filter((t) => contTema[t]).map((t) => (
@@ -83,7 +109,7 @@ export default function Votacoes() {
         <table>
           <thead><tr><th>Data</th><th>Casa</th><th>O que foi votado</th><th className="r">Sim</th><th className="r">Não</th>{MG && <th>Bancada de MG</th>}<th>Resultado</th></tr></thead>
           <tbody>
-            {lista.slice(0, 400).map((v) => (
+            {lista.slice(0, mostrar).map((v) => (
               <tr key={v.id}>
                 <td className="num">{dataBR(v.data)}</td>
                 <td>{casaNome(v.casa)}</td>
@@ -100,6 +126,11 @@ export default function Votacoes() {
           </tbody>
         </table>
       </div>
+      {lista.length > mostrar && (
+        <p className="row" style={{ gap: 12, alignItems: "center" }}><span className="filtros-conta">{`Mostrando ${numero(mostrar)} de ${numero(lista.length)} votações.`}</span>
+          <button className="btn alt" onClick={() => setMostrar((m) => m + 200)}>Mostrar mais 200</button>
+          <button className="link small" onClick={() => setMostrar(lista.length)}>Mostrar todas</button></p>
+      )}
       <OndeVer links={[
         { nome: "Votações na Câmara (dados abertos)", url: "https://dadosabertos.camara.leg.br/swagger/api.html#/Vota%C3%A7%C3%B5es/votos", explica: "o voto de cada deputado" },
         { nome: "Votações no Senado (dados abertos)", url: "https://legis.senado.leg.br/dadosabertos/docs/", explica: "o voto de cada senador" },

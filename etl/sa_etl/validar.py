@@ -149,6 +149,9 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
     for ano in anos:
         if not _perto(meta.get("total_por_ano", {}).get(ano, 0), soma_ano[ano], len(pols)):
             r.erro(f"meta.total_por_ano[{ano}] diferente da soma dos parlamentares")
+        temas = (meta.get("temas_por_ano") or {}).get(ano)
+        if temas is not None and not _perto(sum(t["valor"] for t in temas), meta.get("total_por_ano", {}).get(ano, 0), len(temas) + 1):
+            r.erro(f"meta.temas_por_ano[{ano}]: a soma dos temas (viagens, combustível...) é diferente do total do ano")
     if meta.get("contagens", {}).get("politicos") != len(pols):
         r.erro("meta.contagens.politicos diferente do número de parlamentares")
 
@@ -343,6 +346,33 @@ def _conferir_emendas(saida: Path, r: Resultado) -> None:
             cats = fav.get("por_categoria") or []
             if not _perto(fav["total"], sum(x["valor"] for x in cats), len(cats)):
                 r.erro(f"Emendas {ano}: total dos favorecidos diferente da soma por categoria")
+    for f in sorted((pasta / "destino").glob("*.json")) if (pasta / "destino").exists() else []:
+        _conferir_destino_pix(f, r)
+
+
+def _conferir_destino_pix(f: Path, r: Resultado) -> None:
+    """Emendas Pix no Transferegov (transferegov.py): a lista soma o detalhe, e nenhum CPF vai como CNPJ."""
+    d = _ler(f, r)
+    if d is None:
+        return
+    lista = d.get("beneficiarios") or []
+    if not _perto(d["valor"], sum(x["valor"] for x in lista), len(lista)) or \
+            not _perto(d["gasto"], sum(x["gasto"] for x in lista), len(lista)):
+        r.erro(f"Emendas Pix {f.stem}: total diferente da soma das prefeituras e estados")
+    for b in lista:
+        det = _ler(f.parent / f.stem / f"{b['cnpj']}.json", r) if re.fullmatch(r"\d{14}", b.get("cnpj", "")) else None
+        if det is None:
+            r.erro(f"Emendas Pix {f.stem}: sem o detalhe de {b.get('cnpj')!r}")
+            continue
+        planos = det.get("planos") or []
+        if not _perto(det["valor"], sum(p["valor"] for p in planos), len(planos)) or not _perto(det["valor"], b["valor"]):
+            r.erro(f"Emendas Pix {f.stem}/{b['cnpj']}: valor diferente da soma dos planos de ação")
+        for p in planos:
+            gastos = p.get("gastos") or []
+            if not _perto(p["gasto"], sum(g["valor"] for g in gastos), len(gastos)):
+                r.erro(f"Emendas Pix {f.stem}/{b['cnpj']}: plano {p.get('plano')} com gasto diferente da soma dos pagamentos")
+            if any(g.get("cnpj") and not re.fullmatch(r"\d{14}", g["cnpj"]) for g in gastos):
+                r.erro(f"Emendas Pix {f.stem}/{b['cnpj']}: documento de quem recebeu que não é CNPJ")
 
 
 def _conferir_incentivos(saida: Path, r: Resultado) -> None:

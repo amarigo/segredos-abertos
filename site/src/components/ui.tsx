@@ -180,8 +180,8 @@ export function useTip() {
 export const COR_GRUPO: Record<Grupo, string> = { pessoal: "var(--s1)", escritorio: "var(--s2)", servicos: "var(--s3)" };
 
 /* Barras horizontais com rótulo e valor.
-   rosca: quando as barras são partes de um todo, mostra a lista de um lado e a rosca (pizza) do outro, com as mesmas
-   cores; passar o mouse numa barra acende a fatia e vice-versa. total: o todo, quando a lista mostra só as maiores. */
+   rosca: quando as barras são partes de um todo, mostra em cima a barra das partes (com as mesmas cores) e a parte
+   de cada linha em %; passar o mouse numa linha acende o pedaço e vice-versa. total: o todo, quando a lista mostra só as maiores. */
 export function Barras({ itens, cor, max, rosca, formato, fmt: fmtAntigo }: {
   itens: { label: ReactNode; valor: number; cor?: string; nota?: string; nome?: string }[]; cor?: string; max?: number;
   rosca?: { titulo: string; total?: number; centroRotulo?: string; maxFatias?: number; paleta?: boolean }; formato?: (v: number) => string;
@@ -194,6 +194,7 @@ export function Barras({ itens, cor, max, rosca, formato, fmt: fmtAntigo }: {
   // Uma cor só na lista: cada parte ganha a sua, na ordem da paleta. Cores com sentido (partido, lado, grupo) ficam.
   const umaCor = !!rosca?.paleta || new Set(itens.map((i) => i.cor || cor)).size <= 1;
   const nomeDe = (i: { label: ReactNode; nome?: string }, k: number) => i.nome || (typeof i.label === "string" ? i.label : textoDe(i.label)) || `Item ${k + 1}`;
+  const soma = rosca ? rosca.total ?? itens.reduce((a, i) => a + Math.max(0, i.valor), 0) : 0;
   const fatias = rosca ? prepararFatias(itens.map((i, k) => ({ nome: nomeDe(i, k), valor: i.valor, cor: umaCor ? undefined : i.cor || cor })), rosca.maxFatias, rosca.total) : [];
   const corDe = (k: number, i: { cor?: string }) => {
     if (!rosca) return i.cor || cor || "var(--s1)";
@@ -208,7 +209,7 @@ export function Barras({ itens, cor, max, rosca, formato, fmt: fmtAntigo }: {
           <div className={`bar-row ${rosca && ativo && ativo !== dono ? "apagado" : ""}`} key={k}
             onMouseEnter={rosca ? () => setAtivo(dono || null) : undefined} onMouseLeave={rosca ? () => setAtivo(null) : undefined}>
             <div style={{ minWidth: 0 }}>{i.label}{i.nota && <div className="muted small">{i.nota}</div>}</div>
-            <div className="num">{fmt(i.valor)}</div>
+            <div className="num">{fmt(i.valor)}{rosca && soma > 0 && <span className="pct-linha">{porcentoCurto(i.valor / soma)}</span>}</div>
             <div className="track" aria-hidden="true"><div className="fill" style={{ width: `${(i.valor / m) * 100}%`, background: corDe(k, i) }} /></div>
           </div>
         );
@@ -218,6 +219,8 @@ export function Barras({ itens, cor, max, rosca, formato, fmt: fmtAntigo }: {
   if (!rosca || fatias.length < 2) return lista;
   return <ComRosca fatias={fatias} titulo={rosca.titulo} centroRotulo={rosca.centroRotulo} formato={formato || fmtAntigo} ativo={ativo} onAtivo={setAtivo}>{lista}</ComRosca>;
 }
+
+const porcentoCurto = (p: number) => (p < 0.01 ? "<1%" : `${(p * 100).toLocaleString("pt-BR", { maximumFractionDigits: p < 0.1 ? 1 : 0 })}%`);
 
 /** Texto de um rótulo em JSX (para o nome da fatia da rosca) */
 function textoDe(n: ReactNode): string {

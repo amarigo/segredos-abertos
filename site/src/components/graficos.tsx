@@ -1,4 +1,4 @@
-/* Gráficos do site: rosca (pizza) ao lado de uma lista, mapa do Brasil por estado, comparação entre anos com
+/* Gráficos do site: barra de partes de um todo (no lugar da antiga rosca) com uma lista, mapa do Brasil por estado, comparação entre anos com
    animação e números grandes com a variação contra o ano anterior. Tudo em SVG, sem bibliotecas: o site continua
    leve no celular e funciona sem internet depois de aberto.
    Cores: as do site (styles.css), na mesma ordem em todos os gráficos. A paleta passou no validador de cores
@@ -46,78 +46,69 @@ export function prepararFatias(fatias: Fatia[], max = 7, total?: number): FatiaP
   return itens;
 }
 
-const RAIO = 78, GROSSURA = 40, CIRC = 2 * Math.PI * RAIO;
-
-/** Rosca animada. As fatias crescem ao abrir e mudam de tamanho suavemente quando o ano muda. */
-export function Rosca({ fatias, titulo, formato = curto, centro, centroRotulo = "Total", ativo, onAtivo }: {
+/** Partes de um todo: uma barra única dividida em pedaços (do maior para o menor), com o número grande em cima e a
+ *  lista de cores embaixo. Substitui a antiga rosca (pizza): comparar comprimentos numa linha é mais fácil que comparar
+ *  ângulos, os nomes não ficam espremidos e nada se sobrepõe em tela pequena.
+ *  Passar o mouse (ou o teclado) mostra o pedaço; clicar fixa o pedaço até clicar de novo.
+ *  O nome Rosca ficou para não mudar as páginas que já usam o gráfico. */
+export function Rosca({ fatias, titulo, formato = curto, centro, centroRotulo = "Total", ativo, onAtivo, legenda = true }: {
   fatias: FatiaPronta[]; titulo: string; formato?: (v: number) => string; centro?: string; centroRotulo?: string;
-  ativo?: string | null; onAtivo?: (nome: string | null) => void;
+  ativo?: string | null; onAtivo?: (nome: string | null) => void; legenda?: boolean;
 }) {
-  const tip = useTip();
   const [aberto, setAberto] = useState(poucoMovimento());
   const [sobre, setSobre] = useState<string | null>(null);
+  const [fixo, setFixo] = useState<string | null>(null);
   useEffect(() => { const t = requestAnimationFrame(() => setAberto(true)); return () => cancelAnimationFrame(t); }, []);
-  const foco = ativo ?? sobre;
   const total = fatias.reduce((a, f) => a + f.valor, 0);
   if (!total) return null;
-  let ini = 0;
-  const marca = (n: string | null) => { setSobre(n); onAtivo?.(n); };
+  const foco = ativo ?? sobre ?? fixo;
   const atual = fatias.find((f) => f.nome === foco);
+  const marca = (n: string | null) => { setSobre(n); onAtivo?.(n ?? fixo); };
+  const fixa = (n: string) => { const novo = fixo === n ? null : n; setFixo(novo); onAtivo?.(novo); };
+  const pctTxt = (p: number) => (p < 0.01 ? "<1%" : porcento(p, p < 0.1 ? 1 : 0));
   return (
-    <figure className="rosca" style={{ margin: 0 }}>
-      <svg viewBox="0 0 200 200" role="img" aria-label={`${titulo}. ${fatias.map((f) => `${f.nome}: ${porcento(f.pct)}`).join("; ")}`}>
-        <circle cx={100} cy={100} r={RAIO} fill="none" stroke="var(--grid)" strokeWidth={GROSSURA} />
-        <g transform="rotate(-90 100 100)">
-          {fatias.map((f) => {
-            const comp = f.pct * CIRC;
-            const vao = fatias.length > 1 && comp > 3 ? 1.6 : 0; // 2px de fundo entre as fatias
-            const el = (
-              <circle key={f.nome} className="rosca-fatia" cx={100} cy={100} r={RAIO} fill="none" stroke={f.cor} strokeWidth={GROSSURA}
-                strokeDasharray={`${aberto ? Math.max(0, comp - vao) : 0} ${CIRC}`} strokeDashoffset={-ini}
-                opacity={foco && foco !== f.nome ? 0.35 : 1} tabIndex={0} aria-label={`${f.nome}: ${formato(f.valor)}, ${porcento(f.pct)}`}
-                onMouseMove={(e) => { tip.show(e, `${f.nome}: ${formato(f.valor)} (${porcento(f.pct)})`); if (sobre !== f.nome) marca(f.nome); }}
-                onMouseLeave={() => { tip.hide(); marca(null); }} onFocus={() => marca(f.nome)} onBlur={() => marca(null)} />
-            );
-            ini += comp;
-            return el;
-          })}
-        </g>
-        {atual ? (
-          <>
-            <text x={100} y={88} textAnchor="middle" className="rosca-rot">{atual.nome.length > 22 ? `${atual.nome.slice(0, 21)}…` : atual.nome}</text>
-            <text x={100} y={110} textAnchor="middle" className="rosca-num">{porcento(atual.pct)}</text>
-            <text x={100} y={126} textAnchor="middle" className="rosca-rot">{formato(atual.valor)}</text>
-          </>
-        ) : (
-          <>
-            <text x={100} y={95} textAnchor="middle" className="rosca-rot">{centroRotulo}</text>
-            <text x={100} y={116} textAnchor="middle" className="rosca-num">{centro ?? formato(total)}</text>
-          </>
-        )}
-      </svg>
-      <figcaption className="rosca-leg">
+    <figure className="compo">
+      <div className="compo-topo" aria-live="polite">
+        <span className="compo-rot">{atual ? atual.nome : centroRotulo}</span>
+        <span className="compo-num num">{atual ? formato(atual.valor) : centro ?? formato(total)}</span>
+        {atual && <span className="compo-pct num">{`${pctTxt(atual.pct)} do total`}</span>}
+      </div>
+      <div className="compo-barra" role="group" aria-label={`${titulo}. ${fatias.map((f) => `${f.nome}: ${formato(f.valor)}, ${porcento(f.pct)}`).join("; ")}`}>
         {fatias.map((f) => (
-          <span key={f.nome} className={foco && foco !== f.nome ? "apagado" : ""} onMouseEnter={() => marca(f.nome)} onMouseLeave={() => marca(null)}>
-            <i style={{ background: f.cor }} />{f.nome} <b className="num">{f.pct < 0.01 ? "<1%" : porcento(f.pct, 0)}</b>
-          </span>
+          <button key={f.nome} type="button" className={`compo-seg ${foco && foco !== f.nome ? "apagado" : ""} ${fixo === f.nome ? "fixo" : ""}`}
+            style={{ width: aberto ? `${f.pct * 100}%` : 0, background: f.cor }} aria-pressed={fixo === f.nome}
+            aria-label={`${f.nome}: ${formato(f.valor)}, ${porcento(f.pct)}`} title={`${f.nome}: ${formato(f.valor)} (${porcento(f.pct)})`}
+            onMouseEnter={() => marca(f.nome)} onMouseLeave={() => marca(null)} onFocus={() => marca(f.nome)} onBlur={() => marca(null)} onClick={() => fixa(f.nome)}>
+            {f.pct >= 0.07 && <span className="num">{porcento(f.pct, 0)}</span>}
+          </button>
         ))}
-      </figcaption>
-      {tip.el}
+      </div>
+      {legenda && (
+        <ul className="compo-leg">
+          {fatias.map((f) => (
+            <li key={f.nome}>
+              <button type="button" className={foco && foco !== f.nome ? "apagado" : ""} aria-pressed={fixo === f.nome}
+                onMouseEnter={() => marca(f.nome)} onMouseLeave={() => marca(null)} onClick={() => fixa(f.nome)}>
+                <i style={{ background: f.cor }} /><span className="compo-nome">{f.nome}</span>
+                <span className="num compo-val">{formato(f.valor)}</span><b className="num">{pctTxt(f.pct)}</b>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </figure>
   );
 }
 
-/** Lista de um lado, rosca do outro (no celular, a rosca vem primeiro e menor). */
+/** A barra das partes em cima e a lista (com as mesmas cores) embaixo. Passar o mouse numa linha acende o pedaço. */
 export function ComRosca({ fatias, titulo, formato, centro, centroRotulo, children, ativo, onAtivo }: {
   fatias: FatiaPronta[]; titulo: string; formato?: (v: number) => string; centro?: string; centroRotulo?: string; children: ReactNode;
   ativo?: string | null; onAtivo?: (n: string | null) => void;
 }) {
   return (
-    <div className="caixa-graf">
-      <div className="com-rosca">
-        <div className="com-rosca-lista">{children}</div>
-        <Rosca fatias={fatias} titulo={titulo} formato={formato} centro={centro} centroRotulo={centroRotulo} ativo={ativo} onAtivo={onAtivo} />
-      </div>
+    <div className="caixa-graf com-rosca">
+      <Rosca fatias={fatias} titulo={titulo} formato={formato} centro={centro} centroRotulo={centroRotulo} ativo={ativo} onAtivo={onAtivo} legenda={false} />
+      <div className="com-rosca-lista">{children}</div>
     </div>
   );
 }
@@ -196,8 +187,19 @@ function useDesenho(): Desenho | null {
   return d;
 }
 
-/** Cor de cada estado. Valor: um tom só, do claro ao escuro. Mudança: laranja sobe, azul desce, cinza no meio. */
-function corMapa(v: number | undefined, max: number, divergente: boolean): string {
+/** Cortes da escala do mapa: 5 degraus com o mesmo número de estados em cada um (quintis de todos os valores de todos
+ *  os anos). Com degraus fixos, a diferença entre estados e entre anos fica visível; com um degradê contínuo quase todos
+ *  os estados saíam do mesmo azul. */
+export function quebrasMapa(valores: number[]): number[] {
+  const v = valores.filter((x) => x > 0 && isFinite(x)).sort((a, b) => a - b);
+  if (!v.length) return [];
+  const q = [0.2, 0.4, 0.6, 0.8].map((p) => v[Math.min(v.length - 1, Math.floor(p * v.length))]);
+  return [...new Set(q)];
+}
+const DEGRAU = ["var(--q1)", "var(--q2)", "var(--q3)", "var(--q4)", "var(--q5)"];
+
+/** Cor de cada estado. Valor: 5 degraus de um tom só, do claro ao escuro. Mudança: laranja sobe, azul desce, cinza no meio. */
+function corMapa(v: number | undefined, max: number, divergente: boolean, quebras: number[]): string {
   if (v == null || !isFinite(v)) return "var(--grid)";
   if (divergente) {
     const t = Math.min(1, Math.abs(v) / (max || 1));
@@ -205,24 +207,27 @@ function corMapa(v: number | undefined, max: number, divergente: boolean): strin
     return `color-mix(in oklab, ${v > 0 ? "var(--s2)" : "var(--s1)"} ${Math.round(25 + 75 * t)}%, var(--centro))`;
   }
   if (!v) return "var(--grid)";
-  const t = Math.sqrt(Math.max(0, v) / (max || 1)); // raiz: estados pequenos não somem perto de SP
-  return `color-mix(in oklab, var(--hot) ${Math.round(12 + 88 * t)}%, var(--surface))`;
+  const i = quebras.filter((q) => v >= q).length;
+  return DEGRAU[Math.round((i * 4) / Math.max(1, quebras.length))];
 }
 
-export function MapaUF({ valores, max, titulo, formato = curto, divergente = false, onUf, ufAtiva, rotuloValor }: {
+export function MapaUF({ valores, max, titulo, formato = curto, divergente = false, onUf, ufAtiva, rotuloValor, quebras }: {
   valores: Record<string, number>; max?: number; titulo: string; formato?: (v: number) => string; divergente?: boolean;
   onUf?: (uf: string) => void; ufAtiva?: string; rotuloValor?: (uf: string) => string;
+  /** cortes dos degraus de cor; os mapas de anos diferentes usam os mesmos, para comparar de verdade */
+  quebras?: number[];
 }) {
   const d = useDesenho();
   const tip = useTip();
   const m = max ?? Math.max(0, ...Object.values(valores).map((v) => Math.abs(v)));
+  const q = useMemo(() => quebras ?? quebrasMapa(Object.values(valores)), [quebras, valores]);
   const texto = (uf: string) => rotuloValor ? rotuloValor(uf) : `${NOME_UF[uf] || uf}: ${valores[uf] == null ? "sem dado" : formato(valores[uf])}`;
   if (!d) return <div className="mapa-uf mapa-vazio" aria-hidden="true" />;
   return (
     <div className="mapa-uf">
       <svg viewBox={d.vb} role="group" aria-label={titulo}>
         {Object.entries(d.p).map(([uf, path]) => (
-          <path key={uf} d={path} fill={corMapa(valores[uf], m, divergente)} className={`${ufAtiva === uf ? "ativa" : ""} ${onUf ? "clicavel" : ""}`}
+          <path key={uf} d={path} fill={corMapa(valores[uf], m, divergente, q)} className={`${ufAtiva === uf ? "ativa" : ""} ${onUf ? "clicavel" : ""}`}
             role={onUf ? "button" : "img"} tabIndex={0} aria-label={texto(uf)}
             onMouseMove={(e) => tip.show(e, texto(uf))} onMouseLeave={tip.hide}
             onClick={() => onUf?.(uf)} onKeyDown={(e) => { if (onUf && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onUf(uf); } }} />
@@ -233,13 +238,17 @@ export function MapaUF({ valores, max, titulo, formato = curto, divergente = fal
   );
 }
 
-function LegendaMapa({ max, formato, divergente }: { max: number; formato: (v: number) => string; divergente?: boolean }) {
-  return divergente ? (
+function LegendaMapa({ max, formato, divergente, quebras = [] }: { max: number; formato: (v: number) => string; divergente?: boolean; quebras?: number[] }) {
+  if (divergente) return (
     <div className="mapa-leg" aria-hidden="true">
       <span>Caiu {formato(max)}</span><i className="div" /><span>Subiu {formato(max)}</span>
     </div>
-  ) : (
-    <div className="mapa-leg" aria-hidden="true"><span>Menos</span><i className="seq" /><span>Mais · {formato(max)}</span></div>
+  );
+  const faixas = quebras.length ? [`até ${formato(quebras[0])}`, ...quebras.slice(1).map((q, i) => `${formato(quebras[i])} a ${formato(q)}`), `mais de ${formato(quebras[quebras.length - 1])}`] : [`até ${formato(max)}`];
+  return (
+    <ul className="mapa-degraus" aria-label="Legenda do mapa">
+      {faixas.map((f, i) => <li key={f}><i style={{ background: DEGRAU[Math.round((i * 4) / Math.max(1, faixas.length - 1))] }} />{f}</li>)}
+    </ul>
   );
 }
 
@@ -263,6 +272,7 @@ export function MapaAnos({ porAno, titulo, formato = curto, anoInicial, explica,
   if (!anos.length) return null;
   const anoV = anos.includes(ano) ? ano : anos[anos.length - 1];
   const max = Math.max(0, ...anos.flatMap((x) => Object.values(porAno[x])));
+  const quebras = quebrasMapa(anos.flatMap((x) => Object.entries(porAno[x]).filter(([uf]) => NOME_UF[uf]).map(([, v]) => v)));
   const atual = porAno[anoV] || {};
   const ranking = Object.entries(atual).filter(([uf, v]) => v > 0 && NOME_UF[uf]).sort((x, y) => y[1] - x[1]);
   const anterior = anos[anos.indexOf(anoV) - 1];
@@ -289,8 +299,8 @@ export function MapaAnos({ porAno, titulo, formato = curto, anoInicial, explica,
           <div className="mapa-com-lista">
             <div>
               <div className="mapa-ano-grande num" aria-live="polite">{anoV}</div>
-              <MapaUF valores={atual} max={max} titulo={`${titulo} em ${anoV}`} formato={formato} onUf={onUf} ufAtiva={ufAtiva} />
-              <LegendaMapa max={max} formato={formato} />
+              <MapaUF valores={atual} max={max} quebras={quebras} titulo={`${titulo} em ${anoV}`} formato={formato} onUf={onUf} ufAtiva={ufAtiva} />
+              <LegendaMapa max={max} formato={formato} quebras={quebras} />
             </div>
             <ol className="mapa-ranking">
               {ranking.slice(0, 10).map(([uf, v]) => (
@@ -305,19 +315,49 @@ export function MapaAnos({ porAno, titulo, formato = curto, anoInicial, explica,
           </div>
         </>
       )}
-      {modo === "lado" && (
-        <div className="mapa-lado">
-          {[[a, setA], [b, setB]].map(([x, set], i) => (
-            <div key={i}>
-              <label className="graf-ano"><span className="muted small">{i ? "Comparar com" : "Ano"}</span>
-                <select value={x as string} onChange={(e) => (set as (v: string) => void)(e.target.value)}>{anos.map((y) => <option key={y}>{y}</option>)}</select>
-              </label>
-              <MapaUF valores={porAno[x as string] || {}} max={max} titulo={`${titulo} em ${x}`} formato={formato} onUf={onUf} ufAtiva={ufAtiva} />
+      {modo === "lado" && (() => {
+        const soma = (y: string) => Object.entries(porAno[y] || {}).filter(([uf]) => NOME_UF[uf]).reduce((t, [, v]) => t + v, 0);
+        const pctDe = (de?: number, para?: number) => (de && para != null ? para / de - 1 : null);
+        const linhas = Object.keys(NOME_UF).filter((uf) => porAno[a]?.[uf] || porAno[b]?.[uf])
+          .map((uf) => ({ uf, va: porAno[a]?.[uf] || 0, vb: porAno[b]?.[uf] || 0, p: pctDe(porAno[a]?.[uf], porAno[b]?.[uf] || 0) }))
+          .sort((x, y) => (y.p ?? -Infinity) - (x.p ?? -Infinity));
+        const maxP = Math.max(0.01, ...linhas.map((l) => Math.abs(l.p ?? 0)));
+        return (
+          <>
+            <div className="mapa-lado">
+              {[[a, setA, b], [b, setB, a]].map(([x, set, outro], i) => (
+                <div key={i}>
+                  <label className="graf-ano"><span className="muted small">{i ? "Comparar com" : "Ano"}</span>
+                    <select value={x as string} onChange={(e) => (set as (v: string) => void)(e.target.value)}>{anos.map((y) => <option key={y}>{y}</option>)}</select>
+                  </label>
+                  <div className="mapa-lado-total"><span className="num">{formato(soma(x as string) / Math.max(1, Object.keys(porAno[x as string] || {}).length))}</span> <span className="muted small">média dos estados</span>
+                    {i === 1 && <> <Variacao de={soma(a)} para={soma(b)} rotulo={a} /></>}</div>
+                  <MapaUF valores={porAno[x as string] || {}} max={max} quebras={quebras} titulo={`${titulo} em ${x}`} formato={formato} onUf={onUf} ufAtiva={ufAtiva}
+                    rotuloValor={(uf) => {
+                      const v = porAno[x as string]?.[uf], o = porAno[outro as string]?.[uf];
+                      const p = i ? pctDe(o, v) : pctDe(v, o);
+                      return `${NOME_UF[uf] || uf}: ${v == null ? "sem dado" : formato(v)} em ${x}${p != null ? ` (${i ? "" : `${outro}: `}${p > 0 ? "+" : p < 0 ? "−" : ""}${porcento(Math.abs(p), 0)}${i ? ` contra ${outro}` : ""})` : ""}`;
+                    }} />
+                </div>
+              ))}
+              <div style={{ gridColumn: "1 / -1" }}><LegendaMapa max={max} formato={formato} quebras={quebras} /></div>
             </div>
-          ))}
-          <div style={{ gridColumn: "1 / -1" }}><LegendaMapa max={max} formato={formato} /></div>
-        </div>
-      )}
+            <h4 className="graf-titulo">Quanto mudou em cada estado, de {a} para {b}</h4>
+            <ol className="mapa-mudanca">
+              {linhas.map((l) => (
+                <li key={l.uf} className={ufAtiva === l.uf ? "ativa" : ""}>
+                  {onUf ? <button className="link" onClick={() => onUf(l.uf)}>{NOME_UF[l.uf]}</button> : <span>{NOME_UF[l.uf]}</span>}
+                  <span className="num small muted">{formato(l.va)} → {formato(l.vb)}</span>
+                  <span className="mapa-mudanca-barra" aria-hidden="true">
+                    {l.p != null && <i className={l.p >= 0 ? "sobe" : "desce"} style={{ width: `${(Math.abs(l.p) / maxP) * 50}%` }} />}
+                  </span>
+                  <strong className={`num ${l.p == null ? "muted" : l.p >= 0 ? "sobe" : "desce"}`}>{l.p == null ? "novo" : `${l.p > 0 ? "+" : l.p < 0 ? "−" : ""}${porcento(Math.abs(l.p), 0)}`}</strong>
+                </li>
+              ))}
+            </ol>
+          </>
+        );
+      })()}
       {modo === "mudou" && (
         <>
           <div className="row graf-controles">

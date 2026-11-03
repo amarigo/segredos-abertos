@@ -29,6 +29,7 @@ from sa_etl.cnpj import cnpj_matriz
 
 import fakegov_financas  # noqa: E402  (mesma pasta dos testes)
 import fakegov_tramitacao  # noqa: E402
+import fakegov_transferegov  # noqa: E402
 
 PARTIDOS_DEP = ["PL", "PL", "NOVO", "PT", "PT", "PSOL", "MDB", "PSD"]
 PARTIDOS_SEN = ["PL", "PT", "MDB", "PSD", "NOVO"]
@@ -65,6 +66,7 @@ class FakeGov:
         self.deputados = [{"id": 1000 + i, "nome": f"Deputado Ficticio {i:02d}", "siglaPartido": PARTIDOS_DEP[i % len(PARTIDOS_DEP)],
                            "siglaUf": ["SP", "MG", "RJ", "BA"][i % 4], "urlFoto": f"https://www.camara.leg.br/fotos/{1000 + i}.jpg"}
                           for i in range(n_dep)]
+        self.transferegov = fakegov_transferegov.Transferegov(self.anos, self.deputados)  # emendas Pix
         self.senadores = [{"cod": 5000 + i, "nome": f"Senador Ficticio {i:02d}", "partido": PARTIDOS_SEN[i % len(PARTIDOS_SEN)],
                            "uf": ["SP", "MG", "RJ"][i % 3]} for i in range(n_sen)]
         # Quem passou pela legislatura e não está no cargo hoje (suplente que devolveu a vaga): some da lista atual,
@@ -274,6 +276,9 @@ class FakeGov:
         tra = fakegov_tramitacao.rota(u.netloc, path, q)  # projetos em andamento
         if tra is not None:
             return tra
+        tg = self.transferegov.rota(u.netloc, path, q)  # emendas Pix no Transferegov
+        if tg is not None:
+            return tg
 
         if u.netloc == "dadosabertos.camara.leg.br" and path == "/api/v2/deputados":
             if "idLegislatura" in q:  # todos que passaram pela legislatura; a pessoa se repete a cada nome que usou

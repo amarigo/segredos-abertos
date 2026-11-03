@@ -195,6 +195,7 @@ export interface Verificacao {
   revisao_manual?: { diferencas: number; md: string; csv: string };
 }
 
+export interface TemaCota { grupo: Grupo; tema: string; valor: number; categorias: [string, number][] }
 export interface Meta {
   /** Problemas da última coleta (fonte oficial fora do ar, cópia antiga em uso...), para avisar quem lê */
   avisos?: string[];
@@ -206,6 +207,8 @@ export interface Meta {
     empresas: Record<string, { valor: number; n: number }> } | null;
   /** Quanto a cota pagou a TODAS as empresas em cada ano (sem o corte da lista da página) */
   empresas_por_ano?: Record<string, { valor: number; n: number; top10: number | null }>;
+  /** Cota de todos por tema (viagens, combustível...) dentro dos três grupos, em cada ano */
+  temas_por_ano?: Record<string, TemaCota[]>;
   /** Minas Nossa: "MG" e as cidades acompanhadas */
   recorte?: string; cidades?: string[];
   estado?: { deputados_estaduais: number; emendas_estaduais: number; governo: number; equipe_governo: number };

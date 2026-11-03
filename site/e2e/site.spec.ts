@@ -136,6 +136,33 @@ test.describe("jornada", () => {
     expect(erros).toEqual([]);
   });
 
+  test("emendas Pix: a prefeitura mostra o plano, as metas e a quem pagou, com a fonte", async ({ page }) => {
+    const erros = vigiar(page);
+    const idx = dados(`emendas/destino/${ANO}.json`);
+    const b = idx.beneficiarios[0];
+    const det = dados(`emendas/destino/${ANO}/${b.cnpj}.json`);
+    await page.goto(`./#/emendas?ano=${ANO}`);
+    const sec = page.locator("#destino-pix");
+    await expect(sec).toContainText(`${idx.n_gastos} pagamentos`);
+    await sec.locator(".pix-benef summary").first().click();
+    await expect(sec.locator(".pix-det")).toContainText(det.recebedores[0].nome);
+    await expect(sec.locator(".pix-det")).toContainText(sp(brl(det.recebedores[0].valor)));
+    await expect(sec.locator(".pix-plano").first()).toContainText(det.planos[0].objeto);
+    await expect(sec.locator(".pix-plano").first()).toContainText(det.planos[0].executores[0].metas[0].nome);
+    await expect(sec.getByRole("link", { name: /Transferegov/ }).first()).toHaveAttribute("href", /^https:\/\//);
+    // pessoa física: só o nome, sem CPF
+    await expect(sec).toContainText("(pessoa física)");
+    await expect(sec).not.toContainText("456.789");
+    // a mesma emenda, aberta pela ficha do parlamentar
+    const p = det.planos[0];
+    const autor = page.locator(".emd-autor:not(.pix-benef)", { hasText: new RegExp(p.parlamentar, "i") }).first();
+    await autor.locator(":scope > summary").click();
+    await autor.locator(".emd-pix summary").click();
+    await autor.getByRole("button", { name: /Em que foi gasto/ }).first().click();
+    await expect(autor.locator(".pix-plano").first()).toContainText("Pagamentos que a prefeitura informou");
+    expect(erros).toEqual([]);
+  });
+
   test("incentivos: sem dados do ano do menu, mostra o ano mais recente que existe e avisa", async ({ page }) => {
     const erros = vigiar(page);
     const ANTES = String(Number(ANO) - 1);
@@ -322,19 +349,26 @@ test.describe("idiomas e buscadores", () => {
 });
 
 test.describe("gráficos", () => {
-  test("rosca ao lado da lista, mapa por estado e comparação de anos", async ({ page }) => {
+  test("barra das partes sobre a lista, mapa por estado e comparação de anos", async ({ page }) => {
     const erros = vigiar(page);
     await page.goto("./#/dinheiro");
-    // a área de governo aparece na lista e na rosca ao lado
+    // a área de governo aparece na lista e na barra das partes em cima; clicar num pedaço mostra o valor dele
     const area = page.locator("section#destino .com-rosca").nth(1);
-    await expect(area.locator(".rosca svg")).toBeVisible();
-    await expect(area.locator(".rosca-leg")).toContainText("Encargos Especiais");
+    const pedaco = area.locator(".compo-seg", { hasText: /%/ }).first();
+    await expect(pedaco).toBeVisible();
+    await expect(area.locator(".com-rosca-lista")).toContainText("Encargos Especiais");
+    await pedaco.click();
+    await expect(area.locator(".compo-pct")).toContainText("do total");
     // mapa com os 27 estados e o botão que passa pelos anos
     const mapa = page.locator("section#quem-pagou .mapa-anos");
     await mapa.scrollIntoViewIfNeeded();
     await expect(mapa.locator(".mapa-uf path")).toHaveCount(27);
     await mapa.getByRole("button", { name: "O que mudou" }).click();
     await expect(mapa.locator(".mapa-uf path")).toHaveCount(27);
+    // dois anos lado a lado: dois mapas e a mudança de cada estado em %
+    await mapa.getByRole("button", { name: "Dois anos lado a lado" }).click();
+    await expect(mapa.locator(".mapa-uf path")).toHaveCount(54);
+    await expect(mapa.locator(".mapa-mudanca li").first()).toContainText("%");
     // sinais no fim da página, com a tendência dos anos
     const sinais = page.locator("section#sinais");
     await sinais.scrollIntoViewIfNeeded();
