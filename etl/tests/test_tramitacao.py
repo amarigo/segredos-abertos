@@ -109,3 +109,64 @@ def test_proposta_sem_detalhe_sai_da_agenda(coleta):
     assert "cd-9001" not in ids
     assert all(x in ids for ev in d["agenda"] for x in ev["itens"])
     assert coleta.validar(saida).ok
+
+
+def test_autor_original_e_argumentos_dos_documentos_oficiais(coleta):
+    coleta.usar(FakeGov())
+    saida = coleta.rodar(com_emendas=False, com_incentivos=False)
+    por = {i["nome"]: i for i in coleta.ler(saida, "tramitacao.json")["itens"]}
+    # Na Câmara: a justificação do autor e o parecer pela aprovação contam a favor; o voto em separado, contra
+    deb = por["PL 101/2025"]["debate"]
+    assert [a["papel"] for a in deb["favor"]] == ["Autores da proposta", "Relator na Comissão de Viação e Transportes"]
+    assert deb["favor"][0]["trechos"] == ["O capacete reduz em 60% o risco de morte dos ciclistas em quedas, porque protege a cabeça no impacto."]
+    assert deb["favor"][1]["trechos"][0].startswith("A medida garante")
+    assert deb["favor"][1]["conclusao"] == "aprovação" and deb["favor"][1]["quem"] == "Deputado Ficticio 05 (PT-SP)"
+    assert deb["contra"][0]["quem"].startswith("Deputado Ficticio 03") and deb["contra"][0]["conclusao"] == "rejeição"
+    assert "aumentar o preço da bicicleta" in deb["contra"][0]["trechos"][0]
+    assert all(a["url"].startswith("https://www.camara.leg.br/") for a in deb["favor"] + deb["contra"])
+    # No Senado: proposta que veio da Câmara mostra o deputado que a apresentou, e os documentos da Câmara
+    pl = por["PL 250/2024"]
+    assert pl["veio_da_camara"] and pl["autores"][0]["nome"] == "Deputado Ficticio 05" and pl["autores"][0]["id"] == "dep-1005"
+    assert pl["url_origem"] == "https://www.camara.leg.br/propostas-legislativas/9007"
+    assert [a["casa"] for a in pl["debate"]["favor"]] == ["Câmara", "Câmara"] and pl["debate"]["contra"] == []
+    # Relator do Senado pela rejeição, com o trecho que fala do custo
+    sen = por["PL 200/2025"]["debate"]
+    assert sen["favor"][0]["papel"] == "Autor da proposta"
+    assert sen["contra"][0]["quem"] == "Ficticio 01 (PT-MG)" and "R$ 50 milhões" in sen["contra"][0]["trechos"][0]
+    assert coleta.validar(saida).ok
+
+
+def test_documento_fora_do_ar_nao_derruba_o_cartao(coleta):
+    gov = coleta.usar(FakeGov())
+    gov.falhar("prop_mostrarintegra", "500")
+    saida = coleta.rodar(com_emendas=False, com_incentivos=False)
+    por = {i["nome"]: i for i in coleta.ler(saida, "tramitacao.json")["itens"]}
+    assert "PL 101/2025" in por and por["PL 101/2025"].get("debate") is None
+    assert por["PL 200/2025"]["debate"]["contra"]  # o Senado respondeu
+
+
+def test_conclusao_ignora_o_que_e_so_sobre_emendas():
+    from sa_etl import debate as d
+    assert d.conclusao("Parecer do Relator, Dep. A (PT-SP), pela aprovação deste, e pela rejeição do PL 1/2025, apensado.") == "aprovação"
+    assert d.conclusao("com voto favorável à Proposta e às Emendas nºs 22 e 39, e contrário às demais emendas.") == "aprovação"
+    assert d.conclusao("Complementação de Voto sobre as Emendas 67 a 81, concluindo pela rejeição dessas emendas.") == ""
+    assert d.conclusao("pela constitucionalidade, juridicidade e boa técnica legislativa") == ""
+    assert d.conclusao("Ante o exposto, votamos pela aprovação com emendas. Em suma, pela rejeição.", ultima=True) == "rejeição"
+
+
+def test_trechos_copiam_frases_sem_protocolo():
+    from sa_etl import debate as d
+    texto = d.limpar("Senhor Presidente, é o relatório.\n*CD250605464200* PRL n.1\nA medida reduz o preço da energia em 10% para "
+                     "as famílias de baixa renda, porque corta impostos.\nPelo exposto, contamos com o apoio dos nobres pares.")
+    assert d.trechos(texto) == ["A medida reduz o preço da energia em 10% para as famílias de baixa renda, porque corta impostos."]
+    assert d.frases("Conforme o art. 5º da Lei. Outra frase.") == ["Conforme o art. 5º da Lei.", "Outra frase."]
+    assert d.trechos("") == []
+    assert d.secao("I - RELATÓRIO x. II - VOTO DO RELATOR A medida reduz. Sala da Comissão", "parecer") == "A medida reduz"
+
+
+def test_autor_que_veio_do_senado_e_presidente():
+    a = t.autores_camara([{"uri": "x/orgaos/78", "nome": "Senado Federal - Rodrigo Pacheco", "proponente": 1, "ordemAssinatura": 1},
+                          {"uri": "x/orgaos/1", "nome": "Poder Executivo", "proponente": 1, "ordemAssinatura": 2}],
+                         {}, {"RODRIGO PACHECO": "sen-1"})
+    assert a[0] == {"nome": "Rodrigo Pacheco", "partido": "", "uf": "", "id": "sen-1", "cargo": "Senador(a)"}
+    assert a[1]["nome"] == "Presidente da República"

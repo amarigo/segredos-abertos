@@ -1,21 +1,15 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Explain, Loading, useData } from "../components/ui";
-import { TEMAS, autorSigla, casaNome, dataBR, dataHoraBR, linkSeguro, type GrupoProjeto, type Projeto, type Tramitacao, type TramitacaoAlmg } from "../data";
+import { TEMAS, autorSigla, casaNome, dataBR, dataHoraBR, linkSeguro, type ArgumentoProjeto, type GrupoProjeto, type Projeto, type Tramitacao, type TramitacaoAlmg } from "../data";
 import { norm } from "./Home";
 import { MG } from "../recorte";
 import { VotacoesAbas } from "./Votacoes";
 import { AvisosFim } from "../components/Selo";
+import CaminhoLei from "../components/CaminhoLei";
 
 const ETAPAS_CONGRESSO = ["Apresentada", "Comissões", "Plenário", "Outra Casa", "Sanção ou promulgação"];
 const ETAPAS_ALMG = ["Apresentado", "Comissões", "Plenário", "Sanção do governador"];
-const EXPLICA_ETAPA = [
-  "Um parlamentar, o presidente ou outro autor apresenta a proposta.",
-  "Comissões temáticas estudam o texto. Um relator recomenda aprovar, mudar ou rejeitar.",
-  "Todos os parlamentares da Casa votam.",
-  "Aprovada numa Casa, segue para a outra (Câmara ou Senado), que pode mudar o texto.",
-  "O presidente sanciona (vira lei) ou veta. Emendas à Constituição são promulgadas pelo Congresso.",
-];
 const ABAS: { id: GrupoProjeto | "almg"; nome: string; explica: string }[] = [
   { id: "pauta", nome: "Na pauta", explica: "Marcadas para votação nas próximas sessões do Plenário e reuniões das comissões. A pauta pode mudar até a hora da reunião." },
   { id: "mpv", nome: "Medidas provisórias", explica: "Já valem como lei, mas o Congresso precisa aprovar dentro do prazo, senão perdem a validade." },
@@ -46,14 +40,58 @@ export function Etapas({ p }: { p: Projeto }) {
 function Autores({ p }: { p: Projeto }) {
   if (!p.autores.length) return null;
   const mais = p.n_autores - p.autores.length;
+  const origem = linkSeguro(p.url_origem);
   return (
     <p className="small"><b>Quem propôs: </b>
       {p.autores.map((a, k) => (
-        <span key={k}>{k > 0 && ", "}{a.id ? <Link to={`/p/${a.id}`}>{a.nome}</Link> : a.nome}{autorSigla(a)}</span>
+        <span key={k}>{k > 0 && ", "}{a.id ? <Link to={`/p/${a.id}`}>{a.nome}</Link> : a.nome}{autorSigla(a)}
+          {a.cargo && a.cargo !== "Poder Executivo" && `, ${a.cargo.toLowerCase()}`}</span>
       ))}
       {mais > 0 && ` e mais ${mais}`}
-      {p.veio_da_camara && " · já aprovada pela Câmara"}
+      {p.veio_da_camara && <> · começou na Câmara, que aprovou e enviou ao Senado{origem && <> (<a href={origem} target="_blank" rel="noreferrer">ver na Câmara ↗</a>)</>}</>}
+      {p.veio_do_senado && " · começou no Senado, que aprovou e enviou à Câmara"}
     </p>
+  );
+}
+
+function Argumento({ a, tudo }: { a: ArgumentoProjeto; tudo: boolean }) {
+  const u = linkSeguro(a.url);
+  const trechos = tudo ? a.trechos : a.trechos.slice(0, 1);
+  return (
+    <div className="proj-arg">
+      <p className="small"><b>{a.quem || "Relator"}</b> · {a.papel}{a.casa && ` · ${a.casa}`}{a.data && `, ${dataBR(a.data)}`}
+        {a.conclusao && <> · concluiu pela <b>{a.conclusao}</b></>}</p>
+      {trechos.map((t, k) => <blockquote key={k} className="proj-trecho">“{t}”</blockquote>)}
+      {a.trechos.length === 0 && <p className="small muted">Sem frase curta que explique o motivo; o argumento está no documento.</p>}
+      {u && <a className="small" href={u} target="_blank" rel="noreferrer">Ler o documento oficial ↗</a>}
+    </div>
+  );
+}
+
+/** O que dizem a favor e contra, só com trechos copiados de documentos oficiais (o coletor explica em debate.py). */
+export function Debate({ p }: { p: Projeto }) {
+  const [tudo, setTudo] = useState(false);
+  const d = p.debate;
+  if (!d) return null;
+  const temMais = [...d.favor, ...d.contra].some((a) => a.trechos.length > 1) || d.favor.length > 2 || d.contra.length > 2;
+  const lado = (titulo: string, cls: string, xs: ArgumentoProjeto[], vazio: string) => (
+    <div className={`proj-lado ${cls}`}>
+      <h4>{titulo} <span className="muted small">({xs.length})</span></h4>
+      {xs.length === 0
+        ? <p className="small muted">{vazio}</p>
+        : (tudo ? xs : xs.slice(0, 2)).map((a, k) => <Argumento key={k} a={a} tudo={tudo} />)}
+    </div>
+  );
+  return (
+    <div className="proj-debate">
+      <h4 className="proj-debate-tit">O que dizem a favor e contra</h4>
+      <div className="proj-lados">
+        {lado("A favor", "favor", d.favor, "Ainda não há documento oficial a favor nesta proposta (justificação do autor ou parecer pela aprovação).")}
+        {lado("Contra", "contra", d.contra, "Ninguém registrou documento oficial contra até agora (parecer pela rejeição ou voto em separado). Pode haver quem discorde sem ter posto isso por escrito.")}
+      </div>
+      {temMais && <button className="link small" onClick={() => setTudo(!tudo)}>{tudo ? "Mostrar menos" : "Ver todos os trechos"}</button>}
+      <p className="small muted">Frases copiadas dos documentos oficiais, sem mudar palavras: a justificação de quem propôs, o parecer dos relatores e os votos em separado. Escolhemos as frases que falam do efeito e do motivo; o documento completo está no link.</p>
+    </div>
   );
 }
 
@@ -93,6 +131,7 @@ export function CartaoProjeto({ p }: { p: Projeto }) {
           })}
         </ul>
       )}
+      <Debate p={p} />
       <details className="small">
         <summary>Texto oficial e mais detalhes</summary>
         <div className="proj-col" style={{ marginTop: 8 }}>
@@ -165,13 +204,7 @@ export default function TramitacaoPage() {
         Esta página mostra o momento atual e não depende do ano escolhido no topo.
       </Explain>
 
-      <details className="card">
-        <summary><b>Como uma proposta vira lei</b> (5 etapas)</summary>
-        <ol className="proj-como">
-          {ETAPAS_CONGRESSO.map((n, i) => <li key={n}><b>{n}.</b> {EXPLICA_ETAPA[i]}</li>)}
-        </ol>
-        <p className="small muted">PL é projeto de lei, PLP é projeto de lei complementar, PEC muda a Constituição, MPV é medida provisória e PDL é projeto de decreto legislativo. Cada cartão explica o tipo em "Texto oficial e mais detalhes".</p>
-      </details>
+      <CaminhoLei />
 
       <div className="tabs" role="tablist" aria-label="O que acompanhar">
         {abas.map((a) => (

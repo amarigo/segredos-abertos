@@ -175,7 +175,7 @@ test.describe("jornada", () => {
 
   test("todas as páginas do menu abrem sem erro", async ({ page }) => {
     const erros = vigiar(page);
-    for (const rota of ["dinheiro", "politicos", "empresas", "votacoes", "votacoes/em-andamento", "partidos", "emendas", "incentivos", "corrupcao", "corrupcao/banco-master", "sobre"]) {
+    for (const rota of ["dinheiro", "politicos", "empresas", "votacoes", "votacoes/ja-votadas", "partidos", "emendas", "incentivos", "corrupcao", "corrupcao/banco-master", "sobre"]) {
       await page.goto(`./#/${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();
       await expect(page.locator("main")).not.toContainText("Não foi possível");
@@ -209,7 +209,7 @@ test.describe("jornada", () => {
   test("sem rolagem lateral no celular", async ({ page }, info) => {
     test.skip(info.project.name !== "celular");
     vigiar(page);
-    for (const rota of ["", `#/p/${pols[0].id}`, "#/votacoes", "#/votacoes/em-andamento", "#/votacoes/em-andamento?aba=nova", "#/empresas", "#/incentivos", "#/dinheiro", "#/corrupcao", "#/corrupcao/mensalao", "#/corrupcao/banco-master"]) {
+    for (const rota of ["", `#/p/${pols[0].id}`, "#/votacoes", "#/votacoes/ja-votadas", "#/votacoes?aba=nova", "#/empresas", "#/incentivos", "#/dinheiro", "#/corrupcao", "#/corrupcao/mensalao", "#/corrupcao/banco-master"]) {
       await page.goto(`./${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();
       const largura = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -221,9 +221,11 @@ test.describe("jornada", () => {
 test("projetos em andamento: pauta, autor, próximo passo e link oficial", async ({ page }) => {
   const erros = vigiar(page);
   const tra: { itens: { nome: string; grupos: string[]; url: string; autores: { id: string }[] }[] } = dados("tramitacao.json");
+  // A aba Votações abre direto nos projetos em andamento; as já votadas ficam a um clique
   await page.goto("./#/votacoes");
-  await page.getByRole("link", { name: "Projetos em andamento" }).first().click();
   await expect(page.locator("h1")).toHaveText("Projetos em andamento");
+  await expect(page.locator(".caminho svg")).toBeVisible();
+  await expect(page.locator(".caminho")).toContainText("Outra Casa");
   const naPauta = tra.itens.filter((i) => i.grupos.includes("pauta"));
   await expect(page.getByRole("tab", { name: `Na pauta (${naPauta.length})` })).toHaveAttribute("aria-selected", "true");
   const pl = tra.itens.find((i) => i.nome === "PL 101/2025")!;
@@ -232,12 +234,20 @@ test("projetos em andamento: pauta, autor, próximo passo e link oficial", async
   await expect(cartao).toContainText("Próximo passo:");
   await expect(cartao.locator(`a[href="${pl.url}"]`)).toBeVisible();
   await expect(cartao.locator(".proj-etapas")).toHaveAttribute("aria-label", "Etapa atual: Plenário");
+  // A favor e contra: trechos dos documentos oficiais, com link
+  const deb = cartao.locator(".proj-debate");
+  await expect(deb.locator(".proj-lado.favor")).toContainText("reduz em 60% o risco de morte");
+  await expect(deb.locator(".proj-lado.contra")).toContainText("Deputado Ficticio 03");
+  await expect(deb.locator(".proj-lado.contra a[href^='https://www.camara.leg.br/']")).toBeVisible();
+  // Proposta que veio da Câmara: mostra o deputado que a apresentou, não só "Câmara dos Deputados"
+  await expect(page.locator("article.proj", { hasText: "PL 250/2024" })).toContainText("Deputado Ficticio 05");
+  await expect(page.locator("article.proj", { hasText: "PL 250/2024" })).toContainText("começou na Câmara");
   await cartao.getByRole("link", { name: /Deputado Ficticio 00/ }).click();
   await expect(page).toHaveURL(new RegExp(`/p/${pl.autores[0].id}`));
   // Medidas provisórias: prazo oficial; recém-apresentadas: busca
-  await page.goto("./#/votacoes/em-andamento?aba=mpv");
+  await page.goto("./#/votacoes/em-andamento?aba=mpv"); // endereço antigo continua valendo
   await expect(page.locator("article.proj", { hasText: "MPV 1400/2026" })).toContainText("Prazo:");
-  await page.goto("./#/votacoes/em-andamento?aba=nova");
+  await page.goto("./#/votacoes?aba=nova");
   await page.locator("#busca-projeto").fill("PEC 7");
   await expect(page.locator("article.proj")).toHaveCount(1);
   expect(erros).toEqual([]);
@@ -442,7 +452,7 @@ test.describe("caos no navegador", () => {
       return r.continue();
     });
     const rotas = ["", "#/politicos", `#/p/${pols[0].id}`, `#/p/${pols[2].id}?aba=votos`, "#/empresas", `#/e/${empresas[0].cnpj}`,
-      "#/votacoes", "#/votacoes/em-andamento", `#/v/${vots[0].id}`, "#/partidos", "#/emendas"];
+      "#/votacoes", "#/votacoes/ja-votadas", `#/v/${vots[0].id}`, "#/partidos", "#/emendas"];
     for (const rota of rotas) {
       await page.goto(`./${rota}`);
       await page.waitForTimeout(600);
@@ -476,7 +486,7 @@ test.describe("verificação independente", () => {
   test("cada seção mostra o selo certo e a página explica as diferenças", async ({ page }) => {
     const erros = vigiar(page);
     await page.route("**/data/verificacao.json", (r) => r.fulfill({ json: verif }));
-    await page.goto("./#/votacoes");
+    await page.goto("./#/votacoes/ja-votadas");
     await expect(page.locator(".selo-conferido")).toContainText("Conferido com uma segunda fonte oficial");
     await page.goto("./#/politicos");
     await expect(page.locator(".selo-divergente")).toContainText("Diferença encontrada");
@@ -499,7 +509,7 @@ test.describe("verificação independente", () => {
       const resto = [...document.querySelectorAll("main section, main h1, main .grid")].filter((x) => !fim.contains(x));
       return resto.length > 0 && resto.every((x) => !!(x.compareDocumentPosition(fim) & Node.DOCUMENT_POSITION_FOLLOWING));
     });
-    for (const rota of ["", "#/politicos", `#/p/${pols[0].id}`, "#/votacoes", `#/v/${vots[0].id}`, "#/empresas", `#/e/${empresas[0].cnpj}`]) {
+    for (const rota of ["", "#/politicos", `#/p/${pols[0].id}`, "#/votacoes/ja-votadas", `#/v/${vots[0].id}`, "#/empresas", `#/e/${empresas[0].cnpj}`]) {
       await page.goto(`./${rota}`);
       await expect(page.locator("[data-testid=avisos-fim] .selo, [data-testid=avisos-fim] .selos").first()).toBeVisible();
       expect(await noFim(), rota).toBe(true);
@@ -534,7 +544,7 @@ test.describe("verificação independente", () => {
 
   test("sem o arquivo de verificação, nenhum selo aparece (nunca 'conferido' por engano)", async ({ page }) => {
     await page.route("**/data/verificacao.json", (r) => r.fulfill({ status: 404, body: "" }));
-    await page.goto("./#/votacoes");
+    await page.goto("./#/votacoes/ja-votadas");
     await expect(page.locator("h1")).toBeVisible();
     await expect(page.locator(".selo")).toHaveCount(0);
   });

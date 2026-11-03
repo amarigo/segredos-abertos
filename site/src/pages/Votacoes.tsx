@@ -7,12 +7,12 @@ import { MG } from "../recorte";
 import { AvisosFim } from "../components/Selo";
 import { ColunasAnos, Rosca, numero, prepararFatias } from "../components/graficos";
 
-/** As duas partes da seção de votações: o que já foi votado e o que está em andamento. */
+/** As duas partes da seção de votações: primeiro o que está em andamento, depois o que já foi votado. */
 export function VotacoesAbas() {
   return (
     <nav className="tabs" aria-label="Votações">
-      <NavLink end to="/votacoes" className={({ isActive }) => (isActive ? "ativa" : "")}>Já votadas</NavLink>
-      <NavLink to="/votacoes/em-andamento" className={({ isActive }) => (isActive ? "ativa" : "")}>Projetos em andamento</NavLink>
+      <NavLink end to="/votacoes" className={({ isActive }) => (isActive ? "ativa" : "")}>Projetos em andamento</NavLink>
+      <NavLink to="/votacoes/ja-votadas" className={({ isActive }) => (isActive ? "ativa" : "")}>Já votadas</NavLink>
     </nav>
   );
 }
@@ -67,7 +67,7 @@ export default function Votacoes() {
           <button key={t} className={`chip ${tema === t ? "ok" : ""}`} aria-pressed={tema === t} onClick={() => setTema(tema === t ? "" : t)}>{t} ({contTema[t]})</button>
         ))}
       </div>
-      <p className="muted small">{lista.length} votações{tema ? ` sobre ${tema.toLowerCase()}` : ""}. Os temas são definidos por palavras da ementa. <Link to="/sobre">Entenda</Link>. Para o que ainda vai ser votado, veja <Link to="/votacoes/em-andamento">projetos em andamento</Link>.</p>
+      <p className="muted small">{lista.length} votações{tema ? ` sobre ${tema.toLowerCase()}` : ""}. Os temas são definidos por palavras da ementa. <Link to="/sobre">Entenda</Link>. Para o que ainda vai ser votado, veja <Link to="/votacoes">projetos em andamento</Link>.</p>
       {lista.length > 0 && (
         <div className="secao-graficos">
           <div><h3 className="graf-titulo">Resultado</h3><Rosca fatias={graf.resultado} titulo="Votações aprovadas e rejeitadas" formato={fmtN} centroRotulo="Votações" centro={numero(lista.length)} /></div>

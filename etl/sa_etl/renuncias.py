@@ -415,6 +415,8 @@ class ApiRenuncia:
                     log.info("Renúncias (API): consulta sem filtro recusada (%s); lendo por UF", motivo)
                     e.update(filtros=[{"nomeSiglaUF": uf} for uf in sorted(SIGLAS)], i=0, pagina=1)
                     return True
+                if not filtro and motivo.startswith("HTTP 400") and self._fundo_demais(e):
+                    return True
                 log.warning("Renúncias (API): parou em %s, página %d (%s)", filtro or "sem filtro", e["pagina"], self.motivo)
                 return False
             if not linhas:  # página vazia: acabou este filtro
@@ -428,6 +430,22 @@ class ApiRenuncia:
                                                    ensure_ascii=False).encode()))
             e["paginas"] += 1
             e["pagina"] += 1
+        return True
+
+    def _fundo_demais(self, e: dict) -> bool:
+        """A consulta sem filtro falha sempre na mesma página funda (em 11/2026, HTTP 400 "Erro ao executar a consulta"
+        na página 14289): a API não consegue pular tantas linhas. Na segunda execução seguida que para na mesma página,
+        recomeça lendo estado por estado, que tem bem menos páginas em cada consulta. True: recomeçou."""
+        if e.get("falhou_em") != e["pagina"]:
+            e["falhou_em"], e["falhas"] = e["pagina"], 0
+        e["falhas"] = e.get("falhas", 0) + 1
+        if e["falhas"] < 2:
+            return False
+        log.info("Renúncias (API): a consulta sem filtro para sempre na página %d (%s); recomeçando por UF", e["pagina"], self.motivo)
+        for f in self.lendo.glob("p*.json.gz"):
+            f.unlink()
+        e.update(filtros=[{"nomeSiglaUF": uf} for uf in sorted(SIGLAS)], i=0, pagina=1, paginas=0, falhou_em=None, falhas=0)
+        self.motivo = ""
         return True
 
     def anos(self, n_anos: int) -> dict[int, tuple[dict, dict]]:

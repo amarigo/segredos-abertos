@@ -53,6 +53,58 @@ AUTORES = {9001: [{"uri": f"https://{CD}/api/v2/deputados/1000", "nome": "Deputa
            9006: [{"uri": f"https://{CD}/api/v2/deputados/1004", "nome": "Deputado Ficticio 04", "proponente": 1, "ordemAssinatura": 1}]}
 
 
+# PL 250/2024 já está no Senado (veio da Câmara): a Câmara só responde quando o Senado pergunta pela origem
+ORIGEM = {9007: _prop(9007, "PL", 250, 2024, "Dispõe sobre o transporte escolar rural.", _d(-800), "SF", "Remetida ao Senado Federal")}
+AUTORES[9007] = [{"uri": f"https://{CD}/api/v2/deputados/1005", "nome": "Deputado Ficticio 05", "proponente": 1, "ordemAssinatura": 1}]
+
+# Documentos com argumentos (parecer do relator e voto em separado), como /proposicoes/{id}/relacionadas devolve
+RELACIONADAS = {
+    9001: [{"id": 9201, "siglaTipo": "PRL", "numero": 1, "ano": 0,
+            "ementa": "Parecer do Relator, Dep. Deputado Ficticio 05 (PT-SP), pela aprovação deste, e pela rejeição do PL 1/2025, apensado."},
+           {"id": 9202, "siglaTipo": "VTS", "numero": 1, "ano": 0, "ementa": "Voto em separado."},
+           {"id": 9203, "siglaTipo": "REQ", "numero": 5, "ano": 2026, "ementa": "Requer audiência pública."}],
+    9007: [{"id": 9204, "siglaTipo": "PRL", "numero": 1, "ano": 0,
+            "ementa": "Parecer da Relatora, Dep. Deputada Ficticia 06 (PSB-MG), pela aprovação."}],
+}
+DOCS = {9201: {"id": 9201, "siglaTipo": "PRL", "dataApresentacao": f"{_d(-30).isoformat()}T10:00",
+               "uriOrgaoNumerador": f"https://{CD}/api/v2/orgaos/2001",
+               "urlInteiroTeor": f"https://www.camara.leg.br/proposicoesWeb/prop_mostrarintegra?codteor=9201"},
+        9202: {"id": 9202, "siglaTipo": "VTS", "dataApresentacao": f"{_d(-20).isoformat()}T10:00",
+               "urlInteiroTeor": f"https://www.camara.leg.br/proposicoesWeb/prop_mostrarintegra?codteor=9202"},
+        9204: {"id": 9204, "siglaTipo": "PRL", "dataApresentacao": f"{_d(-900).isoformat()}T10:00",
+               "uriOrgaoNumerador": f"https://{CD}/api/v2/orgaos/2002",
+               "urlInteiroTeor": f"https://www.camara.leg.br/proposicoesWeb/prop_mostrarintegra?codteor=9204"}}
+AUTORES[9202] = [{"uri": f"https://{CD}/api/v2/deputados/1003", "nome": "Deputado Ficticio 03", "proponente": 1, "ordemAssinatura": 1}]
+TEXTOS = {
+    9001: "PROJETO DE LEI\nArt. 1º Fica obrigatório o capacete.\nJUSTIFICAÇÃO\nO capacete reduz em 60% o risco de morte dos ciclistas "
+          "em quedas, porque protege a cabeça no impacto.\nPelo exposto, contamos com o apoio dos nobres pares.\nSala das Sessões",
+    9201: "I - RELATÓRIO\nVem a esta Comissão o projeto.\nII - VOTO DO RELATOR\nA medida garante mais segurança aos ciclistas "
+          "e reduz o custo do SUS com internações, que passa de R$ 100 milhões por ano.\nAnte o exposto, votamos pela aprovação.\nSala da Comissão",
+    9202: "VOTO EM SEPARADO\nA obrigação vai aumentar o preço da bicicleta e afastar trabalhadores de baixa renda que dependem dela, "
+          "pois o capacete custa caro.\nAnte o exposto, votamos pela rejeição do projeto.\nSala da Comissão",
+    9007: "PROJETO DE LEI\nJUSTIFICAÇÃO\nO transporte escolar rural garante o acesso das crianças à escola, porque muitas "
+          "famílias moram longe e não têm como levar os filhos.\nSala das Sessões",
+    9204: "II - VOTO DA RELATORA\nO projeto amplia o acesso à educação no campo e reduz a evasão escolar, que chega a 20% nas áreas rurais.\n"
+          "Sala da Comissão",
+}
+def pdf(texto: str) -> bytes:
+    linhas = texto.split("\n")
+    def esc(s): return s.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+    corpo = "BT /F1 10 Tf 14 TL 40 800 Td " + " ".join(f"({esc(l)}) Tj T*" for l in linhas) + " ET"
+    stream = corpo.encode("cp1252")
+    objs = [b"<< /Type /Catalog /Pages 2 0 R >>", b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+            b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
+            b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"]
+    out = b"%PDF-1.4\n"; offs = []
+    for i, o in enumerate(objs, 1):
+        offs.append(len(out)); out += f"{i} 0 obj\n".encode() + o + b"\nendobj\n"
+    x = len(out)
+    out += f"xref\n0 {len(objs)+1}\n0000000000 65535 f \n".encode() + b"".join(f"{o:010d} 00000 n \n".encode() for o in offs)
+    out += f"trailer\n<< /Size {len(objs)+1} /Root 1 0 R >>\nstartxref\n{x}\n%%EOF".encode()
+    return out
+
+
 def _resumo(p):
     return {k: p[k] for k in ("id", "uri", "siglaTipo", "codTipo", "numero", "ano", "ementa", "dataApresentacao")}
 
@@ -78,6 +130,17 @@ def rota(netloc: str, path: str, q: dict):
              "proposicaoRelacionada_": _resumo(PROPS[9006])}]})
     if netloc == CD and path == "/api/v2/eventos/7002/pauta":
         return _ok({"dados": [{"ordem": 1, "proposicao_": _resumo(PROPS[9006]), "relator": None}]})
+    if netloc == "www.camara.leg.br" and path == "/proposicoesWeb/prop_mostrarintegra":
+        i = int(q.get("codteor", "0"))
+        return (200, pdf(TEXTOS[i]), "application/pdf") if i in TEXTOS else (404, b"", "text/html")
+    if netloc == CD and path.startswith("/api/v2/orgaos/"):
+        nomes = {"2001": "Comissão de Viação e Transportes", "2002": "Comissão de Educação"}
+        oid = path.rsplit("/", 1)[1]
+        return _ok({"dados": {"id": oid, "nome": nomes[oid]}}) if oid in nomes else (404, b"", "text/html")
+    if netloc == CD and path == "/api/v2/proposicoes" and q.get("numero"):
+        todas = {**PROPS, **ORIGEM}
+        return _ok({"dados": [_resumo(p) for p in todas.values() if str(p["numero"]) == q["numero"] and str(p["ano"]) == q.get("ano")
+                              and p["siglaTipo"] == q.get("siglaTipo")], "links": []})
     if netloc == CD and path == "/api/v2/proposicoes":
         if q.get("siglaTipo") == "MPV":
             return _ok({"dados": [_resumo(p) for p in PROPS.values() if p["siglaTipo"] == "MPV" and str(p["ano"]) == q.get("ano")], "links": []})
@@ -86,14 +149,17 @@ def rota(netloc: str, path: str, q: dict):
     if netloc == CD and path.startswith("/api/v2/proposicoes/"):
         partes = path.split("/")
         i = int(partes[4]) if partes[4].isdigit() else 0
-        if i not in PROPS:
+        todas = {**PROPS, **ORIGEM, **DOCS}
+        if i not in todas:
             return 404, b"", "text/html"
         if len(partes) == 5:
-            return _ok({"dados": PROPS[i]})
+            return _ok({"dados": todas[i]})
         if partes[5] == "autores":
             return _ok({"dados": AUTORES.get(i, [])})
         if partes[5] == "tramitacoes":
             return _ok({"dados": TRAM.get(i, [])})
+        if partes[5] == "relacionadas":
+            return _ok({"dados": RELACIONADAS.get(i, [])})
     if netloc == CD and path == "/api/v2/orgaos":
         nomes = {"CCJC": "Comissão de Constituição e Justiça e de Cidadania", "CVT": "Comissão de Viação e Transportes", "CMO": "Comissão Mista de Orçamento"}
         s = q.get("sigla", "")
@@ -102,14 +168,26 @@ def rota(netloc: str, path: str, q: dict):
         return _ok({"AgendaPlenario": {"Sessoes": {"Sessao": [
             {"Data": _d(2).isoformat(), "Hora": "14:00", "TipoSessao": "SESSÃO DELIBERATIVA ORDINÁRIA ", "Casa": "SF",
              "CodigoSessao": "8001", "SituacaoSessao": "Agendada",
-             "Materias": {"Materia": {"CodigoMateria": "6001", "SiglaMateria": "PL", "NumeroMateria": "00200", "AnoMateria": "2025",
-                                      "Ementa": "Dispõe sobre bibliotecas.", "Apreciacao": "Discussão, em turno único",
-                                      "Parecer": "Parecer favorável da CE."}}}]}}})
+             "Materias": {"Materia": [
+                 {"CodigoMateria": "6001", "SiglaMateria": "PL", "NumeroMateria": "00200", "AnoMateria": "2025",
+                  "Ementa": "Dispõe sobre bibliotecas.", "Apreciacao": "Discussão, em turno único",
+                  "Parecer": "Parecer favorável da CE."},
+                 {"CodigoMateria": "6004", "SiglaMateria": "PL", "NumeroMateria": "00250", "AnoMateria": "2024",
+                  "Ementa": "Dispõe sobre o transporte escolar rural.", "Apreciacao": "Discussão, em turno único", "Parecer": ""}]}}]}}})
+    if netloc == SF and path.startswith("/dadosabertos/processo/"):
+        pid = path.rsplit("/", 1)[1]
+        return _ok(PROCESSOS[pid]) if pid in PROCESSOS else (404, b"", "text/html")
+    if netloc == SF and path.startswith("/sdleg-getter/documento/"):
+        doc = path.rsplit("/", 1)[1]
+        return (200, pdf(TEXTOS_SF[doc]), "application/pdf") if doc in TEXTOS_SF else (404, b"", "text/html")
     if netloc == SF and path.startswith("/dadosabertos/comissao/agenda/"):
         return _ok({"AgendaReuniao": {"reunioes": {"reuniao": []}}})
     if netloc == SF and path == "/dadosabertos/processo":
         base = {"casaIdentificadora": "SF", "tramitando": "Sim", "tipoDocumento": "Projeto de Lei Ordinária"}
-        p200 = {**base, "codigoMateria": 6001, "identificacao": "PL 200/2025", "ementa": "Dispõe sobre bibliotecas.",
+        p250 = {**base, "id": 7250, "codigoMateria": 6004, "identificacao": "PL 250/2024", "ementa": "Dispõe sobre o transporte escolar rural.",
+                "autoria": "Câmara dos Deputados", "dataApresentacao": _d(-60).isoformat(), "objetivo": "Revisora",
+                "situacaoAtual": "PRONTA PARA A PAUTA NO PLENÁRIO", "dataSituacaoAtual": _d(-2).isoformat()}
+        p200 = {**base, "id": 7200, "codigoMateria": 6001, "identificacao": "PL 200/2025", "ementa": "Dispõe sobre bibliotecas.",
                 "autoria": "Senador Ficticio 00 (PT/SP)", "dataApresentacao": "2025-03-01", "objetivo": "Iniciadora",
                 "situacaoAtual": "PRONTA PARA A PAUTA NO PLENÁRIO", "dataSituacaoAtual": _d(-2).isoformat()}
         p300 = {**base, "codigoMateria": 6002, "identificacao": "PL 300/2026", "ementa": "Institui a Semana do Livro.",
@@ -118,6 +196,30 @@ def rota(netloc: str, path: str, q: dict):
         req = {**base, "codigoMateria": 6003, "identificacao": "REQ 9/2026", "ementa": "Requer informações.", "autoria": "x",
                "dataApresentacao": _d(-1).isoformat(), "objetivo": "Iniciadora", "situacaoAtual": "APROVADO"}
         if q.get("sigla"):
-            return _ok([p for p in (p200, p300) if p["identificacao"] == f"{q['sigla']} {q.get('numero')}/{q.get('ano')}"])
+            return _ok([p for p in (p200, p250, p300) if p["identificacao"] == f"{q['sigla']} {q.get('numero')}/{q.get('ano')}"])
         return _ok([p300, req])
     return None
+
+
+SFDOC = f"https://{SF}/sdleg-getter/documento/"
+TEXTOS_SF = {
+    "pl200": "PROJETO DE LEI\nJUSTIFICAÇÃO\nAs bibliotecas públicas ampliam o acesso das famílias à leitura, porque muitas cidades "
+             "não têm livraria.\nSala das Sessões",
+    "rel200": "I – RELATÓRIO\nVem à análise o projeto.\nII – ANÁLISE\nO projeto vai custar R$ 50 milhões por ano aos municípios, "
+              "sem dizer de onde vem o dinheiro, e pode prejudicar outras áreas da educação.\nIII – VOTO\nPela rejeição.",
+}
+PROCESSOS = {
+    "7200": {"id": 7200, "siglaCasaIniciadora": "SF", "objetivo": "Iniciadora",
+             "documento": {"url": SFDOC + "pl200", "dataApresentacao": "2025-03-01"},
+             "autoriaIniciativa": [{"autor": "Ficticio 00", "siglaTipo": "SENADOR", "siglaPartido": "PT", "ordem": 1}],
+             "autuacoes": [{"informesLegislativos": [
+                 {"data": f"{_d(-10).isoformat()} 10:00:00", "colegiado": {"sigla": "CE", "nome": "Comissão de Educação e Cultura"},
+                  "descricao": "Recebido o relatório do Senador Ficticio 01, com voto pela rejeição do projeto.",
+                  "documentosAssociados": [{"siglaTipo": "RELATORIO", "autoria": "Senador Ficticio 01 (PT/MG)", "url": SFDOC + "rel200"}]}]}]},
+    "7250": {"id": 7250, "siglaCasaIniciadora": "CD", "objetivo": "Revisora",
+             "documento": {"url": SFDOC + "aut250", "dataApresentacao": _d(-60).isoformat()},
+             "autoriaIniciativa": [{"autor": "Deputado Ficticio 05", "siglaTipo": "DEPUTADO", "siglaPartido": "PSOL",
+                                    "cargo": "Deputado Federal", "ordem": 1}],
+             "outrosNumeros": [{"sigla": "PL", "numero": "00250", "ano": 2024, "casaIdentificadora": "CD"}],
+             "autuacoes": []},
+}
