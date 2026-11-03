@@ -229,6 +229,9 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
     # ---------------- projetos em andamento (aba de votações)
     _conferir_tramitacao(saida, r)
 
+    # ---------------- julgamentos do STF (aba de votações)
+    _conferir_tribunais(saida, r)
+
     # ---------------- privacidade e links (em todos os arquivos)
     for f in sorted(saida.rglob("*.json")):
         x = _ler(f, r)
@@ -450,6 +453,30 @@ def _conferir_tramitacao(saida: Path, r: Resultado) -> None:
         fora = [x for x in ev.get("itens", []) if x not in ids]
         if fora:
             r.erro(f"Agenda {ev.get('id')} aponta para propostas que não estão na lista: {fora[:3]}")
+
+
+def _conferir_tribunais(saida: Path, r: Resultado) -> None:
+    """Cada julgamento tem link oficial do STF, ministros sem repetição e placar igual à soma dos votos mostrados."""
+    f = saida / "tribunais.json"
+    if not f.exists():
+        r.alerta("Sem os julgamentos do STF (tribunais.json)")
+        return
+    d = _ler(f, r) or {}
+    ids = Counter(j.get("id") for j in d.get("julgamentos", []))
+    for i, n in ids.items():
+        if n > 1:
+            r.erro(f"Julgamento do STF repetido: {i} ({n} vezes)")
+    for j in d.get("julgamentos", []):
+        if not str(j.get("link") or "").startswith("https://portal.stf.jus.br/"):
+            r.erro(f"Julgamento do STF sem link oficial: {j.get('id')}")
+        votos = j.get("votos") or []
+        nomes = [v.get("ministro") for v in votos]
+        if len(nomes) != len(set(nomes)):
+            r.erro(f"Julgamento do STF com ministro repetido: {j.get('id')}")
+        if len(votos) > 11:
+            r.erro(f"Julgamento do STF com mais de 11 votos: {j.get('id')} ({len(votos)})")
+        if sum((j.get("placar") or {}).values()) != len(votos):
+            r.erro(f"Placar do julgamento do STF não bate com os votos: {j.get('id')}")
 
 
 def _conferir_financas(saida: Path, r: Resultado) -> None:
