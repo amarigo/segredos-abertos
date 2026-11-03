@@ -55,6 +55,7 @@ class FakeGov:
         self.renuncia_so_navegador = False  # o servidor de arquivos da CGU recusa quem não parece navegador
         self.api_chave = "chave-de-teste"  # a API de dados do Portal pede a chave no cabeçalho chave-api-dados
         self.api_exige_uf = False  # a consulta sem filtro pode não ser aceita
+        self.api_paginas_sem_filtro = None  # a consulta sem filtro falha depois desta página (a API não pula tantas linhas)
         self.repetir_linhas = False  # caos de dados: arquivos com linhas repetidas
         self.legislatura_so_atuais = False  # a lista da legislatura sem quem saiu (o defeito que escondia gente)
         rng = self.rng
@@ -376,6 +377,8 @@ class FakeGov:
             if "nomeSiglaUF" in params:
                 todos = [x for x in todos if x["municipio"]["uf"]["sigla"] == params["nomeSiglaUF"]]
             p = int(params.get("pagina", 1))
+            if self.api_paginas_sem_filtro and "nomeSiglaUF" not in params and p > self.api_paginas_sem_filtro:
+                return 400, '{"Erro na API":"Erro ao executar a consulta"}'.encode(), "application/json"
             return self._json(todos[(p - 1) * 15: p * 15])
 
         m = re.search(r"/renuncias/(\d{4})_RenunciasFiscais\.zip$", path)
