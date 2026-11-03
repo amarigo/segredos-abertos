@@ -379,6 +379,9 @@ def _conferir_incentivos(saida: Path, r: Resultado) -> None:
             r.erro(f"Renúncia {x['ano']}: lista das empresas fora de ordem")
 
 
+DOCS_OFICIAIS = ("https://www.camara.leg.br/", "https://legis.senado.leg.br/", "https://legis.senado.gov.br/")
+
+
 def _conferir_tramitacao(saida: Path, r: Resultado) -> None:
     """Cada proposta tem link oficial e id seguro, sem repetição; a agenda só aponta para propostas da lista."""
     f = saida / "tramitacao.json"
@@ -397,6 +400,11 @@ def _conferir_tramitacao(saida: Path, r: Resultado) -> None:
             r.erro(f"Projeto em andamento sem link oficial: {i.get('id')}")
         if not i.get("grupos"):
             r.erro(f"Projeto em andamento sem motivo para estar na lista: {i.get('id')}")
+        # Argumento a favor ou contra só com link para o documento oficial de onde o trecho foi copiado
+        deb = i.get("debate") or {}
+        for a in (deb.get("favor") or []) + (deb.get("contra") or []):
+            if not str(a.get("url") or "").startswith(DOCS_OFICIAIS):
+                r.erro(f"Argumento sem documento oficial em {i.get('id')}: {a.get('url')!r}")
     for ev in d.get("agenda", []):
         fora = [x for x in ev.get("itens", []) if x not in ids]
         if fora:

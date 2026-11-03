@@ -229,6 +229,19 @@ def test_api_le_por_estado_se_a_consulta_sem_filtro_for_recusada(tmp_path, monke
     assert anos[2024][0]["total"] == 1000000.0  # o registro sem UF fica de fora da consulta por estado
 
 
+def test_api_presa_numa_pagina_funda_recomeca_por_estado(tmp_path, monkeypatch):
+    """Sem filtro, a API falha sempre na mesma página funda: na segunda vez, a leitura recomeça estado por estado."""
+    gov = FakeGov()
+    gov.api_paginas_sem_filtro = 1
+    from fakegov import instalar
+    instalar(monkeypatch, gov)
+    api = renuncias.ApiRenuncia(tmp_path, "chave-de-teste")
+    assert not api.coletar(5)  # primeira falha: pode ser passageira, tenta de novo na próxima execução
+    assert api.coletar(5)  # mesma página de novo: recomeça por UF e termina
+    anos = api.anos(4)
+    assert sorted(anos) == [2024, 2025] and anos[2024][0]["total"] == 1000000.0
+
+
 def test_api_para_no_limite_de_tempo_e_continua_depois(tmp_path, monkeypatch):
     from fakegov import instalar
     instalar(monkeypatch, FakeGov())
