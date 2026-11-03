@@ -349,19 +349,26 @@ test.describe("idiomas e buscadores", () => {
 });
 
 test.describe("gráficos", () => {
-  test("rosca ao lado da lista, mapa por estado e comparação de anos", async ({ page }) => {
+  test("barra das partes sobre a lista, mapa por estado e comparação de anos", async ({ page }) => {
     const erros = vigiar(page);
     await page.goto("./#/dinheiro");
-    // a área de governo aparece na lista e na rosca ao lado
+    // a área de governo aparece na lista e na barra das partes em cima; clicar num pedaço mostra o valor dele
     const area = page.locator("section#destino .com-rosca").nth(1);
-    await expect(area.locator(".rosca svg")).toBeVisible();
-    await expect(area.locator(".rosca-leg")).toContainText("Encargos Especiais");
+    const pedaco = area.locator(".compo-seg", { hasText: /%/ }).first();
+    await expect(pedaco).toBeVisible();
+    await expect(area.locator(".com-rosca-lista")).toContainText("Encargos Especiais");
+    await pedaco.click();
+    await expect(area.locator(".compo-pct")).toContainText("do total");
     // mapa com os 27 estados e o botão que passa pelos anos
     const mapa = page.locator("section#quem-pagou .mapa-anos");
     await mapa.scrollIntoViewIfNeeded();
     await expect(mapa.locator(".mapa-uf path")).toHaveCount(27);
     await mapa.getByRole("button", { name: "O que mudou" }).click();
     await expect(mapa.locator(".mapa-uf path")).toHaveCount(27);
+    // dois anos lado a lado: dois mapas e a mudança de cada estado em %
+    await mapa.getByRole("button", { name: "Dois anos lado a lado" }).click();
+    await expect(mapa.locator(".mapa-uf path")).toHaveCount(54);
+    await expect(mapa.locator(".mapa-mudanca li").first()).toContainText("%");
     // sinais no fim da página, com a tendência dos anos
     const sinais = page.locator("section#sinais");
     await sinais.scrollIntoViewIfNeeded();

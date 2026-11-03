@@ -13,7 +13,7 @@ from pathlib import Path
 
 from . import (autorias, tramitacao, transferegov, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
                renuncias, senado, temas)
-from .categorias import GRUPOS
+from .categorias import GRUPOS, tema_de
 from . import util
 from .util import cnpj_valido, doc_kind, mask_cpf, write_json
 
@@ -476,9 +476,26 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
         "total_gasto": round(sum(d["valor"] for d in despesas), 2),
         "total_por_ano": {str(a): round(sum(d["valor"] for d in despesas if d["ano"] == a), 2) for a in anos},
         "custo_por_ano": {str(a): round(sum(r["por_ano"].get(str(a), {}).get("custo_total", 0) for r in resumo), 2) for a in anos},
+        "temas_por_ano": temas_por_ano(despesas, anos),
     })
     log.info("Pronto: %d políticos, %d despesas, %d votações, %d empresas", len(politicos), len(despesas),
              len(votacoes), len(lista_emp))
+
+
+def temas_por_ano(despesas: list[dict], anos: list[int]) -> dict[str, list[dict]]:
+    """Cota de todos os parlamentares por tema (viagens, combustível...) em cada ano, dentro dos três grupos.
+
+    Cada tema traz as categorias oficiais que entraram nele, para quem quiser conferir com a fonte. A soma dos temas
+    de um ano é igual a total_por_ano (validar.py confere)."""
+    soma: dict[str, dict[tuple[str, str], dict[str, float]]] = {str(a): defaultdict(lambda: defaultdict(float)) for a in anos}
+    for d in despesas:
+        a = str(d["ano"])
+        if a in soma:
+            soma[a][(d.get("grupo") or "escritorio", tema_de(d.get("categoria") or ""))][d.get("categoria") or ""] += d["valor"]
+    return {a: sorted(({"grupo": g, "tema": t, "valor": round(sum(cs.values()), 2),
+                        "categorias": sorted(([c, round(v, 2)] for c, v in cs.items()), key=lambda x: -x[1])}
+                       for (g, t), cs in temas.items()), key=lambda x: -x["valor"])
+            for a, temas in soma.items()}
 
 
 def nao_esta_na_api(d: dict) -> bool:

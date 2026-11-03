@@ -39,3 +39,33 @@ def categoria_curta(categoria: str) -> str:
     c = c[:1].upper() + c[1:].lower() if c.isupper() else c
     # Siglas da Câmara: SIGEPA é a passagem comprada pela própria Câmara; RPA é a passagem paga pelo deputado e reembolsada
     return re.sub(r"\s*-\s*sigepa$", " (comprada pela Câmara)", re.sub(r"\s*-\s*rpa$", " (reembolsada ao deputado)", c, flags=re.I), flags=re.I)
+
+
+# Temas para o resumo "Para onde vai o dinheiro": junta os nomes da Câmara e do Senado num nome curto.
+# A ordem conta: a primeira regra que bate decide (o Senado junta locomoção, hospedagem, comida e combustível numa
+# categoria só, por isso ela vem antes de combustível e hospedagem).
+_TEMAS = (
+    (("LOCOMOCAO, HOSPEDAGEM",), "Locomoção, hospedagem, comida e combustível (Senado)"),
+    (("PASSAGE", "AERONAVE", "EMBARCAC"), "Viagens: passagens e fretamento de avião e barco"),
+    (("COMBUSTIV",), "Combustível"),
+    (("HOSPEDAGEM",), "Hospedagem"),
+    (("ALIMENTACAO",), "Alimentação"),
+    (("VEICULO", "TAXI", "PEDAGIO", "ESTACIONAMENTO", "LOCOMOCAO", "TRANSPORTE"), "Carro alugado, táxi, pedágio e estacionamento"),
+    (("DIVULGACAO",), "Divulgação do mandato"),
+    (("CONSULTORIA", "PESQUISA", "TRABALHOS TECNICOS", "ASSESSORIA", "SERVICOS DE APOIO"), "Consultorias, pesquisas e assessorias"),
+    (("SEGURANCA",), "Segurança"),
+    (("ESCRITORIO", "IMOVE", "ALUGUEL", "MATERIAL"), "Escritório: aluguel, contas e material"),
+    (("TELEFON",), "Telefone"),
+    (("POSTA",), "Correio"),
+    (("ASSINATURA", "PUBLICAC"), "Assinaturas de jornais e revistas"),
+    (("CURSO", "PALESTRA", "EVENTO"), "Cursos e eventos"),
+)
+
+
+def tema_de(categoria: str) -> str:
+    """Nome curto do tipo de gasto para o resumo (viagens, combustível, divulgação...)."""
+    c = norm_name(categoria)
+    for chaves, tema in _TEMAS:
+        if any(k in c for k in chaves):
+            return tema
+    return categoria_curta(categoria)

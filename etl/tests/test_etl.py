@@ -4,7 +4,7 @@ import random
 
 from sa_etl import autorias, camara, senado, ideologia, cnpj, recursos
 from sa_etl.build import montar
-from sa_etl.categorias import grupo_de
+from sa_etl.categorias import grupo_de, tema_de
 from sa_etl.util import cnpj_valido, read_csv_text, to_float, mask_cpf
 
 
@@ -13,6 +13,18 @@ def test_grupos():
     assert grupo_de("COMBUSTÍVEIS E LUBRIFICANTES.") == "pessoal"
     assert grupo_de("DIVULGAÇÃO DA ATIVIDADE PARLAMENTAR.") == "servicos"
     assert grupo_de("MANUTENÇÃO DE ESCRITÓRIO DE APOIO À ATIVIDADE PARLAMENTAR") == "escritorio"
+
+
+def test_temas_do_resumo():
+    # Câmara e Senado com nomes diferentes caem no mesmo tema; a categoria mista do Senado fica separada
+    assert tema_de("PASSAGEM AÉREA - SIGEPA") == tema_de("Passagens aéreas, aquáticas e terrestres nacionais")
+    assert tema_de("COMBUSTÍVEIS E LUBRIFICANTES.") == "Combustível"
+    assert "Senado" in tema_de("Locomoção, hospedagem, alimentação, combustíveis e lubrificantes")
+    assert tema_de("SERVIÇO DE TÁXI, PEDÁGIO E ESTACIONAMENTO") == tema_de("LOCAÇÃO OU FRETAMENTO DE VEÍCULOS AUTOMOTORES")
+    # material do escritório do Senado cita "despesas postais", mas é escritório, não correio
+    assert tema_de("Aquisição de material de consumo para uso no escritório político, inclusive despesas postais") \
+        == tema_de("MANUTENÇÃO DE ESCRITÓRIO DE APOIO À ATIVIDADE PARLAMENTAR")
+    assert tema_de("SERVIÇOS POSTAIS") == "Correio"
 
 
 def test_numeros_e_cpf():

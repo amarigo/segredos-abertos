@@ -3,11 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { Barras, COR_GRUPO, Explain, Loading, useAno, useData } from "../components/ui";
 import { corPartido, cotaNoAno, GRUPO_CURTO, GRUPO_EXPLICA, linkSeguro, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
 import { GastoPartidos } from "./Partidos";
-import { LADOS, ladoPelosVotos } from "../partidos";
 import { MG, SITE } from "../recorte";
 import type { CidadeResumo } from "../data";
 import { AvisosFim, SelosResumo } from "../components/Selo";
 import { Kpi, MapaAnos } from "../components/graficos";
+import { ParaOndeVai } from "../components/ParaOndeVai";
+import { EspectroPartidos } from "../components/EspectroPartidos";
 
 export default function Home() {
   const { data: meta, error } = useData<Meta>("meta.json");
@@ -108,8 +109,8 @@ export default function Home() {
 
       <section>
         <h2>Para onde vai o dinheiro</h2>
-        <Explain>Além do salário, cada parlamentar tem uma <strong>cota</strong> mensal para pagar despesas do mandato. Ele paga e pede reembolso apresentando a nota fiscal. Separamos esses gastos em três grupos.</Explain>
-        <Barras rosca={{ titulo: `Cota parlamentar em ${ano}, pelos três grupos de gasto` }} itens={(Object.keys(grupos) as Grupo[]).map((g) => ({ nome: GRUPO_CURTO[g], label: <strong>{GRUPO_CURTO[g]}</strong>, nota: GRUPO_EXPLICA[g], valor: grupos[g], cor: COR_GRUPO[g] }))} />
+        <Explain>Além do salário, cada parlamentar tem uma <strong>cota</strong> mensal para pagar despesas do mandato. Ele paga e pede reembolso apresentando a nota fiscal. Separamos esses gastos em três grupos e, dentro de cada um, pelo tipo de gasto: viagens, combustível, divulgação e os outros.</Explain>
+        {meta.temas_por_ano?.[ano]?.length ? <ParaOndeVai temas={meta.temas_por_ano[ano]} ano={ano} /> : <Barras rosca={{ titulo: `Cota parlamentar em ${ano}, pelos três grupos de gasto` }} itens={(Object.keys(grupos) as Grupo[]).map((g) => ({ nome: GRUPO_CURTO[g], label: <strong>{GRUPO_CURTO[g]}</strong>, nota: GRUPO_EXPLICA[g], valor: grupos[g], cor: COR_GRUPO[g] }))} />}
       </section>
 
       {ufs.size > 1 && (
@@ -151,8 +152,8 @@ export default function Home() {
       {partidos && partidos.some((p) => p.casa === "camara") && (
         <section>
           <h2>Onde cada partido está, pelos votos</h2>
-          <Explain>Cada partido da Câmara aparece no lado em que fica pelo voto dos seus deputados nas votações nominais. É o mesmo critério para todos. Não usamos o que o partido diz de si, porque nem todos se colocam num lado em documento oficial, como estatuto ou programa. Em cada grupo, os partidos vão do mais à esquerda para o mais à direita. <Link to="/sobre">Entenda o cálculo</Link>.</Explain>
-          <PartidosPelosVotos partidos={partidos.filter((p) => p.casa === "camara")} />
+          <Explain>Cada partido da Câmara aparece no lado em que fica pelo voto dos seus deputados nas votações nominais. É o mesmo critério para todos. Não usamos o que o partido diz de si, porque nem todos se colocam num lado em documento oficial, como estatuto ou programa. Cada bolha é um partido no seu ponto da régua, do tamanho da bancada; a tabela embaixo lista os partidos de cada lado, também do mais à esquerda para o mais à direita. <Link to="/sobre">Entenda o cálculo</Link>.</Explain>
+          <EspectroPartidos partidos={partidos.filter((p) => p.casa === "camara")} />
         </section>
       )}
       {partidos && <GastoPartidos partidos={partidos} ano={ano} limite={10} />}
@@ -170,35 +171,6 @@ export default function Home() {
         {!MG && <SelosResumo />}
       </AvisosFim>
     </>
-  );
-}
-
-/* Partidos agrupados pelo lado em que ficam pelos votos dos seus deputados */
-function PartidosPelosVotos({ partidos }: { partidos: Partido[] }) {
-  const grupos = [
-    ...LADOS.map((l) => ({ titulo: l as string, itens: partidos.filter((p) => p.posicao != null && ladoPelosVotos(p.posicao) === l) })),
-    { titulo: "Sem votos suficientes", itens: partidos.filter((p) => p.posicao == null) },
-  ];
-  return (
-    <div className="lados">
-      {grupos.filter((g) => g.itens.length > 0).map((g) => {
-        const itens = g.itens.slice().sort((a, b) => (a.posicao ?? 0) - (b.posicao ?? 0) || b.n - a.n);
-        const deps = itens.reduce((s, p) => s + p.n, 0);
-        return (
-          <div key={g.titulo} className="lados-grupo">
-            <h3>{g.titulo} <small>{deps} deputado{deps === 1 ? "" : "s"}</small></h3>
-            <ul>
-              {itens.map((p) => (
-                <li key={p.sigla}>
-                  <span><i className="partido-cor" style={{ background: corPartido(p.sigla) }} /><Link to={`/politicos?partido=${encodeURIComponent(p.sigla)}`}><strong>{p.sigla}</strong></Link></span>
-                  <small>{p.n} dep.</small>
-                </li>
-              ))}
-            </ul>
-          </div>
-        );
-      })}
-    </div>
   );
 }
 

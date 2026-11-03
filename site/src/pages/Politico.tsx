@@ -287,10 +287,23 @@ function Votos({ p }: { p: Politico }) {
   const { data: pols } = useData<Resumo[]>("politicos.json");
   const [filtro, setFiltro] = useState<"todos" | "contra">("todos");
   const [tema, setTema] = useState("");
+  const [voto, setVoto] = useState<"" | "Sim" | "Não" | "outros">("");
+  const [mes, setMes] = useState("");
+  const [resultado, setResultado] = useState<"" | "sim" | "nao">("");
+  const [mostrar, setMostrar] = useState(200);
   const porId = useMemo(() => new Map((vots || []).map((v) => [v.id, v])), [vots]);
   if (!p.votos.length) return <div className="empty">Ainda não há votos nominais registrados para {p.nome} no período.</div>;
   const contra = p.votos.filter((v) => v.partido && (v.voto === "Sim" || v.voto === "Não") && v.voto !== v.partido);
-  const lista = (filtro === "contra" ? contra : p.votos).filter((v) => !tema || !!porId.get(v.votacao)?.temas?.includes(tema));
+  const meses = [...new Set(p.votos.map((v) => (porId.get(v.votacao)?.data || "").slice(0, 7)).filter((m) => m.length === 7))].sort().reverse();
+  const lista = (filtro === "contra" ? contra : p.votos).filter((v) => {
+    const info = porId.get(v.votacao);
+    if (tema && !info?.temas?.includes(tema)) return false;
+    if (voto && (voto === "outros" ? v.voto === "Sim" || v.voto === "Não" : v.voto !== voto)) return false;
+    if (mes && !(mes.length === 4 ? info?.data?.startsWith(mes) : info?.data?.slice(0, 7) === mes)) return false;
+    if (resultado && (!info || (resultado === "sim") !== !!info.aprovada)) return false;
+    return true;
+  });
+  const conta = (k: "" | "Sim" | "Não" | "outros") => p.votos.filter((v) => !k || (k === "outros" ? v.voto !== "Sim" && v.voto !== "Não" : v.voto === k)).length;
   const temas = Object.entries(p.temas || {}).sort((a, b) => tot(b[1]) - tot(a[1]));
   const colegas = (pols || []).filter((x) => x.casa === p.casa && x.posicao != null);
   return (
@@ -337,11 +350,37 @@ function Votos({ p }: { p: Politico }) {
             <option value="contra">Só quando votou contra o partido ({contra.length})</option>
           </select>
         </div>
+        <div className="filtros">
+          <fieldset><legend>Votou</legend>
+            {([["", "Todos"], ["Sim", "Sim"], ["Não", "Não"], ["outros", "Outros (abstenção, obstrução...)"]] as const).map(([k, n]) => (
+              <button key={k} className="fchip" aria-pressed={voto === k} onClick={() => { setVoto(k); setMostrar(200); }}>{`${n} (${conta(k)})`}</button>
+            ))}
+          </fieldset>
+          <fieldset><legend>Resultado</legend>
+            {([["", "Todos"], ["sim", "Aprovadas"], ["nao", "Rejeitadas"]] as const).map(([k, n]) => (
+              <button key={k} className="fchip" aria-pressed={resultado === k} onClick={() => { setResultado(k); setMostrar(200); }}>{n}</button>
+            ))}
+          </fieldset>
+          {meses.length > 1 && (
+            <label className="graf-ano"><span className="muted small">Quando</span>
+              <select aria-label="Mês" value={mes} onChange={(e) => { setMes(e.target.value); setMostrar(200); }}>
+                <option value="">Todos os meses</option>
+                {[...new Set(meses.map((m) => m.slice(0, 4)))].map((a) => (
+                  <optgroup key={a} label={a}>
+                    <option value={a}>{`Todo o ano de ${a}`}</option>
+                    {meses.filter((m) => m.startsWith(a)).map((m) => <option key={m} value={m}>{`${MESES_LONGOS[Number(m.slice(5)) - 1]} de ${a}`}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
+          )}
+          <span className="filtros-conta">{`${lista.length} votaç${lista.length === 1 ? "ão" : "ões"}`}</span>
+        </div>
         <div className="table-wrap">
           <table>
             <thead><tr><th className="so-largo">Data</th><th>O que foi votado</th><th className="so-largo">Voto</th><th className="so-largo">Maioria do partido</th><th className="so-largo">Resultado</th></tr></thead>
             <tbody>
-              {lista.slice(0, 300).map((v) => {
+              {lista.slice(0, mostrar).map((v) => {
                 const info = porId.get(v.votacao);
                 return (
                   <tr key={v.votacao}>
@@ -364,7 +403,8 @@ function Votos({ p }: { p: Politico }) {
             </tbody>
           </table>
         </div>
-        {lista.length > 300 && <p className="muted small">Mostrando as 300 votações mais recentes.</p>}
+        {lista.length > mostrar && <p className="row" style={{ gap: 12, alignItems: "center" }}><span className="filtros-conta">{`Mostrando ${mostrar} de ${lista.length}.`}</span>
+          <button className="btn alt" onClick={() => setMostrar((m) => m + 200)}>Mostrar mais 200</button></p>}
       </section>
     </>
   );
