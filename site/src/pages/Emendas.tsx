@@ -4,6 +4,7 @@ import { Barras, Explain, Loading, useAno, useData, useVarios, useVisivel } from
 import { CompararAnos, Kpi, MapaAnos, curto, numero, type Fatia } from "../components/graficos";
 import { casaNome, cnpjFmt, corPartido, dataBR, linkSeguro, reais, reaisCurto, type Casa } from "../data";
 import { DocsDoAutor, type AutorEmenda } from "../components/DocsEmendas";
+import { AbrirGastoDaEmenda, DestinoPix, useDestinoIndice } from "../components/DestinoPix";
 import { Pizza } from "./Partidos";
 import "./emendas.css";
 import { AvisosFim } from "../components/Selo";
@@ -72,6 +73,7 @@ export default function Emendas() {
   const [ref, visivel] = useVisivel<HTMLDivElement>();
   const outros = useVarios<EmendasAno>(visivel && indice ? indice.anos.map((a) => `emendas/${a}.json`) : null);
   const todos = useMemo(() => Object.fromEntries(Object.values(outros).map((x) => [String(x.ano), x])) as Record<string, EmendasAno>, [outros]);
+  const { data: destino } = useDestinoIndice(tem ? ano : null); // emendas Pix no Transferegov: em que foi gasto
 
   if (!indice && !erroIndice) return <Loading />;
   if (!tem) {
@@ -149,10 +151,12 @@ export default function Emendas() {
       </div>
       {data.pagamentos && <QuemPagou p={data.pagamentos} ano={ano} />}
       {data.pagamentos && <EmpresasPagas p={data.pagamentos} ano={ano} />}
-      <Autores data={data} medida={medida} />
+      <Autores data={data} medida={medida} pix={destino?.emendas} />
+      <DestinoPix ano={ano} />
       <PartidosEmendas data={data} medida={medida} />
       <Coletivas data={data} medida={medida} />
-      {data.favorecidos && <Favorecidos f={data.favorecidos} ano={ano} />}
+      {data.favorecidos && <Favorecidos f={data.favorecidos} ano={ano}
+        paginas={new Set((data.pagamentos?.empresas || []).filter((e) => e.pagina).map((e) => e.cnpj))} pix={destino?.beneficiarios} />}
 
       <section>
         <h2>De onde vêm estes dados</h2>
@@ -207,7 +211,7 @@ function Destinos({ f, ano, ufAnos }: { f: Recebedores; ano: string; ufAnos: Rec
   );
 }
 
-function Autores({ data, medida }: { data: EmendasAno; medida: Medida }) {
+function Autores({ data, medida, pix }: { data: EmendasAno; medida: Medida; pix?: Record<string, string> }) {
   const [q, setQ] = useState("");
   const [casa, setCasa] = useState<Casa | "">("");
   const [n, setN] = useState(15);
@@ -245,7 +249,7 @@ function Autores({ data, medida }: { data: EmendasAno; medida: Medida }) {
               <div>
                 <h4>Para quê</h4>
                 <ul>{a.areas.map(([k, x], j) => k === SEM_AREA_PIX && a.pix_emendas?.length
-                  ? <li key={j} className="emd-pix-li"><EmendasPix k={k} x={x} lista={a.pix_emendas} /></li>
+                  ? <li key={j} className="emd-pix-li"><EmendasPix k={k} x={x} lista={a.pix_emendas} ano={data.ano} pix={pix} /></li>
                   : <li key={j}><span>{k}</span><span className="num">{reaisCurto(x)}</span></li>)}</ul>
                 {a.acoes && a.acoes.length > 0 && <>
                   <h4 style={{ marginTop: 10 }}>Em detalhe (ação do Orçamento)</h4>
@@ -338,7 +342,8 @@ function Coletivas({ data, medida }: { data: EmendasAno; medida: Medida }) {
 
 const COR_CAT: Record<string, string> = { prefeitura: "var(--s1)", estado: "var(--s3)", entidade: "var(--c7)", empresa: "var(--c4)", federal: "var(--c5)", pessoa: "var(--c8)", outro: "var(--c-outros)" };
 
-function Favorecidos({ f, ano }: { f: Recebedores; ano: string }) {
+function Favorecidos({ f, ano, paginas, pix }: { f: Recebedores; ano: string; paginas: Set<string>; pix?: { cnpj: string; gasto: number; n_gastos: number }[] }) {
+  const gastoPix = useMemo(() => new Map((pix || []).map((b) => [b.cnpj, b])), [pix]);
   const [aba, setAba] = useState<"lista" | "empresas" | "entidades">("lista");
   const [n, setN] = useState(15);
   const lista = f[aba];
@@ -363,6 +368,8 @@ function Favorecidos({ f, ano }: { f: Recebedores; ano: string }) {
                 <td><strong>{x.nome}</strong>
                   <div className="small muted">{[x.natureza, x.municipio && `${x.municipio}${x.uf ? ` (${x.uf})` : ""}`, x.doc && cnpjFmt(x.doc)].filter(Boolean).join(" · ")}</div>
                   {x.autores.length > 0 && <div className="small">Emendas de {x.autores.slice(0, 3).map(([k]) => k).join(", ")}{x.autores.length > 3 ? " e outros" : ""}</div>}
+                  {x.doc && paginas.has(x.doc) && <div className="small"><Link to={`/e/${x.doc}`}>Para quê recebeu, os documentos e os donos</Link></div>}
+                  {x.doc && gastoPix.get(x.doc) && <div className="small">Emendas Pix de {ano}: informou {gastoPix.get(x.doc)!.n_gastos.toLocaleString("pt-BR")} pagamentos ({reaisCurto(gastoPix.get(x.doc)!.gasto)}). Veja a quem pagou na seção das emendas Pix, acima.</div>}
                   {x.doc && <div className="small"><a href={`https://portaldatransparencia.gov.br/pessoa-juridica/${x.doc}`} target="_blank" rel="noreferrer">Ver no Portal da Transparência ↗</a></div>}
                 </td>
                 <td className="r num">{reais(x.valor)}</td>
@@ -450,24 +457,26 @@ const TRANSFEREGOV = "https://especiais.transferegov.sistema.gov.br/transferenci
 const urlEmenda = (c: string) => `${PORTAL}/emendas/detalhe?codigoEmenda=${encodeURIComponent(c)}${/^\d{4}/.test(c) ? `&ano=${c.slice(0, 4)}` : ""}`;
 
 /** Emenda Pix: o dinheiro vai direto para a prefeitura ou o estado, que depois registra no Transferegov um plano de ação dizendo em que vai gastar. */
-function EmendasPix({ k, x, lista }: { k: string; x: number; lista: [string, string, number][] }) {
+function EmendasPix({ k, x, lista, ano, pix }: { k: string; x: number; lista: [string, string, number][]; ano: number; pix?: Record<string, string> }) {
   return (
     <details className="emd-pix">
       <summary><span>{k} <span className="small link-like">ver as {lista.length} emendas</span></span><span className="num">{reaisCurto(x)}</span></summary>
-      <p className="small muted">Na emenda Pix o dinheiro cai direto no caixa da prefeitura ou do estado, sem um objeto definido no Orçamento. Quem recebe precisa registrar no Transferegov um <b>plano de ação</b> dizendo em que vai gastar (obra, compra de equipamento etc.). Para ver, abra o Transferegov e busque pelo número da emenda.</p>
+      <p className="small muted">Na emenda Pix o dinheiro cai direto no caixa da prefeitura ou do estado, sem um objeto definido no Orçamento. Quem recebe precisa registrar no Transferegov um <b>plano de ação</b> dizendo em que vai gastar (obra, compra de equipamento etc.) e, depois, cada pagamento que fez com o dinheiro. Abra uma emenda para ver.</p>
       <ul>{lista.map(([c, local, val]) => (
         <li key={c} className="emd-pix-item">
           <span><strong>{local || "Destino não informado"}</strong> <span className="small muted num">nº {c}</span><br />
             <span className="small emd-doc-links">
               <a href={urlEmenda(c)} target="_blank" rel="noreferrer">Emenda no Portal ↗</a>
               <a href={TRANSFEREGOV} target="_blank" rel="noreferrer">Plano de ação no Transferegov ↗</a>
-            </span></span>
+            </span>
+            {pix?.[c.replace(/\D/g, "")] && <span className="small emd-pix-gasto"><AbrirGastoDaEmenda ano={ano} cnpj={pix[c.replace(/\D/g, "")]} emenda={c} /></span>}
+          </span>
           <span className="num">{reaisCurto(val)}</span>
         </li>))}</ul>
     </details>
   );
 }
-const NOTA_FISCAL = "E as notas fiscais? Quando a emenda vai para uma prefeitura, um fundo de saúde ou um estado, quem compra é a prefeitura ou o estado, e as notas fiscais ficam no portal da transparência dela e no Tribunal de Contas do estado. O governo federal não publica essas notas. Por isso, os links levam ao que é oficial no Portal da Transparência: a emenda, tudo o que o recebedor ganhou do governo federal e cada pagamento com sua nota de empenho.";
+const NOTA_FISCAL = "E as notas fiscais? Quando a emenda vai para uma prefeitura, um fundo de saúde ou um estado, quem compra é a prefeitura ou o estado. Nas emendas Pix, a prefeitura informa no Transferegov cada pagamento que fez com o dinheiro (para quem, para quê e quanto): veja em cada emenda Pix acima e na seção das emendas Pix por prefeitura. Nas outras, as notas ficam no portal da transparência da prefeitura e no Tribunal de Contas do estado, e os links levam ao que é oficial no Portal da Transparência: a emenda, tudo o que o recebedor ganhou do governo federal e cada pagamento com sua nota de empenho.";
 
 /** Um recebedor na ficha do parlamentar, com os links oficiais (emenda e o que o recebedor ganhou do governo federal). */
 function ItemRecebedor({ r }: { r: Recebedor }) {

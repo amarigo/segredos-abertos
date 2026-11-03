@@ -48,3 +48,23 @@
 .emd-pix-item { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
 .emd-pix summary > span:first-child { min-width: 0; }
 .emd-pix summary > .num { white-space: nowrap; flex-shrink: 0; }
+
+/* Emendas Pix no Transferegov: em que a prefeitura gastou e a quem pagou (components/DestinoPix.tsx) */
+.pix-benef summary { grid-template-columns: minmax(0, 1fr) auto; }
+.emd-autor .pix-track { grid-column: 1 / -1; }
+.pix-benef .pix-track .fill { background: var(--s1); }
+.pix-det { display: grid; gap: 10px; padding: 4px 4px 16px; }
+.pix-det h4 { margin: 6px 0 0; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.pix-plano { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; min-width: 0; overflow-wrap: anywhere; }
+.pix-plano h5 { margin: 6px 0 0; font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.pix-plano-topo { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.pix-plano-topo .num { white-space: nowrap; }
+.pix-exec { display: grid; gap: 2px; }
+.pix-exec .track { display: block; height: 8px; background: var(--grid); border-radius: 4px; overflow: hidden; }
+.pix-exec .fill { display: block; height: 100%; background: var(--s1); }
+.pix-metas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .9rem; }
+.pix-metas li { display: flex; justify-content: space-between; gap: 12px; }
+.pix-metas li > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.pix-metas .num { white-space: nowrap; flex-shrink: 0; }
+.emd-pix-gasto { display: block; margin-top: 4px; }
+.emd-pix-item .pix-plano { margin-top: 6px; }
