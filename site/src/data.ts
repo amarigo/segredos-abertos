@@ -294,9 +294,11 @@ export const numero = (n: number) => (n || 0).toLocaleString("pt-BR");
 
 /* Minas Nossa: deputados estaduais (ALMG) */
 export interface AlmgAno { verba: number; projetos: number; requerimentos: number; aprovadas: number; emendas_indicado: number; emendas_pago: number }
-export interface DeputadoEstadualResumo { id: string; nome: string; partido: string; url: string; url_verba?: string; por_ano: Record<string, AlmgAno> }
+export interface DeputadoEstadualResumo { id: string; nome: string; partido: string; url: string; url_verba?: string; por_ano: Record<string, AlmgAno>;
+  /** false: teve mandato nesta legislatura e saiu do cargo (suplente que devolveu a vaga, renúncia, afastamento) */
+  em_exercicio?: boolean; outros_nomes?: string[] }
 export interface AlmgIndice { anos: string[]; medianas: Record<string, AlmgAno>; deputados: DeputadoEstadualResumo[]; fontes: { verba: string; dados: string };
-  verba_completa?: Record<string, boolean> }
+  verba_completa?: Record<string, boolean>; n_em_exercicio?: number; lista_completa?: boolean }
 export interface VerbaAno {
   total: number; tipos: { tipo: string; valor: number }[]; meses: { mes: number; valor: number }[]; meses_faltando?: number[];
   fornecedores: { nome: string; cnpj: string; pf: boolean; valor: number; n: number }[]; n_fornecedores: number; n_notas: number;

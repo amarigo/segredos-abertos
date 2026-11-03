@@ -139,6 +139,32 @@ test.describe("jornada", () => {
     await expect(page.locator("main")).toContainText("Página não encontrada");
   });
 
+  test("deputado estadual que saiu do cargo aparece, com filtro de situação, busca pelo outro nome e a verba", async ({ page }) => {
+    const erros = vigiar(page);
+    const saiu = almgIdx.deputados.filter((d: { em_exercicio?: boolean }) => d.em_exercicio === false);
+    expect(saiu.length).toBeGreaterThan(0);
+    await page.goto("./#/assembleia");
+    await page.locator("#filtro-situacao").selectOption("fora");
+    await expect(page.locator(".person")).toHaveCount(saiu.length);
+    await expect(page.locator(".person").first()).toContainText("fora do cargo hoje");
+    await page.locator("#filtro-situacao").selectOption("exercicio");
+    await expect(page.locator(".person")).toHaveCount(almgIdx.deputados.length - saiu.length);
+    await page.locator("#filtro-situacao").selectOption("");
+    // o nome que está no arquivo oficial da ALMG também acha a pessoa
+    const outro = almgIdx.deputados.find((d: { outros_nomes?: string[] }) => d.outros_nomes?.length);
+    if (outro) {
+      await page.locator("#filtro-nome").fill(outro.outros_nomes[0]);
+      await expect(page.locator(".person")).toHaveCount(1);
+      await expect(page.locator(".person").first()).toContainText(outro.nome);
+    }
+    await page.goto(`./#/deputado-estadual/${saiu[0].id}`);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(saiu[0].nome);
+    await expect(page.getByRole("note").first()).toContainText("Fora do cargo hoje");
+    const ano = Object.keys(saiu[0].por_ano).sort().pop()!;
+    await expect(page.locator("main")).toContainText(brl(saiu[0].por_ano[ano].verba));
+    expect(erros).toEqual([]);
+  });
+
   test("deputado estadual: a verba da página bate com o arquivo e leva à prestação de contas na ALMG", async ({ page }) => {
     const erros = vigiar(page);
     await page.goto("./#/assembleia");

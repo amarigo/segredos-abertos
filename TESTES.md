@@ -26,6 +26,7 @@ causam dano real. Por isso a estratégia junta três ideias:
 | R11 | Total diferente da página oficial da Câmara | média | médio | `test_etl::test_completa_com_valor_oficial`, `test_passagens_*` | `validar.py` alerta quando mais de 10% dos deputados não batem |
 | R12 | Dependência com falha de segurança conhecida | média | médio | job `seguranca` (pip-audit, npm audit) | versões fixas e atualizadas |
 | R13 | Parlamentar que saiu do cargo no meio do mandato some do site, com gastos e votos (caso Dayany Bittencourt, suplente que devolveu a vaga) | alta | alto | `test_ponta_a_ponta::test_quem_saiu_do_cargo_*`, `test_gasto_de_quem_ficou_fora_da_lista_*`, `test_validar`, `site/e2e` | a lista vem da legislatura inteira (Câmara `idLegislatura`, Senado `exercicio=S`), não só de quem está no cargo hoje; nota ou voto de alguém fora da lista vai para `meta.fora_da_lista` e `validar.py` bloqueia |
+| R14 | Deputado estadual que saiu do cargo no meio do mandato some do Minas Nossa, com verba, projetos e emendas (mesma causa do R13, na ALMG) | alta | alto | `test_estado::test_quem_saiu_do_cargo_*`, `test_quem_ficou_fora_da_lista_*`, `test_conferencia_da_lista_*`, `test_validar_mg`, `site/e2e/mg.spec.ts` | a lista junta a API `em_exercicio` com o arquivo oficial de deputados (coluna `Legislaturas`); projeto ou emenda de deputado do arquivo que não está na lista vai para `almg/deputados.json` (`fora_da_lista`) e `mg_etl.validar` bloqueia |
 
 ## 2. A pirâmide
 
@@ -77,6 +78,7 @@ A coleta diária só publica se `python -m sa_etl.validar` não achar erro. Ela 
 - holdings: cadeia sem repetição (a não ser marcada como ciclo) e dentro do limite;
 - privacidade e segurança: nenhum CPF sem máscara (nem dentro de links), só links http(s), nomes de arquivo seguros;
 - ninguém esquecido: toda nota da cota e todo voto das fontes pertence a um parlamentar da lista (`fora_da_lista` vazio);
+  no Minas Nossa, todo projeto e toda emenda de deputado estadual do arquivo oficial da ALMG pertence a alguém da lista;
 - tamanho: pelo menos 400 deputados, 70 senadores e 50 votações;
 - queda: nenhum total de ano nem contagem caiu mais de 20% em relação à versão no ar. Se a queda for real, rode o
   workflow à mão com "Publicar mesmo com queda grande".

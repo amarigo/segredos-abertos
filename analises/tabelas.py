@@ -602,6 +602,7 @@ def _almg(d: Dados):
 def g_mg_deputados(d: Dados):
     for dep in ((d.m("almg/deputados.json") or {}).get("deputados") or []):
         yield {"deputado_id": str(dep.get("id")), "nome": dep.get("nome"), "partido": dep.get("partido"),
+               "no_cargo_hoje": dep.get("em_exercicio", True) is not False,
                "pagina_oficial": dep.get("url"), "verba_oficial": dep.get("url_verba") or "",
                "pagina_no_site": _site(f"deputado-estadual/{dep.get('id')}", mg=True)}
 
@@ -922,8 +923,8 @@ TABELAS: list[Tabela] = [
     Tabela("verificacao", "0 Sobre os dados", "Conferência independente dos números do site com a fonte oficial.", SITE + "#/verificacao",
            [("data", DATA), ("secao", TEXTO), ("checagem", TEXTO), ("status", TEXTO), ("conferidos", INTEIRO), ("divergentes", INTEIRO),
             ("nao_conferidos", INTEIRO), ("como_conferimos", TEXTO), ("fonte_oficial", LINK)], g_verificacao),
-    Tabela("mg_deputados_estaduais", "9 Minas Gerais", "Deputados estaduais de Minas Gerais (ALMG).", "https://dadosabertos.almg.gov.br/",
-           [("deputado_id", TEXTO), ("nome", TEXTO), ("partido", TEXTO), ("pagina_oficial", LINK), ("verba_oficial", LINK), ("pagina_no_site", LINK)], g_mg_deputados),
+    Tabela("mg_deputados_estaduais", "9 Minas Gerais", "Deputados estaduais de Minas Gerais (ALMG) que tiveram mandato na legislatura, inclusive quem já saiu do cargo.", "https://dadosabertos.almg.gov.br/",
+           [("deputado_id", TEXTO), ("nome", TEXTO), ("partido", TEXTO), ("no_cargo_hoje", LOGICO), ("pagina_oficial", LINK), ("verba_oficial", LINK), ("pagina_no_site", LINK)], g_mg_deputados),
     Tabela("mg_deputados_ano", "9 Minas Gerais", "Verba indenizatória, projetos e emendas de cada deputado estadual por ano.", "https://dadosabertos.almg.gov.br/",
            [("deputado_id", TEXTO), ("ano", INTEIRO), ("verba_indenizatoria", DECIMAL), ("projetos", INTEIRO), ("requerimentos", INTEIRO), ("aprovadas", INTEIRO),
             ("emendas_indicado", DECIMAL), ("emendas_pago", DECIMAL)], g_mg_deputados_ano),

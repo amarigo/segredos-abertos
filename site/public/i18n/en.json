@@ -1992,5 +1992,16 @@
 "Também aparece nos dados oficiais como": "Also appears in the official data as",
 "que tiveram mandato (inclusive quem já saiu do cargo) em": "who held a seat (including those who have left office) in",
 "desde": "since",
-"deputados federais e senadores desta legislatura": "federal deputies and senators of this legislature"
+"deputados federais e senadores desta legislatura": "federal deputies and senators of this legislature",
+"Também está na lista {0} deputado que teve mandato nesta legislatura e já saiu do cargo (suplente que devolveu a vaga, quem renunciou ou se afastou). Use o filtro de situação para ver só um grupo.": "The list also includes {0} deputy who held a seat in this legislature and has already left office (an alternate who returned the seat, or someone who resigned or stepped down). Use the status filter to see only one group.",
+"Também estão na lista os {0} deputados que tiveram mandato nesta legislatura e já saíram do cargo (suplentes que devolveram a vaga, quem renunciou ou se afastou). Use o filtro de situação para ver só um grupo.": "The list also includes the {0} deputies who held a seat in this legislature and have already left office (alternates who returned the seat, or those who resigned or stepped down). Use the status filter to see only one group.",
+"{0} deputados. A lista traz todos que tiveram mandato nesta legislatura, inclusive quem já saiu do cargo: os gastos, projetos e emendas do período no cargo continuam contando.": "{0} deputies. The list includes everyone who held a seat in this legislature, including those who have left office: spending, bills and earmarks from their time in office still count.",
+"{0} deputado. A lista traz todos que tiveram mandato nesta legislatura, inclusive quem já saiu do cargo: os gastos, projetos e emendas do período no cargo continuam contando.": "{0} deputy. The list includes everyone who held a seat in this legislature, including those who have left office: spending, bills and earmarks from their time in office still count.",
+"Deputado do meio da lista em {0} (entre os que estão no cargo hoje): R$ {1} de verba.": "Deputy in the middle of the list in {0} (among those in office today): R$ {1} in allowance.",
+"Deputado do meio da lista em {0} (entre os que estão no cargo hoje): {1} projetos.": "Deputy in the middle of the list in {0} (among those in office today): {1} bills.",
+"Deputado do meio da lista em {0} (entre os que estão no cargo hoje): {1} projeto.": "Deputy in the middle of the list in {0} (among those in office today): {1} bill.",
+"Deputado do meio da lista em {0} (entre os que estão no cargo hoje): {1} aprovados.": "Deputy in the middle of the list in {0} (among those in office today): {1} approved.",
+"Deputado do meio da lista em {0} (entre os que estão no cargo hoje): {1} aprovado.": "Deputy in the middle of the list in {0} (among those in office today): {1} approved.",
+"Deputado do meio da lista em {0} (entre os que estão no cargo hoje): R$ {1} em emendas.": "Deputy in the middle of the list in {0} (among those in office today): R$ {1} in earmarks.",
+"Teve mandato nesta legislatura e já saiu do cargo. Os gastos, projetos e emendas abaixo são do período em que esteve no cargo.": "Held a seat in this legislature and has already left office. The spending, bills and earmarks below are from the time in office."
 }

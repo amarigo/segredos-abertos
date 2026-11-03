@@ -70,6 +70,12 @@ class FakeEstado:
         self.chamadas: list[str] = []
         self.deputados = [{"id": 20000 + i, "nome": f"Fulano Estadual {i:02d}", "partido": PARTIDOS[i % len(PARTIDOS)]}
                           for i in range(n_deputados)]
+        # Teve mandato nesta legislatura e saiu do cargo (suplente que devolveu a vaga): não está em em_exercicio,
+        # mas está no arquivo 'deputados' e tem verba, projeto e emenda nos anos acompanhados
+        self.saiu = [{"id": 20900, "nome": "Beltrana Que Saiu", "partido": "PV"}]
+        # Quem está no arquivo com outro nome (o nome antigo também acha a pessoa na busca)
+        self.nome_no_arquivo = {20005: "Professor Fulano 05"}
+        self.legislaturas_saiu = "19,20"
         self.esperado: dict = {}
         self._emendas()
 
@@ -87,16 +93,23 @@ class FakeEstado:
         return json.dumps({"list": [{**d, "tagLocalizacao": 0} for d in self.deputados]}, ensure_ascii=False).encode()
 
     def deputados_csv(self) -> bytes:
-        linhas = [{"Codigo": d["id"], "Nome": d["nome"], "Partido": d["partido"], "Legislaturas": "20", "UltimaLegislatura": "20",
+        linhas = [{"Codigo": d["id"], "Nome": self.nome_no_arquivo.get(d["id"], d["nome"]), "Partido": d["partido"],
+                   "Legislaturas": "20", "UltimaLegislatura": "20",
                    "PaginaAlmg": f"https://www.almg.gov.br/deputados/fulano-{d['id']}/{d['id']}"} for d in self.deputados]
+        linhas += [{"Codigo": d["id"], "Nome": d["nome"], "Partido": d["partido"], "Legislaturas": self.legislaturas_saiu,
+                    "UltimaLegislatura": self.legislaturas_saiu.split(",")[-1],
+                    "PaginaAlmg": f"https://www.almg.gov.br/deputados/beltrana-{d['id']}/{d['id']}"} for d in self.saiu]
         linhas.append({"Codigo": 1, "Nome": "Antigo", "Partido": "PFL", "Legislaturas": "8", "UltimaLegislatura": "8",
                        "PaginaAlmg": "javascript:alert(1)"})
         return _csv(["Codigo", "Nome", "Partido", "Legislaturas", "UltimaLegislatura", "PaginaAlmg"], linhas).encode()
 
     def verba_mes(self, dep: int, ano: int, mes: int) -> bytes:
         """API da verba: os 20 primeiros deputados gastam (i+1) mil de combustível (CNPJ) e 500 de aluguel com pessoa
-        física (CPF) em janeiro, fevereiro e março; os outros meses vêm vazios."""
+        física (CPF) em janeiro, fevereiro e março; os outros meses vêm vazios. Quem saiu do cargo gasta como o
+        deputado 7, só em janeiro e fevereiro (depois já não estava no cargo)."""
         i = dep - 20000
+        if dep in {d["id"] for d in self.saiu}:
+            i = 7 if mes <= 2 else 99
         if i >= 20 or mes > 3 or ano not in self.anos:
             return json.dumps({"list": []}).encode()
         ref = {"@class": "sql-timestamp", "$": f"{ano}-{mes:02d}-01"}
@@ -213,6 +226,12 @@ class FakeEstado:
             linhas.append({"Codigo": f"RQN {n}/{ano}", "SiglaTipoProposicao": "RQN", "Numero": n, "Ano": ano, "Situacao": "Aprovado",
                            "Autores": json.dumps(aut)})
             n += 1
+        for d in self.saiu:
+            linhas.append({"Codigo": f"PL {n}/{ano}", "TipoProposicao": "PROJETO DE LEI", "SiglaTipoProposicao": "PL", "Numero": n,
+                           "Ano": ano, "Ementa": f"Dispõe sobre o tema {n}.", "Situacao": "Aguardando parecer em comissão",
+                           "DataPublicacao": f"10/01/{ano}", "Legislatura": "20",
+                           "Autores": json.dumps([{"id": d["id"], "nome": f"Deputada {d['nome']}", "partido": d["partido"]}])})
+            n += 1
         linhas.append({"Codigo": f"MSG 1/{ano}", "SiglaTipoProposicao": "MSG", "Numero": 1, "Ano": ano, "Situacao": "Publicado", "Autores": ""})
         return _csv(PROP_COLS, linhas).encode()
 
@@ -239,7 +258,13 @@ class FakeEstado:
                            "Valor Indicado": "R$999.999,00", "Valor Pago Atualizado": "R$0,00", "Status": "Reprovado",
                            "Justificativa de Reprovação": "Prezado(a),\r\nbeneficiário irregular; ver \"CAGEC\"."})
             num += 1
-            # autor que não está mais em exercício
+            for d in self.saiu:  # quem saiu do cargo também indicou emendas
+                linhas.append({"Ano da Indicação": ano, "Número da Indicação": num, "Status da Indicação": "APROVADO",
+                               "Autor": d["nome"].upper(), "Município ": "ITAJUBÁ", "Nome Beneficiário": "MUNICIPIO DE ITAJUBA",
+                               "Valor Indicado": "R$70.000,00", "Valor Pago Atualizado": "R$70.000,00", "Status": "Pago Total",
+                               "Função Descrição": "SAÚDE", "Tipo de autoria": "Individual"})
+                num += 1
+            # autor que não está no arquivo de deputados (nome escrito de outro jeito)
             linhas.append({"Ano da Indicação": ano, "Número da Indicação": num, "Status da Indicação": "APROVADO", "Autor": "EX DEPUTADO ANTIGO",
                            "Município ": "PARAISÓPOLIS", "Nome Beneficiário": "ASSOCIACAO DE MORADORES", "Valor Indicado": "R$50.000,00",
                            "Valor Pago Atualizado": "-", "Status": "-", "Função Descrição": "ASSISTÊNCIA SOCIAL"})

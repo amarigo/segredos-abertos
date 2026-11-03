@@ -4,7 +4,8 @@ Primeiro passa tudo pela mesma conferência do nacional (sa_etl.validar): somas,
 links que não são http(s), nomes de arquivo, queda brusca. Depois confere o que é só de MG:
 
 - todos os políticos são de MG, e o placar da Casa inteira nunca é menor que o da bancada de MG;
-- estado: deputados estaduais (cada um com o seu arquivo, verba somando por tipo e por mês, aprovados nunca mais
+- estado: deputados estaduais (todos da legislatura, inclusive quem saiu do cargo: nenhum projeto ou emenda de
+  deputado fora da lista; cada um com o seu arquivo, verba somando por tipo e por mês, aprovados nunca mais
   que apresentados), emendas estaduais, governador eleito, salários sem valor negativo, e o dinheiro de cada cidade
   (contas somando por área, CNPJ com 14 dígitos). Nenhum número com cara de CPF em nenhum texto;
 - cidades: cada eleição aparece uma vez, um prefeito por eleição, mandato de 4 anos, percentuais entre 0 e
@@ -90,6 +91,20 @@ def conferir_estado(saida: Path, r: Resultado) -> None:
     if idx_f.exists():
         idx = _ler(idx_f, r) or {}
         ids = Counter(d["id"] for d in idx.get("deputados", []))
+        # Projeto ou emenda de um deputado do arquivo oficial que não está na nossa lista: a atuação e o dinheiro
+        # dele sumiriam do site. Aconteceu com quem saiu do cargo no meio do mandato, quando a lista só trazia quem
+        # estava em exercício no dia da coleta.
+        for fonte, x in (idx.get("fora_da_lista") or {}).items():
+            r.erro(f"{fonte}: {x.get('linhas')} linha(s) de {x.get('deputados')} deputado(s) estadual(is) fora da lista "
+                   f"(R$ {x.get('valor', 0):.2f}), ex.: {', '.join(x.get('exemplos') or [])}. "
+                   "A atuação e o dinheiro dessas pessoas ficariam fora do site.")
+        if idx.get("lista_completa") is False:
+            r.alerta("Deputados estaduais: a lista da legislatura inteira não veio; só aparecem os que estão no cargo hoje")
+        if idx.get("autores_sem_cadastro"):
+            r.alerta("Emendas estaduais com autor que não está no arquivo de deputados da ALMG (nome diferente?): "
+                     + ", ".join(list(idx["autores_sem_cadastro"])[:5]))
+        if any(not isinstance(d.get("em_exercicio"), bool) for d in idx.get("deputados", [])):
+            r.erro("Deputados estaduais: falta dizer quem está no cargo hoje (em_exercicio)")
         for i, n in ids.items():
             if n > 1:
                 r.erro(f"Deputado estadual repetido: {i}")

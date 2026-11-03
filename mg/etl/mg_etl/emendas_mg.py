@@ -130,6 +130,7 @@ def resumir(rows: list[dict], deputados: dict[str, str], cidades: dict[str, str]
     estado: dict = defaultdict(lambda: {"indicado": 0.0, "pago": 0.0, "n": 0, "mun": defaultdict(lambda: [0.0, 0.0, 0]),
                                         "autor": defaultdict(lambda: [0.0, 0.0, 0])})
     por_cidade: dict = defaultdict(list)
+    sem_deputado: dict = defaultdict(lambda: defaultdict(float))  # ano -> autor -> indicado (conferência da lista)
     for r in rows:
         if not r["aprovada"]:
             continue
@@ -139,6 +140,8 @@ def resumir(rows: list[dict], deputados: dict[str, str], cidades: dict[str, str]
         e["indicado"] += r["indicado"]; e["pago"] += r["pago"]; e["n"] += 1
         m = e["mun"][mun]; m[0] += r["indicado"]; m[1] += r["pago"]; m[2] += 1
         a = e["autor"][r["autor"]]; a[0] += r["indicado"]; a[1] += r["pago"]; a[2] += 1
+        if not dep:
+            sem_deputado[r["ano"]][r["autor"]] += r["indicado"]
         if dep:
             d = por_dep[dep][r["ano"]]
             d["indicado"] += r["indicado"]; d["pago"] += r["pago"]; d["n"] += 1
@@ -171,7 +174,8 @@ def resumir(rows: list[dict], deputados: dict[str, str], cidades: dict[str, str]
         }
     for cid in por_cidade:
         por_cidade[cid].sort(key=lambda x: (-x["ano"], -x["indicado"]))
-    return {"por_deputado": out_dep, "por_cidade": dict(por_cidade), "estado": out_estado}
+    return {"por_deputado": out_dep, "por_cidade": dict(por_cidade), "estado": out_estado,
+            "sem_deputado": {a: dict(x) for a, x in sem_deputado.items()}}
 
 
 def coletar(cache: Path, deputados: dict[str, str], cidades: dict[str, str]) -> dict | None:

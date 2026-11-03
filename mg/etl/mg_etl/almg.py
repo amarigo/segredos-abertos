@@ -2,7 +2,13 @@
 
 Fontes (dados abertos da ALMG, https://dadosabertos.almg.gov.br/):
 - deputados em exercício: API /api/v2/deputados/em_exercicio (nome, partido);
-- arquivo "deputados": todos os deputados, com o link da página de cada um no site da ALMG;
+- arquivo "deputados": todos os deputados desde a 8ª legislatura, com as legislaturas de cada um (coluna
+  Legislaturas) e o link da página no site da ALMG. É dele que vem quem teve mandato na legislatura e saiu do
+  cargo (suplente que devolveu a vaga, quem renunciou, virou secretário ou perdeu o mandato). Por que o arquivo e
+  não a API (opção 2 da regra do projeto): a API usada acima só traz quem está no cargo no dia da coleta, e não
+  achamos na documentação da API uma lista da legislatura inteira; o arquivo é oficial, traz todos de uma vez e a
+  documentação dele (https://dadosabertos.almg.gov.br/documentacao/arquivos/deputados) diz que traz as
+  legislaturas de cada deputado. Se faltar alguém, a conferência abaixo (fora_da_lista) barra a publicação;
 - verba indenizatória (o equivalente estadual da cota parlamentar): a API
   /api/v2/prestacao_contas/verbas_indenizatorias/deputados/{id}/{ano}/{mes} traz cada nota do mês (tipo de
   despesa, quem emitiu, CNPJ ou CPF, valor reembolsado). O arquivo CSV de verbas da ALMG vem sem os valores, por
@@ -43,6 +49,7 @@ PAGINA_DEPUTADO = "https://www.almg.gov.br/a-assembleia/deputados/deputado/?id={
 # Conferido: /proposicoes/PL/3221/2025/ dá 404; a página do texto do projeto é esta
 PAGINA_PROPOSICAO = "https://www.almg.gov.br/atividade-parlamentar/projetos-de-lei/texto/?tipo={sigla}&num={numero}&ano={ano}"
 INICIO_LEGISLATURA = 2023
+LEGISLATURA_2023 = 20  # a 20ª legislatura vai de fevereiro de 2023 a janeiro de 2027; cada uma dura 4 anos
 ANOS_RECENTES = 2  # foco no ano atual e no anterior (pedido em 24/10/2026): a verba desses anos completa primeiro
 ORCAMENTO_VERBA = 700  # consultas à API da verba por execução
 PAUSA_VERBA = 0.4  # segundos entre consultas (a API responde 429 se formos rápidos demais)
@@ -87,18 +94,72 @@ def em_exercicio(cache: Path) -> list[dict]:
         raise
 
 
-def paginas(cache: Path) -> dict[str, str]:
-    """id -> link da página do deputado no site da ALMG (do arquivo 'deputados')."""
+def legislaturas(anos: list[int]) -> set[int]:
+    """Legislaturas da ALMG que cobrem os anos. A legislatura começa em fevereiro: janeiro ainda é da anterior."""
+    out = set()
+    for a in anos:
+        n = LEGISLATURA_2023 + (a - INICIO_LEGISLATURA) // 4
+        out.add(n)
+        if (a - INICIO_LEGISLATURA) % 4 == 0 and a > INICIO_LEGISLATURA:
+            out.add(n - 1)
+    return out
+
+
+def arquivo_deputados(cache: Path) -> list[dict]:
+    """Linhas do arquivo 'deputados' da ALMG (todos os deputados, de todas as legislaturas). Lista vazia se o
+    arquivo não vier nem houver cópia."""
     texto = fontes.baixar(CSV_DEPUTADOS, cache / "almg" / "deputados.csv", 20, "ALMG (lista de deputados)",
                           colunas=("Codigo", "Nome"))
     if not texto:
-        return {}
+        return []
+    return [r for r in fontes.ler_csv(texto) if (r.get("Codigo") or "").strip()]
+
+
+def paginas(linhas: list[dict]) -> dict[str, str]:
+    """id -> link da página do deputado no site da ALMG (do arquivo 'deputados')."""
     out = {}
-    for r in fontes.ler_csv(texto):
+    for r in linhas:
         u = url_segura(r.get("PaginaAlmg") or "")
-        if r.get("Codigo") and u:
+        if u:
             out[r["Codigo"].strip()] = u
     return out
+
+
+def _legs(r: dict) -> set[int]:
+    return {int(x) for x in re.findall(r"\d+", f"{r.get('Legislaturas') or ''},{r.get('UltimaLegislatura') or ''}")}
+
+
+def da_legislatura(atuais: list[dict], linhas: list[dict], legs: set[int]) -> tuple[list[dict], bool]:
+    """Todos que tiveram mandato nas legislaturas `legs`: quem está no cargo hoje (API, `em_exercicio` True) e quem
+    passou pela legislatura e saiu (arquivo 'deputados', `em_exercicio` False). Devolve (lista, completa): completa
+    é False quando o arquivo não veio ou veio sem a coluna Legislaturas (aí só aparece quem está no cargo hoje)."""
+    por_id = {d["id"]: {**d, "em_exercicio": True} for d in atuais}
+    completa = bool(linhas) and any((r.get("Legislaturas") or "").strip() for r in linhas)
+    for r in linhas if completa else []:
+        if not _legs(r) & legs:
+            continue
+        i, nome = r["Codigo"].strip(), (r.get("Nome") or "").strip()
+        if not id_seguro(i) or not nome:
+            continue
+        if i in por_id:
+            if fontes.chave_nome(nome) != fontes.chave_nome(por_id[i]["nome"]):
+                por_id[i]["outros_nomes"] = [nome]
+            continue
+        por_id[i] = {"id": i, "nome": nome, "partido": (r.get("Partido") or "").strip(), "em_exercicio": False}
+    if not completa:
+        fontes.avisar("ALMG: a lista completa de deputados da legislatura não veio; aparecem só os que estão no cargo "
+                      "hoje, e os gastos de quem saiu do cargo podem estar faltando")
+    return list(por_id.values()), completa
+
+
+def deputados(cache: Path, hoje: dt.date | None = None) -> tuple[list[dict], list[dict], bool]:
+    """Quem teve mandato na legislatura dos anos acompanhados, não só quem está no cargo hoje: quem saiu no meio
+    (suplente que devolveu a vaga, quem renunciou ou se afastou) também gastou verba e apresentou projetos.
+    Devolve (deputados, linhas do arquivo 'deputados', lista completa?)."""
+    atuais = em_exercicio(cache)
+    linhas = arquivo_deputados(cache)
+    lista, completa = da_legislatura(atuais, linhas, legislaturas(anos_legislatura(hoje)))
+    return lista, linhas, completa
 
 
 # ---------------------------------------------------------------- verba indenizatória
@@ -262,6 +323,14 @@ def _autores(campo: str) -> list[str]:
     return [str(a.get("id")) for a in lst if isinstance(a, dict) and a.get("id") is not None]
 
 
+def _autores_com_nome(campo: str) -> list[tuple[str, str]]:
+    try:
+        lst = json.loads(campo or "[]")
+    except ValueError:
+        return []
+    return [(str(a.get("id")), str(a.get("nome") or "")) for a in lst if isinstance(a, dict) and a.get("id") is not None]
+
+
 def proposicoes(textos: dict[int, str], ids: set[str]) -> dict[str, dict[int, dict]]:
     """Por deputado e ano (da apresentação): projetos e requerimentos como primeiro autor, quantos foram aprovados,
     e a lista dos projetos (os mais recentes primeiro)."""
@@ -374,13 +443,59 @@ def link_proposicao(p: dict) -> str:
 
 # ---------------------------------------------------------------- montagem
 
+def fora_da_lista(textos: dict[int, str], linhas: list[dict], ids: set[str], anos: list[int],
+                  emendas: dict | None) -> dict:
+    """Projetos e emendas de deputado que está no arquivo oficial de deputados mas não na nossa lista. Cada um é
+    atuação ou dinheiro que sumiria do site sem ninguém perceber (aconteceu com quem saiu do cargo no meio do
+    mandato, quando a lista só trazia quem estava em exercício). validar.py barra a publicação se houver algum."""
+    nomes = {r["Codigo"].strip(): (r.get("Nome") or "").strip() for r in linhas}
+    por_nome = {fontes.chave_nome(n): i for i, n in nomes.items() if n}
+    achados: dict[str, dict] = {}
+
+    def marcar(fonte: str, dep: str, valor: float = 0.0) -> None:
+        x = achados.setdefault(fonte, {"ids": set(), "linhas": 0, "valor": 0.0})
+        x["ids"].add(f"{nomes.get(dep, '')} ({dep})")
+        x["linhas"] += 1
+        x["valor"] += valor
+
+    for ano, texto in textos.items():
+        for r in fontes.ler_csv(texto, COL_PROPOSICOES):
+            try:
+                a = int(r["Ano"])
+            except ValueError:
+                a = ano
+            if a not in anos:
+                continue
+            for dep, nome in _autores_com_nome(r["Autores"]):
+                # O id e o nome têm de bater com o arquivo de deputados: autor que não é deputado (comissão,
+                # governador) pode ter um código igual ao de algum deputado antigo, e isso não pode barrar nada
+                if dep in nomes and dep not in ids and fontes.chave_nome(nome) == fontes.chave_nome(nomes[dep]):
+                    marcar("Proposições (ALMG)", dep)
+    sem_nome: dict[str, float] = {}
+    for ano, autores in ((emendas or {}).get("sem_deputado") or {}).items():
+        if int(ano) not in anos:
+            continue
+        for autor, valor in autores.items():
+            dep = por_nome.get(fontes.chave_nome(autor))
+            if dep and dep not in ids:
+                marcar("Emendas estaduais (ALMG)", dep, valor)
+            elif not dep:
+                sem_nome[autor] = round(sem_nome.get(autor, 0) + valor, 2)
+    out = {f: {"deputados": len(x["ids"]), "linhas": x["linhas"], "valor": round(x["valor"], 2),
+               "exemplos": sorted(x["ids"])[:10]} for f, x in sorted(achados.items())}
+    return {"fora_da_lista": out, "autores_sem_cadastro": dict(sorted(sem_nome.items(), key=lambda kv: -kv[1])[:20])}
+
+
 def coletar(saida: Path, cache: Path, deps: list[dict], emendas: dict | None, hoje: dt.date | None = None,
-            orcamento: int | None = None) -> list[dict]:
-    """Escreve almg/deputados.json e almg/d/{id}.json. Devolve a lista de deputados (deps: de em_exercicio)."""
+            orcamento: int | None = None, linhas: list[dict] | None = None, completa: bool = True) -> list[dict]:
+    """Escreve almg/deputados.json e almg/d/{id}.json. Devolve a lista de deputados.
+
+    deps: de `deputados()` (todos da legislatura, com `em_exercicio`); linhas: o arquivo 'deputados' da ALMG."""
     anos = anos_legislatura(hoje)
     deps = [d for d in deps if id_seguro(d["id"])]
     ids = {d["id"] for d in deps}
-    links = paginas(cache)
+    linhas = arquivo_deputados(cache) if linhas is None else linhas
+    links = paginas(linhas)
     hoje = hoje or dt.date.today()
     por_mes = baixar_verbas(cache, sorted(ids), hoje, orcamento)
     gastos = verbas(por_mes, anos, hoje)
@@ -397,6 +512,9 @@ def coletar(saida: Path, cache: Path, deps: list[dict], emendas: dict | None, ho
         if t:
             textos[ano] = t
     props = proposicoes(textos, ids)
+    conferencia = fora_da_lista(textos, linhas, ids, anos, emendas)
+    if conferencia["fora_da_lista"]:
+        log.error("ALMG: atuação de deputado fora da lista: %s", conferencia["fora_da_lista"])
     write_json(saida / "almg" / "tramitacao.json", em_andamento(textos, hoje))
     em = (emendas or {}).get("por_deputado", {})
     resumo = []
@@ -419,24 +537,31 @@ def coletar(saida: Path, cache: Path, deps: list[dict], emendas: dict | None, ho
                 "aprovadas": p["aprovadas"] if p else 0,
                 "emendas_indicado": e["indicado"] if e else 0, "emendas_pago": e["pago"] if e else 0,
             }
-        r = {"id": i, "nome": d["nome"], "partido": d["partido"],
+        r = {"id": i, "nome": d["nome"], "partido": d["partido"], "em_exercicio": d.get("em_exercicio", True),
              "url": links.get(i) or PAGINA_DEPUTADO.format(id=i), "url_verba": PAGINA_VERBA_DEPUTADO.format(id=i),
              "por_ano": por_ano}
+        if d.get("outros_nomes"):
+            r["outros_nomes"] = d["outros_nomes"]
         resumo.append(r)
         write_json(saida / "almg" / "d" / f"{i}.json", {**r, "anos": anos_dep})
     medianas = {}
     for ano in anos:
         a = str(ano)
-        # Todos os deputados em exercício entram: quem não teve nenhum gasto ou projeto no ano conta como zero
-        if any(a in r["por_ano"] for r in resumo):
-            com = [r["por_ano"].get(a) or dict.fromkeys(CAMPOS, 0) for r in resumo]
+        # Todos os deputados em exercício hoje entram: quem não teve nenhum gasto ou projeto no ano conta como zero.
+        # Quem saiu do cargo fica de fora da conta, para os meses sem mandato não puxarem o deputado do meio para baixo.
+        no_cargo = [r for r in resumo if r["em_exercicio"]]
+        if any(a in r["por_ano"] for r in no_cargo):
+            com = [r["por_ano"].get(a) or dict.fromkeys(CAMPOS, 0) for r in no_cargo]
             medianas[a] = {k: _mediana([x[k] for x in com]) for k in CAMPOS}
     write_json(saida / "almg" / "deputados.json", {
         "anos": [str(a) for a in anos], "medianas": medianas, "deputados": resumo,
         "fontes": {"verba": PAGINA_VERBA, "dados": BASE},
         "verba_completa": completo,
+        "legislaturas": sorted(legislaturas(anos)), "lista_completa": completa,
+        "n_em_exercicio": sum(r["em_exercicio"] for r in resumo), **conferencia,
     })
-    log.info("ALMG: %d deputados, verba de %d, proposições de %d", len(resumo), len(gastos), len(props))
+    log.info("ALMG: %d deputados (%d fora do cargo hoje), verba de %d, proposições de %d", len(resumo),
+             sum(not r["em_exercicio"] for r in resumo), len(gastos), len(props))
     return resumo
 
 

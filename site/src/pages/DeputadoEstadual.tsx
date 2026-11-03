@@ -23,7 +23,8 @@ export default function DeputadoEstadualPage() {
   if (!/^\d{1,10}$/.test(id)) return <div className="empty">Deputado não encontrado. <Link to="/assembleia">Ver todos os deputados estaduais</Link>.</div>;
   if (!d) return <Loading error={error} />;
   const a = d.anos[ano];
-  const colegas = (idx?.deputados || []).map((x) => x.por_ano[ano]).filter(Boolean);
+  // Comparação só com quem está no cargo hoje (quem saiu tem meses sem mandato), como a mediana da lista
+  const colegas = (idx?.deputados || []).filter((x) => x.em_exercicio !== false).map((x) => x.por_ano[ano]).filter(Boolean);
   const primeiro = d.nome.split(" ")[0];
   return (
     <>
@@ -36,6 +37,11 @@ export default function DeputadoEstadualPage() {
             <span className="chip">{d.partido}</span>
             <a className="chip" href={linkSeguro(d.url)} target="_blank" rel="noreferrer">Página na ALMG ↗</a>
           </div>
+          {d.em_exercicio === false && <p className="small muted" role="note">
+            <strong className="fora-cargo">Fora do cargo hoje</strong>
+            <br /><span>Teve mandato nesta legislatura e já saiu do cargo. Os gastos, projetos e emendas abaixo são do período em que esteve no cargo.</span>
+          </p>}
+          {d.outros_nomes?.length ? <p className="small muted"><span>Também aparece nos dados oficiais como</span> {d.outros_nomes.join(", ")}</p> : null}
         </div>
       </section>
       <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>

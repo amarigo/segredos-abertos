@@ -87,11 +87,13 @@ def incentivos_mg(nacional: Path) -> dict:
 def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[dict], cache_nacional: Path | None) -> dict:
     cont: dict = {}
     mapa_cidades = {emendas_mg.chave_cidade(c["nome"]): c["id"] for c in lista_cidades}
-    deps = _seguro("ALMG (deputados em exercício)", lambda: almg.em_exercicio(cache), [])
-    mapa_dep = {fontes.chave_nome(d["nome"]): d["id"] for d in deps}
+    # Todos que tiveram mandato na legislatura, não só quem está no cargo hoje: quem saiu no meio também gastou
+    deps, linhas, completa = _seguro("ALMG (deputados da legislatura)", lambda: almg.deputados(cache), ([], [], False))
+    mapa_dep = {fontes.chave_nome(n): d["id"] for d in deps for n in [d["nome"], *d.get("outros_nomes", [])]}
     em = _seguro("Emendas estaduais (ALMG)", lambda: emendas_mg.coletar(cache, mapa_dep, mapa_cidades))
     if deps:
-        feitos = _seguro("Deputados estaduais (ALMG)", lambda: almg.coletar(saida, cache, deps, em), [])
+        feitos = _seguro("Deputados estaduais (ALMG)",
+                         lambda: almg.coletar(saida, cache, deps, em, linhas=linhas, completa=completa), [])
         cont["deputados_estaduais"] = len(feitos or [])
     if em:
         util.write_json(saida / "estado" / "emendas.json", {

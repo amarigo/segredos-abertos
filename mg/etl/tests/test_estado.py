@@ -202,15 +202,18 @@ def _montar(nacional, tmp_path, cache=None):
     return saida, cont
 
 
+N_DEPUTADOS = 61  # 60 no cargo hoje e 1 que saiu do cargo nesta legislatura
+
+
 def _json(saida, rel):
     return json.loads((saida / rel).read_text(encoding="utf-8"))
 
 
 def test_montagem_completa(estado, nacional, tmp_path):
     saida, cont = _montar(nacional, tmp_path)
-    assert cont["deputados_estaduais"] == 60 and cont["governo"] == 2 and cont["equipe_governo"] == 3
+    assert cont["deputados_estaduais"] == N_DEPUTADOS and cont["governo"] == 2 and cont["equipe_governo"] == 3
     idx = _json(saida, "almg/deputados.json")
-    assert len(idx["deputados"]) == 60 and len(list((saida / "almg" / "d").glob("*.json"))) == 60
+    assert len(idx["deputados"]) == N_DEPUTADOS and len(list((saida / "almg" / "d").glob("*.json"))) == N_DEPUTADOS
     assert idx["verba_completa"]["2025"] is True
     d3 = _json(saida, "almg/d/20003.json")
     v = d3["anos"]["2025"]["verba"]
@@ -230,7 +233,7 @@ def test_montagem_completa(estado, nacional, tmp_path):
     assert par["federais"] == {"fonte": emendas_federais.PAGINA, "por_ano": [], "favorecidos": [], "autores": []}, \
         "a fonte respondeu e a cidade não recebeu nada: lista vazia, não 'fonte fora do ar'"
     meta = _json(saida, "meta.json")
-    assert meta["estado"]["deputados_estaduais"] == 60
+    assert meta["estado"]["deputados_estaduais"] == N_DEPUTADOS
     assert meta["avisos"] == [], "com todas as fontes no ar, nada pode ficar de fora (avisos da execução de 23/10/2026)"
     assert sum(p["projetos"] for p in d3["por_ano"].values()) > 0, "proposições da ALMG lidas"
     r = validar(saida, minimos=MINIMOS_TESTE)
@@ -263,10 +266,68 @@ def test_orcamento_da_verba_completa_aos_poucos(estado, nacional, tmp_path, monk
     assert sum("verbas_indenizatorias" in u for u in estado.chamadas) == 0
 
 
+# ---------------------------------------------------------------- quem saiu do cargo
+
+def test_quem_saiu_do_cargo_aparece_com_verba_projetos_e_emendas(estado, nacional, tmp_path):
+    """Causa raiz do caso dos deputados que saíram no meio do mandato: a lista vinha só de em_exercicio."""
+    saida, _ = _montar(nacional, tmp_path)
+    idx = _json(saida, "almg/deputados.json")
+    por_id = {d["id"]: d for d in idx["deputados"]}
+    b = por_id["20900"]
+    assert b["em_exercicio"] is False and b["nome"] == "Beltrana Que Saiu" and b["partido"] == "PV"
+    assert sum(d["em_exercicio"] for d in idx["deputados"]) == idx["n_em_exercicio"] == 60
+    d = _json(saida, "almg/d/20900.json")
+    assert d["anos"]["2025"]["verba"]["total"] == pytest.approx(2 * (8000 + 500)), "verba de janeiro e fevereiro"
+    assert d["por_ano"]["2025"]["projetos"] == 1
+    assert d["por_ano"]["2025"]["emendas_indicado"] == pytest.approx(70_000)
+    em = _json(saida, "estado/emendas.json")
+    assert any(a["deputado"] == "20900" for a in em["anos"]["2025"]["autores"]), "emenda ligada à deputada"
+    assert por_id["20005"]["outros_nomes"] == ["Professor Fulano 05"], "nome do arquivo oficial também acha a pessoa"
+    assert idx["fora_da_lista"] == {} and idx["lista_completa"] is True and idx["legislaturas"] == [20]
+    assert "EX DEPUTADO ANTIGO" in idx["autores_sem_cadastro"]
+    # a mediana compara só com quem está no cargo hoje
+    assert idx["medianas"]["2025"]["projetos"] == 2
+
+
+def test_quem_ficou_fora_da_lista_barra_a_publicacao(estado, nacional, tmp_path):
+    """Se o arquivo oficial não marcar a legislatura de alguém que apresentou projeto e indicou emenda, a
+    conferência barra: a atuação e o dinheiro dessa pessoa sumiriam do site."""
+    estado.legislaturas_saiu = "19"
+    saida, _ = _montar(nacional, tmp_path)
+    idx = _json(saida, "almg/deputados.json")
+    assert "20900" not in {d["id"] for d in idx["deputados"]}
+    fora = idx["fora_da_lista"]
+    assert fora["Proposições (ALMG)"]["exemplos"] == ["Beltrana Que Saiu (20900)"]
+    assert fora["Emendas estaduais (ALMG)"]["valor"] == pytest.approx(70_000)
+    r = validar(saida, minimos=MINIMOS_TESTE)
+    assert any("fora da lista" in e and "Beltrana" in e for e in r.erros), r.erros
+
+
+def test_conferencia_da_lista_so_pega_deputado_de_verdade():
+    """Autor com o código de um deputado antigo mas outro nome (comissão, governador) não barra nada; deputado do
+    arquivo fora da lista, sim. Emenda de autor que não está no arquivo vira alerta, não bloqueio."""
+    linhas = [{"Codigo": "7", "Nome": "Fulana Antiga"}, {"Codigo": "8", "Nome": "Ciclano"}]
+    cab = "SiglaTipoProposicao,Numero,Ano,Ementa,Situacao,Autores\n"
+    aut = lambda i, n: '"' + json.dumps([{"id": i, "nome": n}]).replace('"', '""') + '"'
+    texto = cab + f"PL,1,2025,x,y,{aut(7, 'Comissão de Saúde')}\nPL,2,2025,x,y,{aut(8, 'Deputado Ciclano')}\n"
+    em = {"sem_deputado": {2025: {"CICLANO": 100.0, "BANCADA MINEIRA": 50.0}, 2019: {"FULANA ANTIGA": 9.0}}}
+    c = almg.fora_da_lista({2025: texto}, linhas, {"1"}, [2025, 2026], em)
+    assert c["fora_da_lista"]["Proposições (ALMG)"]["exemplos"] == ["Ciclano (8)"]
+    assert c["fora_da_lista"]["Emendas estaduais (ALMG)"]["valor"] == 100.0
+    assert c["autores_sem_cadastro"] == {"BANCADA MINEIRA": 50.0}, "ano fora dos acompanhados não conta"
+
+
+def test_legislaturas_da_almg():
+    assert almg.legislaturas([2025, 2026]) == {20}
+    assert almg.legislaturas([2026, 2027]) == {20, 21}, "janeiro de 2027 ainda é da 20ª"
+    assert almg.legislaturas([2028]) == {21}
+
+
 # ---------------------------------------------------------------- caos
 
 FONTES = {
     "ALMG (deputados)": "/deputados/em_exercicio",
+    "ALMG (arquivo de deputados)": "/arquivo/deputados",
     "verba": "verbas_indenizatorias",
     "proposições": "/arquivo/proposicoes",
     "emendas estaduais": "mediaserver.almg.gov.br",
@@ -288,7 +349,9 @@ def test_uma_fonte_falha_e_o_resto_sai(estado, nacional, tmp_path, fonte, modo):
     for c in CIDADES_TESTE:
         assert (saida / "cidades" / "dinheiro" / f"{c['id']}.json").exists()
     if fonte not in ("ALMG (deputados)", "TSE") and not (fonte == "emendas estaduais" and modo == "cortado"):
-        assert cont.get("deputados_estaduais") == 60, f"{fonte} não deveria derrubar a lista de deputados"
+        # sem o arquivo de deputados (e sem cópia), só aparece quem está no cargo hoje, e o site avisa
+        esperado = 60 if fonte == "ALMG (arquivo de deputados)" else N_DEPUTADOS
+        assert cont.get("deputados_estaduais") == esperado, f"{fonte} não deveria derrubar a lista de deputados"
     r = validar(saida, minimos=MINIMOS_TESTE)
     if fonte == "TSE":  # sem o TSE (e sem cópia), as cidades ficam sem prefeitos: a conferência barra, de propósito
         assert any("mandatos de prefeito" in e for e in r.erros)
@@ -307,7 +370,7 @@ def test_fonte_fora_do_ar_usa_a_ultima_copia_e_avisa(estado, nacional, tmp_path,
     monkeypatch.setattr(util, "download", _download_sempre_velho(util.download))
     monkeypatch.setattr(fontes, "download", _download_sempre_velho(fontes.download))
     saida, cont = _montar(nacional, tmp_path, cache=tmp_path / "cache")
-    assert cont["deputados_estaduais"] == 60 and cont["equipe_governo"] == 3
+    assert cont["deputados_estaduais"] == N_DEPUTADOS and cont["equipe_governo"] == 3
     ita = _json(saida, "cidades/dinheiro/itajuba.json")
     assert ita["estaduais"]["lista"] and ita["contas"]["anos"]
     avisos = " ".join(_json(saida, "meta.json")["avisos"])
