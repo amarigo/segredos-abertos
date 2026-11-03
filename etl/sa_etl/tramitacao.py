@@ -6,8 +6,12 @@ Tudo pelas APIs oficiais:
   (o que vai ser votado), /proposicoes (apresentadas no período e medidas provisórias), /proposicoes/{id} (situação
   atual), /proposicoes/{id}/autores e /proposicoes/{id}/tramitacoes (últimos passos).
 - Senado (https://legis.senado.leg.br/dadosabertos): /plenario/agenda/mes/{data} (sessões do Plenário com as
-  matérias), /comissao/agenda/{inicio}/{fim} (reuniões das comissões com os itens da pauta) e /processo (autoria,
-  situação atual e apresentadas no período).
+  matérias), /comissao/agenda/{inicio}/{fim} (reuniões das comissões com os itens da pauta), /processo (autoria,
+  situação atual e apresentadas no período) e /processo/{id} (autor original e relatórios de cada passo).
+
+Quem propôs é sempre o autor original: quando a proposta veio da outra Casa, a API da Casa onde ela está diz só
+"Câmara dos Deputados" ou "Senado Federal"; aí buscamos o autor na Casa onde ela começou. O que dizem a favor e contra
+sai dos documentos oficiais (veja debate.py).
 
 O resumo em linguagem simples é feito por regras públicas (resumo_simples): troca o número da lei pelo nome
 pelo qual ela é conhecida e o juridiquês mais comum por palavras do dia a dia. A ementa oficial aparece sempre ao
@@ -22,6 +26,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from . import debate
 from .temas import temas_de
 from .util import avisar, get_json, id_seguro, norm_name, url_segura, write_json
 
@@ -362,7 +367,106 @@ def nome_orgao(sigla: str) -> str:
     return nome
 
 
-def detalhe_camara(pid: str, deputados: dict[str, dict], hoje: dt.date | None = None) -> dict | None:
+def autores_camara(autores: list[dict], deputados: dict[str, dict], senadores: dict[str, str] | None = None) -> list[dict]:
+    """Autores como a Câmara registra, ligados à página do político. "Senado Federal - Fulano" vira o senador Fulano
+    (a proposta começou no Senado) e "Poder Executivo" vira o Presidente da República."""
+    senadores = senadores or {}
+    lista = []
+    for a in sorted(autores, key=lambda a: (-(a.get("proponente") or 0), a.get("ordemAssinatura") or 999)):
+        nome = (a.get("nome") or "").strip()
+        dep = _id_camara(a.get("uri") or "") if "/deputados/" in (a.get("uri") or "") else ""
+        pol = deputados.get(f"dep-{dep}") if dep else None
+        m = re.match(r"^Senado Federal\s*[-–]\s*(.+)$", nome)
+        if m:
+            sen = senadores.get(norm_name(m.group(1)), "")
+            lista.append({"nome": m.group(1).strip(), "partido": "", "uf": "", "id": sen, "cargo": "Senador(a)"})
+            continue
+        if nome == "Poder Executivo":
+            lista.append({"nome": "Presidente da República", "partido": "", "uf": "", "id": "", "cargo": "Poder Executivo"})
+            continue
+        lista.append({"nome": pol["nome"] if pol else nome, "partido": pol.get("partido", "") if pol else "",
+                      "uf": pol.get("uf", "") if pol else "", "id": f"dep-{dep}" if pol else ""})
+    return lista
+
+
+def _quem(autores: list[dict], n: int) -> str:
+    nomes = [a["nome"] + (f" ({'-'.join(x for x in (a.get('partido'), a.get('uf')) if x)})" if a.get("partido") or a.get("uf") else "")
+             for a in autores[:2]]
+    return ", ".join(nomes) + (f" e mais {n - 2}" if n > 2 else "")
+
+
+_RELATOR = re.compile(r"(?P<papel>Relator[a]?)\s*,?\s*(?:Dep\.|Deputad[oa])\s*(?P<nome>[^(]+?)\s*\((?P<partido>[^)]+?)-(?P<uf>[A-Z]{2})\)")
+_ORGAO_ID: dict[str, str] = {}
+
+
+def _orgao_por_uri(uri: str) -> str:
+    oid = _id_camara(uri or "")
+    if not oid:
+        return ""
+    if oid not in _ORGAO_ID:
+        try:
+            o = get_json(f"{CAMARA}/orgaos/{oid}", timeout=60).get("dados") or {}
+            _ORGAO_ID[oid] = (o.get("nomePublicacao") or o.get("nome") or "").strip()
+        except Exception:  # noqa: BLE001
+            _ORGAO_ID[oid] = ""
+    return _ORGAO_ID[oid]
+
+
+def _na(orgao: str) -> str:
+    """" na Comissão de Educação", " no Plenário da Câmara"."""
+    o = (orgao or "").strip()
+    if not o:
+        return ""
+    return f" no {o}" if o.lower().startswith(("plenário", "plenario")) else f" na {o}" if o.lower().startswith(("comissão", "comissao", "cpi", "mesa")) else f" em {o}"
+
+
+# Parecer do relator na comissão, em Plenário, reformulado e o relatório na comissão mista de medida provisória
+PARECERES_CAMARA = ("PRL", "PPP", "PPR", "RRL")
+
+
+def docs_camara(pid: str, d: dict, autores: list[dict], n_autores: int) -> list[dict]:
+    """Documentos oficiais com argumentos: a justificação do autor (no texto da proposta), os pareceres dos relatores
+    que dizem aprovar ou rejeitar e os votos em separado."""
+    docs = []
+    if d.get("urlInteiroTeor"):
+        docs.append({"tipo": "justificativa", "quem": _quem(autores, n_autores),
+                     "papel": "Autor da proposta" if n_autores == 1 else "Autores da proposta", "casa": "Câmara",
+                     "data": d.get("dataApresentacao") or "", "url": d["urlInteiroTeor"]})
+    rel = _dados(f"{CAMARA}/proposicoes/{pid}/relacionadas")
+    pareceres = sorted((r for r in rel if r.get("siglaTipo") in PARECERES_CAMARA and str(r.get("id", "")).isdigit()
+                        and debate.conclusao(r.get("ementa") or "")), key=lambda r: -int(r["id"]))
+    vistos = set()
+    for r in pareceres:
+        m = _RELATOR.search(r.get("ementa") or "")
+        quem = f"{m['nome'].strip()} ({m['partido'].strip()}-{m['uf']})" if m else ""
+        if not quem:  # a ementa não diz o nome (relatório de MP): pergunta à API quem assinou
+            try:
+                quem = _quem(autores_camara(_dados(f"{CAMARA}/proposicoes/{r['id']}/autores"), {}), 1)
+            except Exception:  # noqa: BLE001
+                quem = ""
+        if quem in vistos or len(vistos) >= 3:
+            continue  # o mesmo relator reformulando o parecer: vale o mais novo
+        vistos.add(quem)
+        det = get_json(f"{CAMARA}/proposicoes/{r['id']}", timeout=60).get("dados") or {}
+        orgao = "Plenário da Câmara" if r["siglaTipo"] in ("PPP", "PPR") else _orgao_por_uri(det.get("uriOrgaoNumerador") or "")
+        papel = (m["papel"] if m else "Relator") + _na(orgao)
+        docs.append({"tipo": "parecer", "quem": quem, "papel": papel, "casa": "Câmara",
+                     "data": det.get("dataApresentacao") or "", "url": det.get("urlInteiroTeor") or "",
+                     "conclusao": debate.conclusao(r.get("ementa") or "")})
+    vts = sorted((r for r in rel if r.get("siglaTipo") == "VTS" and str(r.get("id", "")).isdigit()), key=lambda r: -int(r["id"]))
+    for r in vts[:3]:
+        det = get_json(f"{CAMARA}/proposicoes/{r['id']}", timeout=60).get("dados") or {}
+        try:
+            au = autores_camara(_dados(f"{CAMARA}/proposicoes/{r['id']}/autores"), {})
+        except Exception:  # noqa: BLE001
+            au = []
+        docs.append({"tipo": "voto_separado", "quem": _quem(au, len(au)), "papel": "Voto em separado", "casa": "Câmara",
+                     "data": det.get("dataApresentacao") or "", "url": det.get("urlInteiroTeor") or ""})
+    return docs
+
+
+def detalhe_camara(pid: str, deputados: dict[str, dict], hoje: dt.date | None = None,
+                   senadores: dict[str, str] | None = None) -> dict | None:
     d = get_json(f"{CAMARA}/proposicoes/{pid}", timeout=60).get("dados") or {}
     if d.get("siglaTipo") not in TIPOS:
         return None
@@ -375,13 +479,12 @@ def detalhe_camara(pid: str, deputados: dict[str, dict], hoje: dt.date | None = 
         tram = _dados(f"{CAMARA}/proposicoes/{pid}/tramitacoes")
     except Exception:  # noqa: BLE001
         tram = []
-    lista = []
-    for a in sorted(autores, key=lambda a: (-(a.get("proponente") or 0), a.get("ordemAssinatura") or 999)):
-        nome = (a.get("nome") or "").strip()
-        dep = _id_camara(a.get("uri") or "") if "/deputados/" in (a.get("uri") or "") else ""
-        pol = deputados.get(f"dep-{dep}") if dep else None
-        lista.append({"nome": pol["nome"] if pol else nome, "partido": pol.get("partido", "") if pol else "",
-                      "uf": pol.get("uf", "") if pol else "", "id": f"dep-{dep}" if pol else ""})
+    lista = autores_camara(autores, deputados, senadores)
+    try:
+        docs = docs_camara(pid, d, lista, len(lista))
+    except Exception as e:  # noqa: BLE001 - sem os pareceres o cartão continua, só sem os argumentos
+        log.info("Câmara: documentos da proposição %s indisponíveis: %s", pid, e)
+        docs = []
     org = st.get("siglaOrgao") or ""
     passos = [{"data": (t.get("dataHora") or "")[:10], "onde": t.get("siglaOrgao") or "",
                "texto": (t.get("despacho") or t.get("descricaoTramitacao") or "").strip()[:300]}
@@ -403,7 +506,7 @@ def detalhe_camara(pid: str, deputados: dict[str, dict], hoje: dt.date | None = 
         "onde": nome_orgao(org) if etapa_camara(st) in (1, 2) else "", "etapa": etapa_camara(st),
         "regime": (st.get("regime") or "").strip(" ."), "url": PAGINA_CAMARA.format(id=pid),
         "texto": url_segura(d.get("urlInteiroTeor")), "passos": passos,
-        "final": final,
+        "final": final, "veio_do_senado": any(a.get("cargo") == "Senador(a)" for a in lista), "_docs": docs,
     }
 
 
@@ -420,7 +523,7 @@ def juntar_pauta(xs: list[dict]) -> list[dict]:
     return list(por.values())
 
 
-def camara(hoje: dt.date, deputados: dict[str, dict]) -> tuple[list[dict], list[dict]]:
+def camara(hoje: dt.date, deputados: dict[str, dict], senadores: dict[str, str] | None = None) -> tuple[list[dict], list[dict]]:
     agenda, por_prop = pauta_camara(hoje)
     novas = set(novas_camara(hoje))
     mpvs = set(mpvs_camara(hoje))
@@ -428,7 +531,7 @@ def camara(hoje: dt.date, deputados: dict[str, dict]) -> tuple[list[dict], list[
 
     def det(pid):
         try:
-            return detalhe_camara(pid, deputados, hoje)
+            return detalhe_camara(pid, deputados, hoje, senadores)
         except Exception as e:  # noqa: BLE001
             log.warning("Câmara: proposição %s indisponível: %s", pid, e)
             return None
@@ -546,6 +649,78 @@ def pauta_senado(hoje: dt.date) -> tuple[list[dict], dict[tuple, list[dict]]]:
     return agenda, por_prop
 
 
+def _sigla_parl(a: dict) -> str:
+    return "-".join(x for x in (a.get("partido"), a.get("uf")) if x)
+
+
+def docs_senado(det: dict, autores: list[dict], n_autores: int) -> list[dict]:
+    """Do processo do Senado: a justificação (no texto da proposta, quando ela começou no Senado), os relatórios de
+    cada comissão com a conclusão do relator e os votos em separado. O "parecer" aprovado pela comissão repete o
+    relatório, então fica só o relatório."""
+    docs = []
+    doc = det.get("documento") or {}
+    if (det.get("siglaCasaIniciadora") or "SF") == "SF" and doc.get("url"):
+        docs.append({"tipo": "justificativa", "quem": _quem(autores, n_autores),
+                     "papel": "Autor da proposta" if n_autores == 1 else "Autores da proposta", "casa": "Senado",
+                     "data": doc.get("dataApresentacao") or "", "url": doc["url"]})
+    informes = [i for a in _lista(det.get("autuacoes")) for i in _lista(a.get("informesLegislativos"))]
+    vistos = set()
+    for inf in sorted(informes, key=lambda i: i.get("data") or "", reverse=True):
+        for dc in _lista(inf.get("documentosAssociados")):
+            st = (dc.get("siglaTipo") or "").upper()
+            col = (inf.get("colegiado") or {}).get("nome") or ""
+            quem = (dc.get("autoria") or "").strip()
+            quem = re.sub(r"^Senador[a]?\s+", "", quem).replace("/", "-")
+            if st == "RELATORIO":
+                chave = (quem, col)
+                concl = debate.conclusao(inf.get("descricao") or "")
+                if not concl or chave in vistos or len(vistos) >= 3:
+                    continue  # complementação só sobre emendas, ou relatório refeito pelo mesmo relator: vale o mais novo
+                vistos.add(chave)
+                docs.append({"tipo": "parecer", "quem": quem, "papel": "Relator" + _na(col), "casa": "Senado",
+                             "data": inf.get("data") or "", "url": dc.get("url") or "", "conclusao": concl})
+            elif "SEPARADO" in st:
+                docs.append({"tipo": "voto_separado", "quem": quem, "papel": "Voto em separado" + _na(col), "casa": "Senado",
+                             "data": inf.get("data") or "", "url": dc.get("url") or ""})
+    return docs
+
+
+def autores_iniciativa(det: dict, senadores: dict[str, str], deputados_nome: dict[str, str], todos: dict[str, dict]) -> list[dict]:
+    """Quem apresentou a proposta na Casa onde ela começou, como o Senado registra (autoriaIniciativa)."""
+    out = []
+    for a in sorted(_lista(det.get("autoriaIniciativa")), key=lambda a: a.get("ordem") or 999):
+        nome = (a.get("autor") or "").strip()
+        if not nome:
+            continue
+        tipo = (a.get("siglaTipo") or "").upper()
+        pid = senadores.get(norm_name(nome), "") if tipo == "SENADOR" else deputados_nome.get(norm_name(nome), "") if tipo == "DEPUTADO" else ""
+        pol = todos.get(pid) if pid else None
+        out.append({"nome": pol["nome"] if pol else nome, "partido": (a.get("siglaPartido") or "").strip(),
+                    "uf": pol.get("uf", "") if pol else "", "id": pid if pol else "",
+                    **({"cargo": a["cargo"]} if a.get("cargo") and tipo not in ("SENADOR",) else {})})
+    return out
+
+
+def origem_camara(det: dict, deputados: dict[str, dict], senadores: dict[str, str]) -> tuple[list[dict], list[dict], str]:
+    """Proposta que veio da Câmara: autores e documentos na Câmara (onde ela começou), pela API da Câmara."""
+    num = next((o for o in _lista(det.get("outrosNumeros")) if o.get("casaIdentificadora") == "CD"), None)
+    if not num:
+        return [], [], ""
+    ps = _dados(f"{CAMARA}/proposicoes", {"siglaTipo": num.get("sigla"), "numero": int(num.get("numero") or 0), "ano": num.get("ano")})
+    p = next((x for x in ps if str(x.get("id", "")).isdigit()), None)
+    if not p:
+        return [], [], ""
+    pid = str(p["id"])
+    d = get_json(f"{CAMARA}/proposicoes/{pid}", timeout=60).get("dados") or {}
+    autores = autores_camara(_dados(f"{CAMARA}/proposicoes/{pid}/autores"), deputados, senadores)
+    try:
+        docs = docs_camara(pid, d, autores, len(autores))
+    except Exception as e:  # noqa: BLE001
+        log.info("Câmara: documentos da proposição %s indisponíveis: %s", pid, e)
+        docs = []
+    return autores, docs, PAGINA_CAMARA.format(id=pid)
+
+
 def _item_senado(p: dict, senadores: dict[str, str], todos: dict[str, dict]) -> dict | None:
     m = _IDENT.match(p.get("identificacao") or "")
     if not m or m.group(1) not in TIPOS or not str(p.get("codigoMateria") or "").isdigit():
@@ -560,12 +735,57 @@ def _item_senado(p: dict, senadores: dict[str, str], todos: dict[str, dict]) -> 
         "onde": "", "etapa": etapa_senado(sit, revisora), "regime": "", "veio_da_camara": revisora,
         "url": PAGINA_SENADO.format(cod=p["codigoMateria"]), "texto": url_segura(p.get("urlDocumento")), "passos": [],
         "final": (p.get("tramitando") or "").lower().startswith("n") or bool(FINAL.search(sit)),
+        "_proc": str(p.get("id") or ""),
+        "_docs": [] if revisora or not p.get("urlDocumento") else [
+            {"tipo": "justificativa", "quem": _quem(autores, n), "papel": "Autor da proposta" if n == 1 else "Autores da proposta",
+             "casa": "Senado", "data": p.get("dataApresentacao") or "", "url": p["urlDocumento"]}],
     }
+
+
+def completar_senado(it: dict, deputados: dict[str, dict], senadores: dict[str, str], todos: dict[str, dict]) -> dict:
+    """Pelo processo no Senado: autor original (quando veio da Câmara, buscado na Câmara) e documentos com argumentos."""
+    proc = it.pop("_proc", "")
+    if not proc.isdigit():
+        return it
+    try:
+        det = get_json(f"{SENADO}/processo/{proc}", timeout=60)
+    except Exception as e:  # noqa: BLE001 - o cartão continua com o que a lista já trouxe
+        log.info("Senado: processo %s indisponível: %s", proc, e)
+        return it
+    if not isinstance(det, dict):
+        return it
+    docs_cd: list[dict] = []
+    if it.get("veio_da_camara") or det.get("siglaCasaIniciadora") == "CD":
+        it["veio_da_camara"] = True
+        it["etapa"] = max(it["etapa"], 3)
+        try:
+            autores, docs_cd, url_cd = origem_camara(det, deputados, senadores)
+        except Exception as e:  # noqa: BLE001
+            log.info("Câmara: origem de %s indisponível: %s", it.get("id"), e)
+            autores, url_cd = [], ""
+        deps = {norm_name(p["nome"]): pid for pid, p in deputados.items()}
+        ini = autores_iniciativa(det, senadores, deps, todos)
+        if not autores:
+            autores = ini
+        partido = {norm_name(a["nome"]): a["partido"] for a in ini if a.get("partido")}
+        for a in autores:  # ex-deputado que não está mais na lista do site: o partido vem do Senado
+            a["partido"] = a.get("partido") or partido.get(norm_name(a["nome"]), "")
+        if autores:
+            it["autores"], it["n_autores"] = autores[:MAX_AUTORES], len(autores)
+        if url_cd:
+            it["url_origem"] = url_cd
+    docs = docs_senado(det, it["autores"], it["n_autores"])
+    # Primeiro quem propôs (justificação), depois os relatores, do mais novo para o mais antigo: Senado e depois Câmara
+    just = [d for d in docs_cd + docs if d["tipo"] == "justificativa"]
+    resto = [d for d in docs + docs_cd if d["tipo"] != "justificativa"]
+    it["_docs"] = just[:1] + resto
+    return it
 
 
 def senado(hoje: dt.date, politicos: list[dict]) -> tuple[list[dict], list[dict]]:
     todos = {p["id"]: p for p in politicos}
     senadores = {norm_name(p["nome"]): p["id"] for p in politicos if p.get("casa") == "senado"}
+    deputados = {p["id"]: p for p in politicos if p.get("casa") == "camara"}
     agenda, por_prop = pauta_senado(hoje)
     ini = hoje - dt.timedelta(days=DIAS_NOVAS)
     novas = get_json(f"{SENADO}/processo", params={"dataInicioApresentacao": ini.isoformat(),
@@ -600,6 +820,11 @@ def senado(hoje: dt.date, politicos: list[dict]) -> tuple[list[dict], list[dict]
         em_plen = any(x["onde"].startswith("Plenário") for x in it["pauta"])
         it["etapa"] = max(it["etapa"], 2 if em_plen else 1) if not it.get("veio_da_camara") else it["etapa"]
         itens[it["id"]] = it
+    # Autor original e documentos: só para o que está na pauta (as novas já trazem autor e texto na lista)
+    na_pauta = [i for i in itens.values() if "pauta" in i["grupos"]]
+    _em_paralelo(lambda i: completar_senado(i, deputados, senadores, todos), na_pauta)
+    for i in itens.values():
+        i.pop("_proc", None)
     # A agenda passa a apontar para o id do item (sf-{codigoMateria}) e não para a sigla
     por_chave = {(i["sigla"], i["numero"], i["ano"]): i["id"] for i in itens.values()}
     for ev in agenda:
@@ -625,6 +850,27 @@ def completar(it: dict) -> dict:
     return it
 
 
+def argumentos(itens: list[dict], cache: Path) -> None:
+    """O que dizem a favor e contra, pelos documentos oficiais de cada proposta (debate.py). Um documento que não
+    abre hoje só deixa o cartão sem aquele trecho; nunca derruba a coleta."""
+    leitor = debate.Leitor(cache)
+
+    def um(it):
+        docs = it.pop("_docs", None) or []
+        try:
+            d = debate.montar(docs, leitor)
+        except Exception as e:  # noqa: BLE001
+            log.info("Argumentos de %s: %s", it.get("id"), e)
+            d = None
+        if d:
+            it["debate"] = d
+
+    _em_paralelo(um, itens)
+    com = sum(1 for i in itens if i.get("debate"))
+    log.info("Argumentos a favor e contra: %d de %d propostas; %d documentos novos lidos, %d ficaram para a próxima",
+             com, len(itens), leitor.novos, leitor.faltaram)
+
+
 def _com_reserva(nome: str, cache: Path, fn):
     """Se a API falhar, usa a última coleta boa (e avisa no site)."""
     arq = cache / f"tramitacao-{nome}.json"
@@ -646,9 +892,11 @@ def _com_reserva(nome: str, cache: Path, fn):
 def coletar(saida: Path, cache: Path, politicos: list[dict], hoje: dt.date | None = None) -> dict:
     hoje = hoje or dt.date.today()
     deputados = {p["id"]: p for p in politicos if p.get("casa") == "camara"}
-    (ic, ac), sc = _com_reserva("camara", cache, lambda: camara(hoje, deputados))
+    senadores = {norm_name(p["nome"]): p["id"] for p in politicos if p.get("casa") == "senado"}
+    (ic, ac), sc = _com_reserva("camara", cache, lambda: camara(hoje, deputados, senadores))
     (is_, as_), ss = _com_reserva("senado", cache, lambda: senado(hoje, politicos))
     itens = [completar(dict(i)) for i in ic + is_]
+    argumentos(itens, cache)
     ordem = {"pauta": 0, "mpv": 1, "nova": 2}
     # Primeiro o que está na pauta (pela data), depois as MPs e as novas (as mais recentes primeiro)
     itens.sort(key=lambda i: (min(ordem[g] for g in i["grupos"]),

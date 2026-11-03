@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { NavLink, Route, Routes, Link, useLocation } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, Link, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
 import Politicos from "./pages/Politicos";
 import PoliticoPage from "./pages/Politico";
@@ -117,8 +117,9 @@ export default function App() {
           <Route path="/p/:id" element={<PoliticoPage />} />
           <Route path="/empresas" element={<Empresas />} />
           <Route path="/e/:cnpj" element={<EmpresaPage />} />
-          <Route path="/votacoes" element={<Votacoes />} />
-          <Route path="/votacoes/em-andamento" element={<TramitacaoPage />} />
+          <Route path="/votacoes" element={<VotacoesInicio />} />
+          <Route path="/votacoes/ja-votadas" element={<Votacoes />} />
+          <Route path="/votacoes/em-andamento" element={<EmAndamentoAntigo />} />
           <Route path="/v/:id" element={<VotacaoPage />} />
           <Route path="/partidos" element={<Partidos />} />
           {!MG && <Route path="/dinheiro" element={<Financas />} />}
@@ -149,4 +150,17 @@ export default function App() {
       </footer>
     </AnoCtx.Provider>
   );
+}
+
+/** A aba Votações abre nos projetos em andamento; as já votadas ficam a um clique. Links antigos continuam valendo:
+ * "?tema=" era filtro da lista das já votadas, e "/votacoes/em-andamento" era o endereço dos projetos em andamento. */
+function VotacoesInicio() {
+  const { search } = useLocation();
+  if (new URLSearchParams(search).has("tema")) return <Navigate to={`/votacoes/ja-votadas${search}`} replace />;
+  return <TramitacaoPage />;
+}
+
+function EmAndamentoAntigo() {
+  const { search } = useLocation();
+  return <Navigate to={`/votacoes${search}`} replace />;
 }

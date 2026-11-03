@@ -24,7 +24,7 @@ Ao usar a opção 2 ou 3, deixe escrito no código por que a API não serviu.
 ## Tecnologia
 
 - Coleta (ETL): Python 3.12 (`etl/sa_etl`, `mg/etl/mg_etl`, `eleicao2026/etl/el_etl`). Dependências fixas em
-  `etl/requirements.txt` (`requests`, `numpy`). Não há backend nem servidor: o resultado da coleta são arquivos JSON.
+  `etl/requirements.txt` (`requests`, `numpy`, `pypdf` para ler o texto dos pareceres). Não há backend nem servidor: o resultado da coleta são arquivos JSON.
 - Site e app: React 18 + TypeScript + Vite (`site/`), instalável no celular como PWA. O Minas Nossa é o mesmo site,
   montado com `--mode mg`. Eleição 2026 (`eleicao2026/site/`), Terras Raras (`terras-raras/gerar_pagina.py`) e o
   painel de status (`status/`) são páginas próprias, sem React.
@@ -57,7 +57,7 @@ Todas as áreas abaixo são coletadas todo dia, na execução das 3h17 (os dados
 | Emendas | Portal da Transparência, arquivo completo de emendas (ZIP); pagamentos pelos arquivos diários de despesas | `etl/sa_etl/emendas.py`, `pagamentos.py` |
 | Arrecadação e gastos da União | API do Siconfi (Tesouro): RREO anexos 1 e 2, RGF anexo 1; Receita Federal, CSV de arrecadação (sem API); Portal da Transparência, orçamento da despesa (arquivo anual); IPCA pela API do SIDRA/IBGE | `etl/sa_etl/fin_tesouro.py`, `fin_receita.py`, `fin_orcamento.py`, `financas.py` |
 | Incentivos | Renúncia fiscal pela API do Portal da Transparência (`renuncias-valor`, chave no secret `PORTAL_TRANSPARENCIA_CHAVE`), arquivos como reserva; pagamentos a empresas pelos arquivos diários de despesas | `etl/sa_etl/incentivos.py`, `renuncias.py` |
-| Tramitação | API da Câmara (`/eventos`, `/eventos/{id}/pauta`, `/proposicoes`) e API do Senado (`/plenario/agenda`, `/comissao/agenda`, `/processo`) | `etl/sa_etl/tramitacao.py` |
+| Tramitação | API da Câmara (`/eventos`, `/eventos/{id}/pauta`, `/proposicoes`, `/proposicoes/{id}/relacionadas`) e API do Senado (`/plenario/agenda`, `/comissao/agenda`, `/processo`, `/processo/{id}`); argumentos a favor e contra copiados do PDF oficial da justificação, do parecer e do voto em separado (a API não traz o texto) | `etl/sa_etl/tramitacao.py`, `debate.py` |
 | Minas Gerais | ALMG (API e dados abertos), TSE, Dados MG, Siconfi, Portal da Transparência | `mg/etl/mg_etl/` (veja `mg/README.md`) |
 | Eleição 2026 | Resultados e boletins de urna do TSE | `eleicao2026/etl/el_etl/` (veja `eleicao2026/README.md`) |
 | Terras Raras | Sem API que junte os dados: planilhas à mão em `terras-raras/dados/`, cada linha com fonte e data | `terras-raras/gerar_pagina.py` (veja `terras-raras/COMO_ATUALIZAR.md`) |
