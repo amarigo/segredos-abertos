@@ -17,7 +17,7 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-from . import emendas, pagamentos, renuncias
+from . import emendas, pagamentos, recursos_recebidos, renuncias
 from .cnpj import chave_dono
 from .util import norm_name, write_json
 
@@ -29,6 +29,7 @@ N_RECEITA_PAG = 400  # quantos dos que mais receberam buscamos na Receita (donos
 N_RECEITA_REN = 300
 FONTES = {
     "pagamentos": "https://portaldatransparencia.gov.br/download-de-dados/despesas",
+    "pagamentos_api": recursos_recebidos.CONSULTA,
     "renuncias": renuncias.FONTE,
     "emendas": "https://portaldatransparencia.gov.br/emendas",
     "receita": "https://minhareceita.org",

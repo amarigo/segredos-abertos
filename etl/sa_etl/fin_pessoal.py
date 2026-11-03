@@ -230,3 +230,91 @@ def coletar_senado(ano: int, mes_max: int) -> dict | None:
               for c, n, e in GRUPOS_SENADO.values()]
     return {"grupos": grupos, "efetivos_com_funcao": efetivo_funcao, "mes": None, "ano": ano,
             "url": URL_SENADO, "url_remuneracao": URL_SENADO_REM.format(ano=ano, mes=mes_max)}
+
+
+# ---------------------------------------------------------------- quantas pessoas o Executivo paga (API do Portal)
+
+API_POR_ORGAO = "https://api.portaldatransparencia.gov.br/api-de-dados/servidores/por-orgao"
+
+
+def _situacao(desc: str) -> str:
+    d = desc.upper()
+    if "PENSION" in d:
+        return "pensionistas"
+    if any(t in d for t in ("APOSENT", "INATIV", "REFORM", "RESERVA")):
+        return "aposentados"
+    if "ATIV" in d:
+        return "ativos"
+    return "outros"
+
+
+def contar_executivo(chave: str, cache: Path, dias: int = 7) -> dict | None:
+    """Pessoas no Executivo federal (civis e militares), por situação: ativos, aposentados e pensionistas.
+
+    Fonte: API do Portal da Transparência, servidores agregados por órgão (servidores/por-orgao). É a API que só conta
+    pessoas, que é o que precisamos aqui (a remuneração continua vindo do arquivo do SIAPE). Fica no cache por 7 dias.
+    Uma pessoa com vínculo em dois órgãos conta duas vezes: o Portal soma por órgão."""
+    import json
+    import time
+    arq = cache / "servidores-por-orgao.json"
+    if arq.exists() and time.time() - arq.stat().st_mtime < dias * 86400:
+        return json.loads(arq.read_text(encoding="utf-8"))
+    if not chave:
+        return json.loads(arq.read_text(encoding="utf-8")) if arq.exists() else None
+    cont: Counter = Counter()
+    outros: Counter = Counter()
+    try:
+        for pagina in range(1, 5000):
+            linhas = get_json(API_POR_ORGAO, params={"pagina": pagina}, timeout=120, headers={"chave-api-dados": chave})
+            if not linhas:
+                break
+            for x in linhas:
+                n = int(x.get("qntPessoas") or 0)
+                desc = str(x.get("descSituacao") or "")
+                k = _situacao(desc)
+                cont[k] += n
+                if k == "outros":
+                    outros[desc or "sem situação"] += n
+            time.sleep(0.2)  # bem abaixo do limite de pedidos por minuto da API
+        else:
+            raise RuntimeError("a consulta não terminou")
+    except Exception as e:  # noqa: BLE001
+        log.warning("Executivo: contagem de servidores pela API indisponível (%s)", str(e)[:120])
+        return json.loads(arq.read_text(encoding="utf-8")) if arq.exists() else None
+    if not sum(cont.values()):
+        return None
+    r = {"ativos": cont["ativos"], "aposentados": cont["aposentados"], "pensionistas": cont["pensionistas"],
+         "outros": dict(outros), "url": API_POR_ORGAO, "consulta": "https://portaldatransparencia.gov.br/servidores/orgao"}
+    arq.parent.mkdir(parents=True, exist_ok=True)
+    arq.write_text(json.dumps(r, ensure_ascii=False), encoding="utf-8")
+    log.info("Executivo: %d ativos, %d aposentados, %d pensionistas (API do Portal)", r["ativos"], r["aposentados"], r["pensionistas"])
+    return r
+
+
+def pessoas_por_poder(poderes: list[dict], executivo: dict | None, camara: dict | None, senado: dict | None) -> None:
+    """Põe em cada Poder quantas pessoas ele paga e o gasto médio por pessoa em 12 meses (gasto do RGF dividido pelas
+    pessoas). Só onde há contagem oficial aberta: Executivo (API do Portal), Câmara e Senado (dados abertos de cada
+    Casa). Judiciário, MPU e TCU ainda ficam sem contagem: não há API com o número de pessoas (o CNJ publica a força de
+    trabalho uma vez por ano no Justiça em Números, em planilha), e o card diz isso."""
+    for p in poderes:
+        orgs = {o["nome"]: o for o in p["orgaos"]}
+        if p["poder"] == "E" and executivo:
+            ex = orgs.get("Executivo federal")
+            if not ex:
+                continue
+            inat = executivo["aposentados"] + executivo["pensionistas"]
+            p["pessoas"] = {
+                "escopo": "Executivo federal: servidores civis e militares (sem o DF e os ex-territórios, pagos pela União em outra linha)",
+                "ativos": executivo["ativos"], "aposentados": executivo["aposentados"], "pensionistas": executivo["pensionistas"],
+                "media_ativo": round(ex["ativos"] / executivo["ativos"], 2) if executivo["ativos"] else None,
+                "media_inativo": round(ex["inativos"] / inat, 2) if inat else None,
+                "url": executivo["consulta"], "fonte_nome": "Portal da Transparência (API de servidores por órgão)"}
+        elif p["poder"] == "L" and camara and senado:
+            n = sum(g["pessoas"] for g in camara["grupos"]) + sum(g["pessoas"] for g in senado["grupos"])
+            gasto = sum(o["ativos"] for nome, o in orgs.items() if "Câmara" in nome or "Senado" in nome)
+            if n and gasto:
+                p["pessoas"] = {
+                    "escopo": "Câmara e Senado, pessoas em atividade (parlamentares, concursados, comissionados e secretários parlamentares); sem o TCU",
+                    "ativos": n, "aposentados": None, "pensionistas": None,
+                    "media_ativo": round(gasto / n, 2), "media_inativo": None,
+                    "url": camara["url"], "fonte_nome": "Dados abertos da Câmara e do Senado"}

@@ -148,15 +148,17 @@ export function Faisca({ serie, marcado, cor = "var(--hot)" }: { serie: [string,
 export function Kpi({ rotulo, valor, formato = curto, serie, ano, dica, anterior: ant }: {
   rotulo: string; valor: number | null | undefined; formato?: (v: number) => string; serie?: [string, number][]; ano?: string; dica?: ReactNode;
   /** Base da variação quando não é o ano anterior inteiro (por exemplo, o mesmo período do ano anterior) */
-  anterior?: { rotulo: string; valor: number | null | undefined } | null;
+  anterior?: { rotulo: string; valor: number | null | undefined; atual?: number | null } | null;
 }) {
   const i = serie && ano ? serie.findIndex(([a]) => a === ano) : -1;
   const anterior: [string, number | null | undefined] | null = ant !== undefined ? (ant ? [ant.rotulo, ant.valor] : null) : serie && i > 0 ? serie[i - 1] : null;
+  // No mesmo período, a seta compara o valor do período (ant.atual), que pode ser menor que o número grande do ano
+  const comparado = ant && ant.atual != null ? ant.atual : valor;
   return (
     <div className="card stat kpi">
       <span className="label">{rotulo}</span>
       <span className="value">{valor == null ? "—" : formato(valor)}</span>
-      {anterior && <Variacao de={anterior[1]} para={valor} rotulo={anterior[0]} />}
+      {anterior && <Variacao de={anterior[1]} para={comparado} rotulo={anterior[0]} />}
       {serie && <Faisca serie={serie} marcado={ano} />}
       {dica && <span className="hint">{dica}</span>}
     </div>

@@ -55,6 +55,8 @@ export default function PoliticoPage() {
   );
 }
 
+const MES_C = ["", "jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
 function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
   const { ano } = useAno();
   const [todas, setTodas] = useState(false);
@@ -70,6 +72,10 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
     { label: "Outros gastos do mandato", valor: d.outros_gastos || 0, nota: "Fora da cota: correios, diárias e passagens de viagens oficiais.", cor: "var(--gold)" },
   ].filter((x) => x.valor > 0);
   const anos = Object.keys(p.anos).sort();
+  // Ano em andamento: a cota compara com o mesmo período do ano anterior (jan até o mesmo mês), pelo mês de cada nota.
+  // O custo conhecido (salário e equipe) não tem o detalhe por mês: fica sem seta.
+  const periodo = meta?.mesmo_periodo && String(meta.mesmo_periodo.ano) === ano ? meta.mesmo_periodo.ate_mes : 0;
+  const somaAte = (ms?: { mes: number; valor: number }[]) => (ms || []).filter((m) => m.mes >= 1 && m.mes <= periodo).reduce((s, m) => s + m.valor, 0);
   const anoAntes = anos[anos.indexOf(ano) - 1];
   const serieDe = (k: "custo_total" | "total"): [string, number][] => anos.filter((a) => p.anos[a]?.[k]).map((a) => [a, p.anos[a][k]]);
   const categoriasAnos: Record<string, Fatia[]> = Object.fromEntries(anos.map((a) => [a, p.anos[a].categorias.map((c) => ({ nome: c.categoria, valor: c.valor }))]));
@@ -77,11 +83,14 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
     <>
       <section className="grid">
         <Kpi rotulo={`Custo conhecido em ${ano}`} valor={d.custo_total} formato={(v) => reais(v)} serie={serieDe("custo_total")} ano={ano}
+          anterior={periodo ? null : undefined}
           dica="Soma de salário, equipe, cota e outros gastos informados pelos sites oficiais." />
         <div className="card stat kpi">
           <span className="label">Cota parlamentar em {ano}</span>
           <span className="value">{reais(d.total)}</span>
-          {anoAntes && <Variacao de={p.anos[anoAntes]?.total} para={d.total} rotulo={anoAntes} />}
+          {anoAntes && (periodo
+            ? <Variacao de={somaAte(p.anos[anoAntes]?.meses)} para={somaAte(d.meses)} rotulo={`jan–${MES_C[periodo]} ${anoAntes}`} />
+            : <Variacao de={p.anos[anoAntes]?.total} para={d.total} rotulo={anoAntes} />)}
           {media > 0 && <span className="hint">{vezes >= 1.05 ? `${vezes.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}× a média` : vezes <= 0.95 ? `${Math.round((1 - vezes) * 100)}% abaixo da média` : "Na média"} {p.casa === "camara" ? "dos deputados" : "dos senadores"} ({reais(media)})</span>}
         </div>
         {d.n_pessoal != null && <div className="card stat"><span className="label">Pessoas na equipe em {ano}</span><span className="value">{d.n_pessoal}</span><span className="hint">Inclui quem entrou ou saiu durante o ano.</span></div>}

@@ -356,6 +356,8 @@ CATEGORIAS_GERAL = {
     "repasse": "Repasses a entidades (convênios, auxílios e subvenções sociais)",
     "subsidio": "Subsídios (subvenções econômicas)",
     "outro": "Outros pagamentos (indenizações, decisões judiciais, despesas de anos anteriores...)",
+    # Pela API (recursos_recebidos.py) o Portal dá o total de cada favorecido, sem dizer para que foi cada pagamento
+    "pago": "Pagamentos do governo federal (a consulta do Portal não separa por tipo de despesa)",
 }
 CONTRATO = {"30", "31", "32", "33", "35", "37", "39", "40", "51", "52"}
 REPASSE = {"41", "42", "43"}

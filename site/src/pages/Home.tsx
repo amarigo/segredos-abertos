@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Barras, COR_GRUPO, Explain, Loading, useAno, useData } from "../components/ui";
-import { corPartido, cotaNoAno, GRUPO_CURTO, GRUPO_EXPLICA, linkSeguro, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
+import { basePeriodo, corPartido, cotaNoAno, nomePeriodo, GRUPO_CURTO, GRUPO_EXPLICA, linkSeguro, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
 import { GastoPartidos } from "./Partidos";
 import { MG, SITE } from "../recorte";
 import type { CidadeResumo } from "../data";
@@ -45,6 +45,15 @@ export default function Home() {
   const totalAno = (p: Resumo) => p.por_ano[ano]?.total || 0;
   const top = (pols || []).slice().sort((a, b) => totalAno(b) - totalAno(a)).slice(0, 8);
   const medias = meta.medias[ano] || { camara: 0, senado: 0 };
+  // Ano em andamento: a seta compara com o mesmo período do ano anterior (jan até o mesmo mês), não com o ano inteiro
+  const emAndamento = String(meta.mesmo_periodo?.ano) === ano;
+  type P = NonNullable<Meta["mesmo_periodo"]>;
+  const comPeriodo = (ant: (p: P, a: string) => number | undefined, atual: (p: P) => number | undefined) => {
+    const b = basePeriodo(meta, ano, ant);
+    if (b === undefined) return {};
+    const v = atual(meta.mesmo_periodo!);
+    return { anterior: b && { ...b, atual: v }, dica: <>{nomePeriodo(meta)} de {ano}: {reaisCurto(v || 0)}</> };
+  };
   // Empresas do ano escolhido (dados antigos, sem detalhe por ano: total de todos os anos)
   const empsAno = !!emps?.some((e) => e.por_ano);
   const topEmps = (emps || []).map((e) => ({ e, v: cotaNoAno(e, ano) || { valor: e.total, n_politicos: e.n_politicos } }))
@@ -70,12 +79,18 @@ export default function Home() {
 
       <section>
         <div className="grid">
-          <Kpi rotulo={`Cota parlamentar em ${ano}`} valor={meta.total_por_ano?.[ano]} serie={serie(meta.total_por_ano)} ano={ano} dica="reembolsos com nota fiscal" />
-          {meta.custo_por_ano?.[ano] ? <Kpi rotulo={`Custo conhecido em ${ano}`} valor={meta.custo_por_ano[ano]} serie={serie(meta.custo_por_ano)} ano={ano} dica="cota, salários e equipe dos gabinetes" /> : null}
-          {medias.camara > 0 && <Kpi rotulo="Média por deputado federal" valor={medias.camara} serie={serieMedia("camara")} ano={ano} dica={`cota em ${ano}`} />}
-          {medias.senado > 0 && <Kpi rotulo="Média por senador" valor={medias.senado} serie={serieMedia("senado")} ano={ano} dica={`cota em ${ano}`} />}
+          <Kpi rotulo={`Cota parlamentar em ${ano}`} valor={meta.total_por_ano?.[ano]} serie={serie(meta.total_por_ano)} ano={ano} dica="reembolsos com nota fiscal"
+            {...comPeriodo((p, a) => p.total[a], (p) => p.total[ano])} />
+          {meta.custo_por_ano?.[ano] ? <Kpi rotulo={`Custo conhecido em ${ano}`} valor={meta.custo_por_ano[ano]} serie={serie(meta.custo_por_ano)} ano={ano} dica="cota, salários e equipe dos gabinetes"
+            anterior={emAndamento ? null : undefined} /> : null}
+          {medias.camara > 0 && <Kpi rotulo="Média por deputado federal" valor={medias.camara} serie={serieMedia("camara")} ano={ano} dica={`cota em ${ano}`}
+            {...comPeriodo((p, a) => p.medias[a]?.camara, (p) => p.medias[ano]?.camara)} />}
+          {medias.senado > 0 && <Kpi rotulo="Média por senador" valor={medias.senado} serie={serieMedia("senado")} ano={ano} dica={`cota em ${ano}`}
+            {...comPeriodo((p, a) => p.medias[a]?.senado, (p) => p.medias[ano]?.senado)} />}
         </div>
-        <p className="small muted">A seta compara com o ano anterior inteiro; o ano em andamento só vai até a última nota publicada. Troque o ano no topo da página.</p>
+        <p className="small muted">{emAndamento
+          ? <>As setas comparam {ano} com o <strong>mesmo período</strong> de {Number(ano) - 1} ({nomePeriodo(meta)} dos dois anos), não com o ano inteiro. As notas de um mês chegam até 3 meses depois, então os últimos meses de {ano} ainda podem subir. O custo conhecido (salários e equipe) não tem o detalhe por mês e fica sem seta.</>
+          : <>A seta compara com o ano anterior inteiro.</>} Troque o ano no topo da página.</p>
       </section>
 
       {MG && (

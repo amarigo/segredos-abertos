@@ -1,0 +1,61 @@
+name: Pagamentos a empresas (API do Portal)
+
+# Lê, pela API oficial do Portal da Transparência, quanto cada empresa e entidade recebeu do governo federal, mês a mês
+# (etl/sa_etl/recursos_recebidos.py). Desde 29/10/2026 o Portal recusa o download dos arquivos diários de despesas
+# para quem não é navegador (HTTP 405 e 403), e a leitura pelos arquivos parou.
+#
+# A leitura completa tem centenas de milhares de páginas e a API aceita 700 pedidos por minuto de madrugada (400 de
+# dia): por isso roda aqui, uma vez por semana, por até 5 horas, e continua de onde parou na execução seguinte. A coleta
+# diária ("Dados e site") só soma o que já foi lido. Para completar mais rápido na primeira vez: Actions > Pagamentos a
+# empresas > Run workflow, quantas vezes precisar (cada execução continua da anterior).
+
+on:
+  schedule:
+    # Domingo, 0h37 de Brasília (3h37 UTC): começa na madrugada, quando a API aceita mais pedidos por minuto
+    - cron: "37 3 * * 0"
+  workflow_dispatch:
+    inputs:
+      minutos:
+        description: "Minutos de leitura nesta execução (no máximo 320)"
+        default: "300"
+
+permissions:
+  contents: read
+
+# Mesma fila da coleta diária no main: as duas usam a mesma chave da API (com limite de pedidos por minuto) e o mesmo
+# cache. Nunca rodam ao mesmo tempo; a coleta diária espera esta terminar.
+concurrency:
+  group: dados-refs/heads/main
+  cancel-in-progress: false
+
+jobs:
+  ler:
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r etl/requirements.txt
+      - name: Cache dos downloads (o mesmo da coleta diária)
+        uses: actions/cache/restore@v4
+        with:
+          path: etl/.cache
+          key: dados-${{ github.run_id }}
+          restore-keys: dados-
+      - name: Ler os pagamentos pela API
+        working-directory: etl
+        env:
+          PORTAL_TRANSPARENCIA_CHAVE: ${{ secrets.PORTAL_TRANSPARENCIA_CHAVE }}
+          MINUTOS: ${{ inputs.minutos || '300' }}
+        run: |
+          m=$(( MINUTOS > 320 ? 320 : MINUTOS ))
+          python -m sa_etl.recursos_recebidos --cache .cache --minutos "$m" | tee -a "$GITHUB_STEP_SUMMARY"
+      # Guarda mesmo se a leitura parou com erro: o que já foi lido não se perde
+      - name: Guardar o que foi lido
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: etl/.cache
+          key: dados-${{ github.run_id }}
