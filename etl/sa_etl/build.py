@@ -11,7 +11,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import (autorias, tramitacao, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
+from . import (autorias, tramitacao, transferegov, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
                renuncias, senado, temas)
 from .categorias import GRUPOS
 from . import util
@@ -658,6 +658,8 @@ def main() -> None:
                     help="não monta a lista de projetos em andamento (pauta, novas e medidas provisórias)")
     ap.add_argument("--minutos-pagamentos-gerais", type=float, default=40,
                     help="tempo máximo, por execução, para completar os dias antigos dos pagamentos a empresas")
+    ap.add_argument("--minutos-transferegov", type=float, default=15,
+                    help="tempo máximo, por execução, para ler os planos e pagamentos das emendas Pix no Transferegov")
     ap.add_argument("--novas-empresas", type=int, default=cnpj.NOVAS_POR_COLETA,
                     help="quantas fornecedoras além das maiores buscar na Receita nesta coleta (o resto vem do cache)")
     a = ap.parse_args()
@@ -665,13 +667,14 @@ def main() -> None:
     executar(a.anos, a.cache, a.saida, max_empresas=a.max_empresas, com_recursos=not a.sem_recursos,
              com_emendas=not a.sem_emendas, com_incentivos=not a.sem_incentivos,
              minutos_pagamentos=a.minutos_pagamentos, minutos_gerais=a.minutos_pagamentos_gerais,
-             com_financas=not a.sem_financas, com_tramitacao=not a.sem_tramitacao, novas_empresas=a.novas_empresas)
+             com_financas=not a.sem_financas, com_tramitacao=not a.sem_tramitacao, novas_empresas=a.novas_empresas,
+             minutos_transferegov=a.minutos_transferegov)
 
 
 def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500, com_recursos: bool = True,
              com_emendas: bool = True, com_incentivos: bool = True, minutos_pagamentos: float = 45,
              minutos_gerais: float = 40, com_financas: bool = True, com_tramitacao: bool = True,
-             novas_empresas: int = cnpj.NOVAS_POR_COLETA) -> None:
+             novas_empresas: int = cnpj.NOVAS_POR_COLETA, minutos_transferegov: float = 15) -> None:
     """A coleta inteira, na ordem certa (usada também pelos testes)."""
     # A renúncia vem antes dos arquivos diários: o Portal passa a recusar downloads (HTTP 405) depois de muitos
     # pedidos seguidos, e os arquivos de renúncia são poucos (e ficam uma semana no cache)
@@ -690,6 +693,7 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
         util.avisar(x)
     if com_emendas:  # antes de montar(), para os avisos das emendas entrarem no meta.json
         juntar_emendas(dados, anos, cache, saida, pag)
+        destino_pix(anos, cache, saida, minutos_transferegov)
     if inc:
         juntar_incentivos(dados, inc)
     if com_tramitacao:  # antes de montar(), para os avisos entrarem no meta.json
@@ -715,6 +719,15 @@ def coletar_financas(saida: Path, cache: Path) -> None:
         financas.coletar(saida, cache)
     except Exception:  # noqa: BLE001
         log.exception("Arrecadação e gastos: erro; a aba não foi atualizada")
+
+
+def destino_pix(anos: list[int], cache: Path, saida: Path, minutos: float) -> None:
+    """Emendas Pix: em que a prefeitura ou o estado gastou e a quem pagou (API do Transferegov). Se falhar, o resto segue."""
+    try:
+        transferegov.executar(anos, cache / "transferegov", saida, minutos)
+    except Exception:  # noqa: BLE001
+        log.exception("Emendas Pix (Transferegov): erro; a página mostra só os links da consulta oficial")
+        util.avisar("Emendas Pix: os planos de ação e pagamentos do Transferegov não foram atualizados")
 
 
 def pagamentos_emendas(anos: list[int], cache: Path, minutos: float) -> dict | None:
