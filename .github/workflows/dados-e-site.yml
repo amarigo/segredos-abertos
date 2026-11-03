@@ -1,7 +1,11 @@
 name: Dados e site
 
 on:
+  # Push só no main. Antes, todo push num branch de PR rodava também a coleta inteira (perto de 1 hora, com milhares de
+  # pedidos às APIs do governo) sem publicar nada, e disputava os mesmos limites do Portal com a coleta do main. Os
+  # testes dos PRs continuam pelo evento pull_request.
   push:
+    branches: [main]
   pull_request:
   schedule:
     # Todo dia às 3h17 de Brasília (6h17 UTC): madrugada é o horário com menos tráfego nas APIs do governo, e elas

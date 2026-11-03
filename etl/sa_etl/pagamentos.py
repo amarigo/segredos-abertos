@@ -26,7 +26,7 @@ import zipfile
 from pathlib import Path
 
 from .emendas import _chave, nome_autor
-from .util import _session, avisar, digits, norm_name, to_float
+from .util import PARADAS, _session, avisar, digits, norm_name, to_float
 
 log = logging.getLogger("sa_etl.pagamentos")
 
@@ -115,6 +115,14 @@ def _data(s: str | None) -> str:
 
 
 ULTIMA_FALHA = ""  # o motivo da última falha ao baixar um dia (vai para o aviso da coleta)
+FALHAS_PARA_PARAR = 5
+PORTAL = "portal-arquivos-diarios"  # nome em util.PARADAS
+
+
+def _limite_falhas() -> int:
+    """Dias seguidos com falha antes de parar. Se uma etapa anterior desta coleta já parou porque o Portal recusava
+    os arquivos, basta um dia com falha: cada dia custa até 3 tentativas com espera, e eram minutos perdidos por etapa."""
+    return 1 if PORTAL in PARADAS else FALHAS_PARA_PARAR
 
 
 def _baixar_dia(dia: str, dest: Path) -> bool | None:
@@ -180,12 +188,14 @@ def coletar(anos: list[int], cache: Path, minutos: float = 30, hoje: dt.date | N
                     empenhos_emenda.update(e["codigo"] for e in d["empenhos"])
                     dia += dt.timedelta(days=1)
                     continue
-                if falhas >= 5:
+                if falhas >= _limite_falhas():
                     log.warning("Pagamentos: Portal falhou em %d dias seguidos; para em %s", falhas, nome)
+                    PARADAS.add(PORTAL)
                     break
                 dia += dt.timedelta(days=1)
                 continue
             falhas = 0
+            PARADAS.discard(PORTAL)
             if not (ok is None and recente):  # dia recente sem arquivo ainda pode aparecer depois
                 f.write_bytes(gzip.compress(json.dumps(d, ensure_ascii=False).encode()))
                 lidos.append(f)
@@ -450,13 +460,16 @@ def coletar_geral(anos: list[int], cache: Path, minutos: float = 40, hoje: dt.da
                 _gravar_geral(cache, nome, tmp)
                 novos += 1
                 falhas = 0
+                PARADAS.discard(PORTAL)
             elif ok is None:
                 if (hoje - dia).days > 5:  # dia recente sem arquivo ainda pode aparecer depois
                     _gravar_geral(cache, nome, None)
                 falhas = 0
+                PARADAS.discard(PORTAL)
             else:
                 falhas += 1
-                if falhas >= 5:
+                if falhas >= _limite_falhas():
+                    PARADAS.add(PORTAL)
                     log.warning("Pagamentos gerais: Portal falhou em %d dias seguidos; para em %s (%s)", falhas, nome, ULTIMA_FALHA)
                     avisar(f"Pagamentos a empresas: o Portal da Transparência falhou em {falhas} dias seguidos "
                            f"({ULTIMA_FALHA}); a leitura continua na próxima execução")

@@ -93,6 +93,28 @@ def test_coleta_curta_le_so_os_dias_mais_recentes(tmp_path, monkeypatch):
     assert chamadas == ["20260228", "20260227", "20260226"]
 
 
+def test_portal_bloqueado_nao_repete_as_esperas_nas_etapas_seguintes(tmp_path, monkeypatch):
+    """Quando uma etapa para porque o Portal recusa os arquivos (HTTP 405), as seguintes fazem um pedido de teste e
+    desistem, em vez de esperar de novo 5 dias seguidos com falha. Se o Portal voltar, a leitura segue normal."""
+    from sa_etl import util
+    util.reiniciar_quedas()
+    chamadas = []
+    monkeypatch.setattr(pagamentos, "_baixar_dia", lambda dia, dest: chamadas.append(dia) or False)
+    hoje = dt.date(2025, 3, 1)
+    pagamentos.coletar_geral([2025], tmp_path, hoje=hoje)
+    assert len(chamadas) == 5 and pagamentos.PORTAL in util.PARADAS
+    chamadas.clear()
+    pagamentos.coletar([2025], tmp_path, hoje=hoje)
+    pagamentos.coletar_geral([2025], tmp_path, hoje=hoje)
+    assert len(chamadas) == 2  # um pedido de teste em cada etapa
+    # o Portal voltou: o pedido de teste funciona e a leitura continua
+    chamadas.clear()
+    monkeypatch.setattr(pagamentos, "_baixar_dia", lambda dia, dest: chamadas.append(dia) and None)
+    pagamentos.coletar_geral([2025], tmp_path, hoje=hoje, max_dias=4)
+    assert len(chamadas) == 4 and pagamentos.PORTAL not in util.PARADAS
+    util.reiniciar_quedas()
+
+
 def test_esfera_e_destino():
     from sa_etl import incentivos
     assert incentivos.esfera("MUNICIPIO DE CAMPINAS") == "municipal"

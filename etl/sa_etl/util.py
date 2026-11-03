@@ -29,6 +29,10 @@ ESPERA_CONEXAO = 30
 QUEDAS_PARA_DESISTIR = 3
 _quedas: dict[str, int] = {}
 FORA_DO_AR: set[str] = set()
+# Fontes que já pararam por falhas seguidas nesta coleta (ex.: o Portal recusando os arquivos diários com HTTP 405).
+# As etapas seguintes que usam a mesma fonte fazem um pedido de teste antes de desistir, em vez de repetir minutos
+# de esperas. Se o pedido de teste funcionar, a fonte sai daqui e a leitura segue normal.
+PARADAS: set[str] = set()
 
 
 class SiteForaDoAr(requests.ConnectionError):
@@ -38,6 +42,7 @@ class SiteForaDoAr(requests.ConnectionError):
 def reiniciar_quedas() -> None:
     _quedas.clear()
     FORA_DO_AR.clear()
+    PARADAS.clear()
 
 
 class _Sessao(requests.Session):
