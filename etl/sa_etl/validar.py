@@ -149,6 +149,9 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
     for ano in anos:
         if not _perto(meta.get("total_por_ano", {}).get(ano, 0), soma_ano[ano], len(pols)):
             r.erro(f"meta.total_por_ano[{ano}] diferente da soma dos parlamentares")
+        temas = (meta.get("temas_por_ano") or {}).get(ano)
+        if temas is not None and not _perto(sum(t["valor"] for t in temas), meta.get("total_por_ano", {}).get(ano, 0), len(temas) + 1):
+            r.erro(f"meta.temas_por_ano[{ano}]: a soma dos temas (viagens, combustível...) é diferente do total do ano")
     if meta.get("contagens", {}).get("politicos") != len(pols):
         r.erro("meta.contagens.politicos diferente do número de parlamentares")
 

@@ -195,12 +195,15 @@ export interface Verificacao {
   revisao_manual?: { diferencas: number; md: string; csv: string };
 }
 
+export interface TemaCota { grupo: Grupo; tema: string; valor: number; categorias: [string, number][] }
 export interface Meta {
   /** Problemas da última coleta (fonte oficial fora do ar, cópia antiga em uso...), para avisar quem lê */
   avisos?: string[];
   atualizado_em: string; anos: number[]; grupos: Record<Grupo, string>; medias: Record<string, Record<Casa, number>>;
   contagens: { politicos: number; despesas: number; votacoes: number; empresas_com_socios: number }; total_gasto: number;
   total_por_ano: Record<string, number>; custo_por_ano: Record<string, number>;
+  /** Cota de todos por tema (viagens, combustível...) dentro dos três grupos, em cada ano */
+  temas_por_ano?: Record<string, TemaCota[]>;
   /** Minas Nossa: "MG" e as cidades acompanhadas */
   recorte?: string; cidades?: string[];
   estado?: { deputados_estaduais: number; emendas_estaduais: number; governo: number; equipe_governo: number };

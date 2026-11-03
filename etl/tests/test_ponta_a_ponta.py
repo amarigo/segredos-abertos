@@ -25,6 +25,10 @@ def test_total_igual_a_soma_das_notas_da_fonte(coleta):
     meta = coleta.ler(saida, "meta.json")
     fonte = sum(float(l[9]) for l in gov.cota[2025]) + sum(x["valorReembolsado"] for x in gov.ceaps[2025])
     assert abs(meta["total_por_ano"]["2025"] - fonte) < 0.05
+    # o resumo por tema (viagens, combustível...) soma o mesmo total, e cada tema mostra as categorias oficiais
+    temas = meta["temas_por_ano"]["2025"]
+    assert abs(sum(t["valor"] for t in temas) - fonte) < 0.05
+    assert all(abs(sum(v for _, v in t["categorias"]) - t["valor"]) < 0.05 for t in temas)
 
 
 def test_deputado_repetido_na_paginacao_aparece_uma_vez(coleta):
