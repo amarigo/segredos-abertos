@@ -200,6 +200,17 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
     for e in emps:  # a soma dos anos tem que bater com o total (as listas do site mostram o ano escolhido)
         if "por_ano" in e and abs(sum(x["valor"] for x in e["por_ano"].values()) - e["total"]) > 0.05:
             r.erro(f"Empresa {e['cnpj']}: soma dos anos diferente do total em empresas.json")
+    todas_f = saida / "empresas-todas.json"
+    if todas_f.exists():  # os totais do site somam TODAS as empresas pagas pela cota, sem corte
+        todas = json.loads(todas_f.read_text(encoding="utf-8"))
+        for a, t in (meta.get("empresas_por_ano") or {}).items():
+            soma = sum(x[2][a][0] for x in todas if a in x[2] and x[2][a][0] > 0)
+            if abs(soma - t["valor"]) > 1:
+                r.erro(f"Empresas {a}: o total do site ({t['valor']:.2f}) não bate com a soma de todas as empresas ({soma:.2f})")
+        if len({x[0] for x in todas}) != len(todas):
+            r.erro("empresas-todas.json com empresa repetida")
+        if emps and len(todas) < len(emps):
+            r.erro("empresas-todas.json tem menos empresas que a lista da página")
     for f in sorted((saida / "e").glob("*.json")) if (saida / "e").exists() else []:
         _conferir_empresa(saida, f, por_id, r)
 

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Abrir, Barras, Explain, Loading, OndeVer, useAno, useData } from "../components/ui";
-import { cnpjFmt, corPartido, cotaNoAno, reais, type CotaAnoEmpresa, type EmpresaResumo } from "../data";
+import { basePeriodo, cnpjFmt, corPartido, cotaNoAno, nomePeriodo, reais, reaisCurto, type CotaAnoEmpresa, type EmpresaResumo, type Meta } from "../data";
 import { norm } from "./Home";
 import { AvisosFim } from "../components/Selo";
 import { CompararAnos, Kpi, Rosca, curto, numero, prepararFatias, type Fatia } from "../components/graficos";
@@ -29,7 +29,12 @@ function BarraLados({ lados }: { lados?: Record<string, [number, number]> }) {
 
 export default function Empresas() {
   const { data, error } = useData<EmpresaResumo[]>("empresas.json");
-  const [q, setQ] = useState("");
+  const { data: meta } = useData<Meta>("meta.json");
+  const [q, setQ0] = useState("");
+  // A lista de todas as empresas só é baixada quando alguém busca
+  const { data: todas } = useData<[string, string, Record<string, [number, number]>][]>(q.trim().length >= 3 ? "empresas-todas.json" : null);
+  const naLista = useMemo(() => new Set((data || []).map((e) => e.cnpj)), [data]);
+  const setQ = setQ0;
   const [ordem, setOrdem] = useState<OrdemEmp>("valor");
   const [partido, setPartido] = useState("");
   const [lado, setLado] = useState("");
@@ -75,6 +80,18 @@ export default function Empresas() {
   }, [data]);
   if (!data) return <Loading error={error} />;
   const totalAno = lista.reduce((s, e) => s + valor(e), 0);
+  // Totais de TODAS as empresas pagas pela cota (meta.json), não só das que estão na lista da página
+  const tot = meta?.empresas_por_ano && Object.keys(meta.empresas_por_ano).length ? meta.empresas_por_ano : null;
+  const serieTot = (f: (x: { valor: number; n: number }) => number): [string, number][] =>
+    Object.entries(tot || {}).sort(([a], [b]) => a.localeCompare(b)).map(([a, x]) => [a, f(x)]);
+  const emAndamento = String(meta?.mesmo_periodo?.ano) === ano;
+  type P = NonNullable<Meta["mesmo_periodo"]>;
+  const periodo = (ant: (p: P, a: string) => number | undefined, atual: (p: P) => number | undefined) => {
+    const b = basePeriodo(meta, ano, ant);
+    return b ? { ...b, atual: atual(meta!.mesmo_periodo!) } : b;
+  };
+  // Busca em todas as empresas: as que não estão na lista da página (fora das 1.000 maiores) também aparecem
+  const fora = q.trim().length >= 3 && todas ? todas.filter(([c, n]) => !naLista.has(c) && (norm(n).includes(norm(q)) || c.includes(q.replace(/\D/g, "") || "x"))).slice(0, 30) : [];
   const temLados = Object.keys(somaLados).length > 0;
   return (
     <section>
@@ -84,10 +101,20 @@ export default function Empresas() {
       {porAno && !q && !partido && !lado && lista.length > 0 && (
         <>
           <div className="grid">
-            <Kpi rotulo={`Pago pela cota às empresas da lista em ${ano}`} valor={graf.total.find(([a]) => a === ano)?.[1]} serie={graf.total} ano={ano} dica={`as ${numero(data.length)} empresas que mais receberam, somando todos os anos`} />
-            <Kpi rotulo={`Empresas da lista pagas em ${ano}`} valor={graf.qtd.find(([a]) => a === ano)?.[1]} formato={numero} serie={graf.qtd} ano={ano} />
-            <Kpi rotulo="Parte das 10 maiores" valor={totalAno ? lista.map(valor).sort((a, b) => b - a).slice(0, 10).reduce((s, v) => s + v, 0) / totalAno : null} formato={(v) => `${Math.round(v * 100)}%`} dica={`do que foi pago às empresas da lista em ${ano}`} />
+            {tot ? <>
+              <Kpi rotulo={`Pago pela cota a todas as empresas em ${ano}`} valor={tot[ano]?.valor} serie={serieTot((x) => x.valor)} ano={ano}
+                anterior={periodo((p, a) => p.empresas[a]?.valor, (p) => p.empresas[ano]?.valor)}
+                dica={emAndamento ? `${nomePeriodo(meta)} de ${ano}: ${reaisCurto(meta!.mesmo_periodo!.empresas[ano]?.valor || 0)}` : "soma de todas as empresas (CNPJ), sem corte"} />
+              <Kpi rotulo={`Empresas pagas em ${ano}`} valor={tot[ano]?.n} formato={numero} serie={serieTot((x) => x.n)} ano={ano}
+                anterior={periodo((p, a) => p.empresas[a]?.n, (p) => p.empresas[ano]?.n)} dica="todas as que receberam da cota no ano" />
+              <Kpi rotulo="Parte das 10 maiores" valor={tot[ano]?.top10} formato={(v) => `${Math.round(v * 100)}%`} dica={`do que foi pago a todas as empresas em ${ano}`} />
+            </> : <>
+              <Kpi rotulo={`Pago pela cota às empresas da lista em ${ano}`} valor={graf.total.find(([a]) => a === ano)?.[1]} serie={graf.total} ano={ano} dica={`as ${numero(data.length)} empresas que mais receberam, somando todos os anos`} />
+              <Kpi rotulo={`Empresas da lista pagas em ${ano}`} valor={graf.qtd.find(([a]) => a === ano)?.[1]} formato={numero} serie={graf.qtd} ano={ano} />
+              <Kpi rotulo="Parte das 10 maiores" valor={totalAno ? lista.map(valor).sort((a, b) => b - a).slice(0, 10).reduce((s, v) => s + v, 0) / totalAno : null} formato={(v) => `${Math.round(v * 100)}%`} dica={`do que foi pago às empresas da lista em ${ano}`} />
+            </>}
           </div>
+          {emAndamento && tot && <p className="small muted">As setas comparam {ano} com o mesmo período de {Number(ano) - 1} ({nomePeriodo(meta)}), não com o ano inteiro.</p>}
           <div className="secao-graficos">
             <div>
               <h3 className="graf-titulo">Quem ficou com o dinheiro em {ano}</h3>
@@ -123,6 +150,12 @@ export default function Empresas() {
               <Barras itens={LADOS.filter((l) => somaLados[l.k]).map((l) => ({ label: l.nome, valor: somaLados[l.k], cor: l.cor }))} />
             </>}
           </Abrir>}
+        </div>
+      )}
+      {fora.length > 0 && (
+        <div className="card">
+          <p className="small"><strong>Outras empresas pagas pela cota</strong> (fora das {numero(data.length)} maiores da lista abaixo)</p>
+          <ul className="small">{fora.map(([c, n, pa]) => <li key={c}><Link to={`/e/${c}`}>{n}</Link> <span className="muted mono">{cnpjFmt(c)}</span> · {reais(pa[ano]?.[0] || 0)} em {ano}</li>)}</ul>
         </div>
       )}
       <p className="muted small">{lista.length} empresa{lista.length === 1 ? "" : "s"}{partido ? ` pagas por parlamentares do ${partido}` : ""}</p>

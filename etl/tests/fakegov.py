@@ -55,6 +55,7 @@ class FakeGov:
         self.renuncia_so_navegador = False  # o servidor de arquivos da CGU recusa quem não parece navegador
         self.api_chave = "chave-de-teste"  # a API de dados do Portal pede a chave no cabeçalho chave-api-dados
         self.api_exige_uf = False  # a consulta sem filtro pode não ser aceita
+        self.recursos_max_pagina = None  # a consulta de recursos recebidos sem filtro falha depois desta página
         self.api_paginas_sem_filtro = None  # a consulta sem filtro falha depois desta página (a API não pula tantas linhas)
         self.repetir_linhas = False  # caos de dados: arquivos com linhas repetidas
         self.legislatura_so_atuais = False  # a lista da legislatura sem quem saiu (o defeito que escondia gente)
@@ -381,6 +382,30 @@ class FakeGov:
                 return 400, '{"Erro na API":"Erro ao executar a consulta"}'.encode(), "application/json"
             return self._json(todos[(p - 1) * 15: p * 15])
 
+        if u.netloc == "api.portaldatransparencia.gov.br" and path == "/api-de-dados/despesas/recursos-recebidos":
+            mi, mf = params["mesAnoInicio"], params["mesAnoFim"]
+            if mi != mf:
+                return 400, b'{"Erro":"periodo"}', "application/json"
+            linhas = self.recursos_mes(int(mi[3:]), int(mi[:2]))
+            if "orgaoSuperior" in params:
+                linhas = [x for x in linhas if x["codigoOrgaoSuperior"] == params["orgaoSuperior"]]
+            p = int(params.get("pagina", 1))
+            if self.recursos_max_pagina and "orgaoSuperior" not in params and p > self.recursos_max_pagina:
+                return 400, '{"Erro na API":"Erro ao executar a consulta"}'.encode(), "application/json"
+            return self._json(linhas[(p - 1) * 15: p * 15])
+
+        if u.netloc == "api.portaldatransparencia.gov.br" and path == "/api-de-dados/servidores/por-orgao":
+            todos = [{"qntPessoas": n, "qntVinculos": n, "descSituacao": sit, "nomOrgaoExercicioSiape": org}
+                     for org in ("Ministério da Saúde", "Ministério da Educação")
+                     for sit, n in (("Ativo Permanente", 300000), ("Aposentado", 200000), ("Pensionista", 100000))]
+            p = int(params.get("pagina", 1))
+            return self._json(todos[(p - 1) * 15: p * 15])
+
+        if u.netloc == "api.portaldatransparencia.gov.br" and path == "/api-de-dados/orgaos-siafi":
+            p = int(params.get("pagina", 1))
+            todos = [{"codigo": c, "descricao": n} for c, n in self.ORGAOS_SUP] + [{"codigo": "26246", "descricao": "Universidade X"}]
+            return self._json(todos[(p - 1) * 15: p * 15])
+
         m = re.search(r"/renuncias/(\d{4})_RenunciasFiscais\.zip$", path)
         if m:
             z = self._renuncias_zip(int(m.group(1)))
@@ -392,6 +417,36 @@ class FakeGov:
             return (200, z, "application/zip") if z else (404, b"", "text/html")
 
         return 404, b"", "text/html"
+
+    ORGAOS_SUP = [("26000", "Ministério da Educação"), ("36000", "Ministério da Saúde"), ("52000", "Ministério da Defesa")]
+
+    def recursos_mes(self, ano: int, mes: int) -> list[dict]:
+        """Linhas da consulta "recursos recebidos por favorecido" de um mês (empresas, uma prefeitura e pessoas físicas)."""
+        rng = random.Random(ano * 100 + mes)
+        out = []
+        for i in range(40):
+            cs, ns = self.ORGAOS_SUP[i % 3]
+            ug = f"{150000 + i % 7}"
+            if i % 13 == 5:
+                cod, nome = "***.123.456-**", "FULANO DE TAL"
+            elif i % 17 == 3:
+                cod, nome = "18.715.383/0001-40", "MUNICIPIO DE ITAJUBA"
+            else:
+                c = cnpj_matriz(str(10_000_000 + (i % 23) * 1_234_567 % 89_999_999))
+                cod, nome = f"{c[:2]}.{c[2:5]}.{c[5:8]}/{c[8:12]}-{c[12:]}", f"EMPRESA {i % 23} LTDA"
+            out.append({"anoMes": ano * 100 + mes, "codigoPessoa": cod, "nomePessoa": nome, "tipoPessoa": "Pessoa Jurídica",
+                        "municipioPessoa": "ITAJUBA", "siglaUFPessoa": "MG", "codigoUG": ug, "nomeUG": f"UG {ug}",
+                        "codigoOrgao": cs, "nomeOrgao": ns, "codigoOrgaoSuperior": cs, "nomeOrgaoSuperior": ns,
+                        "valor": round(rng.uniform(1000, 900000), 2)})
+        # a mesma empresa e unidade gestora aparecem uma vez por mês: junta as que o sorteio repetiu
+        unico: dict[tuple, dict] = {}
+        for x in out:
+            k = (x["codigoPessoa"], x["codigoUG"])
+            if k in unico:
+                unico[k]["valor"] = round(unico[k]["valor"] + x["valor"], 2)
+            else:
+                unico[k] = x
+        return list(unico.values())
 
     def _emendas_zip(self) -> bytes:
         cab = ["Código da Emenda", "Ano da Emenda", "Tipo de Emenda", "Nome do Autor da Emenda", "Localidade de aplicação do recurso",

@@ -201,6 +201,11 @@ export interface Meta {
   atualizado_em: string; anos: number[]; grupos: Record<Grupo, string>; medias: Record<string, Record<Casa, number>>;
   contagens: { politicos: number; despesas: number; votacoes: number; empresas_com_socios: number }; total_gasto: number;
   total_por_ano: Record<string, number>; custo_por_ano: Record<string, number>;
+  /** Janeiro até o mesmo mês em todos os anos, para comparar o ano em andamento com o mesmo período dos anteriores */
+  mesmo_periodo?: { ano: number; ate_mes: number; total: Record<string, number>; medias: Record<string, Record<Casa, number>>;
+    empresas: Record<string, { valor: number; n: number }> } | null;
+  /** Quanto a cota pagou a TODAS as empresas em cada ano (sem o corte da lista da página) */
+  empresas_por_ano?: Record<string, { valor: number; n: number; top10: number | null }>;
   /** Minas Nossa: "MG" e as cidades acompanhadas */
   recorte?: string; cidades?: string[];
   estado?: { deputados_estaduais: number; emendas_estaduais: number; governo: number; equipe_governo: number };
@@ -410,4 +415,23 @@ export function dataHoraBR(s: string): string {
 export function autorSigla(a: AutorProjeto): string {
   const x = [a.partido, a.uf].filter(Boolean).join("-");
   return x ? ` (${x})` : "";
+}
+
+const MES_CURTO = ["", "jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+/** Base da seta dos números grandes: no ano em andamento, o mesmo período do ano anterior (jan até o mesmo mês).
+ *  undefined: usa a série normal (anos inteiros). null: sem comparação justa. */
+export function basePeriodo(meta: Meta | null | undefined, ano: string, valor: (p: NonNullable<Meta["mesmo_periodo"]>, a: string) => number | null | undefined) {
+  const p = meta?.mesmo_periodo;
+  if (!p || String(p.ano) !== ano) return undefined;
+  const ant = String(Number(ano) - 1);
+  const v = valor(p, ant);
+  return v ? { rotulo: `jan–${MES_CURTO[p.ate_mes]} ${ant}`, valor: v } : null;
+}
+
+/** "janeiro a agosto" do período comparado */
+export function nomePeriodo(meta: Meta | null | undefined): string {
+  const p = meta?.mesmo_periodo;
+  const M = ["", "janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+  return p ? (p.ate_mes === 1 ? "janeiro" : `janeiro a ${M[p.ate_mes]}`) : "";
 }

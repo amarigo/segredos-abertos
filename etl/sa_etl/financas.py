@@ -19,8 +19,8 @@ import logging
 import time
 from pathlib import Path
 
-from . import fin_orcamento, fin_pessoal, fin_receita, fin_tesouro
-from .util import get_json, write_json
+from . import fin_divida, fin_orcamento, fin_pessoal, fin_receita, fin_tesouro
+from .util import chave_portal, get_json, write_json
 
 log = logging.getLogger("sa_etl.financas")
 AVISOS: list[str] = []  # problemas desta coleta, mostrados na própria aba (não no aviso geral do site)
@@ -350,6 +350,11 @@ def coletar(saida: Path, cache: Path, ano_atual: int | None = None, minutos: flo
     if anos[ultimo]["pessoal_camara"]:
         anos[ultimo]["pessoal_camara"]["verba_gabinete"] = _verba_gabinete(saida, ultimo)
     anos[ultimo]["pessoal_senado"] = fin_pessoal.coletar_senado(ultimo, mes_hoje)
+    try:  # quantas pessoas cada Poder paga e o gasto médio por pessoa (só no ano mais recente: a contagem é a de hoje)
+        fin_pessoal.pessoas_por_poder(anos[ultimo]["pessoal_poderes"], fin_pessoal.contar_executivo(chave_portal(), cache),
+                                      anos[ultimo]["pessoal_camara"], anos[ultimo]["pessoal_senado"])
+    except Exception:  # noqa: BLE001
+        log.exception("Pessoas por Poder: erro; os cards ficam sem a contagem")
     # comparações e sinais
     for ano, d in anos.items():
         bim = d["periodo"]["bimestre"]
@@ -365,6 +370,12 @@ def coletar(saida: Path, cache: Path, ano_atual: int | None = None, minutos: flo
                                            "adm_geral": adm if ant else None,
                                            "ipca_fator": (idx.get(f"{ano}{d['periodo']['mes']:02d}", 0) / idx.get(f"{ano - 1}{d['periodo']['mes']:02d}", 1)) if idx else None}
     gravar(saida, anos)
+    try:  # dinheiro emprestado e dívida paga desde 2018, bimestre a bimestre (RREO Anexo 01)
+        div = fin_divida.coletar(cache, ano_atual)
+        if div:
+            write_json(saida / "financas" / "divida.json", div)
+    except Exception:  # noqa: BLE001
+        log.exception("Dívida: erro; a série desde 2018 ficou de fora")
     log.info("Arrecadação e gastos: anos %s em %.0f s", sorted(anos), time.time() - inicio)
     return {"anos": sorted(anos)}
 

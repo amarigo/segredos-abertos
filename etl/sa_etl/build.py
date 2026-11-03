@@ -11,7 +11,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import (autorias, tramitacao, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
+from . import (autorias, recursos_recebidos, tramitacao, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
                renuncias, senado, temas)
 from .categorias import GRUPOS
 from . import util
@@ -409,7 +409,11 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
                 if vizinhas.get(doc) else []),
         })
     lista_emp.sort(key=lambda x: -x["total"])
-    write_json(saida / "empresas.json", lista_emp[:1000])
+    # A lista com o detalhe (partidos, lados) fica com as 1.000 maiores, para a página abrir rápido no celular. Os totais
+    # e a busca usam TODAS as empresas pagas pela cota (empresas-todas.json e meta.json), sem corte.
+    write_json(saida / "empresas.json", lista_emp[:N_LISTA_EMPRESAS])
+    write_json(saida / "empresas-todas.json", [[e["cnpj"], e["nome"], {a: [x["valor"], x["n_politicos"]] for a, x in e["por_ano"].items()}]
+                                               for e in lista_emp])
 
     # ---------- Votações ----------
     lista_v = []
@@ -468,7 +472,10 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
                          "total": round(sum(r["total"] for r in rs), 2), "por_ano": anos_p})
     write_json(saida / "partidos.json", partidos)
 
+    periodo = mesmo_periodo(despesas, resumo, anos, recebeu_doc=lambda d: doc_kind(d["doc"]) == "cnpj")
     write_json(saida / "meta.json", {
+        "mesmo_periodo": periodo,
+        "empresas_por_ano": totais_empresas(lista_emp, anos),
         "atualizado_em": hoje, "anos": anos, "avisos": list(util.AVISOS), "grupos": GRUPOS, "medias": medias,
         "fora_da_lista": dados.get("fora_da_lista") or {},
         "contagens": {"politicos": len(politicos), "despesas": len(despesas), "votacoes": len(votacoes),
@@ -479,6 +486,66 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
     })
     log.info("Pronto: %d políticos, %d despesas, %d votações, %d empresas", len(politicos), len(despesas),
              len(votacoes), len(lista_emp))
+
+
+N_LISTA_EMPRESAS = 1000
+
+
+def totais_empresas(lista: list[dict], anos: list[int]) -> dict:
+    """Quanto a cota pagou a TODAS as empresas (CNPJ) em cada ano, quantas foram e a parte das 10 maiores."""
+    out = {}
+    for ano in anos:
+        a = str(ano)
+        vs = sorted((e["por_ano"][a]["valor"] for e in lista if e["por_ano"].get(a, {}).get("valor", 0) > 0), reverse=True)
+        if vs:
+            tot = sum(vs)
+            out[a] = {"valor": round(tot, 2), "n": len(vs), "top10": round(sum(vs[:10]) / tot, 4) if tot else None}
+    return out
+
+
+def mesmo_periodo(despesas: list[dict], resumo: list[dict], anos: list[int], recebeu_doc, hoje: dt.date | None = None) -> dict | None:
+    """Para comparar o ano em andamento com os anteriores no MESMO período (janeiro até o mesmo mês), e não com o ano
+    anterior inteiro. Usa o mês de competência da nota (numMes na Câmara, mes no Senado).
+
+    O período vai até o último mês com notas do ano mais recente, sem contar o mês que ainda não acabou. As notas de um
+    mês chegam até 3 meses depois, por isso os últimos meses do ano em andamento ainda podem subir."""
+    hoje = hoje or dt.date.today()
+    if not despesas:
+        return None
+    ultimo = max(anos)
+    meses = [d["mes"] for d in despesas if d["ano"] == ultimo and 1 <= (d.get("mes") or 0) <= 12]
+    if not meses:
+        return None
+    ate = max(meses)
+    if ultimo == hoje.year:
+        ate = min(ate, hoje.month - 1)
+    if ate < 1 or ate >= 12:
+        return None  # ano inteiro: a comparação normal já é a certa
+    casa_de = {r["id"]: r["casa"] for r in resumo}
+    total: dict[str, float] = defaultdict(float)
+    empresas: dict[str, float] = defaultdict(float)
+    n_emp: dict[str, set] = defaultdict(set)
+    por_pol: dict[tuple[str, str], float] = defaultdict(float)
+    for d in despesas:
+        if not 1 <= (d.get("mes") or 0) <= ate:
+            continue
+        a = str(d["ano"])
+        total[a] += d["valor"]
+        por_pol[(a, d["politico"])] += d["valor"]
+        if recebeu_doc(d):
+            empresas[a] += d["valor"]
+            n_emp[a].add(d["doc"])
+    medias: dict[str, dict] = {}
+    for ano in anos:
+        a = str(ano)
+        medias[a] = {}
+        for casa in ("camara", "senado"):
+            ts = [v for (aa, pid), v in por_pol.items() if aa == a and casa_de.get(pid) == casa and v > 0]
+            medias[a][casa] = round(sum(ts) / len(ts), 2) if ts else 0
+    return {"ano": ultimo, "ate_mes": ate,
+            "total": {str(a): round(total.get(str(a), 0.0), 2) for a in anos},
+            "medias": medias,
+            "empresas": {str(a): {"valor": round(empresas.get(str(a), 0.0), 2), "n": len(n_emp.get(str(a), ()))} for a in anos}}
 
 
 def nao_esta_na_api(d: dict) -> bool:
@@ -745,8 +812,17 @@ def coletar_incentivos(anos: list[int], cache: Path, minutos: float, max_dias: i
         if max_dias is not None:
             return None
         geral = pagamentos.resumir_geral(arqs, anos)
+        # A API do Portal (lida pelo workflow semanal, recursos_recebidos.py) tem o total de cada favorecido, mês a mês.
+        # Desde 29/10/2026 os arquivos diários não baixam (HTTP 405): em cada ano fica a fonte que cobre mais dias.
+        api = recursos_recebidos.resumir(cache, anos)
+        geral = recursos_recebidos.juntar(geral, api, anos)
         for ano, c in sorted(geral["cobertura"].items()):
-            log.info("Pagamentos gerais %s: %s de %s dias lidos (%s a %s)", ano, c["dias"], c["dias_ano"], c["de"], c["ate"])
+            log.info("Pagamentos gerais %s: %s de %s dias lidos (%s a %s, %s)", ano, c.get("dias"), c.get("dias_ano"),
+                     c.get("de"), c.get("ate"), "API" if c.get("origem") == "api" else "arquivos diários")
+        atual = geral["cobertura"].get(max(anos)) or {}
+        if atual.get("origem") == "api" and atual.get("ate") and (dt.date.today() - dt.date.fromisoformat(atual["ate"])).days <= 40:
+            # a API cobre o ano atual: a falha dos arquivos diários não deixa o site incompleto
+            util.AVISOS[:] = [x for x in util.AVISOS if not x.startswith("Pagamentos a empresas: o Portal da Transparência falhou")]
         return geral
     except Exception:  # noqa: BLE001
         log.exception("Incentivos: erro nos pagamentos a empresas")

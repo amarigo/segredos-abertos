@@ -16,7 +16,9 @@ interface Receita { id: string; nome: string; explica: string; tipo: "propria" |
 interface DespesaGrupo { id: string; nome: string; explica: string; liquidado: number; pago: number; empenhado: number; dotacao: number }
 interface Funcao { nome: string; explica: string; liquidado: number; dotacao: number; sub: [string, number][] }
 interface OrgaoRGF { nome: string; bruta: number; ativos: number; inativos: number; dtp: number; pct_rcl: number | null; limite_max: number; limite_pct: number | null; rcl: number }
-interface Poder { poder: string; nome: string; ano: number; quadrimestre: number; orgaos: OrgaoRGF[]; url: string }
+interface Poder { poder: string; nome: string; ano: number; quadrimestre: number; orgaos: OrgaoRGF[]; url: string;
+  /** Quantas pessoas o Poder paga hoje e o gasto médio por pessoa em 12 meses (fin_pessoal.pessoas_por_poder) */
+  pessoas?: { escopo: string; ativos: number; aposentados: number | null; pensionistas: number | null; media_ativo: number | null; media_inativo: number | null; url: string; fonte_nome: string } }
 interface Grupo { id: string; nome: string; explica: string; valor: number; tributos: [string, number][] }
 interface Arrecadacao { total: number; meses: [number, number][]; ate_mes: number; grupos: Grupo[]; por_uf: [string, number][] }
 interface Setores { ate_mes: number; total: number; setores: { secao: string; nome: string; valor: number; impostos: [string, number][] }[] }
@@ -270,7 +272,64 @@ function Arrecadou({ d, propria }: { d: Ano; propria: number }) {
       <h3 className="fin-sub">Dinheiro emprestado</h3>
       <Barras formato={rs} itens={div.map((r) => ({ label: r.nome, valor: r.valor, nota: r.explica, cor: r.tipo === "divida" ? "var(--esq)" : "var(--c-outros)" }))} />
       <p className="small muted">Valores realizados {d.parcial ? `até ${d.periodo.mes_nome}` : "no ano"}, sem as receitas intraorçamentárias (quando um órgão federal paga outro). <Fonte href={d.fontes_ano.rreo1}>RREO, Anexo 1, na API do Tesouro</Fonte></p>
+      <DividaDesde2018 />
     </section>
+  );
+}
+
+/* ------------------------------------------------------------------ dívida desde 2018 (data/financas/divida.json, fin_divida.py) */
+
+type ChaveDivida = "novo" | "rolagem" | "juros" | "amortizacao" | "amortizacao_rolagem";
+interface Divida {
+  anos: { ano: number; ate_bimestre: number; ate: string; parcial: boolean; valores: Record<ChaveDivida, number>; url: string }[];
+  bimestres: { ano: number; bimestre: number; ate: string; valores: Record<ChaveDivida, number>; url: string }[];
+  contas: Record<ChaveDivida, { nome: string; explica: string; tipo: "emprestimo" | "pagamento" }>;
+}
+const COR_DIVIDA: Record<ChaveDivida, string> = { novo: "var(--esq)", rolagem: "var(--c-outros)", juros: "var(--s2)", amortizacao: "var(--s1)", amortizacao_rolagem: "var(--c5)" };
+const BIM = ["", "jan–fev", "mar–abr", "mai–jun", "jul–ago", "set–out", "nov–dez"];
+
+/** Quanto o governo pegou emprestado e quanto pagou de dívida, ano a ano desde 2018; tocar num ano abre os bimestres. */
+function DividaDesde2018() {
+  const { data } = useData<Divida>("financas/divida.json");
+  const [k, setK] = useState<ChaveDivida>("novo");
+  const [ano, setAno] = useState<string>("");
+  if (!data?.anos.length) return null;
+  const chaves = Object.keys(data.contas) as ChaveDivida[];
+  const sel = ano || String(data.anos[data.anos.length - 1].ano);
+  const a = data.anos.find((x) => String(x.ano) === sel);
+  const bims = data.bimestres.filter((b) => String(b.ano) === sel);
+  const primeiro = data.anos[0].ano, ultimo = data.anos[data.anos.length - 1];
+  const soma = (c: ChaveDivida) => data.anos.reduce((t, x) => t + (x.valores[c] || 0), 0);
+  return (
+    <div className="fin-divida">
+      <h3 className="fin-sub">Empréstimos e dívida paga desde {primeiro}</h3>
+      <p className="small">
+        De {primeiro} até {ultimo.parcial ? `${ultimo.ate} de ${ultimo.ano}` : ultimo.ano}, o governo federal pegou <strong>{rs(soma("novo"))}</strong> emprestado para pagar gastos
+        e <strong>{rs(soma("rolagem"))}</strong> para pagar dívida velha. No mesmo período pagou <strong>{rs(soma("juros"))}</strong> de juros
+        e <strong>{rs(soma("amortizacao") + soma("amortizacao_rolagem"))}</strong> de dívida que venceu.
+      </p>
+      <div className="toggle" role="group" aria-label="O que mostrar">
+        {chaves.map((c) => <button key={c} type="button" aria-pressed={k === c} onClick={() => setK(c)}>{data.contas[c].nome}</button>)}
+      </div>
+      <p className="small muted">{data.contas[k].explica} Toque num ano para ver quando, bimestre a bimestre.</p>
+      <ColunasAnos serie={data.anos.map((x) => [String(x.ano), x.valores[k] || 0])} titulo={data.contas[k].nome} formato={rs} cor={COR_DIVIDA[k]}
+        parcial={new Set(data.anos.filter((x) => x.parcial).map((x) => String(x.ano)))} ano={sel} setAno={setAno} />
+      {a && (
+        <div className="grid grid-2">
+          <div>
+            <h4>{data.contas[k].nome} em {sel}, por bimestre</h4>
+            <Barras formato={rs} itens={bims.map((b) => ({ label: <Fonte href={b.url}>{BIM[b.bimestre]}</Fonte>, valor: Math.max(0, b.valores[k] || 0), cor: COR_DIVIDA[k],
+              nota: (b.valores[k] || 0) < 0 ? "Valor negativo: o Tesouro corrigiu o bimestre anterior." : undefined }))} />
+          </div>
+          <div>
+            <h4>Tudo de {sel}{a.parcial ? ` (até ${a.ate})` : ""}</h4>
+            <Barras formato={rs} itens={chaves.map((c) => ({ label: <button className="link" onClick={() => setK(c)}>{data.contas[c].nome}</button>, valor: a.valores[c] || 0, cor: COR_DIVIDA[c] }))} />
+            <p className="small"><Fonte href={a.url}>RREO, Anexo 1, de {sel} na API do Tesouro</Fonte></p>
+          </div>
+        </div>
+      )}
+      <p className="small muted">* ano em andamento. Cada bimestre é a diferença entre dois relatórios do Tesouro (o RREO é acumulado no ano). O Tesouro não diz em que cada real emprestado foi gasto: o dinheiro entra no caixa único. Separamos o que paga dívida velha (rolagem) do que paga gastos do orçamento.</p>
+    </div>
   );
 }
 
@@ -473,6 +532,13 @@ function Poderes({ d }: { d: Ano }) {
               <div className="small muted">gasto com pessoal em 12 meses até {["", "abril", "agosto", "dezembro"][p.quadrimestre]} de {p.ano}</div>
               <div className="fin-barra" aria-hidden="true"><span style={{ width: `${Math.min(100, (uso || 0) * 100)}%` }} /><i style={{ left: "90%" }} /><i style={{ left: "95%" }} /></div>
               <div className="small">{pc(uso)} do limite da LRF · ativos {rs(tot(p, "ativos"))} · aposentados e pensionistas {rs(tot(p, "inativos"))}</div>
+              {p.pessoas ? (
+                <div className="fin-pessoas small">
+                  <div><strong className="num">{numero(p.pessoas.ativos)}</strong> pessoas em atividade{p.pessoas.media_ativo ? <> · média de <strong className="num">{rs(p.pessoas.media_ativo)}</strong> por pessoa em 12 meses ({rs(p.pessoas.media_ativo / 12)} por mês)</> : null}</div>
+                  {p.pessoas.aposentados != null && <div><strong className="num">{numero((p.pessoas.aposentados || 0) + (p.pessoas.pensionistas || 0))}</strong> aposentados e pensionistas{p.pessoas.media_inativo ? <> · média de <strong className="num">{rs(p.pessoas.media_inativo)}</strong> por pessoa em 12 meses</> : null}</div>}
+                  <div className="muted">{p.pessoas.escopo}. Pessoas: <Fonte href={p.pessoas.url}>{p.pessoas.fonte_nome}</Fonte>; gasto: RGF. A média divide o gasto de 12 meses pelas pessoas de hoje.</div>
+                </div>
+              ) : <div className="small muted">Número de pessoas: {p.poder === "E" || p.poder === "L" ? "a contagem oficial não respondeu nesta atualização." : "ainda não temos uma contagem oficial deste Poder que dê para atualizar sozinha (não há API); por isso a média por pessoa fica de fora."}</div>}
               {p.orgaos.length > 1 && (
                 <>
                   <button className="link small" aria-expanded={aberto === p.poder} onClick={() => setAberto(aberto === p.poder ? null : p.poder)}>
