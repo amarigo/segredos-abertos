@@ -7,12 +7,13 @@ import { MG } from "../recorte";
 import { AvisosFim } from "../components/Selo";
 import { ColunasAnos, Rosca, numero, prepararFatias } from "../components/graficos";
 
-/** As duas partes da seção de votações: primeiro o que está em andamento, depois o que já foi votado. */
+/** As partes da seção de votações: o que está em andamento, o que já foi votado no Congresso e os julgamentos do STF. */
 export function VotacoesAbas() {
   return (
     <nav className="tabs" aria-label="Votações">
       <NavLink end to="/votacoes" className={({ isActive }) => (isActive ? "ativa" : "")}>Projetos em andamento</NavLink>
       <NavLink to="/votacoes/ja-votadas" className={({ isActive }) => (isActive ? "ativa" : "")}>Já votadas</NavLink>
+      {!MG && <NavLink to="/votacoes/tribunais" className={({ isActive }) => (isActive ? "ativa" : "")}>Julgamentos do STF</NavLink>}
     </nav>
   );
 }

@@ -438,3 +438,24 @@ export function nomePeriodo(meta: Meta | null | undefined): string {
   const M = ["", "janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
   return p ? (p.ate_mes === 1 ? "janeiro" : `janeiro a ${M[p.ate_mes]}`) : "";
 }
+
+/* Julgamentos do STF (tribunais.json, gerado por etl/sa_etl/tribunais.py) */
+/** Em que lado o voto ficou: com o relator, com quem divergiu, pedido de vista, fora (impedido/suspeito) ou outro. */
+export type LadoVoto = "relator" | "divergencia" | "vista" | "fora" | "outro";
+export interface VotoMinistro { ministro: string; voto: string; lado: LadoVoto; acompanha: string; link: string }
+export interface Julgamento {
+  id: string; tribunal: "stf" | "tse"; colegiado: string; tipo_sessao: string;
+  processo: string; classe: string; numero: string; uf: string; partes: { nome: string; tipo: string }[];
+  relator: string; inicio: string; fim: string; julgado: boolean; resultado: string; decisao: string;
+  vista: string; destaque: string; votos: VotoMinistro[]; placar: Record<LadoVoto, number>; maioria: "" | "relator" | "divergencia";
+  /** em_julgamento: sessão aberta; vista: suspenso por pedido de vista; destaque: vai ao plenário presencial;
+   * decidido: um lado teve 6 votos ou mais; sem_maioria: terminou sem lado com 6 votos */
+  situacao: "em_julgamento" | "vista" | "destaque" | "decidido" | "sem_maioria";
+  link: string; fonte: string;
+}
+export interface MinistroResumo { nome: string; tribunal: string; votos: number; relator: number; com_maioria: number; vencido: number; divergencias: number; fora: number }
+export interface Tribunais {
+  atualizado_em: string; meses: number; situacao_fontes: Record<string, string>;
+  fontes: Record<string, { nome: string; pagina: string; servicos: string[] }>;
+  classes: Record<string, string>; ministros: MinistroResumo[]; julgamentos: Julgamento[];
+}
