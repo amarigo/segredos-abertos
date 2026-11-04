@@ -5,6 +5,10 @@
 
     python -m el_etl.build coletar [--turno 1 2] [--ufs SP RJ] [--cache .cache]
         baixa de novo do TSE os resultados oficiais e os boletins de urna e grava em dados/.
+
+    python -m el_etl.build eleitos [--baixar]
+        quem foi eleito para governador, senador e deputado (mandato a partir de 2027): com --baixar, baixa de novo do
+        TSE, da Câmara e do Senado para dados/eleitos/; sempre confere com a segunda fonte e mostra o resumo.
 """
 import argparse
 import json
@@ -13,7 +17,7 @@ import shutil
 import sys
 import tempfile
 
-from . import analisar, depois17, locais, montar, mudancas, noite, oficial, turno1, turno2, validar
+from . import analisar, depois17, eleitos, locais, montar, mudancas, noite, oficial, pagina_eleitos, turno1, turno2, validar
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 DADOS = os.path.normpath(os.path.join(AQUI, '..', '..', 'dados'))
@@ -70,6 +74,7 @@ def cmd_montar(a, dados=DADOS):
     for t, (urnas, validos) in listas.items():
         analisar.gravar_planilhas(t, urnas, os.path.join(tmp, 'dados', 'urnas'))
         analisar.gravar_lista_site(t, urnas, validos, os.path.join(tmp, 'urnas'))
+    montar_eleitos(os.path.join(dados, 'eleitos'), tmp)
     if os.path.exists(a.saida):
         shutil.rmtree(a.saida)
     os.makedirs(os.path.dirname(os.path.abspath(a.saida)), exist_ok=True)
@@ -78,6 +83,49 @@ def cmd_montar(a, dados=DADOS):
     if a.resumo:
         with open(a.resumo, 'w', encoding='utf-8') as f:
             json.dump(resumos, f, ensure_ascii=False)
+    return 0
+
+
+def montar_eleitos(pasta, saida):
+    """Página dos eleitos (eleitos/). Se a conferência com a segunda fonte falhar, a página só diz que está em conferência:
+    nenhum número sem conferir vai para o ar, e o resto do site da eleição continua."""
+    if not os.path.exists(os.path.join(pasta, 'coleta.json')):
+        print('eleitos: dados ainda não baixados (python -m el_etl.build eleitos --baixar)')
+        pagina_eleitos.gravar(saida, None, ['dados ainda não baixados'])
+        return False
+    D, erros = eleitos.montar_eleitos(pasta)
+    if erros:
+        print(f'::error title=Eleitos 2026::A conferência dos eleitos falhou ({len(erros)} diferenças). A página dos '
+              'eleitos não foi publicada com números.')
+        for x in erros[:50]:
+            print(' -', x)
+        pagina_eleitos.gravar(saida, None, erros)
+        return False
+    pagina_eleitos.gravar(saida, D, [])
+    n = len(D['eleitos'])
+    lig = sum(1 for x in D['eleitos'] if x.get('hoje'))
+    print(f'eleitos: {n} conferidos com o arquivo de vagas e o de candidatos; {lig} já têm mandato no Congresso hoje')
+    return True
+
+
+def cmd_eleitos(a, dados=DADOS):
+    pasta = os.path.join(dados, 'eleitos')
+    if a.baixar:
+        eleitos.baixar(pasta)
+    D, erros = eleitos.montar_eleitos(pasta)
+    from collections import Counter
+    n = Counter((x['c']) for x in D['eleitos'])
+    for c, nome in eleitos.CARGOS.items():
+        print(f"{nome}: {n.get(c, 0)} eleitos, {D['vagas'].get(c, 0)} vagas, {D['reeleitos'].get(c, 0)} reeleitos, "
+              f"{D['tentaram_e_perderam'].get(c, 0)} tentaram a reeleição e perderam")
+    print(f"já têm mandato no Congresso hoje: {sum(1 for x in D['eleitos'] if x.get('hoje'))}; "
+          f"senadores que continuam até 2031: {len(D['senado_continua'])}")
+    if erros:
+        print(f'A CONFERÊNCIA FALHOU ({len(erros)} diferenças):')
+        for x in erros[:80]:
+            print(' -', x)
+        return 1
+    print('Conferência: o número de eleitos bate com as vagas e cada eleito consta como eleito no arquivo de candidatos.')
     return 0
 
 
@@ -91,7 +139,11 @@ def main(argv=None):
     m = sub.add_parser('montar')
     m.add_argument('--saida', required=True)
     m.add_argument('--resumo', help='grava também o resumo da análise (JSON)')
+    el = sub.add_parser('eleitos')
+    el.add_argument('--baixar', action='store_true')
     a = p.parse_args(argv)
+    if a.cmd == 'eleitos':
+        return cmd_eleitos(a)
     if a.cmd == 'coletar':
         cmd_coletar(a)
         return 0
