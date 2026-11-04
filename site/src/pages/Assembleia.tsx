@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Abrir, Barras, Explain, Loading, OndeVer, useData } from "../components/ui";
 import { corPartido, reais, reaisCurto, type AlmgAno, type AlmgIndice } from "../data";
 import { norm } from "./Home";
+import { FotoPolitico } from "../components/Foto";
 import { AvisosFim } from "../components/Selo";
 
 type Ordem = "verba" | "projetos" | "aprovadas" | "emendas_indicado" | "nome";
@@ -82,7 +83,7 @@ export default function Assembleia() {
       </div>
       {ordem !== "nome" && lista.length > 1 && <Abrir aberto titulo={`Gráfico: ${ORDENS.find((o) => o.k === ordem)!.nome.toLowerCase()} em ${ano}`}>
         <Barras fmt={dinheiro ? (v) => reais(v) : (v) => v.toLocaleString("pt-BR")}
-          itens={lista.slice(0, 15).map((d) => ({ label: <Link to={`/deputado-estadual/${d.id}`}>{d.nome}</Link>, nota: d.partido, valor: d.por_ano[ano]?.[ordem as Exclude<Ordem, "nome">] || 0, cor: corPartido(d.partido) }))} />
+          itens={lista.slice(0, 15).map((d) => ({ label: <Link className="foto-mini" to={`/deputado-estadual/${d.id}`}><FotoPolitico url={d.foto} nome={d.nome} tamanho={24} decorativa />{d.nome}</Link>, nota: d.partido, valor: d.por_ano[ano]?.[ordem as Exclude<Ordem, "nome">] || 0, cor: corPartido(d.partido) }))} />
         {porPartido.length > 1 && <Abrir titulo="Somado por partido">
           <Barras fmt={dinheiro ? (v) => reais(v) : (v) => v.toLocaleString("pt-BR")}
             itens={porPartido.map((p) => ({ label: p.partido, nota: `${p.n} deputado${p.n === 1 ? "" : "s"}`, valor: p.valor, cor: corPartido(p.partido) }))} />
@@ -93,7 +94,7 @@ export default function Assembleia() {
       <div className="list">
         {lista.map((d) => (
           <Link key={d.id} to={`/deputado-estadual/${d.id}`} className="person">
-            <span className="avatar sigla-avatar" aria-hidden="true" style={{ background: corPartido(d.partido) }}>{d.partido.slice(0, 4)}</span>
+            <FotoPolitico url={d.foto} nome={d.nome} decorativa />
             <div style={{ minWidth: 0 }}>
               <div className="pname">{d.nome}</div>
               <div className="meta">Deputado estadual · {d.partido}{d.em_exercicio === false && <> · <span className="fora-cargo">fora do cargo hoje</span></>}</div>

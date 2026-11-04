@@ -240,6 +240,58 @@ def test_montagem_completa(estado, nacional, tmp_path):
     assert r.erros == []
 
 
+def test_foto_oficial_dos_deputados_estaduais(estado, nacional, tmp_path):
+    """A API da ALMG não traz a foto: o endereço da página oficial é conferido, e quem não tem foto fica sem."""
+    saida, _ = _montar(nacional, tmp_path)
+    idx = {d["id"]: d for d in _json(saida, "almg/deputados.json")["deputados"]}
+    assert idx["20003"]["foto"] == "https://www.almg.gov.br/export/sites/portal/a-assembleia/deputados/fotos/20003.jpg"
+    assert _json(saida, "almg/d/20003.json")["foto"] == idx["20003"]["foto"]
+    assert "foto" not in idx["20007"], "sem foto na ALMG: nada de link quebrado, o site mostra as iniciais"
+    # na execução seguinte, as fotos conferidas ficam no cache (não pergunta de novo à ALMG)
+    estado.chamadas.clear()
+    _montar(nacional, tmp_path)
+    assert not any("/fotos/" in u for u in estado.chamadas)
+
+
+def test_foto_continua_se_o_site_da_almg_cair(estado, nacional, tmp_path):
+    _montar(nacional, tmp_path)
+    guardado = tmp_path / "cache" / "almg" / "fotos.json"
+    fotos = json.loads(guardado.read_text(encoding="utf-8"))
+    for g in fotos.values():  # conferidas há 40 dias: hora de conferir de novo
+        g["visto"] = (dt.date.today() - dt.timedelta(days=40)).isoformat()
+    guardado.write_text(json.dumps(fotos), encoding="utf-8")
+    estado.falhar("/fotos/", "fora")
+    saida, _ = _montar(nacional, tmp_path)
+    idx = {d["id"]: d for d in _json(saida, "almg/deputados.json")["deputados"]}
+    assert idx["20003"].get("foto"), "a ALMG caiu agora: a foto conferida há pouco continua"
+    assert "foto" not in idx["20007"]
+
+
+def test_foto_do_governador_e_do_vice_vem_do_tse(estado, nacional, tmp_path):
+    saida, _ = _montar(nacional, tmp_path)
+    gov = _json(saida, "estado/governo.json")
+    e22, e18 = gov["eleicoes"]
+    assert e22["governador"]["foto"] == "fotos/tse/2022/130002022000.jpg"
+    assert (saida / e22["governador"]["foto"]).read_bytes().startswith(b"\xff\xd8")
+    assert e22["vice"]["foto"] == "fotos/tse/2022/130012022000.jpg"
+    assert "foto" not in e18["vice"], "o ZIP de 2018 não tem a foto do vice: o site mostra as iniciais"
+    assert all("sq" not in p for e in gov["eleicoes"] for p in (e["governador"], e["vice"]))
+    assert len(list((saida / "fotos").rglob("*.jpg"))) == 3, "só as fotos de quem foi eleito vão para o site"
+    # o ZIP (dezenas de MB) não fica no cache; as fotos usadas, sim, e não se baixa de novo
+    assert not list((tmp_path / "cache").rglob("fotos_*.zip"))
+    n = len(estado.tse.chamadas)
+    _montar(nacional, tmp_path)
+    assert not any("/fotos/" in u for u in estado.tse.chamadas[n:])
+
+
+def test_sem_o_zip_de_fotos_do_tse_o_governo_continua(estado, nacional, tmp_path):
+    estado.tse.falhas["/fotos/"] = "fora"
+    saida, _ = _montar(nacional, tmp_path)
+    gov = _json(saida, "estado/governo.json")
+    assert gov["eleicoes"][0]["governador"]["nome"] and "foto" not in gov["eleicoes"][0]["governador"]
+    assert "sq" not in gov["eleicoes"][0]["governador"]
+
+
 def test_nenhum_cpf_em_nenhum_arquivo(estado, nacional, tmp_path):
     saida, _ = _montar(nacional, tmp_path)
     for f in saida.rglob("*.json"):

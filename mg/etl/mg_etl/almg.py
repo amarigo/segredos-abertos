@@ -16,7 +16,8 @@ Fontes (dados abertos da ALMG, https://dadosabertos.almg.gov.br/):
   consultados de novo a cada poucos dias (o deputado tem prazo para apresentar as notas). Para não sobrecarregar
   a ALMG, cada execução faz no máximo ORCAMENTO_VERBA consultas, dos meses mais novos para os mais antigos: o
   histórico se completa em poucos dias;
-- arquivo "proposicoes" (um por ano): cada proposta, com os autores e a situação (aprovada, arquivada...).
+- arquivo "proposicoes" (um por ano): cada proposta, com os autores e a situação (aprovada, arquivada...);
+- foto oficial: a API não traz; usamos o endereço da foto da página oficial do deputado (veja FOTOS_DEPUTADO).
 
 CPF: quem emitiu uma nota como pessoa física aparece só como "pessoa física", sem nenhum número.
 A ALMG não publica nos dados abertos o voto de cada deputado nem a presença em Plenário; por isso não há essas
@@ -48,6 +49,13 @@ PAGINA_VERBA_DEPUTADO = PAGINA_VERBA + "detalhe.html?id={id}"
 PAGINA_DEPUTADO = "https://www.almg.gov.br/a-assembleia/deputados/deputado/?id={id}"
 # Conferido: /proposicoes/PL/3221/2025/ dá 404; a página do texto do projeto é esta
 PAGINA_PROPOSICAO = "https://www.almg.gov.br/atividade-parlamentar/projetos-de-lei/texto/?tipo={sigla}&num={numero}&ano={ano}"
+# Foto oficial de cada deputado. A API da ALMG não traz a foto (conferido em 04/11/2026: /api/v2/deputados/{id}
+# devolve nome, partido, contatos e mandatos, sem nenhum campo de imagem). A página oficial do deputado
+# (PAGINA_DEPUTADO) mostra a foto num endereço montado pelo mesmo id da API (opção 3 da regra do projeto).
+# Conferido em 04/11/2026: este endereço respondeu a foto dos 77 deputados em exercício. Cada endereço é conferido
+# de novo na coleta (precisa responder uma imagem); se não responder, o site mostra as iniciais.
+FOTOS_DEPUTADO = ("https://www.almg.gov.br/export/sites/portal/a-assembleia/deputados/fotos/{id}.jpg",)
+DIAS_FOTO = 30  # foto achada é conferida de novo depois de 30 dias; foto que faltou, depois de 7
 INICIO_LEGISLATURA = 2023
 LEGISLATURA_2023 = 20  # a 20ª legislatura vai de fevereiro de 2023 a janeiro de 2027; cada uma dura 4 anos
 ANOS_RECENTES = 2  # foco no ano atual e no anterior (pedido em 24/10/2026): a verba desses anos completa primeiro
@@ -73,6 +81,41 @@ def _primeiro_ano(hoje: dt.date) -> int:
 
 
 # ---------------------------------------------------------------- quem são
+
+def _e_imagem(url: str) -> bool:
+    """O endereço responde uma imagem de verdade (não uma página de erro)?"""
+    try:
+        r = get(url, tries=2, timeout=30, headers={"Accept": "image/*"})
+    except Exception:  # noqa: BLE001
+        return False
+    return r.headers.get("content-type", "").lower().startswith("image/") and len(r.content) > 1000
+
+
+def fotos(cache: Path, ids: list[str], hoje: dt.date | None = None) -> dict[str, str]:
+    """Foto oficial de cada deputado (id -> link), conferida na ALMG. Guarda o que achou em cache por DIAS_FOTO."""
+    hoje = hoje or dt.date.today()
+    alvo = cache / "almg" / "fotos.json"
+    try:
+        guardado = json.loads(alvo.read_text(encoding="utf-8")) if alvo.exists() else {}
+    except ValueError:
+        guardado = {}
+    for i in ids:
+        g = guardado.get(i) or {}
+        try:
+            idade = (hoje - dt.date.fromisoformat(g.get("visto", ""))).days
+        except ValueError:
+            idade = 10 ** 6
+        if idade < (DIAS_FOTO if g.get("url") else 7):
+            continue
+        achada = next((u for u in (m.format(id=i) for m in FOTOS_DEPUTADO) if _e_imagem(u)), "")
+        if not achada and g.get("url") and idade < 3 * DIAS_FOTO:
+            achada = g["url"]  # o site da ALMG pode ter falhado agora; a foto conferida há pouco continua valendo
+        guardado[i] = {"url": achada, "visto": hoje.isoformat()}
+        fontes.pausa(0.2)
+    alvo.parent.mkdir(parents=True, exist_ok=True)
+    alvo.write_text(json.dumps(guardado, ensure_ascii=False), encoding="utf-8")
+    return {i: url_segura(guardado[i]["url"]) for i in ids if url_segura((guardado.get(i) or {}).get("url"))}
+
 
 def em_exercicio(cache: Path) -> list[dict]:
     """Deputados em exercício (id, nome, partido). Se a API falhar, usa a última lista boa do cache."""
@@ -505,6 +548,9 @@ def coletar(saida: Path, cache: Path, deps: list[dict], emendas: dict | None, ho
     # Ano completo: todos os meses de todos os deputados já consultados na ALMG
     completo = {str(a): bool(por_mes) and all({m for (x, m) in meses if x == a} >= esperados[a] for meses in por_mes.values())
                 for a in anos}
+    foto = fotos(cache, sorted(ids), hoje)
+    if ids and len(foto) < len(ids):
+        log.info("ALMG: %d de %d deputados sem foto oficial (o site mostra as iniciais)", len(ids) - len(foto), len(ids))
     textos = {}
     for ano in anos:
         t = fontes.baixar(CSV_PROPOSICOES.format(ano=ano), cache / "almg" / f"proposicoes_{ano}.csv",
@@ -540,6 +586,8 @@ def coletar(saida: Path, cache: Path, deps: list[dict], emendas: dict | None, ho
         r = {"id": i, "nome": d["nome"], "partido": d["partido"], "em_exercicio": d.get("em_exercicio", True),
              "url": links.get(i) or PAGINA_DEPUTADO.format(id=i), "url_verba": PAGINA_VERBA_DEPUTADO.format(id=i),
              "por_ano": por_ano}
+        if foto.get(i):
+            r["foto"] = foto[i]
         if d.get("outros_nomes"):
             r["outros_nomes"] = d["outros_nomes"]
         resumo.append(r)

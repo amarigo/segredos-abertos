@@ -9,6 +9,7 @@ import {
   MESES_LONGOS, descricaoCurta, tipoVotacao, type AnoDetalhe, type NotasPolitico, type Pessoa,
 } from "../data";
 import { AvisosFim, EmRevisao } from "../components/Selo";
+import { FotoPerfil } from "../components/Foto";
 import { norm } from "./Home";
 
 export default function PoliticoPage() {
@@ -22,7 +23,7 @@ export default function PoliticoPage() {
   return (
     <>
       <section className="profile">
-        {linkSeguro(p.foto) ? <img src={linkSeguro(p.foto)} alt={`Foto de ${p.nome}`} /> : <span className="avatar" style={{ width: 112, height: 112 }} />}
+        <FotoPerfil url={p.foto} nome={p.nome} />
         <div>
           <span className="eyebrow">{p.cargo} · {p.uf}</span>
           <h1>{p.nome}</h1>

@@ -2182,5 +2182,9 @@
 ". Escolha o ano no topo da página. Acima estão as maiores notas de": ". Choose the year at the top of the page. Above are the largest invoices of",
 "Fonte: arquivo anual da cota da Câmara dos Deputados (dados abertos), campo do tipo de despesa. \"Abrir nota\" mostra a imagem da nota fiscal no site oficial; passagens compradas pela Câmara e contas de telefone não têm imagem e abrem a página oficial da despesa.": "Source: annual expense allowance file of the Chamber of Deputies (open data), expense type field. \"Open invoice\" shows the invoice image on the official website; tickets bought by the Chamber and phone bills have no image and open the official expense page.",
 "Fonte: API de despesas da cota (CEAPS) do Senado Federal, campo do tipo de despesa. O Senado não publica a imagem das notas: o link abre a lista oficial de despesas do senador, por tipo e ano.": "Source: Federal Senate expense allowance API (CEAPS), expense type field. The Senate does not publish invoice images: the link opens the senator's official expense list, by type and year.",
-"Valores que a página oficial soma mas que ainda não têm nota publicada não aparecem nesta lista (veja o aviso no início da cota).": "Amounts that the official page adds up but that have no published invoice yet do not appear in this list (see the notice at the start of the allowance section)."
+"Valores que a página oficial soma mas que ainda não têm nota publicada não aparecem nesta lista (veja o aviso no início da cota).": "Amounts that the official page adds up but that have no published invoice yet do not appear in this list (see the notice at the start of the allowance section).",
+"Foto oficial de {*}": "Official photo of {*}",
+"{*} (sem foto oficial)": "{*} (no official photo)",
+"Foto:": "Photo:",
+"Foto oficial publicada por: {*}": "Official photo published by: {*}"
 }

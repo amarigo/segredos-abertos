@@ -835,3 +835,13 @@ tr.linha-aberta > td { background: var(--tint); }
 .filtros legend { float: left; margin-right: 4px; font-size: .78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .filtros select { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: .9rem; }
 .filtros-conta { font-size: .88rem; color: var(--muted); }
+
+/* Foto oficial do político (components/Foto.tsx): sem foto, círculo neutro com as iniciais */
+.avatar.foto-oficial { display: block; flex: none; }
+.avatar.foto-sem { display: grid; place-items: center; flex: none; font-weight: 800; color: var(--ink-2); letter-spacing: .02em; line-height: 1; }
+.foto-perfil { margin: 0; display: grid; justify-items: center; gap: 4px; }
+.foto-perfil .avatar { border: 4px solid var(--surface); box-shadow: 0 0 0 2px var(--ink); }
+.foto-perfil figcaption { font-size: .72rem; text-align: center; }
+.foto-mini { display: inline-flex; align-items: center; gap: 8px; }
+@media (max-width: 520px) { .foto-perfil .avatar { width: 72px !important; height: 72px !important; font-size: 1.1rem !important; } }
+.stat .foto-perfil { justify-items: start; margin: 6px 0 2px; }

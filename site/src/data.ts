@@ -307,6 +307,8 @@ export const numero = (n: number) => (n || 0).toLocaleString("pt-BR");
 /* Minas Nossa: deputados estaduais (ALMG) */
 export interface AlmgAno { verba: number; projetos: number; requerimentos: number; aprovadas: number; emendas_indicado: number; emendas_pago: number }
 export interface DeputadoEstadualResumo { id: string; nome: string; partido: string; url: string; url_verba?: string; por_ano: Record<string, AlmgAno>;
+  /** foto oficial publicada pela ALMG (conferida na coleta); sem foto, a página mostra as iniciais */
+  foto?: string;
   /** false: teve mandato nesta legislatura e saiu do cargo (suplente que devolveu a vaga, renúncia, afastamento) */
   em_exercicio?: boolean; outros_nomes?: string[] }
 export interface AlmgIndice { anos: string[]; medianas: Record<string, AlmgAno>; deputados: DeputadoEstadualResumo[]; fontes: { verba: string; dados: string };
@@ -334,7 +336,9 @@ export interface EmendasEstado {
     autores: { nome: string; deputado: string | null; indicado: number; pago: number; n: number }[] }>;
 }
 /* Minas Nossa: governo do estado */
-export interface PessoaGoverno { nome: string; partido: string; partido_hoje: string; mudou: string | null }
+export interface PessoaGoverno { nome: string; partido: string; partido_hoje: string; mudou: string | null;
+  /** foto oficial do TSE, publicada junto dos dados (fotos/tse/{ano}/{sq}.jpg) */
+  foto?: string }
 export interface Governo {
   eleicoes: { eleicao: number; inicio: number; fim: number; turnos: number; governador: PessoaGoverno & { votos: number; pct: number }; vice: PessoaGoverno | null;
     candidatos: { nome: string; partido: string; votos: number; pct: number; eleito: boolean }[] }[];

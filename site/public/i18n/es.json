@@ -2182,5 +2182,9 @@
 ". Escolha o ano no topo da página. Acima estão as maiores notas de": ". Elija el año en la parte superior de la página. Arriba están las mayores facturas de",
 "Fonte: arquivo anual da cota da Câmara dos Deputados (dados abertos), campo do tipo de despesa. \"Abrir nota\" mostra a imagem da nota fiscal no site oficial; passagens compradas pela Câmara e contas de telefone não têm imagem e abrem a página oficial da despesa.": "Fuente: archivo anual de la cuota de la Cámara de Diputados (datos abiertos), campo del tipo de gasto. \"Abrir factura\" muestra la imagen de la factura en el sitio oficial; los pasajes comprados por la Cámara y las cuentas de teléfono no tienen imagen y abren la página oficial del gasto.",
 "Fonte: API de despesas da cota (CEAPS) do Senado Federal, campo do tipo de despesa. O Senado não publica a imagem das notas: o link abre a lista oficial de despesas do senador, por tipo e ano.": "Fuente: API de gastos de la cuota (CEAPS) del Senado Federal, campo del tipo de gasto. El Senado no publica la imagen de las facturas: el enlace abre la lista oficial de gastos del senador, por tipo y año.",
-"Valores que a página oficial soma mas que ainda não têm nota publicada não aparecem nesta lista (veja o aviso no início da cota).": "Los valores que la página oficial suma pero que aún no tienen factura publicada no aparecen en esta lista (vea el aviso al inicio de la cuota)."
+"Valores que a página oficial soma mas que ainda não têm nota publicada não aparecem nesta lista (veja o aviso no início da cota).": "Los valores que la página oficial suma pero que aún no tienen factura publicada no aparecen en esta lista (vea el aviso al inicio de la cuota).",
+"Foto oficial de {*}": "Foto oficial de {*}",
+"{*} (sem foto oficial)": "{*} (sin foto oficial)",
+"Foto:": "Foto:",
+"Foto oficial publicada por: {*}": "Foto oficial publicada por: {*}"
 }

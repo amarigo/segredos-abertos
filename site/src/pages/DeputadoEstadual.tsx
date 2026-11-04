@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Abrir, Barras, Explain, GastoMensal, Loading, OndeVer, useData } from "../components/ui";
 import { norm } from "./Home";
-import { cnpjFmt, corPartido, dataBR, linkSeguro, reais, type AlmgIndice, type DeputadoEstadual, type ProposicaoAlmg, type VerbaAno } from "../data";
+import { cnpjFmt, dataBR, linkSeguro, reais, type AlmgIndice, type DeputadoEstadual, type ProposicaoAlmg, type VerbaAno } from "../data";
 import { Metrica } from "./Atuacao";
+import { FotoPerfil } from "../components/Foto";
 import { AvisosFim } from "../components/Selo";
 
 type Aba = "gastos" | "atuacao" | "emendas";
@@ -29,7 +30,7 @@ export default function DeputadoEstadualPage() {
   return (
     <>
       <section className="profile">
-        <span className="avatar sigla-avatar" style={{ width: 96, height: 96, fontSize: "1rem", background: corPartido(d.partido) }} aria-hidden="true">{d.partido.slice(0, 5)}</span>
+        <FotoPerfil url={d.foto} nome={d.nome} />
         <div>
           <span className="eyebrow">Deputado estadual · Assembleia de Minas Gerais</span>
           <h1>{d.nome}</h1>

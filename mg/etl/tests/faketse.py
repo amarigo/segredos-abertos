@@ -130,7 +130,9 @@ class FakeTSE:
                         sq += 1
                         sit = ("2º TURNO" if turnos == 2 and turno == 1 and i < 2 else
                                "ELEITO" if (turno == turnos and i == 0) else "NÃO ELEITO")
-                        vot.append({**base, "NR_TURNO": turno, "DS_CARGO": cargo, "SQ_CANDIDATO": f"{cargo[:3]}{i}",
+                        # governador: número sequencial no formato do TSE (só dígitos), o mesmo do ZIP de fotos
+                        sqc = f"13000{ano}{i:03d}" if cargo == "GOVERNADOR" else f"{cargo[:3]}{i}"
+                        vot.append({**base, "NR_TURNO": turno, "DS_CARGO": cargo, "SQ_CANDIDATO": sqc,
                                     "NR_CANDIDATO": str(10 + i), "NM_CANDIDATO": f"{cargo} {i}", "SG_PARTIDO": parts[i % len(parts)],
                                     "QT_VOTOS_NOMINAIS": rng.randint(100, 9000) // (i + 1), "DS_SIT_TOT_TURNO": sit})
         return vot
@@ -148,6 +150,7 @@ class FakeTSE:
             out.append({**base, "DS_CARGO": "VICE-GOVERNADOR", "NR_CANDIDATO": f"0{10 + i}", "NM_CANDIDATO": f"VICE TROCADO {i}",
                         "SG_PARTIDO": parts[(i + 1) % len(parts)], "DS_SITUACAO_CANDIDATURA": "INAPTO", "DS_DETALHE_SITUACAO_CAND": "INDEFERIDO"})
             out.append({**base, "DS_CARGO": "VICE-GOVERNADOR", "NR_CANDIDATO": f"0{10 + i}", "NM_CANDIDATO": f"VICE DO GOVERNADOR {i}",
+                        "SQ_CANDIDATO": f"13001{ano}{i:03d}",
                         "NM_URNA_CANDIDATO": f"Vice do Governador {i}", "SG_PARTIDO": parts[(i + 1) % len(parts)]})
         out.append({**base, "CD_TIPO_ELEICAO": 1, "NM_TIPO_ELEICAO": "Eleição Suplementar", "DS_CARGO": "VICE-GOVERNADOR",
                     "NR_CANDIDATO": "10", "NM_CANDIDATO": "VICE SUPLEMENTAR", "SG_PARTIDO": "PSOL"})
@@ -174,8 +177,25 @@ class FakeTSE:
             z.writestr("leiame.pdf", b"%PDF-1.4")
         return buf.getvalue()
 
+    def fotos_zip(self, ano: int) -> bytes:
+        """ZIP de fotos dos candidatos, como o do TSE (FMG{sq}_div.jpg). Em 2018 falta a foto do vice."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("leiame.pdf", b"%PDF-1.4")
+            for i in range(3):
+                z.writestr(f"FMG13000{ano}{i:03d}_div.jpg", b"\xff\xd8\xff\xe0" + bytes([i]) * 3000)
+                if ano != 2018:
+                    z.writestr(f"FMG13001{ano}{i:03d}_div.jpg", b"\xff\xd8\xff\xe0" + bytes([i + 5]) * 3000)
+            z.writestr("FMG999_div.jpg", b"<html>nao e foto</html>")
+        return buf.getvalue()
+
     def responder(self, url: str) -> bytes:
         self.chamadas.append(url)
+        f = re.search(r"/fotos/foto_cand(\d{4})_MG_div\.zip$", url)
+        if f:
+            if any(p in url and mo == "fora" for p, mo in self.falhas.items()):
+                raise requests.ConnectionError("TSE fora do ar")
+            return self.fotos_zip(int(f.group(1)))
         m = re.search(r"/(votacao_candidato_munzona|consulta_cand)_(\d{4})\.zip$", url)
         if not m:
             raise requests.HTTPError(f"404 {url}")

@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Explain, Loading, ResultadoChip, VotoBarra, VotoChip, VotoLegenda, useData } from "../components/ui";
-import { casaNome, dataBR, descricaoCurta, linkSeguro, proposicaoNome, tipoVotacao, type Votacao, type VotacaoResumo } from "../data";
+import { casaNome, dataBR, descricaoCurta, linkSeguro, proposicaoNome, tipoVotacao, type Resumo, type Votacao, type VotacaoResumo } from "../data";
+import { FotoPolitico } from "../components/Foto";
 import { norm } from "./Home";
 import { MG } from "../recorte";
 import { AvisosFim, EmRevisao } from "../components/Selo";
@@ -14,6 +15,8 @@ export default function VotacaoPage() {
   const { id = "" } = useParams();
   const { data: v, error } = useData<Votacao>(`v/${id}.json`);
   const { data: todas } = useData<VotacaoResumo[]>("votacoes.json");
+  const { data: pols } = useData<Resumo[]>("politicos.json");
+  const fotos = useMemo(() => new Map((pols || []).map((p) => [p.id, p.foto])), [pols]);
   const [q, setQ] = useState("");
   const votos = useMemo(() => (v?.votos || []).filter((x) => !q || norm(`${x.nome} ${x.partido} ${x.uf}`).includes(norm(q))), [v, q]);
   if (!v) return <Loading error={error} />;
@@ -131,7 +134,7 @@ export default function VotacaoPage() {
             <tbody>
               {votos.map((x) => (
                 <tr key={x.politico}>
-                  <td><Link to={`/p/${x.politico}?aba=votos`}>{x.nome}</Link></td>
+                  <td><Link className="foto-mini" to={`/p/${x.politico}?aba=votos`}><FotoPolitico url={fotos.get(x.politico)} nome={x.nome} tamanho={28} decorativa />{x.nome}</Link></td>
                   <td>{x.partido}-{x.uf}</td>
                   <td><VotoChip voto={x.voto} /></td>
                 </tr>
