@@ -45,9 +45,11 @@ CKAN = 'https://dadosabertos.tse.jus.br/api/3/action/package_show?id={id}'
 PACOTE_CAND = 'candidatos-2026'
 ARQ_CAND = 'consulta_cand_2026.zip'
 ARQ_VAGAS = 'consulta_vagas_2026.zip'
+ARQ_COMPL = 'consulta_cand_complementar_2026.zip'
 # endereços conhecidos, usados só se a API do portal não responder
 RESERVA = {ARQ_CAND: 'https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2026.zip',
-           ARQ_VAGAS: 'https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_vagas/consulta_vagas_2026.zip'}
+           ARQ_VAGAS: 'https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_vagas/consulta_vagas_2026.zip',
+           ARQ_COMPL: 'https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand_complementar/consulta_cand_complementar_2026.zip'}
 PAGINA_CAND = 'https://dadosabertos.tse.jus.br/dataset/candidatos-2026'
 
 CAMARA = 'https://dadosabertos.camara.leg.br/api/v2'
@@ -123,15 +125,35 @@ def _csvs_do_zip(conteudo, prefixo):
 
 
 def baixar_candidatos(pasta):
-    """Do arquivo de candidatos, guarda só os cargos estaduais e federais (sem presidente) e só as COLUNAS."""
+    """Do arquivo de candidatos, guarda só os cargos estaduais e federais (sem presidente) e só as COLUNAS. Desde 2024
+    parte das colunas (como ST_REELEICAO) pode estar no arquivo "Informações complementares": o que faltar no principal
+    vem de lá, pelo SQ_CANDIDATO."""
     url = url_arquivo(ARQ_CAND)
     r = _get(url, timeout=600)
-    linhas = []
+    linhas, colunas = [], set()
     for row in _csvs_do_zip(r.content, 'consulta_cand_2026'):
+        colunas.update(row)
         if row.get('CD_CARGO') in CARGOS:
             linhas.append({k: (row.get(k) or '').strip() for k in COLUNAS})
     if not linhas:
         raise RuntimeError('arquivo de candidatos sem nenhuma linha de governador, senador ou deputado')
+    faltam = [k for k in COLUNAS if k not in colunas]
+    print('candidatos: colunas do arquivo principal:', ', '.join(sorted(colunas)), flush=True)
+    if faltam:
+        rc = _get(url_arquivo(ARQ_COMPL), timeout=600)
+        compl, cols_c = {}, set()
+        for row in _csvs_do_zip(rc.content, 'consulta_cand_complementar_2026'):
+            cols_c.update(row)
+            compl[row.get('SQ_CANDIDATO', '').strip()] = row
+        print('candidatos: colunas do arquivo complementar:', ', '.join(sorted(cols_c)), flush=True)
+        for x in linhas:
+            c = compl.get(x['SQ_CANDIDATO'], {})
+            for k in faltam:
+                x[k] = (c.get(k) or '').strip()
+        faltam = [k for k in faltam if k not in cols_c]
+    if faltam:
+        print('::warning title=Eleitos 2026::colunas que o TSE não publicou nos arquivos de candidatos: '
+              + ', '.join(faltam), flush=True)
     with gzip.open(os.path.join(pasta, 'candidatos.csv.gz'), 'wt', encoding='utf-8', newline='', compresslevel=9) as f:
         w = csv.DictWriter(f, fieldnames=COLUNAS, delimiter=';')
         w.writeheader()
