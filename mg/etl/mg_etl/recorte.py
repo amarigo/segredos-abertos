@@ -44,6 +44,8 @@ def recortar(nacional: Path, saida: Path, uf: str = UF) -> dict:
 
     for p in pols:
         _copiar(nacional / "p" / f"{p['id']}.json", saida / "p" / f"{p['id']}.json")
+        for f in sorted((nacional / "p" / "notas").glob(f"{p['id']}-*.json")):  # lista completa de notas de cada ano
+            _copiar(f, saida / "p" / "notas" / f.name)
     write_json(saida / "politicos.json", pols)
 
     vots = _votacoes(nacional, saida, ids)

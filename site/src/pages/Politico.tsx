@@ -6,7 +6,7 @@ import { Abrir, Barras, COR_GRUPO, Espectro, Explain, GastoMensal, LinkNota, Loa
 import {
   GRUPO_CURTO, GRUPO_EXPLICA, cnpjFmt, dataBR, linkSeguro, pct, proposicaoNome, reais,
   type Grupo, type Meta, type Politico, type Recursos, type Resumo, type VotacaoResumo,
-  MESES_LONGOS, descricaoCurta, tipoVotacao, type AnoDetalhe, type Pessoa,
+  MESES_LONGOS, descricaoCurta, tipoVotacao, type AnoDetalhe, type NotasPolitico, type Pessoa,
 } from "../data";
 import { AvisosFim, EmRevisao } from "../components/Selo";
 import { norm } from "./Home";
@@ -172,6 +172,8 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
         <h2>Cota por mês em {ano}</h2>
         <GastoMensal meses={d.meses} ano={ano} cor="var(--s2)" />
       </section>
+
+      <TodasNotas p={p} d={d} ano={ano} />
 
       <ForaDoTotal d={d} ano={ano} />
     </>
@@ -422,6 +424,83 @@ function Votos({ p }: { p: Politico }) {
 const tot = (c: Record<string, number | undefined>) => (c.Sim || 0) + (c["Não"] || 0) + (c.Outros || 0);
 
 /* Passagens que faltam nos dados abertos e a diferença que sobra, explicadas */
+/* Todas as notas fiscais do ano, cada uma com o tipo de despesa oficial (carro alugado, aluguel de escritório...),
+   com filtro por tipo e por fornecedor. O arquivo é carregado só quando a seção aparece. */
+function TodasNotas({ p, d, ano }: { p: Politico; d: AnoDetalhe; ano: string }) {
+  const n_ano = d.n_notas || 0;
+  const { data, error } = useData<NotasPolitico>(n_ano ? `p/notas/${p.id}-${ano}.json` : null);
+  const [cat, setCat] = useState("");
+  const [q, setQ] = useState("");
+  const [n, setN] = useState(50);
+  const notas = useMemo(() => {
+    if (!data) return [];
+    const i = (c: string) => data.colunas.indexOf(c);
+    const [iData, iCat, iForn, iDoc, iValor, iUrl, iLink, iDet] = ["data", "categoria", "fornecedor", "doc", "valor", "url", "link", "detalhe"].map(i);
+    return data.notas.map((x) => ({ data: String(x[iData] || ""), categoria: String(x[iCat]), fornecedor: String(x[iForn]), doc: String(x[iDoc] || ""),
+      valor: Number(x[iValor]), url: String(x[iUrl] || ""), link: String(x[iLink] || ""), detalhe: String(x[iDet] || "") }));
+  }, [data]);
+  // Tipos de despesa agrupados pelo tema simples, com quantas notas e quanto somam (do maior para o menor)
+  const grupos = useMemo(() => {
+    const porCat = new Map<string, { n: number; valor: number }>();
+    for (const x of notas) { const c = porCat.get(x.categoria) || { n: 0, valor: 0 }; c.n++; c.valor += x.valor; porCat.set(x.categoria, c); }
+    const porTema = new Map<string, { valor: number; cats: [string, { n: number; valor: number }][] }>();
+    for (const [c, v] of porCat) {
+      const t = data?.temas[c] || c;
+      const g = porTema.get(t) || { valor: 0, cats: [] };
+      g.valor += v.valor; g.cats.push([c, v]); porTema.set(t, g);
+    }
+    return [...porTema].sort((a, b) => b[1].valor - a[1].valor).map(([t, g]) => [t, g.cats.sort((a, b) => b[1].valor - a[1].valor)] as const);
+  }, [notas, data]);
+  const lista = useMemo(() => notas.filter((x) => (!cat || x.categoria === cat) && (!q || norm(`${x.fornecedor} ${x.detalhe}`).includes(norm(q)))), [notas, cat, q]);
+  const soma = lista.reduce((s, x) => s + x.valor, 0);
+  const comListas = Object.keys(p.anos).filter((a) => p.anos[a].n_notas).sort();
+  return (
+    <section id="todas-notas">
+      <h2>Todas as notas fiscais de {ano}{n_ano ? ` (${n_ano.toLocaleString("pt-BR")})` : ""}</h2>
+      <p className="muted small">Cada nota com o tipo de despesa oficial (por exemplo, aluguel de carro, aluguel de escritório, combustível ou divulgação), como a fonte oficial informa, e o link para o documento original.</p>
+      {d.n_notas === undefined ? <div className="empty">A lista completa de notas está disponível só para os anos mais recentes{comListas.length ? ` (${comListas.join(", ")})` : ""}. Escolha o ano no topo da página. Acima estão as maiores notas de {ano}.</div>
+        : !n_ano ? <div className="empty">Nenhuma nota fiscal publicada para {p.nome} em {ano}.</div>
+        : !data ? <Loading error={error} /> : <>
+        <div className="search">
+          <select aria-label="Tipo de despesa" value={cat} onChange={(ev) => { setCat(ev.target.value); setN(50); }}>
+            <option value="">Todos os tipos de despesa ({notas.length.toLocaleString("pt-BR")})</option>
+            {grupos.map(([tema, cats]) => (
+              <optgroup key={tema} label={tema}>
+                {cats.map(([c, v]) => <option key={c} value={c}>{`${c} · ${v.n.toLocaleString("pt-BR")} ${v.n > 1 ? "notas" : "nota"} · ${reais(v.valor)}`}</option>)}
+              </optgroup>
+            ))}
+          </select>
+          <input aria-label="Filtrar por fornecedor" value={q} onChange={(ev) => { setQ(ev.target.value); setN(50); }} placeholder="Filtrar por fornecedor" />
+        </div>
+        <p className="small" role="status"><strong>{lista.length.toLocaleString("pt-BR")}</strong> {lista.length !== 1 ? "notas" : "nota"} · <strong className="num">{reais(soma, true)}</strong>{cat && <> em <em>{cat}</em></>}</p>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th className="so-largo">Data</th><th>Tipo de despesa e fornecedor</th><th className="r">Valor</th><th className="so-largo">Nota</th></tr></thead>
+            <tbody>
+              {lista.slice(0, n).map((x, i) => (
+                <tr key={i}>
+                  <td className="num so-largo">{x.data ? dataBR(x.data) : "Sem data"}</td>
+                  <td><button className="chip cat-nota" title="Ver só as notas deste tipo" onClick={() => { setCat(x.categoria); setN(50); }}>{x.categoria}</button>
+                    <div>{/^\d{14}$/.test(x.doc) ? <Link to={`/e/${x.doc}`}>{x.fornecedor}</Link> : x.fornecedor}{x.doc && !/^\d{14}$/.test(x.doc) && <span className="small muted mono"> · {x.doc}</span>}</div>
+                    {x.detalhe && <div className="small">{x.detalhe}</div>}
+                    <div className="small so-celular"><span className="num muted">{x.data ? dataBR(x.data) : "Sem data"}</span> · <LinkNota url={x.url} link={x.link || (x.url ? "nota" : "")} /></div></td>
+                  <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(x.valor, true)}</td>
+                  <td className="small so-largo"><LinkNota url={x.url} link={x.link || (x.url ? "nota" : "")} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {lista.length > n && <button className="link" onClick={() => setN(n + 200)}>Mostrar mais notas ({(lista.length - n).toLocaleString("pt-BR")} restantes)</button>}
+        <p className="muted small">{p.casa === "camara"
+          ? "Fonte: arquivo anual da cota da Câmara dos Deputados (dados abertos), campo do tipo de despesa. \"Abrir nota\" mostra a imagem da nota fiscal no site oficial; passagens compradas pela Câmara e contas de telefone não têm imagem e abrem a página oficial da despesa."
+          : "Fonte: API de despesas da cota (CEAPS) do Senado Federal, campo do tipo de despesa. O Senado não publica a imagem das notas: o link abre a lista oficial de despesas do senador, por tipo e ano."}</p>
+        {(d.sem_nota_meses || []).length > 0 && <p className="muted small">Valores que a página oficial soma mas que ainda não têm nota publicada não aparecem nesta lista (veja o aviso no início da cota).</p>}
+      </>}
+    </section>
+  );
+}
+
 function SemNota({ d, ano }: { d: AnoDetalhe; ano: string }) {
   const lista = d.passagens_da_lista;
   const resto = d.sem_nota_meses || [];

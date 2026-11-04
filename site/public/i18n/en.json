@@ -2160,5 +2160,21 @@
 "{0} ainda não foi publicado": "{0} has not been published yet",
 "{0} e {1} ainda não foram publicados": "{0} and {1} have not been published yet",
 "e {0} saiu incompleto": "and {0} came out incomplete",
-"; mostramos {0}, o último ano completo.": "; we show {0}, the latest complete year."
+"; mostramos {0}, o último ano completo.": "; we show {0}, the latest complete year.",
+"Cada nota com o tipo de despesa oficial (por exemplo, aluguel de carro, aluguel de escritório, combustível ou divulgação), como a fonte oficial informa, e o link para o documento original.": "Each invoice with its official expense type (for example, car rental, office rental, fuel or advertising), as reported by the official source, and the link to the original document.",
+"Tipo de despesa": "Expense type",
+"Todos os tipos de despesa ({0})": "All expense types ({0})",
+"Filtrar por fornecedor": "Filter by supplier",
+"Tipo de despesa e fornecedor": "Expense type and supplier",
+"Ver só as notas deste tipo": "Show only invoices of this type",
+"Mostrar mais notas ({0} restantes)": "Show more invoices ({0} remaining)",
+"Sem data": "No date",
+"notas": "invoices",
+"nota": "invoice",
+"Nenhuma nota fiscal publicada para": "No invoice published for",
+"A lista completa de notas está disponível só para os anos mais recentes": "The full list of invoices is available only for the most recent years",
+". Escolha o ano no topo da página. Acima estão as maiores notas de": ". Choose the year at the top of the page. Above are the largest invoices of",
+"Fonte: arquivo anual da cota da Câmara dos Deputados (dados abertos), campo do tipo de despesa. \"Abrir nota\" mostra a imagem da nota fiscal no site oficial; passagens compradas pela Câmara e contas de telefone não têm imagem e abrem a página oficial da despesa.": "Source: annual expense allowance file of the Chamber of Deputies (open data), expense type field. \"Open invoice\" shows the invoice image on the official website; tickets bought by the Chamber and phone bills have no image and open the official expense page.",
+"Fonte: API de despesas da cota (CEAPS) do Senado Federal, campo do tipo de despesa. O Senado não publica a imagem das notas: o link abre a lista oficial de despesas do senador, por tipo e ano.": "Source: Federal Senate expense allowance API (CEAPS), expense type field. The Senate does not publish invoice images: the link opens the senator's official expense list, by type and year.",
+"Valores que a página oficial soma mas que ainda não têm nota publicada não aparecem nesta lista (veja o aviso no início da cota).": "Amounts that the official page adds up but that have no published invoice yet do not appear in this list (see the notice at the start of the allowance section)."
 }

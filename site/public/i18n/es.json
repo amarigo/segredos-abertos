@@ -2160,5 +2160,21 @@
 "{0} ainda não foi publicado": "{0} todavía no fue publicado",
 "{0} e {1} ainda não foram publicados": "{0} y {1} todavía no fueron publicados",
 "e {0} saiu incompleto": "y {0} salió incompleto",
-"; mostramos {0}, o último ano completo.": "; mostramos {0}, el último año completo."
+"; mostramos {0}, o último ano completo.": "; mostramos {0}, el último año completo.",
+"Cada nota com o tipo de despesa oficial (por exemplo, aluguel de carro, aluguel de escritório, combustível ou divulgação), como a fonte oficial informa, e o link para o documento original.": "Cada factura con su tipo de gasto oficial (por ejemplo, alquiler de auto, alquiler de oficina, combustible o divulgación), como lo informa la fuente oficial, y el enlace al documento original.",
+"Tipo de despesa": "Tipo de gasto",
+"Todos os tipos de despesa ({0})": "Todos los tipos de gasto ({0})",
+"Filtrar por fornecedor": "Filtrar por proveedor",
+"Tipo de despesa e fornecedor": "Tipo de gasto y proveedor",
+"Ver só as notas deste tipo": "Ver solo las facturas de este tipo",
+"Mostrar mais notas ({0} restantes)": "Mostrar más facturas ({0} restantes)",
+"Sem data": "Sin fecha",
+"notas": "facturas",
+"nota": "factura",
+"Nenhuma nota fiscal publicada para": "Ninguna factura publicada para",
+"A lista completa de notas está disponível só para os anos mais recentes": "La lista completa de facturas está disponible solo para los años más recientes",
+". Escolha o ano no topo da página. Acima estão as maiores notas de": ". Elija el año en la parte superior de la página. Arriba están las mayores facturas de",
+"Fonte: arquivo anual da cota da Câmara dos Deputados (dados abertos), campo do tipo de despesa. \"Abrir nota\" mostra a imagem da nota fiscal no site oficial; passagens compradas pela Câmara e contas de telefone não têm imagem e abrem a página oficial da despesa.": "Fuente: archivo anual de la cuota de la Cámara de Diputados (datos abiertos), campo del tipo de gasto. \"Abrir factura\" muestra la imagen de la factura en el sitio oficial; los pasajes comprados por la Cámara y las cuentas de teléfono no tienen imagen y abren la página oficial del gasto.",
+"Fonte: API de despesas da cota (CEAPS) do Senado Federal, campo do tipo de despesa. O Senado não publica a imagem das notas: o link abre a lista oficial de despesas do senador, por tipo e ano.": "Fuente: API de gastos de la cuota (CEAPS) del Senado Federal, campo del tipo de gasto. El Senado no publica la imagen de las facturas: el enlace abre la lista oficial de gastos del senador, por tipo y año.",
+"Valores que a página oficial soma mas que ainda não têm nota publicada não aparecem nesta lista (veja o aviso no início da cota).": "Los valores que la página oficial suma pero que aún no tienen factura publicada no aparecen en esta lista (vea el aviso al inicio de la cuota)."
 }

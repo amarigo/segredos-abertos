@@ -584,6 +584,7 @@ details.recolhe[open] > summary { margin-bottom: 4px; }
 .projetos a { padding: 10px 4px; }
 .linguas a { padding: 10px 10px; }
 button.chip { min-height: 36px; padding: 6px 14px; cursor: pointer; }
+.chip.cat-nota { white-space: normal; text-transform: none; letter-spacing: 0; text-align: left; font-size: .8rem; margin-bottom: 4px; }
 details > summary { padding-block: 10px; }
 
 /* Menu e abas que rolam para o lado no celular: a borda direita some aos poucos, para mostrar que há mais */

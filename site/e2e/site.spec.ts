@@ -55,6 +55,26 @@ test.describe("jornada", () => {
     expect(erros).toEqual([]);
   });
 
+  test("todas as notas do ano com a categoria de cada uma e filtro por categoria", async ({ page }) => {
+    const erros = vigiar(page);
+    const p = pols.filter((x) => x.casa === "camara").sort((a, b) => b.total - a.total)[0];
+    const d = dados(`p/${p.id}.json`).anos[ANO];
+    const x: { colunas: string[]; notas: (string | number)[][] } = dados(`p/notas/${p.id}-${ANO}.json`);
+    expect(x.notas.length).toBe(d.n_notas);
+    const iCat = x.colunas.indexOf("categoria"), iValor = x.colunas.indexOf("valor");
+    await page.goto(`./#/p/${p.id}`);
+    const sec = page.locator("#todas-notas");
+    await expect(sec.getByRole("heading", { level: 2 })).toContainText(`(${d.n_notas.toLocaleString("pt-BR")})`);
+    await expect(sec.locator("tbody tr").first()).toContainText(String(x.notas[0][iCat]));
+    const cat = String(x.notas[x.notas.length - 1][iCat]);
+    const da = x.notas.filter((n) => n[iCat] === cat);
+    await sec.getByLabel("Tipo de despesa").selectOption(cat);
+    const soma = da.reduce((s, n) => s + Number(n[iValor]), 0);
+    await expect(sec.getByRole("status")).toContainText(sp(brl(soma, true)));
+    await expect(sec.locator("tbody tr")).toHaveCount(Math.min(da.length, 50));
+    expect(erros).toEqual([]);
+  });
+
   test("quem saiu do cargo no meio do mandato aparece, também pelo nome antigo", async ({ page }) => {
     // Caso da deputada Dayany Bittencourt (antes "Dayany do Capitão"): suplente que devolveu a vaga ao titular
     const erros = vigiar(page);
@@ -412,10 +432,18 @@ test.describe("segurança", () => {
       for (const a of Object.values(x.anos) as { maiores_notas: { url: string }[] }[]) a.maiores_notas.forEach((n) => (n.url = ruim));
       await r.fulfill({ json: x });
     });
+    await page.route(`**/data/p/notas/${p.id}-*.json`, async (r) => {
+      const x = dados(`p/notas/${p.id}-${ANO}.json`);
+      const i = x.colunas.indexOf("url");
+      x.notas.forEach((n: string[]) => (n[i] = ruim));
+      await r.fulfill({ json: x });
+    });
     await page.goto(`./#/p/${p.id}`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(p.nome);
+    await expect(page.locator("#todas-notas tbody tr").first()).toBeVisible();
     expect(await page.locator('a[href^="javascript:" i], img[src^="javascript:" i]').count()).toBe(0);
-    for (const a of await page.locator("a").all()) await a.click({ trial: true }).catch(() => {});
+    // Só os links visíveis: os de celular ficam escondidos no computador (e vice-versa) e o clique de teste esperaria por eles
+    for (const a of await page.locator("a:visible").all()) await a.click({ trial: true, timeout: 2000 }).catch(() => {});
     expect(erros).toEqual([]);
   });
 

@@ -2,7 +2,7 @@
 import json
 import random
 
-from sa_etl import autorias, camara, senado, ideologia, cnpj, recursos
+from sa_etl import autorias, camara, senado, ideologia, cnpj, recursos, validar
 from sa_etl.build import montar
 from sa_etl.categorias import grupo_de, tema_de
 from sa_etl.util import cnpj_valido, read_csv_text, to_float, mask_cpf
@@ -104,11 +104,64 @@ def test_montar_gera_arquivos(tmp_path):
     assert json.loads((tmp_path / "votacoes.json").read_text())[0]["sim"] == 1
 
 
+def test_lista_completa_de_notas_com_categoria(tmp_path):
+    """Todas as notas do ano ficam num arquivo à parte, cada uma com o tipo de despesa oficial e o tema simples;
+    a soma bate com o total, o CPF sai mascarado e a conferência aceita o arquivo."""
+    pols = [{"id": "dep-1", "casa": "camara", "cargo": "Deputado(a) Federal", "nome": "Fulano", "partido": "AAA",
+             "uf": "SP", "foto": "", "fonte": ""}]
+    base = {"politico": "dep-1", "ano": 2025, "grupo": "pessoal", "url": "", "link": ""}
+    desp = [{**base, "mes": 3, "data": "2025-03-02", "categoria": "Locação ou fretamento de veículos automotores",
+             "fornecedor": "Locadora", "doc": "22222222000122", "valor": 3000.0},
+            {**base, "mes": 5, "data": "2025-05-10", "categoria": "Aluguel de imóveis para escritório político",
+             "grupo": "escritorio", "fornecedor": "José", "doc": "12345678909", "valor": 1500.5},
+            {**base, "mes": 1, "data": "2025-01-20", "categoria": "Combustíveis e lubrificantes.",
+             "fornecedor": "Posto", "doc": "33333333000133", "valor": 99.9}]
+    montar({"politicos": pols, "despesas": desp, "votacoes": [], "votos": [], "empresas": {}}, tmp_path, [2025])
+    p = json.loads((tmp_path / "p" / "dep-1.json").read_text())
+    assert p["anos"]["2025"]["n_notas"] == 3
+    x = json.loads((tmp_path / "p" / "notas" / "dep-1-2025.json").read_text())
+    linhas = [dict(zip(x["colunas"], n)) for n in x["notas"]]
+    assert [n["data"] for n in linhas] == ["2025-05-10", "2025-03-02", "2025-01-20"]  # mais recente primeiro
+    assert linhas[0]["doc"] == "***.456.789-**"
+    assert x["temas"]["Locação ou fretamento de veículos automotores"] == "Carro alugado, táxi, pedágio e estacionamento"
+    assert x["temas"]["Aluguel de imóveis para escritório político"] == "Escritório: aluguel, contas e material"
+    assert round(sum(n["valor"] for n in linhas), 2) == p["total"]
+    r = validar.Resultado()
+    validar._conferir_politico(tmp_path, p, r)
+    assert not r.erros
+    # uma nota a menos no arquivo: a conferência barra
+    x["notas"].pop()
+    (tmp_path / "p" / "notas" / "dep-1-2025.json").write_text(json.dumps(x))
+    r = validar.Resultado()
+    validar._conferir_politico(tmp_path, p, r)
+    assert any("lista completa" in e for e in r.erros)
+
+
+def test_lista_completa_so_nos_anos_pedidos(tmp_path):
+    pols = [{"id": "dep-1", "casa": "camara", "cargo": "", "nome": "F", "partido": "A", "uf": "SP", "foto": "", "fonte": ""}]
+    desp = [{"politico": "dep-1", "ano": a, "mes": 1, "data": f"{a}-01-02", "categoria": "Telefonia", "grupo": "escritorio",
+             "fornecedor": "Tel", "doc": "", "valor": 10.0, "url": ""} for a in (2024, 2025)]
+    montar({"politicos": pols, "despesas": desp, "votacoes": [], "votos": [], "empresas": {}}, tmp_path, [2024, 2025], [2025])
+    assert (tmp_path / "p" / "notas" / "dep-1-2025.json").exists()
+    assert not (tmp_path / "p" / "notas" / "dep-1-2024.json").exists()
+    p = json.loads((tmp_path / "p" / "dep-1.json").read_text())
+    assert "n_notas" not in p["anos"]["2024"] and p["anos"]["2025"]["n_notas"] == 1
+
+
 def test_senado_usa_voto_do_lider_como_orientacao():
     items = [{"codigoSessaoVotacao": 3, "votacaoSecreta": "N", "votos": [
         {"codigoParlamentar": 5, "siglaVotoParlamentar": "Não", "nomeParlamentar": senado.LIDER_GOVERNO_SENADO}]}]
     v, _ = senado.parse_votacoes(items, {"sen-5"})
     assert v[0]["orientacoes"] == {"Governo (voto do líder)": "Não"}
+
+
+def test_auxilio_moradia_entra_positivo():
+    """O arquivo anual traz a complementação do auxílio-moradia com valor líquido negativo; a página oficial soma positivo."""
+    csv_ = ('"ideCadastro";"nuDeputadoId";"txtDescricao";"vlrDocumento";"vlrLiquido";"numAno";"numMes"\n'
+            '"1";"3001";"COMPLEMENTAÇÃO DO AUXÍLIO-MORADIA";"2841.54";"-2841.54";"2025";"1"\n'
+            '"1";"3001";"PASSAGEM AÉREA - SIGEPA";"-500";"-500";"2025";"1"\n')
+    rows = camara.parse_cota(read_csv_text(csv_), {"dep-1"})
+    assert [r["valor"] for r in rows] == [2841.54, -500]  # devolução de passagem continua negativa
 
 
 def test_cota_usa_idecadastro():
