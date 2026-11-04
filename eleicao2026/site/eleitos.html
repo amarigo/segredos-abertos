@@ -1,0 +1,244 @@
+<nav class="projetos" aria-label="Projetos do Segredos Abertos">
+  <div class="wrap">
+    <span>Projetos:</span>
+    <a href="../../">Brasil</a>
+    <a href="../../mg/">Minas Nossa</a>
+    <a href="../" aria-current="page">Eleição 2026</a>
+    <a href="../../terras-raras/">Terras Raras MG</a>
+  </div>
+</nav>
+
+<div class="wrap">
+<header class="top">
+  <div class="toprow">
+    <div>
+      <div class="eyebrow">Eleição 2026 · Mandato 2027 a 2030 · <a href="../../" class="sa-link">parte do Segredos Abertos</a></div>
+      <h1>Quem assume em 2027</h1>
+    </div>
+    <div class="size" role="group" aria-label="Tamanho da letra">
+      <span>Letra:</span>
+      <button id="fminus" type="button" aria-label="Diminuir letra">A−</button>
+      <button id="fplus" type="button" aria-label="Aumentar letra">A+</button>
+    </div>
+  </div>
+  <p class="lead">Governadores, senadores, deputados federais e estaduais eleitos em 4 e 25 de outubro de 2026, com partido, coligação, votos e foto, direto do TSE. Veja quem volta e quem é novo.</p>
+</header>
+</div>
+
+<main class="wrap" id="topo">
+<p class="volta"><a href="../">← Eleição para presidente</a></p>
+
+<div class="notice" role="note" id="emconf" hidden>
+  <strong>Os eleitos estão em conferência.</strong>
+  <p>Os números do TSE ainda não bateram com a segunda fonte oficial (o arquivo de vagas e o de candidatos), por isso não mostramos a lista aqui. Enquanto isso, veja o resultado no <a class="ext" href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener">site oficial do TSE</a>.</p>
+</div>
+
+<div id="conteudo" hidden>
+<div class="ok" role="note">
+  <p><b>Todos os nomes e números desta página são oficiais, do TSE.</b> Resultado totalizado em <span class="num" id="d-tot"></span>; baixado em <span class="num" id="d-col"></span>. Conferido com o arquivo de vagas e o de candidatos do TSE: o número de eleitos bate com o de vagas em cada estado, e cada eleito consta como eleito.</p>
+  <p class="verify" style="margin-top:.4rem"><b>Confira no TSE</b><a class="ext" href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener">Site oficial de resultados</a><a class="ext" href="https://dadosabertos.tse.jus.br/dataset/candidatos-2026" target="_blank" rel="noopener">Candidatos 2026 (dados abertos)</a></p>
+</div>
+
+<section class="view" aria-labelledby="h-resumo">
+  <h2 id="h-resumo">Quem volta e quem é novo</h2>
+  <p>“Reeleito” é quem já tinha o mesmo cargo e se candidatou de novo (o TSE marca isso no registro da candidatura). “Novo no cargo” pode já ter tido outro cargo: um deputado federal eleito senador, por exemplo.</p>
+  <div class="facts" id="resumo"></div>
+</section>
+
+<section class="view" aria-labelledby="h-lista">
+  <h2 id="h-lista">Os eleitos</h2>
+  <div class="toggle" role="group" aria-label="Cargo" id="f-cargo"></div>
+  <div class="filtros">
+    <div class="field"><label for="f-uf">Estado</label><select id="f-uf"><option value="">Todos os estados</option></select></div>
+    <div class="field"><label for="f-p">Partido</label><select id="f-p"><option value="">Todos os partidos</option></select></div>
+    <div class="field"><label for="f-q">Nome</label><input id="f-q" type="search" placeholder="Digite um nome" autocomplete="off"></div>
+  </div>
+  <div class="toggle sm" role="group" aria-label="Quem mostrar" id="f-re">
+    <button type="button" data-re="" aria-pressed="true">Todos</button>
+    <button type="button" data-re="S" aria-pressed="false">Só reeleitos</button>
+    <button type="button" data-re="N" aria-pressed="false">Só novos no cargo</button>
+  </div>
+
+  <div class="panel">
+    <h3 id="h-part">Cadeiras por partido</h3>
+    <p class="small muted" id="part-nota"></p>
+    <div id="lados"></div>
+    <div id="partidos" class="pbar-list"></div>
+  </div>
+
+  <p class="muted" id="contagem" aria-live="polite"></p>
+  <ul class="cards-el" id="lista"></ul>
+  <button type="button" class="btn alt" id="mais" hidden>Mostrar mais</button>
+</section>
+
+<section class="view" aria-labelledby="h-senado" id="senado">
+  <h2 id="h-senado">O Senado de 2027</h2>
+  <p>O Senado tem 81 cadeiras. Em 2026 foram eleitos <b class="num" id="sen-n"></b> senadores (dois por estado). Os outros <b class="num" id="sen-c"></b>, eleitos em 2022, continuam até janeiro de 2031. Lista do Senado de hoje (quem está no exercício do mandato, titular ou suplente).</p>
+  <details>
+    <summary>Ver os senadores que continuam até 2031</summary>
+    <ul class="simples" id="sen-lista"></ul>
+  </details>
+</section>
+
+<section class="view" aria-labelledby="h-quando">
+  <h2 id="h-quando">Quando cada um assume</h2>
+  <ul class="simples">
+    <li><b>Governadores:</b> 6 de janeiro de 2027 (<a class="ext" href="https://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm#art28" target="_blank" rel="noopener">Constituição, art. 28</a>, com a mudança da Emenda Constitucional 111, de 2021).</li>
+    <li><b>Deputados federais e senadores:</b> a partir de 1º de fevereiro de 2027, quando começa a 58ª legislatura (<a class="ext" href="https://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm#art57" target="_blank" rel="noopener">Constituição, art. 57, § 4º</a>).</li>
+    <li><b>Deputados estaduais e distritais:</b> em fevereiro de 2027, na data marcada pela Constituição de cada estado.</li>
+  </ul>
+  <p>Até lá, quem está no cargo continua. Os gastos da cota e os votos de cada deputado federal e senador já aparecem nas páginas do <a href="../../">Segredos Abertos</a>. Quem foi reeleito ou já está no Congresso tem o link aqui. Quem é novo passa a aparecer lá sozinho a partir de fevereiro de 2027, quando a Câmara e o Senado publicarem a nova legislatura.</p>
+</section>
+
+<section class="view" aria-labelledby="h-dados">
+  <h2 id="h-dados">Dados abertos</h2>
+  <div class="dlbox">
+    <a class="dlrow" href="dados/eleitos.csv" download><b>eleitos.csv</b><span>Um eleito por linha: cargo, estado, nome, partido, coligação, votos, reeleito ou não. Separador ponto e vírgula, UTF-8.</span></a>
+    <a class="dlrow" href="dados/eleitos.json" download><b>eleitos.json</b><span>Os mesmos dados desta página, com as fontes e as datas.</span></a>
+  </div>
+  <ul class="srclist small" id="fontes"></ul>
+</section>
+</div>
+</main>
+
+<script type="application/json" id="dados">/*DATA*/</script>
+<script>
+const D=JSON.parse(document.getElementById("dados").textContent||"null");
+const NAMES={AC:"Acre",AL:"Alagoas",AP:"Amapá",AM:"Amazonas",BA:"Bahia",CE:"Ceará",DF:"Distrito Federal",ES:"Espírito Santo",GO:"Goiás",MA:"Maranhão",MT:"Mato Grosso",MS:"Mato Grosso do Sul",MG:"Minas Gerais",PA:"Pará",PB:"Paraíba",PR:"Paraná",PE:"Pernambuco",PI:"Piauí",RJ:"Rio de Janeiro",RN:"Rio Grande do Norte",RS:"Rio Grande do Sul",RO:"Rondônia",RR:"Roraima",SC:"Santa Catarina",SP:"São Paulo",SE:"Sergipe",TO:"Tocantins"};
+const PLURAL={"3":"Governadores","5":"Senadores","6":"Deputados federais","7":"Deputados estaduais"};
+const $=id=>document.getElementById(id);
+const fmt=n=>Math.round(n).toLocaleString("pt-BR");
+const brl=n=>n.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ext=(href,txt)=>`<a class="ext" href="${esc(href)}" target="_blank" rel="noopener">${txt}</a>`;
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+if(window.SA_I18N)SA_I18N.seletor(document.querySelector('nav.projetos .wrap'));
+let fs=parseInt(store.get("fs"))||20;
+function setFs(v){fs=Math.max(16,Math.min(30,v));document.documentElement.style.setProperty("--base",fs+"px");store.set("fs",fs)}
+setFs(fs);$("fplus").onclick=()=>setFs(fs+2);$("fminus").onclick=()=>setFs(fs-2);
+
+/* deputado distrital (DF) entra junto com os estaduais */
+const grupo=c=>c==="8"?"7":c;
+const novo=x=>x.re!=="S";
+
+/* o que o Segredos Abertos já mostra de quem tem mandato hoje: total da cota e lado medido pelos votos (data/) */
+let POL={}, PART={};
+const LADOS=["Esquerda","Centro-esquerda","Centro","Centro-direita","Direita"];
+function rotulo(p){if(p==null)return null;if(p<=-0.5)return"Esquerda";if(p<=-0.15)return"Centro-esquerda";if(p<0.15)return"Centro";if(p<0.5)return"Centro-direita";return"Direita"}
+
+let cargo="6", re="", vistos=60;
+function filtrados(){
+  const uf=$("f-uf").value, p=$("f-p").value, q=$("f-q").value.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+  return D.eleitos.filter(x=>grupo(x.c)===cargo&&(!uf||x.uf===uf)&&(!p||x.p===p)&&(!re||(re==="S"?!novo(x):novo(x)))
+    &&(!q||(x.nm+" "+x.nc).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").includes(q)));
+}
+function resumo(){
+  const h=[];
+  for(const c of ["3","5","6","7"]){
+    const xs=D.eleitos.filter(x=>grupo(x.c)===c), r=xs.filter(x=>!novo(x)).length;
+    const perd=(D.tentaram_e_perderam[c]||0)+(c==="7"?(D.tentaram_e_perderam["8"]||0):0);
+    h.push(`<div class="fact"><span class="muted small">${PLURAL[c]}</span><b class="num">${fmt(xs.length)}</b>
+      <span class="small"><b class="num">${fmt(r)}</b> reeleitos · <b class="num">${fmt(xs.length-r)}</b> novos no cargo</span>
+      <span class="small muted"><span class="num">${fmt(perd)}</span> tentaram a reeleição e não conseguiram</span></div>`);
+  }
+  $("resumo").innerHTML=h.join("");
+}
+function cargoBtns(){
+  $("f-cargo").innerHTML=["6","5","3","7"].map(c=>`<button type="button" data-c="${c}" aria-pressed="${c===cargo}">${PLURAL[c]}</button>`).join("");
+}
+function opcoes(){
+  const ufs=[...new Set(D.eleitos.map(x=>x.uf))].sort((a,b)=>NAMES[a].localeCompare(NAMES[b],"pt"));
+  $("f-uf").innerHTML='<option value="">Todos os estados</option>'+ufs.map(u=>`<option value="${u}">${NAMES[u]}</option>`).join("");
+  const ps=[...new Set(D.eleitos.filter(x=>grupo(x.c)===cargo).map(x=>x.p))].sort();
+  const atual=$("f-p").value;
+  $("f-p").innerHTML='<option value="">Todos os partidos</option>'+ps.map(p=>`<option${p===atual?" selected":""}>${esc(p)}</option>`).join("");
+}
+function partidos(xs){
+  const n={};xs.forEach(x=>n[x.p]=(n[x.p]||0)+1);
+  const ord=Object.entries(n).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
+  const max=ord.length?ord[0][1]:1;
+  $("h-part").textContent=`Cadeiras por partido (${fmt(xs.length)})`;
+  $("partidos").innerHTML=ord.map(([p,k])=>{const pos=PART[p];const lado=rotulo(pos);
+    return `<div class="pbar"><span class="pn">${esc(p)}</span><span class="pb"><i style="width:${(k/max*100).toFixed(1)}%"></i></span><span class="pk num">${fmt(k)}</span><span class="pl small muted">${lado||""}</span></div>`}).join("");
+  /* por lado: só para quem tem partido medido na Câmara de hoje */
+  if(Object.keys(PART).length){
+    const c={};let sem=0;xs.forEach(x=>{const l=rotulo(PART[x.p]);if(l)c[l]=(c[l]||0)+1;else sem++});
+    const tot=xs.length||1;
+    $("lados").innerHTML=`<div class="lbar" role="img" aria-label="${LADOS.map(l=>l+": "+(c[l]||0)).join(", ")}">${LADOS.map((l,i)=>c[l]?`<i class="l${i}" style="flex:${c[l]}" title="${l}: ${c[l]}"></i>`:"").join("")}${sem?`<i class="ls" style="flex:${sem}" title="Sem medida: ${sem}"></i>`:""}</div>
+      <p class="legend small">${LADOS.map((l,i)=>`<span><i class="sw l${i}"></i>${l} <b class="num">${fmt(c[l]||0)}</b></span>`).join("")}${sem?`<span><i class="sw ls"></i>Partido sem medida <b class="num">${fmt(sem)}</b></span>`:""}</p>`;
+    $("part-nota").innerHTML=`O lado (esquerda, centro, direita) é o do partido medido pelos votos dos seus deputados federais na Câmara de 2023 a 2026, no <a href="../../#/partidos">Segredos Abertos</a>. Partido sem deputado federal hoje fica “sem medida”. É o partido, não a pessoa: quem é novo ainda não votou.`;
+  }else{$("lados").innerHTML="";$("part-nota").textContent=""}
+}
+function cartao(x){
+  const ini=x.nm.split(" ").filter(Boolean).slice(0,2).map(w=>w[0]).join("");
+  const hoje=x.hoje, pol=hoje&&POL[hoje.id];
+  let selo=!novo(x)?'<span class="tag re">Reeleito</span>':'<span class="tag nv">Novo no cargo</span>';
+  let atual="";
+  if(hoje){
+    const cargoHoje=hoje.casa==="camara"?"deputado federal":"senador";
+    const ja=(x.c==="6"&&hoje.casa==="camara")||(x.c==="5"&&hoje.casa==="senado");
+    atual=`<p class="small">${ja?"Já é":"Hoje é"} ${cargoHoje} (${esc(hoje.partido)}-${esc(hoje.uf)}).`+
+      (pol?` Cota parlamentar usada neste mandato: <b class="num">${brl(pol.total)}</b>.`:"")+
+      (pol&&pol.rotulo?` Lado pelos votos: <b>${esc(pol.rotulo)}</b>.`:"")+`</p>`;
+  }
+  const vs=(x.vs||[]).map(v=>`${esc(v.nm)}${v.p?` (${esc(v.p)})`:""}`).join(", ");
+  const quem=x.c==="3"?"Vice":"Suplentes";
+  const links=[ext(x.tse,"Resultado no TSE")];
+  if(hoje)links.push(ext(hoje.url,hoje.casa==="camara"?"Perfil na Câmara":"Perfil no Senado"));
+  if(hoje&&pol)links.push(`<a href="../../#/p/${esc(hoje.id)}">Gastos e votos de hoje</a>`);
+  return `<li class="el">
+    <span class="foto"><img src="${esc(x.foto)}" alt="" loading="lazy" width="80" height="106" onerror="this.remove()"><b aria-hidden="true">${esc(ini)}</b></span>
+    <div class="info">
+      <p class="nome"><b>${esc(x.nm)}</b> ${selo}</p>
+      <p class="small">${esc(x.p)}${x.fed?` · ${esc(x.fed)}`:""} · ${NAMES[x.uf]} · <span class="num">${fmt(x.v)}</span> votos${x.pv?` (${esc(x.pv)}%)`:""} · ${esc(x.st)}</p>
+      <p class="small muted">${esc(x.nc)}${x.oc?` · ${esc(x.oc)}`:""}</p>
+      ${x.col?`<p class="small muted">Coligação: ${esc(x.col)} (${esc(x.comp)})</p>`:""}
+      ${vs?`<p class="small muted">${quem}: ${vs}</p>`:""}
+      ${x.dvt?`<p class="small aviso">Situação dos votos no TSE: ${esc(x.dvt)}</p>`:""}
+      ${atual}
+      <p class="links small">${links.join(" ")}</p>
+    </div></li>`;
+}
+function desenhar(){
+  document.querySelectorAll("#f-cargo button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.c===cargo)));
+  document.querySelectorAll("#f-re button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.re===re)));
+  const xs=filtrados();
+  partidos(xs);
+  $("contagem").textContent=`${fmt(xs.length)} ${xs.length===1?"eleito":"eleitos"}`+($("f-uf").value?` em ${NAMES[$("f-uf").value]}`:"");
+  $("lista").innerHTML=xs.slice(0,vistos).map(cartao).join("");
+  $("mais").hidden=xs.length<=vistos;
+}
+function iniciar(){
+  if(!D){$("emconf").hidden=false;return}
+  $("conteudo").hidden=false;
+  $("d-tot").textContent=D.totalizado_em;$("d-col").textContent=D.coletado_em;
+  resumo();cargoBtns();opcoes();
+  const sen=D.eleitos.filter(x=>x.c==="5").length;
+  $("sen-n").textContent=fmt(sen);$("sen-c").textContent=fmt(D.senado_continua.length);
+  $("sen-lista").innerHTML=D.senado_continua.map(s=>`<li>${ext(s.url,esc(s.nm))} (${esc(s.p)}-${esc(s.uf)})${s.part&&s.part!=="Titular"?` · ${esc(s.part)}`:""}</li>`).join("");
+  const F=D.fontes||{};
+  $("fontes").innerHTML=[
+    F.resultados&&`<li>Resultado de cada cargo e estado: ${ext(F.resultados.url,"site de resultados do TSE")} (arquivos JSON oficiais).</li>`,
+    F.candidatos&&`<li>Situação final e reeleição de cada candidato: ${ext(F.candidatos.pagina,"Candidatos 2026, Portal de Dados Abertos do TSE")}, publicado em ${esc(F.candidatos.publicado)}.</li>`,
+    F.vagas&&`<li>Vagas por cargo e estado: ${ext(F.vagas.url,"arquivo de vagas do TSE")}.</li>`,
+    F.camara&&`<li>Quem já é deputado federal: ${ext(F.camara.url,"API da Câmara")}.</li>`,
+    F.senado&&`<li>Quem já é senador e até quando: ${ext(F.senado.url,"API do Senado")}.</li>`,
+    `<li>Fotos: oficiais do TSE, do site de resultados.</li>`].filter(Boolean).join("");
+  desenhar();
+  document.addEventListener("click",e=>{
+    const b=e.target.closest("#f-cargo button");if(b){cargo=b.dataset.c;vistos=60;opcoes();desenhar();return}
+    const r=e.target.closest("#f-re button");if(r){re=r.dataset.re;vistos=60;desenhar()}
+  });
+  ["f-uf","f-p"].forEach(id=>$(id).addEventListener("change",()=>{vistos=60;desenhar()}));
+  $("f-q").addEventListener("input",()=>{vistos=60;desenhar()});
+  $("mais").onclick=()=>{vistos+=60;desenhar()};
+  /* números do site do Brasil (mesmo endereço): cota de quem já tem mandato e lado de cada partido */
+  Promise.all([fetch("../../data/politicos.json").then(r=>r.ok?r.json():[]).catch(()=>[]),
+               fetch("../../data/partidos.json").then(r=>r.ok?r.json():[]).catch(()=>[])]).then(([pol,part])=>{
+    (pol||[]).forEach(p=>POL[p.id]=p);
+    (part||[]).forEach(p=>{if(p.casa==="camara"&&p.posicao!=null)PART[p.sigla]=p.posicao});
+    desenhar();
+  });
+}
+iniciar();
+</script>

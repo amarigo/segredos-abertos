@@ -162,11 +162,11 @@ def baixar_camara(pasta, legislaturas=(57, 58)):
         url = f'{CAMARA}/deputados?idLegislatura={leg}&itens=100&ordem=ASC&ordenarPor=nome'
         while url:
             try:
-                d = _get(url, tentativas=3, headers={'Accept': 'application/json'}).json()
+                d = _get(url, tentativas=6 if leg == legislaturas[0] else 2, headers={'Accept': 'application/json'}).json()
             except requests.RequestException:
                 if leg == legislaturas[0]:
                     raise
-                break  # legislatura que ainda não começou
+                break  # legislatura que ainda não começou (a API responde erro ou lista vazia)
             for x in d['dados']:
                 vistos.setdefault(str(x['id']), {'id': str(x['id']), 'nome': x['nome'], 'uf': x['siglaUf'],
                                                  'partido': x['siglaPartido'], 'leg': [] })['leg'].append(leg)
@@ -216,9 +216,19 @@ def baixar(pasta):
     u, lm, n = baixar_vagas(pasta)
     info['fontes']['vagas'] = {'url': u, 'pagina': PAGINA_CAND, 'publicado': lm, 'linhas': n}
     print(f'vagas: {n} linhas', flush=True)
-    info['fontes']['camara'] = {'url': CAMARA + '/deputados', 'deputados': baixar_camara(pasta)}
-    info['fontes']['senado'] = {'url': SENADO + '/senador/lista/atual', 'senadores': baixar_senado(pasta)}
-    print('Câmara e Senado: ok', flush=True)
+    # Câmara e Senado só servem para ligar o eleito ao mandato de hoje: se a API cair, fica a última cópia baixada
+    for nome, fn, url in (('camara', baixar_camara, CAMARA + '/deputados'), ('senado', baixar_senado, SENADO + '/senador/lista/atual')):
+        try:
+            info['fontes'][nome] = {'url': url, 'n': fn(pasta)}
+            print(f'{nome}: ok ({info["fontes"][nome]["n"]})', flush=True)
+        except (requests.RequestException, KeyError, ValueError) as e:
+            if not os.path.exists(os.path.join(pasta, nome + '.json')):
+                raise
+            anterior = json.load(open(os.path.join(pasta, 'coleta.json'), encoding='utf-8')) \
+                if os.path.exists(os.path.join(pasta, 'coleta.json')) else {}
+            info['fontes'][nome] = {**anterior.get('fontes', {}).get(nome, {'url': url}), 'aviso': f'API fora do ar em '
+                                    f"{info['coletado_em']}; usada a cópia anterior"}
+            print(f'::warning title=Eleitos 2026::{nome}: {e}; usada a última cópia baixada', flush=True)
     with open(os.path.join(pasta, 'coleta.json'), 'w', encoding='utf-8') as f:
         json.dump(info, f, ensure_ascii=False, indent=1)
     return info
