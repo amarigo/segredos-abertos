@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import logging
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -169,7 +170,8 @@ def sem_repetidos(itens: list[dict], *chaves: str) -> list[dict]:
     return out
 
 
-def montar(dados: dict, saida: Path, anos: list[int]) -> None:
+def montar(dados: dict, saida: Path, anos: list[int], anos_notas: list[int] | None = None) -> None:
+    """anos_notas: anos com a lista completa de notas de cada político (p/notas/); None = todos os anos."""
     politicos = sem_repetidos(dados["politicos"], "id")
     por_id = {p["id"]: p for p in politicos}
     despesas = [d for d in dados["despesas"] if d["ano"] in anos and d["politico"] in por_id]
@@ -269,6 +271,12 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
             if not d_ano and not r:
                 continue
             det = gastos_do_ano(d_ano, emps)
+            if anos_notas is None or ano in anos_notas:
+                # Lista completa, num arquivo à parte, carregado só quando a pessoa abre "Todas as notas"
+                todas = todas_as_notas(d_ano)
+                det["n_notas"] = len(todas["notas"])
+                if todas["notas"]:
+                    write_json(saida / "p" / "notas" / f"{p['id']}-{ano}.json", todas)
             extra = custos_extras(p["casa"], r)
             extra.update(fora_do_periodo_oficial(d_ano, r))
             extra["custo_total"] = round(det["total"] + (extra["salario"] or 0) + (extra["verba_gabinete"] or 0)
@@ -630,6 +638,26 @@ def gastos_do_ano(ds: list[dict], emps: dict) -> dict:
     }
 
 
+# Colunas de cada nota em p/notas/{id}-{ano}.json (lista de listas: o arquivo fica bem menor que com nomes repetidos)
+COLUNAS_NOTA = ["data", "categoria", "fornecedor", "doc", "valor", "url", "link", "detalhe"]
+
+
+def todas_as_notas(ds: list[dict]) -> dict:
+    """Todas as notas fiscais de um político num ano, da mais recente para a mais antiga, para a lista completa do site.
+
+    Cada nota leva o tipo de despesa oficial (txtDescricao no arquivo da Câmara, tipoDespesa na API do Senado) e o tema
+    em linguagem simples (carro alugado, aluguel de escritório, combustível...) para filtrar. Ficam de fora só os valores
+    que o site completa com a página oficial sem nota publicada (sem_nota). O CPF de pessoa física sai mascarado."""
+    ns = sorted((d for d in ds if not d.get("sem_nota")), key=lambda d: (d.get("data") or "", d["valor"]), reverse=True)
+    return {
+        "colunas": COLUNAS_NOTA,
+        "temas": {c: tema_de(c) for c in sorted({d["categoria"] for d in ns})},
+        "notas": [[d.get("data") or "", d["categoria"], d["fornecedor"],
+                   mask_cpf(d["doc"]) if doc_kind(d["doc"]) == "cpf" else d["doc"], d["valor"], d.get("url") or "",
+                   d.get("link") or ("nota" if d.get("url") else ""), d.get("detalhe") or ""] for d in ns],
+    }
+
+
 def fora_do_periodo_oficial(ds: list[dict], r: dict) -> dict:
     """Notas de meses que a página oficial do ano não mostra.
 
@@ -751,6 +779,9 @@ def main() -> None:
                     help="tempo máximo, por execução, para ler os planos e pagamentos das emendas Pix no Transferegov")
     ap.add_argument("--novas-empresas", type=int, default=cnpj.NOVAS_POR_COLETA,
                     help="quantas fornecedoras além das maiores buscar na Receita nesta coleta (o resto vem do cache)")
+    ap.add_argument("--anos-notas", type=int, nargs="+", default=[dt.date.today().year - 1, dt.date.today().year],
+                    help="anos com a lista completa de notas de cada político (padrão: o ano passado e o atual; "
+                         "dois anos dão cerca de 90 MB, 8 MB compactados)")
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     executar(a.anos, a.cache, a.saida, max_empresas=a.max_empresas, com_recursos=not a.sem_recursos,
@@ -758,14 +789,14 @@ def main() -> None:
              minutos_pagamentos=a.minutos_pagamentos, minutos_gerais=a.minutos_pagamentos_gerais,
              com_financas=not a.sem_financas, com_tramitacao=not a.sem_tramitacao, novas_empresas=a.novas_empresas,
              minutos_transferegov=a.minutos_transferegov, com_tribunais=not a.sem_tribunais,
-             minutos_tribunais=a.minutos_tribunais)
+             minutos_tribunais=a.minutos_tribunais, anos_notas=a.anos_notas)
 
 
 def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500, com_recursos: bool = True,
              com_emendas: bool = True, com_incentivos: bool = True, minutos_pagamentos: float = 45,
              minutos_gerais: float = 40, com_financas: bool = True, com_tramitacao: bool = True,
              novas_empresas: int = cnpj.NOVAS_POR_COLETA, minutos_transferegov: float = 15,
-             com_tribunais: bool = True, minutos_tribunais: float = 10) -> None:
+             com_tribunais: bool = True, minutos_tribunais: float = 10, anos_notas: list[int] | None = None) -> None:
     """A coleta inteira, na ordem certa (usada também pelos testes)."""
     # A renúncia vem antes dos arquivos diários: o Portal passa a recusar downloads (HTTP 405) depois de muitos
     # pedidos seguidos, e os arquivos de renúncia são poucos (e ficam uma semana no cache)
@@ -791,11 +822,26 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
         coletar_tramitacao(saida, cache, dados["politicos"])
     if com_tribunais:
         coletar_tribunais(saida, cache, minutos_tribunais)
-    montar(dados, saida, anos)
+    montar(dados, saida, anos, anos_notas)
     if inc:
         gravar_incentivos(dados, saida, anos, inc, pag)
     if com_financas:  # depois de tudo: usa as emendas e a verba de gabinete já gravadas
         coletar_financas(saida, cache)
+    regravar_avisos(saida)
+
+
+def regravar_avisos(saida: Path) -> None:
+    """Os avisos das etapas que rodam depois de montar() (incentivos, arrecadação e gastos) também vão para o
+    meta.json. Antes, uma falha nessas etapas tirava a página do site sem aviso nenhum: o meta.json já estava gravado,
+    e o painel de status e o tentar-de-novo.yml não ficavam sabendo."""
+    f = saida / "meta.json"
+    try:
+        meta = json.loads(f.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    if meta.get("avisos") != util.AVISOS or meta.get("avisos_tentar") != util.avisos_para_tentar():
+        meta["avisos"], meta["avisos_tentar"] = list(util.AVISOS), util.avisos_para_tentar()
+        write_json(f, meta)
 
 
 def coletar_tramitacao(saida: Path, cache: Path, politicos: list[dict]) -> None:
@@ -804,6 +850,7 @@ def coletar_tramitacao(saida: Path, cache: Path, politicos: list[dict]) -> None:
         tramitacao.coletar(saida, cache, politicos)
     except Exception:  # noqa: BLE001
         log.exception("Projetos em andamento: erro; a página não foi atualizada")
+        util.avisar("Projetos em andamento: a coleta falhou; a página ficou de fora desta atualização")
 
 
 def coletar_tribunais(saida: Path, cache: Path, minutos: float) -> None:
@@ -818,9 +865,14 @@ def coletar_tribunais(saida: Path, cache: Path, minutos: float) -> None:
 def coletar_financas(saida: Path, cache: Path) -> None:
     """Aba de arrecadação e gastos. Se falhar, o resto do site segue."""
     try:
-        financas.coletar(saida, cache)
+        r = financas.coletar(saida, cache)
     except Exception:  # noqa: BLE001
         log.exception("Arrecadação e gastos: erro; a aba não foi atualizada")
+        util.avisar("Arrecadação e gastos: a coleta falhou; a aba ficou de fora desta atualização")
+        return
+    if r is None:  # sem a aba, os avisos dela (que iriam na própria aba) vão para o aviso geral do site
+        for a in financas.AVISOS:
+            util.avisar(a)
 
 
 def destino_pix(anos: list[int], cache: Path, saida: Path, minutos: float) -> None:
@@ -894,6 +946,7 @@ def gravar_incentivos(dados: dict, saida: Path, anos: list[int], inc: tuple[dict
         incentivos.gravar(saida, anos, inc[0], inc[1], pag, dados.get("emendas_autores") or {}, rec, paginas)
     except Exception:  # noqa: BLE001
         log.exception("Incentivos: erro ao gravar a página")
+        util.avisar("Incentivos: a página não foi gravada nesta atualização (erro na coleta)")
 
 
 def juntar_emendas(dados: dict, anos: list[int], cache: Path, saida: Path, pag: dict | None) -> None:

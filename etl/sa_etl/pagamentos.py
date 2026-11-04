@@ -154,6 +154,25 @@ def _baixar_dia(dia: str, dest: Path) -> bool | None:
     return False
 
 
+def recusa_em_curso() -> bool:
+    """O Portal parou de entregar os arquivos diários nesta coleta porque recusa robôs (não é queda passageira).
+    As páginas usam isso para não dizer que a leitura "avança a cada atualização" quando ela está parada."""
+    return PORTAL in PARADAS and recusa_robos(ULTIMA_FALHA)
+
+
+def _avisar_parada(lidos: list[Path], parou_em: dt.date) -> None:
+    """A leitura dos pagamentos de emendas parou porque o Portal não entregou os arquivos. Antes o site só mostrava
+    "dados até" a última data, sem dizer que a leitura estava parada (ficou assim de 29/10/2026 em diante)."""
+    dias = sorted(f.name[:8] for f in lidos if f.name[:8].isdigit())
+    ate = dt.datetime.strptime(dias[-1], "%Y%m%d").strftime("%d/%m/%Y") if dias else parou_em.strftime("%d/%m/%Y")
+    if recusa_robos(ULTIMA_FALHA):
+        avisar(f"Pagamentos de emendas: o Portal da Transparência recusa o download dos arquivos diários "
+               f"({ULTIMA_FALHA}); os pagamentos ligados às emendas estão parados em {ate}", tentar_de_novo=False)
+    else:
+        avisar(f"Pagamentos de emendas: o Portal da Transparência não entregou os arquivos diários ({ULTIMA_FALHA}); "
+               f"os pagamentos estão até {ate} e a leitura continua na próxima execução")
+
+
 def coletar(anos: list[int], cache: Path, minutos: float = 30, hoje: dt.date | None = None) -> list[Path]:
     """Lê os dias ainda não lidos, em ordem, até o limite de tempo. Devolve os arquivos de todos os dias já lidos.
 
@@ -194,8 +213,9 @@ def coletar(anos: list[int], cache: Path, minutos: float = 30, hoje: dt.date | N
                     dia += dt.timedelta(days=1)
                     continue
                 if falhas >= _limite_falhas():
-                    log.warning("Pagamentos: Portal falhou em %d dias seguidos; para em %s", falhas, nome)
+                    log.warning("Pagamentos: Portal falhou em %d dias seguidos; para em %s (%s)", falhas, nome, ULTIMA_FALHA)
                     PARADAS.add(PORTAL)
+                    _avisar_parada(lidos, dia)
                     break
                 dia += dt.timedelta(days=1)
                 continue

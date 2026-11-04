@@ -64,3 +64,45 @@ jobs:
           else
             resumo "Não consegui disparar a coleta; fica para a próxima tentativa."
           fi
+
+      # A leitura semanal dos pagamentos a empresas (pagamentos-empresas.yml) usa a mesma fila da coleta diária. O GitHub
+      # guarda só uma execução esperando em cada fila: se outra chega, a que esperava é cancelada sem rodar. Foi o que
+      # aconteceu com a primeira leitura, em 04/11/2026 (cancelada pelo push seguinte no main). Aqui, se a leitura não
+      # terminou bem nos últimos 7 dias, não houve tentativa nas últimas 24 horas e a fila está vazia, ela é disparada
+      # de novo: começa na hora, e uma execução que já começou não é cancelada por quem chega depois.
+      - name: Leitura semanal dos pagamentos a empresas
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          resumo() { echo "$1"; echo "$1" >> "$GITHUB_STEP_SUMMARY"; }
+          semana=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          dia=$(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%SZ)
+          if ! leituras=$(gh run list --workflow pagamentos-empresas.yml --limit 30 --json status,conclusion,createdAt); then
+            resumo "Não consegui ver as leituras dos pagamentos a empresas; fica para a próxima verificação."
+            exit 0
+          fi
+          em_dia=$(jq --arg s "$semana" '[.[] | select(.createdAt >= $s) | select(.conclusion == "success" or .status != "completed")] | length' <<< "$leituras")
+          recente=$(jq --arg d "$dia" '[.[] | select(.createdAt >= $d) | select(.conclusion != "cancelled" and .conclusion != "skipped")] | length' <<< "$leituras")
+          if [ "$em_dia" != "0" ]; then
+            resumo "Leitura dos pagamentos a empresas: em dia ou em andamento."
+            exit 0
+          fi
+          if [ "$recente" != "0" ]; then
+            resumo "Leitura dos pagamentos a empresas: a última tentativa (há menos de 24 horas) não terminou bem; veja a execução em Actions > Pagamentos a empresas."
+            exit 0
+          fi
+          if ! ocupada=$(gh run list --workflow dados-e-site.yml --branch main --limit 20 --json status \
+                           --jq '[.[] | select(.status != "completed")] | length'); then
+            resumo "Não consegui ver as coletas em andamento; a leitura dos pagamentos fica para a próxima verificação."
+            exit 0
+          fi
+          if [ "$ocupada" != "0" ]; then
+            resumo "Leitura dos pagamentos a empresas atrasada, mas a fila está com a coleta diária; fica para a próxima verificação."
+            exit 0
+          fi
+          if gh workflow run pagamentos-empresas.yml --ref main; then
+            resumo "Leitura dos pagamentos a empresas disparada (nenhuma terminou bem nos últimos 7 dias)."
+          else
+            resumo "Não consegui disparar a leitura dos pagamentos a empresas; fica para a próxima verificação."
+          fi

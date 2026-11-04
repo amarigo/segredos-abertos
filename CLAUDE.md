@@ -63,6 +63,7 @@ Todas as áreas abaixo são coletadas todo dia, na execução das 3h17 (os dados
 | Fotos dos políticos | Deputados federais: API da Câmara (`urlFoto`); senadores: API do Senado (`UrlFotoParlamentar`); deputados estaduais: endereço da foto da página oficial da ALMG, conferido na coleta (a API da ALMG não traz foto); governador e vice: ZIP de fotos dos candidatos do TSE (só as dos eleitos vão para o site). Sem foto, o site mostra as iniciais; o perfil dá o crédito da fonte (`site/src/components/Foto.tsx`) | `camara.py`, `senado.py`, `mg/etl/mg_etl/almg.py`, `governo.py` |
 | Minas Gerais | ALMG (API e dados abertos), TSE, Dados MG, Siconfi, Portal da Transparência | `mg/etl/mg_etl/` (veja `mg/README.md`) |
 | Eleição 2026 | Resultados e boletins de urna do TSE | `eleicao2026/etl/el_etl/` (veja `eleicao2026/README.md`) |
+| Eleitos de 2026 (mandato 2027) | Resultado da eleição estadual no site de resultados do TSE (JSON oficial); conferido com os arquivos de candidatos e de vagas (dados abertos do TSE, via API CKAN); API da Câmara e do Senado para quem já tem mandato. Baixado à mão pelo workflow [`eleitos-2026.yml`](.github/workflows/eleitos-2026.yml), não todo dia | `eleicao2026/etl/el_etl/eleitos.py` |
 | Terras Raras | Sem API que junte os dados: planilhas à mão em `terras-raras/dados/`, cada linha com fonte e data | `terras-raras/gerar_pagina.py` (veja `terras-raras/COMO_ATUALIZAR.md`) |
 
 O ponto de entrada da coleta nacional é `etl/sa_etl/build.py`. A tabela completa com links está no README.

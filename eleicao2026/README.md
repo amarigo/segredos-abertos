@@ -62,6 +62,48 @@ publica em `/eleicao2026/`. Uma falha aqui não trava o site nacional.
 O único texto que não é do TSE é o quadro sobre a prorrogação até as 19h no 2º turno: são fatos relatados pela
 imprensa, marcados como "Notícia", de veículos de perfis diferentes.
 
+## Quem assume em 2027 (eleitos/)
+
+Página com os governadores, senadores, deputados federais, estaduais e distritais eleitos em 2026, para o mandato que
+começa em 2027: partido, federação, coligação, votos, foto oficial, vice ou suplentes, quem foi reeleito e quem é novo
+no cargo. Publicada em https://amarigo.github.io/segredos-abertos/eleicao2026/eleitos/.
+
+```
+dados/eleitos/resultados/   resultado de cada cargo e estado, como veio do TSE (.json.gz)
+dados/eleitos/candidatos.csv.gz   do arquivo de candidatos do TSE, só os cargos estaduais e federais e só as colunas usadas
+dados/eleitos/vagas.csv     vagas de cada cargo em cada estado (arquivo de vagas do TSE)
+dados/eleitos/camara.json, senado.json   deputados federais e senadores de hoje (APIs da Câmara e do Senado)
+dados/eleitos/coleta.json   quando foi baixado e de onde
+```
+
+1. `eleitos.py` baixa o resultado da eleição estadual (6259, 1º turno, e 6260, 2º turno de governador) do site de
+   resultados do TSE, os mesmos arquivos JSON que o aplicativo oficial lê. A API do DivulgaCandContas recusa acesso
+   automático (HTTP 403), por isso não é usada.
+2. Confere com a segunda fonte do TSE, os arquivos abertos achados pela API do Portal de Dados Abertos: o número de
+   eleitos de cada cargo em cada estado tem que ser igual ao de vagas, cada eleito tem que constar como eleito no
+   arquivo de candidatos (e vice-versa) e a apuração tem que estar em 100%. Se algo não bater, a página não mostra
+   nenhum número, só diz que os eleitos estão em conferência; o resto do site da eleição continua.
+3. "Reeleito": primeiro o campo `ST_REELEICAO` do registro da candidatura no TSE. Em 2026 o TSE publicou esse campo
+   vazio (`#NE`, no arquivo complementar; conferido em 04/11/2026). Por isso, para deputado federal e senador, vale quem
+   está no exercício do mesmo cargo hoje, segundo as APIs da Câmara e do Senado. Para governador e deputado estadual
+   não há fonte oficial única de quem está no cargo hoje: a página não marca reeleito nem novo. Se o TSE preencher o
+   campo, ele passa a valer sozinho na próxima coleta.
+4. Quem já é deputado federal ou senador é achado nas APIs da Câmara e do Senado pelo dia de nascimento e pelo nome
+   civil. O eleito ganha o link para o perfil oficial e para os gastos e votos que o Segredos Abertos já mostra.
+5. A página também lê, no navegador, o `politicos.json` e o `partidos.json` do site do Brasil: a cota usada neste
+   mandato e o lado de cada partido medido pelos votos na Câmara.
+
+Para baixar de novo: Actions > Eleitos 2026 > Run workflow. O workflow guarda o que baixou neste diretório, no próprio
+branch. Vale rodar depois de uma decisão da Justiça Eleitoral que mude um resultado e em fevereiro de 2027, quando a
+Câmara publicar a 58ª legislatura: aí os deputados novos também ganham o link para os seus gastos e votos.
+
+Localmente (precisa de acesso ao TSE): `python -m el_etl.build eleitos --baixar`. Sem `--baixar`, só confere o que já
+está em `dados/eleitos/` e mostra o resumo.
+
+O que já se ajusta sozinho em 2027, sem mudar código: a coleta da Câmara e do Senado (`etl/sa_etl/camara.py`,
+`senado.py`) pega as legislaturas de todos os anos acompanhados, então a 58ª entra junto com a 57ª a partir de
+fevereiro; a da ALMG (`mg/etl/mg_etl/almg.py`) passa da 20ª para a 21ª legislatura do mesmo jeito.
+
 ## Rodar localmente
 
 ```bash
@@ -100,3 +142,7 @@ No 1º turno, o TSE conta como nulo o voto no número 28 (candidatura que não v
 | Gráfico da noite diferente do oficial | `test_noite`, `test_ponta_a_ponta::test_site_completo`, e2e confere que a última parcial é igual ao total oficial | a página mostra a conferência e as seções sem hora |
 | Boletim lido errado | `test_boletim` (boletim de urna verdadeiro do TSE) | soma tem que bater com o oficial |
 | Página quebrada ou número diferente do oficial na tela | `site/e2e/eleicao2026.spec.ts` (computador e celular, com caos) | testes no navegador antes de publicar |
+| Eleito faltando, sobrando ou trocado | `test_eleitos::test_falta_um_eleito_bloqueia`, `test_falta_um_estado_bloqueia`, `test_apuracao_incompleta_bloqueia` | número de eleitos = vagas do TSE e cada eleito consta como eleito no arquivo de candidatos; se não, a página dos eleitos não mostra números |
+| Ligar o eleito à pessoa errada (homônimo, irmão gêmeo) | `test_eleitos::test_mesma_pessoa` | mesmo dia de nascimento e mesmo primeiro nome; com dúvida (mais de uma pessoa), não liga |
+| Marcar reeleito sem fonte | `test_eleitos::test_reeleicao_sem_o_campo_do_tse_usa_camara_e_senado` | sem o campo do TSE, só deputado federal e senador são marcados, pelo exercício do cargo hoje |
+| Página dos eleitos quebrada ou com número diferente do arquivo | `site/e2e/eleicao2026.spec.ts` (eleitos, computador e celular, sem os dados do site do Brasil) | testes no navegador antes de publicar |
