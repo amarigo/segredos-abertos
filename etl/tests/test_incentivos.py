@@ -343,3 +343,54 @@ def test_renuncia_tem_recorte_de_minas():
     assert mg["total"] == 400 and mg["n"] == 2
     assert [e["nome"] for e in mg["top"]] == ["Mineira Ltda", "Outra Mineira Sa"], "só empresas de MG, da maior para a menor"
     assert mg["por_municipio"][0] == ["Itajuba", 300, 1]
+
+
+def _api_ordenada(n_paginas: int = 100, por_ano: int = 10, repetir: int | None = None):
+    """Como a API real: linhas em ordem de ano (2015 nas primeiras páginas, o ano mais novo nas últimas)."""
+    pedidas: list[int] = []
+
+    def pedir(self, filtro, pagina):
+        pedidas.append(pagina)
+        if pagina > n_paginas:
+            return [], ""
+        ano = 2015 + (pagina - 1) // por_ano
+        linhas = [{"ano": ano, "cnpj": f"{pagina:08d}{i:04d}95", "razaoSocial": "EMPRESA", "tipoRenuncia": "X",
+                   "descricaoBeneficioFiscal": "Sudene", "tributo": "IRPJ", "valorRenunciado": 10.0} for i in range(15)]
+        if repetir and pagina == repetir:  # a página seguinte "andou" e repete a última linha desta
+            linhas[0] = {**linhas[0], "cnpj": f"{pagina + 1:08d}{14:04d}95"}
+        return linhas, ""
+    return pedir, pedidas
+
+
+def test_api_le_do_fim_e_para_nos_anos_que_o_site_mostra(tmp_path, monkeypatch):
+    """A API não filtra por ano e põe os anos mais novos no fim: a leitura começa na última página e para quando
+    chega a um ano mais velho que os mostrados. Antes lia da página 1 (2015) e nunca chegava aos anos do site."""
+    pedir, pedidas = _api_ordenada()
+    monkeypatch.setattr(renuncias.ApiRenuncia, "_pedir", pedir)
+    monkeypatch.setattr(renuncias.time, "sleep", lambda s: None)
+    api = renuncias.ApiRenuncia(tmp_path, "chave", n_anos=2)
+    assert api.coletar(5)
+    # só a busca da última página (dobrando o passo e dividindo ao meio) passa pelas páginas de 2015 a 2021
+    assert len([p for p in pedidas if p <= 60]) <= 8 and len(pedidas) < 45
+    anos = api.anos(2)
+    assert sorted(anos) == [2023, 2024]
+    assert anos[2024][0]["n"] == 150 and anos[2023][0]["total"] == 1500.0  # 10 páginas de 15 linhas de R$ 10 cada
+
+    # Um mês depois: a última página é achada em poucos pedidos, a partir da leitura anterior
+    est = tmp_path / "api" / "estado.json"
+    e = json.loads(est.read_text())
+    e["fim_em"] -= 40 * 86400
+    est.write_text(json.dumps(e))
+    pedidas.clear()
+    assert api.coletar(5)
+    assert pedidas[:2] == [100, 101]
+
+
+def test_linha_repetida_entre_paginas_conta_uma_vez(tmp_path, monkeypatch):
+    """A leitura leva dias; se a Receita acrescenta linhas, as páginas andam e uma linha pode vir duas vezes."""
+    pedir, _ = _api_ordenada(repetir=95)
+    monkeypatch.setattr(renuncias.ApiRenuncia, "_pedir", pedir)
+    monkeypatch.setattr(renuncias.time, "sleep", lambda s: None)
+    api = renuncias.ApiRenuncia(tmp_path, "chave", n_anos=1)
+    assert api.coletar(5)
+    assert api.anos(1)[2024][0]["n"] == 149

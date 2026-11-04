@@ -275,9 +275,15 @@ def resumir(ano: int, ben, det, n_top: int = N_TOP) -> tuple[dict, dict[str, dic
 API = "https://api.portaldatransparencia.gov.br/api-de-dados/renuncias-valor"
 API_TESTE = "https://api.portaldatransparencia.gov.br/api-de-dados/orgaos-siafi"  # consulta simples, para testar a chave
 API_CADASTRO = "https://portaldatransparencia.gov.br/api-de-dados/cadastrar-email"
-API_EM_PARALELO = 6  # pedidos ao mesmo tempo (a API leva uns 5 segundos por página)
+API_EM_PARALELO = 12  # pedidos ao mesmo tempo (a API leva de 4 a 14 segundos por página)
 API_POR_MINUTO = 300  # o limite do Portal é 400 por minuto (700 de madrugada); acima disso a chave fica suspensa por 8 horas
 API_REFAZER_DIAS = 30  # a Receita atualiza a renúncia uma ou duas vezes por ano; relemos tudo uma vez por mês
+# Como a leitura anda. A consulta não aceita filtro de ano (só UF, código IBGE e CNPJ; conferido na documentação
+# oficial, api.portaldatransparencia.gov.br/v3/api-docs, em 04/11/2026) e devolve as linhas em ordem de ano, do mais
+# velho para o mais novo: em 04/11/2026 eram 50.144 páginas, 2015 na página 1, 2020 na 26.573 e 2024 no fim.
+# Versão 1 lia da página 1 em diante: depois de semanas ainda estava em 2020 e o site nunca recebia os anos que mostra.
+# Versão 2 lê do fim para o começo e para quando chega a um ano mais velho que os N_ANOS mais recentes.
+VERSAO_LEITURA = 2
 REGRAS_API = {**REGRAS_DET, **{k: v for k, v in REGRAS_BEN.items() if k not in REGRAS_DET},
               "nome": [["razao", "social"], ["nome", "beneficiario"], ["nome", "empresa"]],
               "fantasia": [["nome", "fantasia"]],
@@ -310,18 +316,25 @@ def _valor_api(v: str) -> str:
     return v.replace(".", ",") if re.fullmatch(r"-?\d+(\.\d+)?", v) else v
 
 
+def _ano(x: dict) -> int:
+    d = digits(str(x.get("ano") or ""))[:4]
+    return int(d) if d else 0
+
+
 class ApiRenuncia:
     """Lê a consulta de valores renunciados página por página, guardando cada página no cache. A leitura completa pode
     levar algumas execuções; enquanto não termina, nada da API vai para o site."""
 
-    def __init__(self, cache: Path, chave: str):
+    def __init__(self, cache: Path, chave: str, n_anos: int = N_ANOS):
         # "api": a última leitura completa (é a que vai para o site); "api-lendo": a leitura em andamento
         self.pasta = cache / "api"
         self.lendo = cache / "api-lendo"
         self.lendo.mkdir(parents=True, exist_ok=True)
         self.estado_f = self.lendo / "estado.json"
         self.chave = chave
+        self.n_anos = n_anos
         self.motivo = ""
+        self.falhou_em = 0  # a página que falhou na busca da última página
 
     def _completa_em(self) -> float | None:
         try:
@@ -335,11 +348,56 @@ class ApiRenuncia:
             e = json.loads(self.estado_f.read_text())
         except (OSError, ValueError):
             e = {}
-        if not e:
+        if e.get("versao") != VERSAO_LEITURA:  # nada começado, ou leitura do jeito antigo (da página 1 em diante)
             for f in self.lendo.glob("p*.json.gz"):
                 f.unlink()
-            e = {"filtros": [{}], "i": 0, "pagina": 1, "fim": False, "paginas": 0}
+            # pagina None: ainda não sabemos qual é a última página deste filtro; corte: o ano mais velho que interessa
+            e = {"versao": VERSAO_LEITURA, "filtros": [{}], "i": 0, "pagina": None, "corte": None, "ultimas": {},
+                 "fim": False, "paginas": 0}
         return e
+
+    def _palpite(self, i: int) -> int:
+        """Última página do filtro i na leitura completa anterior: com ela, achar a última de hoje custa 2 pedidos."""
+        try:
+            return max(1, int(json.loads((self.pasta / "estado.json").read_text())["ultimas"][str(i)]))
+        except (OSError, ValueError, KeyError, TypeError):
+            return 1
+
+    def _ultima_pagina(self, filtro: dict, palpite: int) -> tuple[int | None, list, str]:
+        """(número da última página com linhas, as linhas dela, motivo da falha). 0: a consulta não tem nenhuma linha.
+        Anda dobrando o passo a partir do palpite até achar uma página vazia e depois divide o intervalo ao meio."""
+        vistas: dict[int, list] = {0: []}
+
+        def tem(n: int) -> bool | None:
+            linhas, motivo = self._pedir(filtro, n)
+            if linhas is None:
+                self.motivo, self.falhou_em = motivo, n
+                return None
+            vistas[n] = linhas
+            return bool(linhas)
+
+        r = tem(palpite)
+        if r is None:
+            return None, [], self.motivo
+        if r:
+            lo, passo = palpite, 1
+            while True:
+                r = tem(lo + passo)
+                if r is None:
+                    return None, [], self.motivo
+                if not r:
+                    hi = lo + passo
+                    break
+                lo, passo = lo + passo, passo * 2
+        else:
+            lo, hi = 0, palpite
+        while hi - lo > 1:
+            meio = (lo + hi) // 2
+            r = tem(meio)
+            if r is None:
+                return None, [], self.motivo
+            lo, hi = (meio, hi) if r else (lo, meio)
+        return lo, vistas.get(lo, []), ""
 
     def _pedir(self, filtro: dict, pagina: int) -> tuple[list | None, str]:
         """(linhas, motivo da falha). Roda em paralelo: não mexe em self, só devolve."""
@@ -390,61 +448,98 @@ class ApiRenuncia:
         with ThreadPoolExecutor(API_EM_PARALELO) as pool:
             while not e["fim"] and time.time() - inicio < minutos * 60:
                 t0, filtro = time.time(), e["filtros"][e["i"]]
-                lote = list(pool.map(self._pedir, [filtro] * API_EM_PARALELO, range(e["pagina"], e["pagina"] + API_EM_PARALELO)))
+                if e["pagina"] is None:
+                    if not self._comecar_filtro(e, filtro):
+                        break
+                    self.estado_f.write_text(json.dumps(e))
+                    continue
+                paginas = list(range(e["pagina"], max(0, e["pagina"] - API_EM_PARALELO), -1))
+                lote = list(pool.map(self._pedir, [filtro] * len(paginas), paginas))
                 if not self._guardar_lote(e, filtro, lote):
                     break
                 self.estado_f.write_text(json.dumps(e))
-                time.sleep(max(0.0, API_EM_PARALELO * 60 / API_POR_MINUTO - (time.time() - t0)))
+                time.sleep(max(0.0, len(paginas) * 60 / API_POR_MINUTO - (time.time() - t0)))
         self.estado_f.write_text(json.dumps(e))
         if e["fim"]:
             shutil.rmtree(self.pasta, ignore_errors=True)
             self.lendo.rename(self.pasta)
-        log.info("Renúncias (API): %d páginas lidas%s", e["paginas"], ", completa" if e["fim"] else
-                 f", leitura continua na próxima execução (filtro {e['i'] + 1} de {len(e['filtros'])}, página {e['pagina']})")
+        log.info("Renúncias (API): %d páginas lidas%s", e["paginas"], f", completa (anos desde {e['corte']})" if e["fim"] else
+                 f", leitura continua na próxima execução (filtro {e['i'] + 1} de {len(e['filtros'])}, "
+                 f"página {e['pagina']} de {e['ultimas'].get(str(e['i']), '?')}, do fim para o começo, até {e['corte']})")
         return e["fim"] or bool(feita)
 
+    def _comecar_filtro(self, e: dict, filtro: dict) -> bool:
+        """Acha a última página do filtro (e, no primeiro, o ano mais novo e o corte). False: parar a leitura."""
+        n, linhas, motivo = self._ultima_pagina(filtro, self._palpite(e["i"]))
+        if n is None:
+            if motivo.startswith(("HTTP 401", "HTTP 403")):
+                self.motivo = f"{motivo} ({self._testar_chave()})"
+            if not filtro and motivo.startswith("HTTP 400") and len(e["filtros"]) == 1:
+                if self.falhou_em == 1:  # nem a primeira página: a consulta sem filtro não é aceita
+                    log.info("Renúncias (API): consulta sem filtro recusada (%s); lendo por UF", motivo)
+                    self._por_uf(e)
+                    return True
+                if self._fundo_demais(e):  # página funda: na segunda vez seguida, lê por UF
+                    return True
+            log.warning("Renúncias (API): não achei a última página (%s, %s)", filtro or "sem filtro", self.motivo)
+            return False
+        if e["corte"] is None and linhas:
+            e["corte"] = max(_ano(x) for x in linhas) - self.n_anos + 1
+        e["ultimas"][str(e["i"])] = n
+        e["pagina"] = n
+        log.info("Renúncias (API): %s tem %d páginas; lendo do fim até o ano %s", filtro or "sem filtro", n, e["corte"])
+        if n == 0:
+            self._proximo_filtro(e)
+        return True
+
+    def _proximo_filtro(self, e: dict) -> None:
+        e["i"] += 1
+        e["pagina"] = None
+        if e["i"] >= len(e["filtros"]):
+            e.update(fim=True, fim_em=time.time())
+
+    def _por_uf(self, e: dict) -> None:
+        """Recomeça estado por estado (consultas menores). Perde as linhas sem UF, que são poucas."""
+        for f in self.lendo.glob("p*.json.gz"):
+            f.unlink()
+        e.update(filtros=[{"nomeSiglaUF": uf} for uf in sorted(SIGLAS)], i=0, pagina=None, ultimas={}, paginas=0,
+                 falhou_em=None, falhas=0)
+
     def _guardar_lote(self, e: dict, filtro: dict, lote: list[tuple[list | None, str]]) -> bool:
-        """Guarda as páginas do lote em ordem, até a primeira vazia (fim do filtro). False: parar a leitura."""
+        """Guarda as páginas do lote em ordem (da mais nova para a mais velha) até chegar a uma página só com anos
+        mais velhos que o corte, que encerra o filtro. False: parar a leitura."""
         for linhas, motivo in lote:
             if linhas is None:
                 self.motivo = motivo
                 if motivo.startswith(("HTTP 401", "HTTP 403")):
                     self.motivo += f" ({self._testar_chave()})"
-                if e["paginas"] == 0 and not filtro and motivo.startswith("HTTP 400"):
-                    # a consulta sem filtro não é aceita: lê estado por estado
-                    log.info("Renúncias (API): consulta sem filtro recusada (%s); lendo por UF", motivo)
-                    e.update(filtros=[{"nomeSiglaUF": uf} for uf in sorted(SIGLAS)], i=0, pagina=1)
-                    return True
                 if not filtro and motivo.startswith("HTTP 400") and self._fundo_demais(e):
                     return True
                 log.warning("Renúncias (API): parou em %s, página %d (%s)", filtro or "sem filtro", e["pagina"], self.motivo)
                 return False
-            if not linhas:  # página vazia: acabou este filtro
-                e["i"] += 1
-                e["pagina"] = 1
-                if e["i"] >= len(e["filtros"]):
-                    e.update(fim=True, fim_em=time.time())
+            if linhas:
+                f = self.lendo / f"p{e['paginas']:06d}.json.gz"
+                f.write_bytes(gzip.compress(json.dumps([_achatar(x) for x in linhas if isinstance(x, dict)],
+                                                       ensure_ascii=False).encode()))
+                e["paginas"] += 1
+            e["pagina"] -= 1
+            mais_novo = max((_ano(x) for x in linhas if isinstance(x, dict)), default=0)
+            if e["pagina"] < 1 or (linhas and e["corte"] and mais_novo < e["corte"]):
+                self._proximo_filtro(e)
                 return True
-            f = self.lendo / f"p{e['paginas']:06d}.json.gz"
-            f.write_bytes(gzip.compress(json.dumps([_achatar(x) for x in linhas if isinstance(x, dict)],
-                                                   ensure_ascii=False).encode()))
-            e["paginas"] += 1
-            e["pagina"] += 1
         return True
 
     def _fundo_demais(self, e: dict) -> bool:
-        """A consulta sem filtro falha sempre na mesma página funda (em 11/2026, HTTP 400 "Erro ao executar a consulta"
-        na página 14289): a API não consegue pular tantas linhas. Na segunda execução seguida que para na mesma página,
-        recomeça lendo estado por estado, que tem bem menos páginas em cada consulta. True: recomeçou."""
+        """A consulta sem filtro já falhou numa página funda (em 03/11/2026, HTTP 400 "Erro ao executar a consulta" na
+        página 14289). Na segunda execução seguida que para na mesma página, recomeça estado por estado, que tem bem
+        menos páginas em cada consulta. True: recomeçou."""
         if e.get("falhou_em") != e["pagina"]:
             e["falhou_em"], e["falhas"] = e["pagina"], 0
         e["falhas"] = e.get("falhas", 0) + 1
         if e["falhas"] < 2:
             return False
-        log.info("Renúncias (API): a consulta sem filtro para sempre na página %d (%s); recomeçando por UF", e["pagina"], self.motivo)
-        for f in self.lendo.glob("p*.json.gz"):
-            f.unlink()
-        e.update(filtros=[{"nomeSiglaUF": uf} for uf in sorted(SIGLAS)], i=0, pagina=1, paginas=0, falhou_em=None, falhas=0)
+        log.info("Renúncias (API): a consulta sem filtro para sempre na página %s (%s); recomeçando por UF", e["pagina"], self.motivo)
+        self._por_uf(e)
         self.motivo = ""
         return True
 
@@ -452,8 +547,15 @@ class ApiRenuncia:
         """Os resumos por ano, do mesmo jeito que os do arquivo .zip."""
         det_por_ano: dict[int, list[dict]] = defaultdict(list)
         col = None
+        vistas: set[tuple] = set()
         for f in sorted(self.pasta.glob("p*.json.gz")):
             for r in json.loads(gzip.decompress(f.read_bytes())):
+                # Se a Receita acrescentar linhas durante a leitura (que leva alguns dias), as páginas andam e a mesma
+                # linha pode vir duas vezes; contada duas vezes, ela aumentaria o total
+                chave = tuple(sorted(r.items()))
+                if chave in vistas:
+                    continue
+                vistas.add(chave)
                 if col is None:
                     col = achar_colunas(list(r.keys()), REGRAS_API)
                     log.info("Renúncias (API): colunas %s", {k: v for k, v in col.items() if v})
@@ -498,7 +600,7 @@ def coletar(cache: Path, ano_atual: int, n_anos: int = N_ANOS, chave: str | None
     chave = chave if chave is not None else chave_portal()
     api_motivo = ""
     if chave:
-        api = ApiRenuncia(cache, chave)
+        api = ApiRenuncia(cache, chave, n_anos)
         if api.coletar(minutos_api):
             for ano, (r, emps) in api.anos(n_anos).items():
                 anos[ano] = r
