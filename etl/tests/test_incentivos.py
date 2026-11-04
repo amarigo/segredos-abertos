@@ -197,6 +197,26 @@ def test_portal_fora_do_ar_nao_derruba_o_site(coleta):
     assert coleta.validar(saida).erros == []
 
 
+def test_portal_que_recusa_robos_nao_dispara_nova_coleta(coleta):
+    """Desde 29/10/2026 o Portal recusa os arquivos diários a robôs (HTTP 405). O aviso fica no site, mas não vai
+    para "avisos_tentar": tentar-de-novo.yml rodava a coleta inteira a cada 2 horas sem nunca resolver."""
+    gov = coleta.usar(FakeGov())
+    gov.falhar("/download-de-dados/despesas/", "405")
+    saida = coleta.rodar()
+    meta = coleta.ler(saida, "meta.json")
+    aviso = next(a for a in meta["avisos"] if a.startswith("Pagamentos a empresas"))
+    assert "HTTP 405, CloudFront" in aviso and "API" in aviso
+    assert aviso not in meta["avisos_tentar"]
+
+
+def test_portal_fora_do_ar_dispara_nova_coleta(coleta):
+    """Falha passageira (HTTP 500): outra coleta daqui a 2 horas pode resolver."""
+    gov = coleta.usar(FakeGov())
+    gov.falhar("/download-de-dados/despesas/", "500")
+    meta = coleta.ler(coleta.rodar(), "meta.json")
+    assert any(a.startswith("Pagamentos a empresas") for a in meta["avisos_tentar"])
+
+
 def test_resumo_geral_ignora_arquivo_com_defeito(tmp_path):
     bom = tmp_path / "20250102-geral-v1.json.gz"
     bom.write_bytes(gzip.compress(json.dumps({"f": {"12345678000195": ["X", {"contrato": 10}, 1, {"0": 10}]}, "o": ["M"]}).encode()))

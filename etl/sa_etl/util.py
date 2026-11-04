@@ -155,6 +155,10 @@ def eh_csv(raw: bytes) -> bool:
 # ---------------------------------------------------------------- avisos da coleta
 
 AVISOS: list[str] = []
+# Avisos que uma nova coleta daqui a 2 horas não resolve (por exemplo, o Portal recusa os arquivos para robôs desde
+# 29/10/2026 e a API que os substitui é lida por um workflow semanal). Continuam no site, mas tentar-de-novo.yml não
+# dispara outra coleta por causa deles: era uma coleta inteira (mais de uma hora) a cada 2 horas, sem nunca resolver.
+SEM_RETENTATIVA: set[str] = set()
 
 _BRASILIA = timezone(timedelta(hours=-3))
 
@@ -191,10 +195,18 @@ def resumo_fora_da_lista() -> dict:
                 "exemplos": sorted(x["ids"])[:10]} for f, x in sorted(FORA_DA_LISTA.items())}
 
 
-def avisar(msg: str) -> None:
-    """Registra um problema da coleta que o site deve mostrar (dados faltando, cópia antiga em uso...)."""
+def avisar(msg: str, tentar_de_novo: bool = True) -> None:
+    """Registra um problema da coleta que o site deve mostrar (dados faltando, cópia antiga em uso...).
+    tentar_de_novo=False: outra coleta logo em seguida não resolve (veja SEM_RETENTATIVA)."""
     if msg not in AVISOS:
         AVISOS.append(msg)
+    if not tentar_de_novo:
+        SEM_RETENTATIVA.add(msg)
+
+
+def avisos_para_tentar() -> list[str]:
+    """Os avisos que justificam outra coleta daqui a 2 horas (vão para meta.json, "avisos_tentar")."""
+    return [a for a in AVISOS if a not in SEM_RETENTATIVA]
 
 
 def com_copia(dest: Path, buscar, descricao: str, max_horas: float = 20) -> Any:

@@ -35,7 +35,7 @@ import fakegov_tribunais  # noqa: E402
 PARTIDOS_DEP = ["PL", "PL", "NOVO", "PT", "PT", "PSOL", "MDB", "PSD"]
 PARTIDOS_SEN = ["PL", "PT", "MDB", "PSD", "NOVO"]
 DIREITA = {"PL", "NOVO"}
-MODOS = {"500", "429", "404", "timeout", "parado", "conexao", "html", "vazio", "truncado", "lixo"}
+MODOS = {"500", "429", "404", "405", "timeout", "parado", "conexao", "html", "vazio", "truncado", "lixo"}
 
 
 def _csv(cab: list[str], linhas: list[list]) -> str:
@@ -240,6 +240,10 @@ class FakeGov:
             raise requests.ConnectionError(f"caos: conexão recusada em {url}")
         if modo in ("500", "429", "404"):
             return self._resp(int(modo), b"erro", url)
+        if modo == "405":  # desde 29/10/2026 o CloudFront do Portal recusa os arquivos a quem não é navegador
+            r = self._resp(405, b"<html>405 Not Allowed</html>", url, "text/html")
+            r.headers["server"] = "CloudFront"
+            return r
         if modo == "html":
             return self._resp(200, b"<!DOCTYPE html><html><body>Servico indisponivel</body></html>", url, "text/html")
         if modo == "vazio":

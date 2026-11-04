@@ -119,6 +119,11 @@ FALHAS_PARA_PARAR = 5
 PORTAL = "portal-arquivos-diarios"  # nome em util.PARADAS
 
 
+def recusa_robos(motivo: str) -> bool:
+    """A recusa que começou em 29/10/2026: HTTP 405 do CloudFront ou HTTP 403 do S3, para quem não é navegador."""
+    return bool(re.match(r"HTTP 40[35]\b", motivo or ""))
+
+
 def _limite_falhas() -> int:
     """Dias seguidos com falha antes de parar. Se uma etapa anterior desta coleta já parou porque o Portal recusava
     os arquivos, basta um dia com falha: cada dia custa até 3 tentativas com espera, e eram minutos perdidos por etapa."""
@@ -473,8 +478,15 @@ def coletar_geral(anos: list[int], cache: Path, minutos: float = 40, hoje: dt.da
                 if falhas >= _limite_falhas():
                     PARADAS.add(PORTAL)
                     log.warning("Pagamentos gerais: Portal falhou em %d dias seguidos; para em %s (%s)", falhas, nome, ULTIMA_FALHA)
-                    avisar(f"Pagamentos a empresas: o Portal da Transparência falhou em {falhas} dias seguidos "
-                           f"({ULTIMA_FALHA}); a leitura continua na próxima execução")
+                    if recusa_robos(ULTIMA_FALHA):
+                        # Desde 29/10/2026 o Portal recusa os arquivos a robôs: outra coleta logo depois não resolve.
+                        # Os pagamentos vêm da API (recursos_recebidos.py, workflow semanal pagamentos-empresas.yml).
+                        avisar(f"Pagamentos a empresas: o Portal da Transparência recusa o download dos arquivos diários "
+                               f"({ULTIMA_FALHA}); os pagamentos mais recentes vêm da API do Portal, lida uma vez por semana",
+                               tentar_de_novo=False)
+                    else:
+                        avisar(f"Pagamentos a empresas: o Portal da Transparência falhou em {falhas} dias seguidos "
+                               f"({ULTIMA_FALHA}); a leitura continua na próxima execução")
                     break
         dia -= dt.timedelta(days=1)
     tmp.unlink(missing_ok=True)
