@@ -29,6 +29,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARIA DO SOCORRO NERI MEDEIROS DE SOUZA",
 "nascimento": "1966-05-19"
 },
@@ -40,6 +41,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GLEISI HELENA HOFFMANN",
 "nascimento": "1965-09-06"
 },
@@ -51,6 +53,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANA PAULA PROCOPIO JUNQUEIRA",
 "nascimento": "1965-08-22"
 },
@@ -62,6 +65,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ BENES LEOCADIO DE ARAUJO",
 "nascimento": "1966-04-22"
 },
@@ -95,6 +99,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ADRIANO ANTÔNIO AVELAR",
 "nascimento": "1969-09-06"
 },
@@ -106,6 +111,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PEDRO PAULO CARVALHO TEIXEIRA",
 "nascimento": "1972-06-29"
 },
@@ -113,11 +119,11 @@
 "id": "122195",
 "nome": "Leonardo Gadelha",
 "uf": "PB",
-"partido": "PSC",
+"partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LEONARDO DE MELO GADELHA",
 "nascimento": "1975-05-12"
 },
@@ -129,6 +135,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PEDRO LUCAS ANDRADE FERNANDES RIBEIRO",
 "nascimento": "1979-11-01"
 },
@@ -140,6 +147,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ÁTILA DE MELO LIRA",
 "nascimento": "1980-04-01"
 },
@@ -147,11 +155,11 @@
 "id": "123756",
 "nome": "Antônia Lúcia",
 "uf": "AC",
-"partido": "REPUBLICANOS",
+"partido": "MDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANTÔNIA LUCILÉIA CRUZ RAMOS CÂMARA",
 "nascimento": "1970-07-17"
 },
@@ -172,7 +180,6 @@
 "uf": "CE",
 "partido": "PL",
 "leg": [
-57,
 57
 ],
 "nome_civil": "MARIA GORETE PEREIRA",
@@ -197,6 +204,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANDRÉ PEIXOTO FIGUEIREDO LIMA",
 "nascimento": "1966-11-10"
 },
@@ -208,6 +216,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCELO PIRES MORAES",
 "nascimento": "1979-08-07"
 },
@@ -219,6 +228,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ ALFONSO EBERT HAMM",
 "nascimento": "1962-04-25"
 },
@@ -226,11 +236,11 @@
 "id": "137070",
 "nome": "Vicentinho Júnior",
 "uf": "TO",
-"partido": "PP",
+"partido": "PSDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "VICENTE ALVES DE OLIVEIRA JUNIOR",
 "nascimento": "1985-04-11"
 },
@@ -253,6 +263,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LÍDICE DA MATA E SOUZA",
 "nascimento": "1956-03-12"
 },
@@ -264,6 +275,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ARNALDO CALIL PEREIRA JARDIM",
 "nascimento": "1955-05-08"
 },
@@ -275,6 +287,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CARLOS ALBERTO ROLIM ZARATTINI",
 "nascimento": "1959-06-08"
 },
@@ -282,11 +295,11 @@
 "id": "141408",
 "nome": "Cleber Verde",
 "uf": "MA",
-"partido": "REPUBLICANOS",
+"partido": "MDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CLEBER VERDE CORDEIRO MENDES",
 "nascimento": "1972-05-10"
 },
@@ -294,11 +307,11 @@
 "id": "141411",
 "nome": "Dagoberto Nogueira",
 "uf": "MS",
-"partido": "PSDB",
+"partido": "PP",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DAGOBERTO NOGUEIRA FILHO",
 "nascimento": "1955-07-21"
 },
@@ -310,6 +323,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "EDUARDO HENRIQUE DA FONTE DE ALBUQUERQUE SILVA",
 "nascimento": "1972-10-17"
 },
@@ -321,6 +335,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FERNANDO BEZERRA DE SOUZA COELHO FILHO",
 "nascimento": "1984-02-28"
 },
@@ -332,6 +347,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "HUGO LEAL MELO DA SILVA",
 "nascimento": "1962-08-06"
 },
@@ -343,6 +359,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JILMAR AUGUSTINHO TATTO",
 "nascimento": "1965-06-25"
 },
@@ -354,6 +371,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOÃO CARLOS PAOLILO BACELAR FILHO",
 "nascimento": "1972-10-08"
 },
@@ -361,11 +379,11 @@
 "id": "141459",
 "nome": "João Maia",
 "uf": "RN",
-"partido": "PL",
+"partido": "PP",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOÃO DA SILVA MAIA",
 "nascimento": "1953-09-20"
 },
@@ -377,6 +395,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ AIRTON FÉLIX CIRILO DA SILVA",
 "nascimento": "1957-02-21"
 },
@@ -410,6 +429,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ CARLOS GHIORZZI BUSATO",
 "nascimento": "1948-11-06"
 },
@@ -417,11 +437,11 @@
 "id": "141487",
 "nome": "Luiz Fernando Faria",
 "uf": "MG",
-"partido": "PSD",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ FERNANDO RAMOS FARIA",
 "nascimento": "1957-09-12"
 },
@@ -433,6 +453,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ PAULO TEIXEIRA FERREIRA",
 "nascimento": "1961-05-06"
 },
@@ -444,6 +465,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PAULO ABI-ACKEL",
 "nascimento": "1963-06-21"
 },
@@ -455,6 +477,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PAULO PEREIRA DA SILVA",
 "nascimento": "1956-02-25"
 },
@@ -466,6 +489,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RODRIGO BATISTA DE CASTRO",
 "nascimento": "1971-07-15"
 },
@@ -477,6 +501,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RODRIGO SOBRAL ROLLEMBERG",
 "nascimento": "1959-07-13"
 },
@@ -484,11 +509,11 @@
 "id": "141555",
 "nome": "Vinicius Carvalho",
 "uf": "SP",
-"partido": "REPUBLICANOS",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "VINICIUS RAPOZO DE CARVALHO",
 "nascimento": "1966-01-07"
 },
@@ -500,6 +525,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "Tiago Dimas Braga Pereira",
 "nascimento": "1988-08-04"
 },
@@ -511,6 +537,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DOMINGOS GOMES DE AGUIAR NETO",
 "nascimento": "1988-04-29"
 },
@@ -533,6 +560,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MÁRCIO CARLOS MARINHO",
 "nascimento": "1970-12-12"
 },
@@ -544,6 +572,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GLAUBER DE MEDEIROS BRAGA",
 "nascimento": "1982-06-26"
 },
@@ -555,6 +584,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RENILCE CONCEIÇÃO NICODEMOS DE ALBUQUERQUE",
 "nascimento": "1976-12-08"
 },
@@ -566,6 +596,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MILTON VIEIRA PINTO",
 "nascimento": "1962-09-16"
 },
@@ -575,7 +606,6 @@
 "uf": "SP",
 "partido": "PODE",
 "leg": [
-57,
 57
 ],
 "nome_civil": "PAULO ROMEIRO DE ALMEIDA SOARES",
@@ -589,6 +619,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCEL VAN HATTEM",
 "nascimento": "1985-11-08"
 },
@@ -596,11 +627,11 @@
 "id": "157130",
 "nome": "Túlio Gadêlha",
 "uf": "PE",
-"partido": "REDE",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "TÚLIO GADÊLHA SALES DE MELO",
 "nascimento": "1987-11-12"
 },
@@ -608,11 +639,11 @@
 "id": "160161",
 "nome": "Marcelo Queiroz",
 "uf": "RJ",
-"partido": "PP",
+"partido": "PSDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCELO ANDRE CID HERACLITO DO PORTO QUEIROZ",
 "nascimento": "1984-11-03"
 },
@@ -624,6 +655,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "AFONSO BANDEIRA FLORENCE",
 "nascimento": "1960-10-15"
 },
@@ -635,6 +667,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIS HENRIQUE DE OLIVEIRA RESENDE",
 "nascimento": "1971-07-23"
 },
@@ -646,6 +679,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "AUREO LIDIO MOREIRA RIBEIRO",
 "nascimento": "1979-02-17"
 },
@@ -655,9 +689,9 @@
 "uf": "ES",
 "partido": "PSB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PAULO ROBERTO FOLLETTO",
 "nascimento": "1956-04-30"
 },
@@ -665,12 +699,11 @@
 "id": "160518",
 "nome": "Weliton Prado",
 "uf": "MG",
-"partido": "PROS",
+"partido": "PSD",
 "leg": [
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "WELITON FERNANDES PRADO",
 "nascimento": "1975-08-24"
 },
@@ -682,6 +715,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "AGUINALDO VELLOSO BORGES RIBEIRO",
 "nascimento": "1969-02-13"
 },
@@ -704,6 +738,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DIONILSO MATEUS MARCON",
 "nascimento": "1964-09-21"
 },
@@ -715,6 +750,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ELVINO JOSÉ BOHN GASS",
 "nascimento": "1962-02-05"
 },
@@ -726,6 +762,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ARTHUR CÉSAR PEREIRA DE LIRA",
 "nascimento": "1969-06-25"
 },
@@ -737,6 +774,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALEXANDRE LEITE DA SILVA",
 "nascimento": "1989-04-18"
 },
@@ -748,6 +786,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JONAS DONIZETTE FERREIRA",
 "nascimento": "1965-06-25"
 },
@@ -759,6 +798,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DANRLEI DE DEUS HINTERHOLZ",
 "nascimento": "1973-04-18"
 },
@@ -770,6 +810,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANTONIO LUIZ PARANHOS RIBEIRO LEITE DE BRITO",
 "nascimento": "1969-01-17"
 },
@@ -781,6 +822,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOÃO CARLOS SIQUEIRA",
 "nascimento": "1967-02-28"
 },
@@ -792,6 +834,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PAULO ROBERTO FREIRE DA COSTA",
 "nascimento": "1955-02-14"
 },
@@ -803,6 +846,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALCEU MOREIRA DA SILVA",
 "nascimento": "1954-06-04"
 },
@@ -814,6 +858,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ OLIMPIO SILVEIRA MORAES",
 "nascimento": "1956-12-11"
 },
@@ -825,6 +870,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "WALDENOR ALVES PEREIRA FILHO",
 "nascimento": "1954-03-08"
 },
@@ -836,6 +882,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ÉRIKA JUCÁ KOKAY",
 "nascimento": "1957-08-15"
 },
@@ -847,6 +894,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DIEGO LEONARDO DE ANDRADE CARVALHO",
 "nascimento": "1977-08-08"
 },
@@ -858,6 +906,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "VINICIUS DE AZEVEDO GURGEL",
 "nascimento": "1978-07-31"
 },
@@ -869,6 +918,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ CARLOS BECKER DE OLIVEIRA E SILVA",
 "nascimento": "1978-06-21"
 },
@@ -876,11 +926,11 @@
 "id": "160598",
 "nome": "Flávia Morais",
 "uf": "GO",
-"partido": "PDT",
+"partido": "MDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FLÁVIA CARREIRO ALBUQUERQUE MORAIS",
 "nascimento": "1969-04-26"
 },
@@ -892,6 +942,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DIMAS FABIANO TOLEDO JÚNIOR",
 "nascimento": "1973-05-23"
 },
@@ -903,6 +954,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ARTHUR DE OLIVEIRA MAIA DA SILVA",
 "nascimento": "1964-08-17"
 },
@@ -914,6 +966,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCO ANTÔNIO FELICIANO",
 "nascimento": "1972-10-12"
 },
@@ -925,6 +978,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PEDRO FRANCISCO UCZAI",
 "nascimento": "1963-03-10"
 },
@@ -936,6 +990,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "VALMIR CARLOS DA ASSUNÇÃO",
 "nascimento": "1964-12-17"
 },
@@ -947,6 +1002,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SANDRO ALEX CRUZ DE OLIVEIRA",
 "nascimento": "1972-11-25"
 },
@@ -956,7 +1012,6 @@
 "uf": "PB",
 "partido": "PSC",
 "leg": [
-57,
 57
 ],
 "nome_civil": "ROMERO RODRIGUES VEIGA",
@@ -966,11 +1021,11 @@
 "id": "160632",
 "nome": "Zé Silva",
 "uf": "MG",
-"partido": "SOLIDARIEDADE",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ SILVA SOARES",
 "nascimento": "1963-05-11"
 },
@@ -978,11 +1033,11 @@
 "id": "160635",
 "nome": "Ruy Carneiro",
 "uf": "PB",
-"partido": "PSC",
+"partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RUY MANUEL CARNEIRO BARBOSA DE ACA BELCHIOR",
 "nascimento": "1970-08-17"
 },
@@ -994,6 +1049,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "EROS FERREIRA BIONDINI",
 "nascimento": "1971-05-20"
 },
@@ -1005,6 +1061,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCIVANIA DO SOCORRO DA ROCHA FLEXA",
 "nascimento": "1973-06-21"
 },
@@ -1012,11 +1069,11 @@
 "id": "160642",
 "nome": "Pastor Eurico",
 "uf": "PE",
-"partido": "PL",
+"partido": "PSDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FRANCISCO EURICO DA SILVA",
 "nascimento": "1962-09-12"
 },
@@ -1028,6 +1085,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "AUGUSTO RODRIGUES COUTINHO DE MELO",
 "nascimento": "1962-10-22"
 },
@@ -1039,6 +1097,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FELIX DE ALMEIDA MENDONÇA JÚNIOR",
 "nascimento": "1963-11-29"
 },
@@ -1050,6 +1109,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GIOVANI CHERINI",
 "nascimento": "1960-06-23"
 },
@@ -1061,6 +1121,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "HUGO MOTTA WANDERLEY DA NÓBREGA",
 "nascimento": "1989-09-11"
 },
@@ -1072,6 +1133,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DOMINGOS SÁVIO CAMPOS RESENDE",
 "nascimento": "1957-03-25"
 },
@@ -1079,11 +1141,11 @@
 "id": "160976",
 "nome": "Tiririca",
 "uf": "SP",
-"partido": "PL",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FRANCISCO EVERARDO TIRIRICA OLIVEIRA SILVA",
 "nascimento": "1965-05-01"
 },
@@ -1095,6 +1157,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RAFAEL PEZENTI",
 "nascimento": "1987-06-06"
 },
@@ -1106,6 +1169,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "EMIDIO ALVES MADEIRA JUNIOR",
 "nascimento": "1967-03-10"
 },
@@ -1117,6 +1181,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FRANCISCO DANIEL CELEGUIM DE MORAIS",
 "nascimento": "1984-05-05"
 },
@@ -1128,6 +1193,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ HILOSHI NISHIMORI",
 "nascimento": "1949-04-09"
 },
@@ -1157,11 +1223,11 @@
 "id": "165470",
 "nome": "Rodrigo Valadares",
 "uf": "SE",
-"partido": "UNIÃO",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RODRIGO SANTANA VALADARES",
 "nascimento": "1989-08-06"
 },
@@ -1171,11 +1237,9 @@
 "uf": "GO",
 "partido": "PL",
 "leg": [
-57,
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MAGDA MOFATTO HON",
 "nascimento": "1948-10-26"
 },
@@ -1198,6 +1262,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PAULO FERNANDO DOS SANTOS",
 "nascimento": "1957-09-15"
 },
@@ -1209,6 +1274,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FABIO DE ALMEIDA REIS",
 "nascimento": "1977-04-15"
 },
@@ -1220,6 +1286,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MIGUEL ÂNGELO MONTEIRO ANDRADE",
 "nascimento": "1991-10-11"
 },
@@ -1227,11 +1294,11 @@
 "id": "175765",
 "nome": "Ribamar Silva",
 "uf": "SP",
-"partido": "PSD",
+"partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RIBAMAR ANTONIO DA SILVA",
 "nascimento": "1975-05-27"
 },
@@ -1243,6 +1310,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSE AUGUSTO ROSA",
 "nascimento": "1966-10-04"
 },
@@ -1254,6 +1322,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANDRE DOS SANTOS ABDON",
 "nascimento": "1970-11-10"
 },
@@ -1265,6 +1334,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LEANDRE DAL PONTE",
 "nascimento": "1975-12-20"
 },
@@ -1276,6 +1346,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "AFONSO ANTUNES DA MOTTA",
 "nascimento": "1950-01-08"
 },
@@ -1283,11 +1354,11 @@
 "id": "178843",
 "nome": "Marx Beltrão",
 "uf": "AL",
-"partido": "PP",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARX BELTRÃO LIMA SIQUEIRA",
 "nascimento": "1979-11-28"
 },
@@ -1299,6 +1370,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ELMAR JOSE VIEIRA NASCIMENTO",
 "nascimento": "1970-07-06"
 },
@@ -1310,6 +1382,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JORGE JOSE SANTOS PEREIRA SOLLA",
 "nascimento": "1961-04-11"
 },
@@ -1317,11 +1390,11 @@
 "id": "178858",
 "nome": "Mário Negromonte Jr.",
 "uf": "BA",
-"partido": "PP",
+"partido": "PSB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARIO SILVIO MENDES NEGROMONTE JÚNIOR",
 "nascimento": "1980-08-31"
 },
@@ -1333,6 +1406,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PAULO VELLOSO DANTAS AZI",
 "nascimento": "1963-01-14"
 },
@@ -1340,11 +1414,11 @@
 "id": "178866",
 "nome": "Luizianne Lins",
 "uf": "CE",
-"partido": "PT",
+"partido": "REDE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZIANNE DE OLIVEIRA LINS",
 "nascimento": "1968-11-18"
 },
@@ -1352,11 +1426,11 @@
 "id": "178871",
 "nome": "Evair Vieira de Melo",
 "uf": "ES",
-"partido": "PP",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "EVAIR VIEIRA DE MELO",
 "nascimento": "1972-04-02"
 },
@@ -1368,6 +1442,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "HELDER IGNACIO SALOMAO",
 "nascimento": "1964-03-08"
 },
@@ -1379,6 +1454,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CELIO ANTONIO DA SILVEIRA",
 "nascimento": "1959-09-19"
 },
@@ -1386,11 +1462,11 @@
 "id": "178881",
 "nome": "Aluisio Mendes",
 "uf": "MA",
-"partido": "PSC",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALUISIO GUIMARAES MENDES FILHO",
 "nascimento": "1961-11-11"
 },
@@ -1402,6 +1478,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANDRE LUIZ CARVALHO RIBEIRO",
 "nascimento": "1989-08-27"
 },
@@ -1413,6 +1490,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "HILDO AUGUSTO DA ROCHA NETO",
 "nascimento": "1960-04-22"
 },
@@ -1420,11 +1498,11 @@
 "id": "178886",
 "nome": "Juscelino Filho",
 "uf": "MA",
-"partido": "UNIÃO",
+"partido": "PSDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSE JUSCELINO DOS SANTOS REZENDE FILHO",
 "nascimento": "1984-11-06"
 },
@@ -1436,6 +1514,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RUBENS PEREIRA E SILVA JUNIOR",
 "nascimento": "1984-03-16"
 },
@@ -1447,6 +1526,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MISAEL ARTUR FERREIRA VARELLA",
 "nascimento": "1959-11-27"
 },
@@ -1458,6 +1538,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "NEWTON CARDOSO JUNIOR",
 "nascimento": "1979-11-11"
 },
@@ -1469,6 +1550,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FABIO PAULINO GARCIA",
 "nascimento": "1977-06-29"
 },
@@ -1480,6 +1562,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "EDER MAURO CARDOSO BARRA",
 "nascimento": "1960-12-14"
 },
@@ -1502,6 +1585,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOAQUIM PASSARINHO PINTO DE SOUZA PORTO",
 "nascimento": "1961-12-02"
 },
@@ -1513,6 +1597,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALIEL MACHADO BARK",
 "nascimento": "1989-02-26"
 },
@@ -1520,11 +1605,11 @@
 "id": "178929",
 "nome": "Diego Garcia",
 "uf": "PR",
-"partido": "REPUBLICANOS",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DIEGO ALEXSANDER GONCALO PAULA GARCIA",
 "nascimento": "1984-10-10"
 },
@@ -1536,6 +1621,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUCIANO DUCCI",
 "nascimento": "1955-03-23"
 },
@@ -1547,6 +1633,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SERGIO DE SOUZA",
 "nascimento": "1971-03-13"
 },
@@ -1554,11 +1641,11 @@
 "id": "178934",
 "nome": "Toninho Wandscheer",
 "uf": "PR",
-"partido": "PROS",
+"partido": "PP",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANTONIO WANDSCHEER",
 "nascimento": "1950-08-31"
 },
@@ -1570,6 +1657,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALTINEU CÔRTES FREITAS COUTINHO",
 "nascimento": "1968-09-13"
 },
@@ -1577,11 +1665,11 @@
 "id": "178943",
 "nome": "Marcos Soares",
 "uf": "RJ",
-"partido": "UNIÃO",
+"partido": "PSDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCOS BEZERRA RIBEIRO SOARES",
 "nascimento": "1978-05-16"
 },
@@ -1593,6 +1681,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ROSANGELA DE SOUZA GOMES",
 "nascimento": "1966-12-27"
 },
@@ -1604,6 +1693,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SORAYA ALENCAR DOS SANTOS",
 "nascimento": "1958-12-04"
 },
@@ -1615,6 +1705,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SOSTENES SILVA CAVALCANTE",
 "nascimento": "1975-01-16"
 },
@@ -1622,11 +1713,11 @@
 "id": "178954",
 "nome": "Lucio Mosquini",
 "uf": "RO",
-"partido": "MDB",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUCIO ANTONIO MOSQUINI",
 "nascimento": "1969-07-23"
 },
@@ -1638,6 +1729,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANTONIO CARLOS GOMES DA SILVA",
 "nascimento": "1972-06-13"
 },
@@ -1649,6 +1741,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIS ANTONIO FRANCISCATTO COVATTI",
 "nascimento": "1987-07-25"
 },
@@ -1656,11 +1749,11 @@
 "id": "178964",
 "nome": "Heitor Schuch",
 "uf": "RS",
-"partido": "PSB",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "HEITOR JOSE SCHUCH",
 "nascimento": "1962-03-25"
 },
@@ -1668,11 +1761,11 @@
 "id": "178966",
 "nome": "Geovania de Sá",
 "uf": "SC",
-"partido": "PSDB",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "Geovânia de Sá",
 "nascimento": "1972-03-30"
 },
@@ -1684,6 +1777,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOAO SOMARIVA DANIEL",
 "nascimento": "1967-08-22"
 },
@@ -1695,6 +1789,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALEX SPINELLI MANENTE",
 "nascimento": "1979-08-22"
 },
@@ -1706,6 +1801,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ FELIPE BALEIA TENUTO ROSSI",
 "nascimento": "1972-06-09"
 },
@@ -1717,6 +1813,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCIO LUIZ ALVINO DE SOUZA",
 "nascimento": "1969-06-14"
 },
@@ -1728,6 +1825,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MIGUEL LOMBARDI",
 "nascimento": "1964-01-29"
 },
@@ -1739,6 +1837,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "NILTO IGNACIO TATTO",
 "nascimento": "1963-07-31"
 },
@@ -1750,6 +1849,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ORLANDO SILVA DE JESUS JUNIOR",
 "nascimento": "1971-05-27"
 },
@@ -1761,6 +1861,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RENATA HELLMEISTER DE ABREU MELO",
 "nascimento": "1982-04-15"
 },
@@ -1768,11 +1869,11 @@
 "id": "178992",
 "nome": "Vitor Lippi",
 "uf": "SP",
-"partido": "PSDB",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "VITOR LIPPI",
 "nascimento": "1959-05-18"
 },
@@ -1784,6 +1885,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CARLOS HENRIQUE AMORIM",
 "nascimento": "1961-04-21"
 },
@@ -1795,6 +1897,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MOSES HAENDEL MELO RODRIGUES",
 "nascimento": "1978-06-06"
 },
@@ -1806,6 +1909,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCELO HENRIQUE TEIXEIRA DIAS",
 "nascimento": "1974-02-16"
 },
@@ -1817,6 +1921,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCIO DELLA VALLE BIOLCHI",
 "nascimento": "1979-05-23"
 },
@@ -1828,6 +1933,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RAIMUNDO DINIZ ARAÚJO",
 "nascimento": "1980-03-21"
 },
@@ -1837,7 +1943,6 @@
 "uf": "MA",
 "partido": "PATRIOTA",
 "leg": [
-57,
 57
 ],
 "nome_civil": "WOLMER DE AZEVEDO ARAUJO",
@@ -1851,6 +1956,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MERLONG SOLANO NOGUEIRA",
 "nascimento": "1958-09-17"
 },
@@ -1862,6 +1968,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FLÁVIO RODRIGUES NOGUEIRA",
 "nascimento": "1953-02-27"
 },
@@ -1871,7 +1978,6 @@
 "uf": "AL",
 "partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
 "nome_civil": "NIVALDO FERREIRA DE ALBUQUERQUE NETO",
@@ -1881,11 +1987,11 @@
 "id": "198197",
 "nome": "Greyce Elias",
 "uf": "MG",
-"partido": "AVANTE",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GREYCE DE QUEIROZ ELIAS",
 "nascimento": "1981-12-15"
 },
@@ -1893,11 +1999,11 @@
 "id": "198783",
 "nome": "Emanuel Pinheiro Neto",
 "uf": "MT",
-"partido": "MDB",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "EMANUEL PINHEIRO DA SILVA PRIMO",
 "nascimento": "1995-01-05"
 },
@@ -1909,6 +2015,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ ALBERTO OVANDO",
 "nascimento": "1949-09-25"
 },
@@ -1916,11 +2023,11 @@
 "id": "204353",
 "nome": "Aline Gurgel",
 "uf": "AP",
-"partido": "REPUBLICANOS",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALINE PARANHOS VARONIL GURGEL",
 "nascimento": "1980-11-25"
 },
@@ -1932,6 +2039,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSIAS MARIO DA VITORIA",
 "nascimento": "1971-06-02"
 },
@@ -1939,11 +2047,11 @@
 "id": "204356",
 "nome": "Amaro Neto",
 "uf": "ES",
-"partido": "REPUBLICANOS",
+"partido": "PP",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "AMARO ROCHA NASCIMENTO NETO",
 "nascimento": "1976-12-04"
 },
@@ -1951,11 +2059,11 @@
 "id": "204358",
 "nome": "Beto Pereira",
 "uf": "MS",
-"partido": "PSDB",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "HUMBERTO REZENDE PEREIRA",
 "nascimento": "1977-11-14"
 },
@@ -1963,11 +2071,11 @@
 "id": "204360",
 "nome": "Silvia Cristina",
 "uf": "RO",
-"partido": "PL",
+"partido": "PP",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SILVIA CRISTINA AMANCIO CHAGAS",
 "nascimento": "1974-01-15"
 },
@@ -1979,6 +2087,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CARLOS ALBERTO CHIODINI",
 "nascimento": "1982-03-08"
 },
@@ -1986,11 +2095,11 @@
 "id": "204362",
 "nome": "Ricardo Guidi",
 "uf": "SC",
-"partido": "PSD",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RICARDO ZANATTA GUIDI",
 "nascimento": "1977-09-28"
 },
@@ -1998,11 +2107,11 @@
 "id": "204364",
 "nome": "Eli Borges",
 "uf": "TO",
-"partido": "PL",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ELI DIAS BORGES",
 "nascimento": "1960-09-01"
 },
@@ -2014,6 +2123,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GILSON MARQUES VIEIRA",
 "nascimento": "1981-04-12"
 },
@@ -2025,6 +2135,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DANIEL COSTA DE FREITAS",
 "nascimento": "1982-04-03"
 },
@@ -2036,6 +2147,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FÁBIO LUIZ SCHIOCHET FILHO",
 "nascimento": "1988-05-31"
 },
@@ -2047,6 +2159,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CAROLINE RODRIGUES DE TONI",
 "nascimento": "1986-09-01"
 },
@@ -2058,6 +2171,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JULIO CESAR RIBEIRO",
 "nascimento": "1975-02-24"
 },
@@ -2069,6 +2183,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "BEATRIZ KICIS TORRENTS DE SORDI",
 "nascimento": "1961-09-19"
 },
@@ -2078,7 +2193,6 @@
 "uf": "SC",
 "partido": "PL",
 "leg": [
-57,
 57
 ],
 "nome_civil": "LUIZ ARMANDO SCHROEDER REIS",
@@ -2092,6 +2206,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOÃO CHRISÓSTOMO DE MOURA",
 "nascimento": "1959-06-23"
 },
@@ -2103,6 +2218,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ACÁCIO DA SILVA FAVACHO NETO",
 "nascimento": "1983-09-28"
 },
@@ -2110,11 +2226,11 @@
 "id": "204387",
 "nome": "Sargento Fahur",
 "uf": "PR",
-"partido": "PSD",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GILSON CARDOSO FAHUR",
 "nascimento": "1963-11-06"
 },
@@ -2126,6 +2242,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALCIBIO MESQUITA BIBO NUNES",
 "nascimento": "1957-01-09"
 },
@@ -2133,11 +2250,11 @@
 "id": "204390",
 "nome": "Professor Alcides",
 "uf": "GO",
-"partido": "PL",
+"partido": "PSDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALCIDES RIBEIRO FILHO",
 "nascimento": "1953-10-25"
 },
@@ -2145,11 +2262,11 @@
 "id": "204391",
 "nome": "José Nelto",
 "uf": "GO",
-"partido": "PP",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ NELTO LAGARES DAS MERCEZ",
 "nascimento": "1960-09-19"
 },
@@ -2157,11 +2274,11 @@
 "id": "204394",
 "nome": "Gervásio Maia",
 "uf": "PB",
-"partido": "PSB",
+"partido": "PCdoB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GERVÁSIO AGRIPINO MAIA",
 "nascimento": "1975-04-14"
 },
@@ -2169,11 +2286,11 @@
 "id": "204395",
 "nome": "Pedro Lupion",
 "uf": "PR",
-"partido": "PP",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PEDRO DEBONI LUPION MELLO",
 "nascimento": "1983-06-04"
 },
@@ -2183,10 +2300,9 @@
 "uf": "PR",
 "partido": "PL",
 "leg": [
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "NELSI COGUETTO MARIA",
 "nascimento": "1959-03-01"
 },
@@ -2194,11 +2310,11 @@
 "id": "204398",
 "nome": "Felipe Francischini",
 "uf": "PR",
-"partido": "UNIÃO",
+"partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIS FELIPE BONATTO FRANCISCHINI",
 "nascimento": "1991-10-02"
 },
@@ -2206,11 +2322,11 @@
 "id": "204404",
 "nome": "Lucas Redecker",
 "uf": "RS",
-"partido": "PSDB",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUCAS BELLO REDECKER",
 "nascimento": "1981-05-26"
 },
@@ -2222,6 +2338,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PEDRO BANDARRA WESTPHALEN",
 "nascimento": "1950-12-19"
 },
@@ -2233,6 +2350,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FERNANDA MELCHIONNA E SILVA",
 "nascimento": "1984-02-02"
 },
@@ -2240,11 +2358,11 @@
 "id": "204408",
 "nome": "Gustinho Ribeiro",
 "uf": "SE",
-"partido": "REPUBLICANOS",
+"partido": "PP",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ AUGUSTO CARVALHO RIBEIRO FILHO",
 "nascimento": "1982-02-16"
 },
@@ -2256,6 +2374,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DANIEL TRZECIAK DUARTE",
 "nascimento": "1986-11-04"
 },
@@ -2263,11 +2382,11 @@
 "id": "204410",
 "nome": "Luisa Canziani",
 "uf": "PR",
-"partido": "PSD",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUISA CANZIANI DOS SANTOS SILVEIRA",
 "nascimento": "1996-04-11"
 },
@@ -2279,6 +2398,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FILIPE BARROS BAPTISTA DE TOLEDO RIBEIRO",
 "nascimento": "1991-05-29"
 },
@@ -2286,11 +2406,11 @@
 "id": "204412",
 "nome": "Dr. Zacharias Calil",
 "uf": "GO",
-"partido": "UNIÃO",
+"partido": "MDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ZACARIAS CALIL HAMU",
 "nascimento": "1953-11-05"
 },
@@ -2302,6 +2422,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "UBIRATAN ANTUNES SANDERSON",
 "nascimento": "1969-12-01"
 },
@@ -2309,11 +2430,11 @@
 "id": "204419",
 "nome": "Glaustin da Fokus",
 "uf": "GO",
-"partido": "PSC",
+"partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GLAUSKSTON BATISTA RIOS",
 "nascimento": "1973-12-22"
 },
@@ -2336,6 +2457,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANDRÉ FERREIRA RODRIGUES",
 "nascimento": "1972-12-10"
 },
@@ -2347,6 +2469,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SILVIO SERAFIM COSTA FILHO",
 "nascimento": "1982-03-05"
 },
@@ -2358,6 +2481,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ CARLOS VERAS DOS SANTOS",
 "nascimento": "1981-08-10"
 },
@@ -2365,11 +2489,11 @@
 "id": "204427",
 "nome": "Fernando Rodolfo",
 "uf": "PE",
-"partido": "PL",
+"partido": "PRD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FERNANDO RODOLFO TENORIO DE VASCONCELOS",
 "nascimento": "1983-11-17"
 },
@@ -2377,11 +2501,11 @@
 "id": "204431",
 "nome": "Marcos Aurélio Sampaio",
 "uf": "PI",
-"partido": "PSD",
+"partido": "MDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCOS AURÉLIO  PÁDUA RIBEIRO GONÇALVES DE SAMPAIO",
 "nascimento": "1991-09-19"
 },
@@ -2404,6 +2528,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ISNALDO BULHOES BARROS JUNIOR",
 "nascimento": "1976-10-30"
 },
@@ -2411,11 +2536,11 @@
 "id": "204441",
 "nome": "Otoni de Paula",
 "uf": "RJ",
-"partido": "MDB",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "OTONI MOURA DE PAULO JUNIOR",
 "nascimento": "1976-11-22"
 },
@@ -2427,6 +2552,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "HELIO FERNANDO BARBOSA LOPES",
 "nascimento": "1969-03-28"
 },
@@ -2438,6 +2564,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FERNANDO WANDERLEY VARGAS DA SILVA",
 "nascimento": "1956-12-06"
 },
@@ -2456,11 +2583,11 @@
 "id": "204449",
 "nome": "Nelson Barbudo",
 "uf": "MT",
-"partido": "PL",
+"partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "NELSON NED PREVIDENTE",
 "nascimento": "1960-02-14"
 },
@@ -2472,6 +2599,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ ANTONIO DE SOUZA TEIXEIRA JÚNIOR",
 "nascimento": "1973-12-15"
 },
@@ -2483,6 +2611,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "NATÁLIA BASTOS BONAVIDES",
 "nascimento": "1988-06-15"
 },
@@ -2490,11 +2619,11 @@
 "id": "204455",
 "nome": "Luiz Lima",
 "uf": "RJ",
-"partido": "PL",
+"partido": "NOVO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ EDUARDO CARNEIRO DA SILVA DE SOUZA LIMA",
 "nascimento": "1977-12-10"
 },
@@ -2506,6 +2635,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GUTEMBERG REIS DE OLIVEIRA",
 "nascimento": "1979-09-09"
 },
@@ -2513,11 +2643,11 @@
 "id": "204457",
 "nome": "Juninho do Pneu",
 "uf": "RJ",
-"partido": "UNIÃO",
+"partido": "PSDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ROGERIO TEIXEIRA JUNIOR",
 "nascimento": "1976-10-23"
 },
@@ -2525,11 +2655,11 @@
 "id": "204459",
 "nome": "Daniela do Waguinho",
 "uf": "RJ",
-"partido": "UNIÃO",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DANIELA MOTE DE SOUZA CARNEIRO",
 "nascimento": "1976-02-10"
 },
@@ -2541,6 +2671,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "Carlos Roberto Jordy Coelho de Mattos",
 "nascimento": "1982-02-08"
 },
@@ -2552,6 +2683,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CHRISTINE NOGUEIRA DOS REIS TONIETTO",
 "nascimento": "1991-05-14"
 },
@@ -2563,6 +2695,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "TALIRIA PETRONE SOARES",
 "nascimento": "1985-04-09"
 },
@@ -2574,6 +2707,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSE ANTONIO DOS SANTOS MEDEIROS",
 "nascimento": "1970-03-19"
 },
@@ -2585,6 +2719,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ELIÉSER GIRÃO MONTEIRO FILHO",
 "nascimento": "1955-05-08"
 },
@@ -2592,11 +2727,11 @@
 "id": "204474",
 "nome": "Juarez Costa",
 "uf": "MT",
-"partido": "MDB",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JUAREZ ALVES DA COSTA",
 "nascimento": "1960-01-20"
 },
@@ -2606,7 +2741,6 @@
 "uf": "RJ",
 "partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
 "nome_civil": "JOÃO FRANCISCO INÁCIO BRAZÃO",
@@ -2616,11 +2750,11 @@
 "id": "204479",
 "nome": "Nicoletti",
 "uf": "RR",
-"partido": "UNIÃO",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANTONIO CARLOS NICOLETTI",
 "nascimento": "1981-07-21"
 },
@@ -2632,6 +2766,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ROGÉRIO CORREIA DE MOURA BAPTISTA",
 "nascimento": "1958-01-11"
 },
@@ -2643,6 +2778,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JAZIEL PEREIRA DE SOUSA",
 "nascimento": "1961-05-03"
 },
@@ -2650,11 +2786,11 @@
 "id": "204482",
 "nome": "Euclydes Pettersen",
 "uf": "MG",
-"partido": "PSC",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "EUCLYDES MARCOS PETTERSEN NETO",
 "nascimento": "1984-08-15"
 },
@@ -2666,6 +2802,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ CARLOS MOTTA",
 "nascimento": "1959-04-24"
 },
@@ -2673,11 +2810,11 @@
 "id": "204486",
 "nome": "Mauro Benevides Filho",
 "uf": "CE",
-"partido": "PDT",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CARLOS MAURO BENEVIDES FILHO",
 "nascimento": "1959-03-09"
 },
@@ -2689,6 +2826,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CELIO STUDART BARBOSA",
 "nascimento": "1987-06-19"
 },
@@ -2696,11 +2834,11 @@
 "id": "204489",
 "nome": "Robério Monteiro",
 "uf": "CE",
-"partido": "PDT",
+"partido": "PSB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCOS ROBERIO RIBEIRO MONTEIRO",
 "nascimento": "1970-02-15"
 },
@@ -2712,6 +2850,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GILBERTO APARECIDO ABRAMO",
 "nascimento": "1966-08-06"
 },
@@ -2723,6 +2862,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PAULO JOSE CARLOS GUEDES",
 "nascimento": "1970-10-01"
 },
@@ -2730,11 +2870,11 @@
 "id": "204494",
 "nome": "Fred Costa",
 "uf": "MG",
-"partido": "PATRIOTA",
+"partido": "PRD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FREDERICO BORGES DA COSTA",
 "nascimento": "1977-07-12"
 },
@@ -2746,6 +2886,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "AIRTON LUIZ FALEIRO",
 "nascimento": "1959-03-16"
 },
@@ -2753,12 +2894,11 @@
 "id": "204496",
 "nome": "Celso Sabino",
 "uf": "PA",
-"partido": "UNIÃO",
+"partido": "PDT",
 "leg": [
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CELSO SABINO DE OLIVEIRA",
 "nascimento": "1978-08-29"
 },
@@ -2770,6 +2910,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOÃO FERRARI JÚNIOR",
 "nascimento": "1967-07-13"
 },
@@ -2777,11 +2918,11 @@
 "id": "204498",
 "nome": "Olival Marques",
 "uf": "PA",
-"partido": "MDB",
+"partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "OLIVAL HENRIQUE MARQUES DE SOUZA",
 "nascimento": "1982-01-09"
 },
@@ -2793,6 +2934,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALENCAR SANTANA BRAGA",
 "nascimento": "1976-03-14"
 },
@@ -2811,11 +2953,11 @@
 "id": "204504",
 "nome": "Cezinha de Madureira",
 "uf": "SP",
-"partido": "PSD",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANTONIO CEZAR CORREIA FREIRE",
 "nascimento": "1973-12-12"
 },
@@ -2827,6 +2969,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCOS ANTONIO PEREIRA",
 "nascimento": "1972-04-04"
 },
@@ -2845,12 +2988,11 @@
 "id": "204508",
 "nome": "Igor Timo",
 "uf": "MG",
-"partido": "PODE",
+"partido": "UNIÃO",
 "leg": [
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "IGOR TARCIANO TIMO",
 "nascimento": "1982-04-10"
 },
@@ -2858,11 +3000,11 @@
 "id": "204511",
 "nome": "David Soares",
 "uf": "SP",
-"partido": "UNIÃO",
+"partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DAVID BEZERRA RIBEIRO SOARES",
 "nascimento": "1973-12-21"
 },
@@ -2874,6 +3016,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCELO EDUARDO FREITAS",
 "nascimento": "1976-03-04"
 },
@@ -2892,11 +3035,11 @@
 "id": "204515",
 "nome": "André Janones",
 "uf": "MG",
-"partido": "AVANTE",
+"partido": "REDE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANDRE LUIS GASPAR JANONES",
 "nascimento": "1984-05-05"
 },
@@ -2908,6 +3051,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSE VITOR DE RESENDE AGUIAR",
 "nascimento": "1984-11-01"
 },
@@ -2915,12 +3059,11 @@
 "id": "204518",
 "nome": "Dr. Frederico",
 "uf": "MG",
-"partido": "PATRIOTA",
+"partido": "PL",
 "leg": [
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FREDERICO DE CASTRO ESCALEIRA",
 "nascimento": "1977-03-24"
 },
@@ -2932,6 +3075,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GERALDO JUNIO DO AMARAL",
 "nascimento": "1987-06-30"
 },
@@ -2954,6 +3098,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANTÔNIO PINHEIRO NETO",
 "nascimento": "1991-05-30"
 },
@@ -2965,6 +3110,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ROSANA DE OLIVEIRA VALLE",
 "nascimento": "1969-05-08"
 },
@@ -2976,6 +3122,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ PHILIPPE DE ORLEANS BRAGANÇA",
 "nascimento": "1969-04-03"
 },
@@ -2987,6 +3134,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ADRIANA MIGUEL VENTURA",
 "nascimento": "1969-03-06"
 },
@@ -2994,11 +3142,11 @@
 "id": "204531",
 "nome": "Guilherme Derrite",
 "uf": "SP",
-"partido": "PL",
+"partido": "PP",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GUILHERME MURARO DERRITE",
 "nascimento": "1984-10-10"
 },
@@ -3006,11 +3154,11 @@
 "id": "204533",
 "nome": "Idilvan Alencar",
 "uf": "CE",
-"partido": "PDT",
+"partido": "PSB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANTONIO IDILVAN DE LIMA ALENCAR",
 "nascimento": "1968-09-23"
 },
@@ -3022,6 +3170,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "TABATA CLAUDIA AMARAL DE PONTES",
 "nascimento": "1993-11-14"
 },
@@ -3033,6 +3182,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SAMIA DE SOUZA BOMFIM",
 "nascimento": "1989-08-22"
 },
@@ -3040,11 +3190,11 @@
 "id": "204536",
 "nome": "Kim Kataguiri",
 "uf": "SP",
-"partido": "UNIÃO",
+"partido": "MISSÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "KIM PATROCA KATAGUIRI",
 "nascimento": "1996-01-28"
 },
@@ -3056,6 +3206,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "HERCÍLIO ARAÚJO DINIZ FILHO",
 "nascimento": "1963-09-14"
 },
@@ -3067,6 +3218,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARIA DO PARTO MENDES ROSAS",
 "nascimento": "1965-10-01"
 },
@@ -3074,11 +3226,11 @@
 "id": "204541",
 "nome": "Eduardo Bismarck",
 "uf": "CE",
-"partido": "PDT",
+"partido": "PV",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "EDUARDO HENRIQUE MAIA BISMARCK",
 "nascimento": "1981-11-14"
 },
@@ -3090,6 +3242,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANTONIO JOSE AGUIAR ALBUQUERQUE",
 "nascimento": "1983-09-26"
 },
@@ -3097,11 +3250,11 @@
 "id": "204550",
 "nome": "Júnior Mano",
 "uf": "CE",
-"partido": "PL",
+"partido": "PSB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANTÔNIO LUIZ RODRIGUES MANO JÚNIOR",
 "nascimento": "1985-04-16"
 },
@@ -3113,6 +3266,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MANOEL ISIDORIO DE SANTANA JUNIOR",
 "nascimento": "1962-07-28"
 },
@@ -3124,6 +3278,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SIDNEY RICARDO DE OLIVEIRA LEITE",
 "nascimento": "1967-04-08"
 },
@@ -3135,6 +3290,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ MARCELO DO NASCIMENTO NILO",
 "nascimento": "1955-04-26"
 },
@@ -3146,6 +3302,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ CERQUEIRA DE SANTANA NETO",
 "nascimento": "1964-03-30"
 },
@@ -3157,6 +3314,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ADOLFO VIANA DE CASTRO NETO",
 "nascimento": "1981-02-02"
 },
@@ -3168,6 +3326,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSIMAR CUNHA RODRIGUES",
 "nascimento": "1976-11-13"
 },
@@ -3175,11 +3334,11 @@
 "id": "204566",
 "nome": "Marreca Filho",
 "uf": "MA",
-"partido": "PATRIOTA",
+"partido": "PRD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANTONIO DA CRUZ FILGUEIRA NETO",
 "nascimento": "1992-04-25"
 },
@@ -3187,11 +3346,11 @@
 "id": "204567",
 "nome": "Raimundo Costa",
 "uf": "BA",
-"partido": "PODE",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RAIMUNDO MAGALHÃES COSTA",
 "nascimento": "1961-03-09"
 },
@@ -3203,6 +3362,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GILDENEMIR DE LIMA SOUSA",
 "nascimento": "1971-11-08"
 },
@@ -3225,6 +3385,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALBERTO BARROS CAVALCANTE NETO",
 "nascimento": "1982-05-05"
 },
@@ -3243,11 +3404,11 @@
 "id": "204574",
 "nome": "Junior Lourenço",
 "uf": "MA",
-"partido": "PL",
+"partido": "MDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSE LOURENÇO BOMFIM JUNIOR",
 "nascimento": "1978-10-18"
 },
@@ -3259,6 +3420,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CHARLES FERNANDES SILVEIRA SANTANA",
 "nascimento": "1965-03-15"
 },
@@ -3270,6 +3432,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JORGE BRAZ DE OLIVEIRA",
 "nascimento": "1953-07-13"
 },
@@ -3279,7 +3442,6 @@
 "uf": "PR",
 "partido": "PSD",
 "leg": [
-57,
 57
 ],
 "nome_civil": "REINHOLD STEPHANES JUNIOR",
@@ -3293,6 +3455,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CÉLIA NUNES CORREA",
 "nascimento": "1989-05-10"
 },
@@ -3302,8 +3465,6 @@
 "uf": "MG",
 "partido": "PSC",
 "leg": [
-57,
-57,
 57
 ],
 "nome_civil": "KATIA REGINA OLIVEIRA DIAS",
@@ -3317,6 +3478,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSEILDO RIBEIRO RAMOS",
 "nascimento": "1957-08-23"
 },
@@ -3328,6 +3490,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "NIKOLAS FERREIRA DE OLIVEIRA",
 "nascimento": "1996-05-30"
 },
@@ -3335,11 +3498,11 @@
 "id": "210989",
 "nome": "Bruno Farias",
 "uf": "MG",
-"partido": "AVANTE",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "BRUNO SOUZA FARIAS",
 "nascimento": "1982-10-07"
 },
@@ -3369,11 +3532,11 @@
 "id": "213762",
 "nome": "Carla Dickson",
 "uf": "RN",
-"partido": "UNIÃO",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "HILKEA CARLA DE SOUZA MEDEIROS LIMA",
 "nascimento": "1976-07-02"
 },
@@ -3381,11 +3544,11 @@
 "id": "214694",
 "nome": "Jorge Goetten",
 "uf": "SC",
-"partido": "PL",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JORGE GOETTEN DE LIMA",
 "nascimento": "1962-04-10"
 },
@@ -3393,11 +3556,11 @@
 "id": "215043",
 "nome": "Josivaldo JP",
 "uf": "MA",
-"partido": "PSD",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSIVALDO DOS SANTOS MELO",
 "nascimento": "1983-11-29"
 },
@@ -3453,6 +3616,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GILVAN AGUIAR COSTA",
 "nascimento": "1976-09-24"
 },
@@ -3464,6 +3628,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JACKELINE OLIVEIRA ROCHA",
 "nascimento": "1983-08-26"
 },
@@ -3471,11 +3636,11 @@
 "id": "220528",
 "nome": "Dr. Victor Linhalis",
 "uf": "ES",
-"partido": "PODE",
+"partido": "PSB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "VICTOR GAROZI LINHALIS",
 "nascimento": "1986-01-02"
 },
@@ -3487,6 +3652,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GILSON DANIEL BATISTA",
 "nascimento": "1978-07-17"
 },
@@ -3494,11 +3660,11 @@
 "id": "220530",
 "nome": "Messias Donato",
 "uf": "ES",
-"partido": "REPUBLICANOS",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "Manoel Messias Donato Bezerra",
 "nascimento": "1976-08-06"
 },
@@ -3521,6 +3687,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RAFAEL CAVALCANTI PRUDENTE",
 "nascimento": "1983-11-05"
 },
@@ -3532,6 +3699,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "Reginaldo Veras Coelho",
 "nascimento": "1973-01-02"
 },
@@ -3543,6 +3711,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DAVYS FREDERICO TEIXEIRA LINHARES",
 "nascimento": "1980-01-26"
 },
@@ -3550,11 +3719,11 @@
 "id": "220536",
 "nome": "Zé Haroldo Cathedral",
 "uf": "RR",
-"partido": "PSD",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ HAROLDO FIGUEIREDO CAMPOS",
 "nascimento": "1982-03-22"
 },
@@ -3562,11 +3731,11 @@
 "id": "220537",
 "nome": "Helena Lima",
 "uf": "RR",
-"partido": "MDB",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARIA HELENA TEIXEIRA LIMA",
 "nascimento": "1976-03-30"
 },
@@ -3578,6 +3747,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ FRANCISCO LOPES DE ALBUQUERQUE",
 "nascimento": "1974-01-25"
 },
@@ -3585,11 +3755,11 @@
 "id": "220539",
 "nome": "Defensor Stélio Dener",
 "uf": "RR",
-"partido": "REPUBLICANOS",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "STÉLIO DENER DE SOUZA CRUZ",
 "nascimento": "1972-11-16"
 },
@@ -3597,12 +3767,11 @@
 "id": "220540",
 "nome": "Duda Ramos",
 "uf": "RR",
-"partido": "MDB",
+"partido": "PODE",
 "leg": [
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DUDA BRITO RAMOS",
 "nascimento": "1974-05-19"
 },
@@ -3610,11 +3779,11 @@
 "id": "220542",
 "nome": "Alexandre Guimarães",
 "uf": "TO",
-"partido": "REPUBLICANOS",
+"partido": "MDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ ALEXANDRE DOMINGUES GUIMARÃES",
 "nascimento": "1986-02-19"
 },
@@ -3626,6 +3795,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RICARDO AYRES DE CARVALHO",
 "nascimento": "1979-01-17"
 },
@@ -3633,11 +3803,11 @@
 "id": "220544",
 "nome": "Antonio Andrade",
 "uf": "TO",
-"partido": "REPUBLICANOS",
+"partido": "PSDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANTONIO POINCARE ANDRADE FILHO",
 "nascimento": "1958-10-22"
 },
@@ -3649,6 +3819,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FILIPE MARTINS DOS SANTOS",
 "nascimento": "1984-04-01"
 },
@@ -3660,6 +3831,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RODOLFO OLIVEIRA NOGUEIRA",
 "nascimento": "1973-11-24"
 },
@@ -3671,6 +3843,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCOS SBOROWSKI POLLON",
 "nascimento": "1981-01-19"
 },
@@ -3682,6 +3855,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CAMILA BAZACHI JARA MARZOCHI",
 "nascimento": "1995-02-10"
 },
@@ -3689,11 +3863,11 @@
 "id": "220549",
 "nome": "Any Ortiz",
 "uf": "RS",
-"partido": "CIDADANIA",
+"partido": "PP",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANY MACHADO ORTIZ",
 "nascimento": "1983-10-19"
 },
@@ -3701,11 +3875,11 @@
 "id": "220550",
 "nome": "Mauricio Marcon",
 "uf": "RS",
-"partido": "PODE",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MAURICIO BEDIN MARCON",
 "nascimento": "1987-01-24"
 },
@@ -3717,6 +3891,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FRANCIANE ABADE BAYER MULLER",
 "nascimento": "1987-10-09"
 },
@@ -3724,13 +3899,11 @@
 "id": "220552",
 "nome": "Tenente Coronel Zucco",
 "uf": "RS",
-"partido": "REPUBLICANOS",
+"partido": "PL",
 "leg": [
-57,
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUCIANO LORENZINI ZUCCO",
 "nascimento": "1974-03-09"
 },
@@ -3742,6 +3915,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DENISE DA SILVA PESSÔA",
 "nascimento": "1983-06-17"
 },
@@ -3753,6 +3927,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALEXANDRE DUARTE LINDENMEYER",
 "nascimento": "1963-12-23"
 },
@@ -3764,6 +3939,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DAIANA SILVA DOS SANTOS",
 "nascimento": "1982-01-29"
 },
@@ -3775,6 +3951,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANA PAULA DE SOUZA LIMA",
 "nascimento": "1964-04-19"
 },
@@ -3786,6 +3963,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DANIELA CRISTINA REINEHR",
 "nascimento": "1977-04-04"
 },
@@ -3797,6 +3975,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCOS ANTONIO PEREIRA GOMES",
 "nascimento": "1988-07-22"
 },
@@ -3808,6 +3987,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JULIA PEDROSO ZANATTA",
 "nascimento": "1985-03-20"
 },
@@ -3815,11 +3995,11 @@
 "id": "220560",
 "nome": "Thiago de Joaldo",
 "uf": "SE",
-"partido": "PP",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSE THIAGO ALVES DE CARVALHO",
 "nascimento": "1982-06-20"
 },
@@ -3831,6 +4011,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "KATARINA FEITOZA LIMA SANTANA",
 "nascimento": "1973-10-05"
 },
@@ -3838,11 +4019,11 @@
 "id": "220563",
 "nome": "Icaro de Valmir",
 "uf": "SE",
-"partido": "PL",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ICARO BARBOSA COSTA",
 "nascimento": "2001-04-10"
 },
@@ -3854,6 +4035,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "YANDRA BARRETO FERREIRA",
 "nascimento": "1994-04-25"
 },
@@ -3865,6 +4047,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ADRIANA SAUTHIER ACCORSI",
 "nascimento": "1973-03-17"
 },
@@ -3872,11 +4055,11 @@
 "id": "220566",
 "nome": "Lêda Borges",
 "uf": "GO",
-"partido": "PSDB",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "Lêda Borges de Moura",
 "nascimento": "1961-11-02"
 },
@@ -3884,11 +4067,11 @@
 "id": "220567",
 "nome": "Jeferson Rodrigues",
 "uf": "GO",
-"partido": "REPUBLICANOS",
+"partido": "PSDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JEFERSON RODRIGUES LEMOS",
 "nascimento": "1975-05-01"
 },
@@ -3900,6 +4083,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GUSTAVO GAYER MACHADO DE ARAUJO",
 "nascimento": "1981-04-13"
 },
@@ -3911,6 +4095,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SILVYE ALVES DA SILVA",
 "nascimento": "1980-11-08"
 },
@@ -3920,9 +4105,9 @@
 "uf": "GO",
 "partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ISMAEL ALEXANDRINO JUNIOR",
 "nascimento": "1983-07-26"
 },
@@ -3930,11 +4115,11 @@
 "id": "220571",
 "nome": "Daniel Agrobom",
 "uf": "GO",
-"partido": "PL",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DANIEL VIEIRA RAMOS",
 "nascimento": "1968-07-02"
 },
@@ -3942,11 +4127,11 @@
 "id": "220572",
 "nome": "Marussa Boldrin",
 "uf": "GO",
-"partido": "MDB",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARUSSA CASSIA FAVARO BOLDRIN",
 "nascimento": "1990-06-25"
 },
@@ -3958,6 +4143,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DORINALDO BARBOSA MALAFAIA",
 "nascimento": "1976-02-23"
 },
@@ -3969,6 +4155,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GILBERTO GOMES DA SILVA",
 "nascimento": "1981-04-01"
 },
@@ -3987,11 +4174,11 @@
 "id": "220576",
 "nome": "Alfredo Gaspar",
 "uf": "AL",
-"partido": "UNIÃO",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALFREDO GASPAR DE MENDONÇA NETO",
 "nascimento": "1970-08-13"
 },
@@ -4001,7 +4188,6 @@
 "uf": "AP",
 "partido": "MDB",
 "leg": [
-57,
 57
 ],
 "nome_civil": "JOSÉ AUGUSTO PUPPIO REIS JÚNIOR",
@@ -4015,6 +4201,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSENILDO SANTOS ABRANTES",
 "nascimento": "1973-03-29"
 },
@@ -4044,11 +4231,11 @@
 "id": "220581",
 "nome": "Luciano Amaral",
 "uf": "AL",
-"partido": "PV",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUCIANO SURUAGY DO AMARAL FILHO",
 "nascimento": "1986-06-27"
 },
@@ -4060,6 +4247,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DANIEL BARBOSA DE ALMEIDA SILVA",
 "nascimento": "1984-10-27"
 },
@@ -4071,6 +4259,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FABIO MICHEY COSTA DA SILVA",
 "nascimento": "1980-10-15"
 },
@@ -4082,6 +4271,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CÁSSIO MURILO GALDINO DE ARAÚJO",
 "nascimento": "1980-07-02"
 },
@@ -4089,11 +4279,11 @@
 "id": "220585",
 "nome": "Mersinho Lucena",
 "uf": "PB",
-"partido": "PP",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FRANCISCO EMERSON ASSIS DE LUCENA",
 "nascimento": "1981-02-08"
 },
@@ -4105,6 +4295,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RAFAEL DE GOES BRITO",
 "nascimento": "1981-08-25"
 },
@@ -4127,6 +4318,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ROBERTO DUARTE JUNIOR",
 "nascimento": "1975-04-25"
 },
@@ -4134,11 +4326,11 @@
 "id": "220589",
 "nome": "Eduardo Velloso",
 "uf": "AC",
-"partido": "UNIÃO",
+"partido": "SOLIDARIEDADE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "EDUARDO OVÍDIO BORGES DE VELLOSO VIANNA",
 "nascimento": "1976-07-08"
 },
@@ -4150,6 +4342,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ULYSSES FREITAS PEREIRA DE ARAÚJO",
 "nascimento": "1972-10-19"
 },
@@ -4161,6 +4354,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ROZIMEIRE RIBEIRO ANDRADE",
 "nascimento": "1975-02-10"
 },
@@ -4172,6 +4366,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ ESTEPHAN AMORIM BARBARY FILHO",
 "nascimento": "1966-05-28"
 },
@@ -4190,11 +4385,11 @@
 "id": "220594",
 "nome": "Coronel Assis",
 "uf": "MT",
-"partido": "UNIÃO",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JONILDO JOSÉ DE ASSIS",
 "nascimento": "1976-04-16"
 },
@@ -4206,6 +4401,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RUBIA FERNANDA DINIZ ROBSON SANTOS DE SIQUEIRA",
 "nascimento": "1974-11-13"
 },
@@ -4224,12 +4420,11 @@
 "id": "220597",
 "nome": "Thiago Flores",
 "uf": "RO",
-"partido": "MDB",
+"partido": "UNIÃO",
 "leg": [
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "THIAGO LEITE FLORES PEREIRA",
 "nascimento": "1980-07-03"
 },
@@ -4241,6 +4436,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "TARCISIO MOTTA DE CARVALHO",
 "nascimento": "1975-01-28"
 },
@@ -4252,6 +4448,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCELO BEZERRA  CRIVELLA",
 "nascimento": "1957-10-09"
 },
@@ -4285,6 +4482,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DIMAS DE PAIVA GADELHA JUNIOR",
 "nascimento": "1975-05-03"
 },
@@ -4292,11 +4490,11 @@
 "id": "220603",
 "nome": "Dani Cunha",
 "uf": "RJ",
-"partido": "UNIÃO",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DANIELLE DYTZ DA CUNHA",
 "nascimento": "1987-05-19"
 },
@@ -4308,6 +4506,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCOS PAULO BARBOSA TAVARES",
 "nascimento": "1978-01-28"
 },
@@ -4315,11 +4514,11 @@
 "id": "220605",
 "nome": "Bandeira de Mello",
 "uf": "RJ",
-"partido": "PSB",
+"partido": "PV",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "EDUARDO CARVALHO BANDEIRA DE MELLO",
 "nascimento": "1953-03-22"
 },
@@ -4331,6 +4530,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "REIMONT LUIZ OTONI SANTA BARBARA",
 "nascimento": "1961-09-02"
 },
@@ -4338,13 +4538,11 @@
 "id": "220607",
 "nome": "Max Lemos",
 "uf": "RJ",
-"partido": "PROS",
+"partido": "UNIÃO",
 "leg": [
-57,
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MAX RODRIGUES LEMOS",
 "nascimento": "1966-01-17"
 },
@@ -4352,11 +4550,11 @@
 "id": "220608",
 "nome": "Cristiane Lopes",
 "uf": "RO",
-"partido": "UNIÃO",
+"partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CRISTIANE LOPES DA LUZ",
 "nascimento": "1983-11-17"
 },
@@ -4368,6 +4566,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MAURICIO FONSECA RIBEIRO CARVALHO DE MORAES",
 "nascimento": "1988-06-25"
 },
@@ -4375,11 +4574,11 @@
 "id": "220610",
 "nome": "Dr. Fernando Máximo",
 "uf": "RO",
-"partido": "UNIÃO",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FERNANDO RODRIGUES MÁXIMO",
 "nascimento": "1979-10-04"
 },
@@ -4391,6 +4590,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "EDUARDO PAZUELLO",
 "nascimento": "1963-07-19"
 },
@@ -4398,11 +4598,11 @@
 "id": "220612",
 "nome": "Bebeto",
 "uf": "RJ",
-"partido": "PTB",
+"partido": "PP",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "Carlos Roberto Rodrigues",
 "nascimento": "1963-07-31"
 },
@@ -4412,9 +4612,9 @@
 "uf": "RJ",
 "partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ROBERTO LUIZ RODRIGUES DE OLIVEIRA",
 "nascimento": "1956-12-08"
 },
@@ -4424,9 +4624,9 @@
 "uf": "RJ",
 "partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DANIEL RICARDO SORANZ PINTO",
 "nascimento": "1979-02-16"
 },
@@ -4438,6 +4638,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "HENRIQUE DOS SANTOS VIEIRA LIMA",
 "nascimento": "1987-04-15"
 },
@@ -4445,12 +4646,11 @@
 "id": "220616",
 "nome": "Luciano Vieira",
 "uf": "RJ",
-"partido": "PL",
+"partido": "PSDB",
 "leg": [
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUCIANO VIEIRA MENDES",
 "nascimento": "1988-04-26"
 },
@@ -4458,12 +4658,11 @@
 "id": "220617",
 "nome": "Murillo Gouvea",
 "uf": "RJ",
-"partido": "UNIÃO",
+"partido": "PSDB",
 "leg": [
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MURILLO GOUVEA RODRIGUES",
 "nascimento": "1986-09-22"
 },
@@ -4475,6 +4674,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ PORTUGAL NETO",
 "nascimento": "1976-08-26"
 },
@@ -4497,6 +4697,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ROSANGELA DE OLIVEIRA CAMPOS REIS",
 "nascimento": "1963-04-18"
 },
@@ -4508,6 +4709,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "EVANDRO GONÇALVES DA SILVA JÚNIOR",
 "nascimento": "1984-02-27"
 },
@@ -4519,6 +4721,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "NELI PEREIRA DE AQUINO",
 "nascimento": "1972-11-17"
 },
@@ -4526,11 +4729,11 @@
 "id": "220623",
 "nome": "Duda Salabert",
 "uf": "MG",
-"partido": "PDT",
+"partido": "PSOL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DUDA SALABERT ROSA",
 "nascimento": "1981-05-02"
 },
@@ -4538,11 +4741,11 @@
 "id": "220624",
 "nome": "Robinson Faria",
 "uf": "RN",
-"partido": "PL",
+"partido": "PP",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ROBINSON MESQUITA DE FARIA",
 "nascimento": "1959-04-12"
 },
@@ -4550,11 +4753,11 @@
 "id": "220625",
 "nome": "Delegada Ione",
 "uf": "MG",
-"partido": "AVANTE",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "IONE MARIA MOREIRA DIAS BARBOSA",
 "nascimento": "1974-03-20"
 },
@@ -4566,6 +4769,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RAFAEL TADEU SIMÕES",
 "nascimento": "1964-11-29"
 },
@@ -4588,6 +4792,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MAURICIO LUIZ DE SOUZA",
 "nascimento": "1988-09-29"
 },
@@ -4599,6 +4804,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DANDARA TONANTZIN SILVA CASTRO",
 "nascimento": "1994-01-23"
 },
@@ -4606,12 +4812,11 @@
 "id": "220630",
 "nome": "Pedro Aihara",
 "uf": "MG",
-"partido": "PATRIOTA",
+"partido": "PP",
 "leg": [
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PEDRO DOSHIKAZU PIANCHAO AIHARA",
 "nascimento": "1993-02-16"
 },
@@ -4619,12 +4824,11 @@
 "id": "220631",
 "nome": "Samuel Viana",
 "uf": "MG",
-"partido": "PL",
+"partido": "UNIÃO",
 "leg": [
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SAMUEL JOSÉ RODRIGUES DE VIANA",
 "nascimento": "1992-03-05"
 },
@@ -4636,6 +4840,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANA CRISTINA DE LIMA PIMENTEL",
 "nascimento": "1982-05-15"
 },
@@ -4643,11 +4848,11 @@
 "id": "220633",
 "nome": "Ricardo Salles",
 "uf": "SP",
-"partido": "PL",
+"partido": "NOVO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RICARDO DE AQUINO SALLES",
 "nascimento": "1975-06-08"
 },
@@ -4657,8 +4862,6 @@
 "uf": "SP",
 "partido": "SOLIDARIEDADE",
 "leg": [
-57,
-57,
 57
 ],
 "nome_civil": "MARCELO DE LIMA FERNANDES",
@@ -4672,6 +4875,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "BRUNO AREVALO GANEM",
 "nascimento": "1986-09-15"
 },
@@ -4694,6 +4898,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARIA OSMARINA MARINA DA SILVA VAZ DE LIMA",
 "nascimento": "1958-02-08"
 },
@@ -4701,11 +4906,11 @@
 "id": "220638",
 "nome": "Antonio Carlos Rodrigues",
 "uf": "SP",
-"partido": "PL",
+"partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANTONIO CARLOS RODRIGUES",
 "nascimento": "1950-05-17"
 },
@@ -4728,6 +4933,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JULIANA CARDOSO",
 "nascimento": "1979-10-22"
 },
@@ -4739,6 +4945,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RODRIGO GAMBALE VIEIRA",
 "nascimento": "1984-03-17"
 },
@@ -4746,11 +4953,11 @@
 "id": "220642",
 "nome": "Delegado Bruno Lima",
 "uf": "SP",
-"partido": "PP",
+"partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "BRUNO MARCELLO DE OLIVEIRA LIMA",
 "nascimento": "1986-08-25"
 },
@@ -4762,6 +4969,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SONIA BONE DE SOUSA SILVA",
 "nascimento": "1974-03-06"
 },
@@ -4769,11 +4977,11 @@
 "id": "220644",
 "nome": "Rosângela Moro",
 "uf": "SP",
-"partido": "UNIÃO",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ROSANGELA MARIA WOLFF DE QUADROS MORO",
 "nascimento": "1974-05-28"
 },
@@ -4785,6 +4993,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ERIKA SANTOS SILVA",
 "nascimento": "1992-12-09"
 },
@@ -4792,11 +5001,11 @@
 "id": "220646",
 "nome": "Felipe Becari",
 "uf": "SP",
-"partido": "UNIÃO",
+"partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FELIPE BECARI COMENALE",
 "nascimento": "1987-03-06"
 },
@@ -4808,6 +5017,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MANOEL MAURICIO SILVA NEVES",
 "nascimento": "1979-11-05"
 },
@@ -4815,11 +5025,11 @@
 "id": "220648",
 "nome": "Marangoni",
 "uf": "SP",
-"partido": "UNIÃO",
+"partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FERNANDO JOSE DE SOUZA MARANGONI",
 "nascimento": "1980-01-22"
 },
@@ -4827,11 +5037,11 @@
 "id": "220649",
 "nome": "Delegado da Cunha",
 "uf": "SP",
-"partido": "PP",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CARLOS ALBERTO DA CUNHA",
 "nascimento": "1977-10-14"
 },
@@ -4839,11 +5049,11 @@
 "id": "220650",
 "nome": "Paulo Alexandre Barbosa",
 "uf": "SP",
-"partido": "PSDB",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PAULO ALEXANDRE PEREIRA BARBOSA",
 "nascimento": "1979-01-09"
 },
@@ -4851,11 +5061,11 @@
 "id": "220651",
 "nome": "Simone Marquetto",
 "uf": "SP",
-"partido": "MDB",
+"partido": "PP",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SIMONE APARECIDA MARQUETO CURRALADAS",
 "nascimento": "1975-09-20"
 },
@@ -4863,11 +5073,11 @@
 "id": "220652",
 "nome": "Delegado Palumbo",
 "uf": "SP",
-"partido": "MDB",
+"partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARIO PALUMBO JUNIOR",
 "nascimento": "1974-08-16"
 },
@@ -4879,6 +5089,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "Fábio Eduardo de Oliveira Teruel",
 "nascimento": "1971-10-22"
 },
@@ -4890,6 +5101,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PAULO FRANCISCO MUNIZ BILYNSKYJ",
 "nascimento": "1987-03-10"
 },
@@ -4901,6 +5113,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARIO LUIS FRIAS",
 "nascimento": "1971-10-09"
 },
@@ -4908,11 +5121,11 @@
 "id": "220656",
 "nome": "Fernanda Pessoa",
 "uf": "CE",
-"partido": "UNIÃO",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FERNANDA ENEIDA PESSOA CARACAS DE SOUZA",
 "nascimento": "1966-06-08"
 },
@@ -4924,6 +5137,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANDRÉ FERNANDES DE MOURA",
 "nascimento": "1997-12-10"
 },
@@ -4935,6 +5149,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ GASTÃO BITTENCOURT DA SILVA",
 "nascimento": "1962-08-19"
 },
@@ -4944,7 +5159,6 @@
 "uf": "CE",
 "partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
 "nome_civil": "DAYANY BITTENCOURT SANTIL",
@@ -4954,15 +5168,11 @@
 "id": "220660",
 "nome": "Yury Bruno",
 "uf": "CE",
-"partido": "PL",
+"partido": "MDB",
 "leg": [
-57,
-57,
-57,
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "YURY BRUNO ALENCAR ARAUJO",
 "nascimento": "1988-05-31"
 },
@@ -4974,6 +5184,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MATHEUS SOARES NORONHA",
 "nascimento": "1998-09-10"
 },
@@ -4985,6 +5196,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUCAS CAVALCANTI RAMOS",
 "nascimento": "1986-02-14"
 },
@@ -4996,6 +5208,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ ERIBERTO MEDEIROS DE OLIVEIRA",
 "nascimento": "1965-09-26"
 },
@@ -5003,11 +5216,11 @@
 "id": "220664",
 "nome": "Guilherme Uchoa",
 "uf": "PE",
-"partido": "PSB",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GUILHERME A. UCHOA CAVALCANTI PESSOA DE MELO JUNIOR",
 "nascimento": "1971-04-27"
 },
@@ -5019,6 +5232,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ERICA CLARISSA BORBA CORDEIRO DE MOURA",
 "nascimento": "1984-12-26"
 },
@@ -5030,6 +5244,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ DE FRANÇA E SILVA MEIRA",
 "nascimento": "1958-01-07"
 },
@@ -5041,6 +5256,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PEDRO HENRIQUE DE A. L. C. CAMPOS",
 "nascimento": "1995-10-28"
 },
@@ -5048,11 +5264,11 @@
 "id": "220668",
 "nome": "Maria Arraes",
 "uf": "PE",
-"partido": "SOLIDARIEDADE",
+"partido": "PSB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARIA LEAL ARRAES DE ALENCAR",
 "nascimento": "1994-02-24"
 },
@@ -5064,6 +5280,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ EDUARDO DE QUEIROZ CAMPOS DA FONTE ALBUQUERQUE",
 "nascimento": "2000-12-08"
 },
@@ -5075,6 +5292,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "IZA PAULA DE DEUS E MELLO ALBUQUERQUE ARRUDA",
 "nascimento": "1987-09-06"
 },
@@ -5086,6 +5304,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DILVANDA FURTADO FARO",
 "nascimento": "1969-05-08"
 },
@@ -5093,11 +5312,11 @@
 "id": "220672",
 "nome": "Henderson Pinto",
 "uf": "PA",
-"partido": "MDB",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "HENDERSON LIRA PINTO",
 "nascimento": "1976-04-25"
 },
@@ -5109,6 +5328,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LENILDO MENDES DOS SANTOS SERTÃO",
 "nascimento": "1979-04-27"
 },
@@ -5116,11 +5336,11 @@
 "id": "220674",
 "nome": "Dra. Alessandra Haber",
 "uf": "PA",
-"partido": "MDB",
+"partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALESSANDRA HABER CARVALHO SANTOS",
 "nascimento": "1988-09-15"
 },
@@ -5132,6 +5352,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANTONIO LEOCÁDIO DOS SANTOS",
 "nascimento": "1976-08-26"
 },
@@ -5139,11 +5360,11 @@
 "id": "220676",
 "nome": "Andreia Siqueira",
 "uf": "PA",
-"partido": "MDB",
+"partido": "PSB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANDREIA BRITO GONÇALVES SIQUEIRA",
 "nascimento": "1992-08-19"
 },
@@ -5155,6 +5376,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "KENISTON DE JESUS REGO BRAGA",
 "nascimento": "1967-06-02"
 },
@@ -5166,6 +5388,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FÁBIO HENRIQUE DIAS DE  MACEDO",
 "nascimento": "1981-09-18"
 },
@@ -5177,6 +5400,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANTONIO TADEU VENERI",
 "nascimento": "1953-02-10"
 },
@@ -5188,6 +5412,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CARLOS ALBERTO RICHA",
 "nascimento": "1965-07-29"
 },
@@ -5199,6 +5424,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SEBASTIÃO HENRIQUE DE MEDEIROS",
 "nascimento": "1983-01-08"
 },
@@ -5206,11 +5432,11 @@
 "id": "220685",
 "nome": "Paulo Litro",
 "uf": "PR",
-"partido": "PSD",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PAULO HENRIQUE COLETTI FERNANDES",
 "nascimento": "1991-10-30"
 },
@@ -5218,13 +5444,11 @@
 "id": "220686",
 "nome": "Duarte",
 "uf": "MA",
-"partido": "PSB",
+"partido": "AVANTE",
 "leg": [
-57,
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "HILDELIS SILVA DUARTE JUNIOR",
 "nascimento": "1986-09-15"
 },
@@ -5232,12 +5456,11 @@
 "id": "220687",
 "nome": "Márcio Honaiser",
 "uf": "MA",
-"partido": "PDT",
+"partido": "SOLIDARIEDADE",
 "leg": [
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARCIO JOSE HONAISER",
 "nascimento": "1967-04-04"
 },
@@ -5249,6 +5472,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FRANCISCO DE ASSIS DE OLIVEIRA COSTA",
 "nascimento": "1979-10-14"
 },
@@ -5260,6 +5484,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARIA DEUSDETE LIMA CUNHA RODRIGUES",
 "nascimento": "1979-01-25"
 },
@@ -5271,6 +5496,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALDEN JOSE LAZARO DA SILVA",
 "nascimento": "1980-04-19"
 },
@@ -5278,11 +5504,11 @@
 "id": "220691",
 "nome": "Diego Coronel",
 "uf": "BA",
-"partido": "PSD",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DIEGO HENRIQUE SILVA CERQUEIRA MARTINS",
 "nascimento": "1983-01-22"
 },
@@ -5294,6 +5520,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ADALBERTO ROSA BARRETO",
 "nascimento": "1979-03-16"
 },
@@ -5305,6 +5532,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "Roberta de Araujo Costa Roma",
 "nascimento": "1980-05-11"
 },
@@ -5316,6 +5544,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RICARDO MAIA CHAVES DE SOUZA",
 "nascimento": "1975-08-26"
 },
@@ -5327,6 +5556,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ROGÉRIA DE ALMEIDA PEREIRA DOS SANTOS",
 "nascimento": "1966-08-19"
 },
@@ -5338,6 +5568,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "IVONEIDE SOUZA CAETANO",
 "nascimento": "1972-09-10"
 },
@@ -5345,11 +5576,11 @@
 "id": "220697",
 "nome": "Jadyel Alencar",
 "uf": "PI",
-"partido": "PV",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JADYEL SILVA ALENCAR",
 "nascimento": "1987-07-23"
 },
@@ -5361,6 +5592,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CARLOS ALBERTO GEBRIM PRETO",
 "nascimento": "1968-02-17"
 },
@@ -5368,11 +5600,11 @@
 "id": "220699",
 "nome": "Castro Neto",
 "uf": "PI",
-"partido": "PSD",
+"partido": "MDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ DIAS DE CASTRO NETO",
 "nascimento": "1974-04-23"
 },
@@ -5384,6 +5616,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FLORENTINO ALVES VERAS NETO",
 "nascimento": "1969-10-05"
 },
@@ -5395,6 +5628,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MATHEUS ARAUJO LAIOLA",
 "nascimento": "1982-12-24"
 },
@@ -5406,6 +5640,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GERALDO GABRIEL MENDES",
 "nascimento": "1985-12-05"
 },
@@ -5413,11 +5648,11 @@
 "id": "220703",
 "nome": "Neto Carletto",
 "uf": "BA",
-"partido": "PP",
+"partido": "AVANTE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ORLANDO SULZ DE ALMEIDA NETO",
 "nascimento": "1996-05-28"
 },
@@ -5429,6 +5664,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ANA CAROLINA MOURA MELO DARTORA",
 "nascimento": "1983-05-01"
 },
@@ -5447,13 +5683,11 @@
 "id": "220706",
 "nome": "Padovani",
 "uf": "PR",
-"partido": "UNIÃO",
+"partido": "PP",
 "leg": [
-57,
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "NELSON FERNANDO PADOVANI",
 "nascimento": "1977-10-29"
 },
@@ -5465,6 +5699,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "AMANDA KELLY GENTIL GUIMARÃES ROSA",
 "nascimento": "1998-12-25"
 },
@@ -5476,6 +5711,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GABRIEL JOSE MOURA NUNES SOARES",
 "nascimento": "1983-07-23"
 },
@@ -5485,9 +5721,9 @@
 "uf": "AM",
 "partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FAUSTO VIEIRA DOS SANTOS JUNIOR",
 "nascimento": "1992-12-20"
 },
@@ -5495,11 +5731,11 @@
 "id": "220713",
 "nome": "Saullo Vianna",
 "uf": "AM",
-"partido": "UNIÃO",
+"partido": "MDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SAULLO VELAME VIANNA",
 "nascimento": "1984-06-22"
 },
@@ -5507,11 +5743,11 @@
 "id": "220714",
 "nome": "Adail Filho",
 "uf": "AM",
-"partido": "REPUBLICANOS",
+"partido": "MDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ADAIL JOSÉ FIGUEIREDO PINHEIRO",
 "nascimento": "1992-02-16"
 },
@@ -5519,11 +5755,11 @@
 "id": "220715",
 "nome": "Amom Mandel",
 "uf": "AM",
-"partido": "CIDADANIA",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "AMOM MANDEL LINS FILHO",
 "nascimento": "2001-01-02"
 },
@@ -5535,6 +5771,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALFREDO ALVES CAVALCANTE",
 "nascimento": "1959-06-24"
 },
@@ -5546,6 +5783,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ADILSON BARROSO OLIVEIRA",
 "nascimento": "1964-06-14"
 },
@@ -5553,11 +5791,11 @@
 "id": "221329",
 "nome": "Ricardo Abrão",
 "uf": "RJ",
-"partido": "UNIÃO",
+"partido": "PSDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RICARDO MARTINS DAVID",
 "nascimento": "1972-09-13"
 },
@@ -5569,6 +5807,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUCIENE CAVALCANTE DA SILVA",
 "nascimento": "1979-12-21"
 },
@@ -5578,7 +5817,6 @@
 "uf": "MA",
 "partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
 "nome_civil": "BENJAMIM DE OLIVEIRA",
@@ -5654,11 +5892,11 @@
 "id": "224117",
 "nome": "Gabriel Mota",
 "uf": "RR",
-"partido": "REPUBLICANOS",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GABRIEL MOTA E SILVA",
 "nascimento": "1982-12-24"
 },
@@ -5670,6 +5908,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ELTON CARLOS WELTER",
 "nascimento": "1968-11-23"
 },
@@ -5701,7 +5940,6 @@
 "uf": "CE",
 "partido": "PDT",
 "leg": [
-57,
 57
 ],
 "nome_civil": "ANA PAULA BRANDÃO DA SILVA FARIAS",
@@ -5715,6 +5953,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ITAMAR PAIM PRUCH",
 "nascimento": "1977-04-05"
 },
@@ -5726,6 +5965,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PRISCILA BEZERRA DA COSTA",
 "nascimento": "1984-09-12"
 },
@@ -5768,7 +6008,6 @@
 "uf": "MA",
 "partido": "PP",
 "leg": [
-57,
 57
 ],
 "nome_civil": "ALLAN QUADROS GARCÊS",
@@ -5782,6 +6021,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SAULO PEDROSO DE SOUZA",
 "nascimento": "1983-01-21"
 },
@@ -5791,8 +6031,6 @@
 "uf": "MA",
 "partido": "PSC",
 "leg": [
-57,
-57,
 57
 ],
 "nome_civil": "TACILLA MARIANA CARVALHO SILVA",
@@ -5837,7 +6075,6 @@
 "uf": "MG",
 "partido": "PATRIOTA",
 "leg": [
-57,
 57
 ],
 "nome_civil": "FELIPE MAURÍCIO SALIBA DE SOUZA",
@@ -5882,8 +6119,6 @@
 "uf": "MG",
 "partido": "PSC",
 "leg": [
-57,
-57,
 57
 ],
 "nome_civil": "DUARTE EUSTÁQUIO GONÇALVES JUNIOR",
@@ -5897,6 +6132,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FLAVIO CAMPOS FERREIRA",
 "nascimento": "1971-02-25"
 },
@@ -6128,6 +6364,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "REJANE DE ALMEIDA",
 "nascimento": "1963-08-24"
 },
@@ -6139,6 +6376,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RODRIGO LUGLI",
 "nascimento": "1975-11-26"
 },
@@ -6150,6 +6388,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSE ADRIANO RIBEIRO DA SILVA",
 "nascimento": "1966-03-18"
 },
@@ -6161,6 +6400,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "João Cury Neto",
 "nascimento": "1973-10-22"
 },
@@ -6190,11 +6430,11 @@
 "id": "233592",
 "nome": "Paulo Lemos",
 "uf": "AP",
-"partido": "PSOL",
+"partido": "PT",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PAULO CESAR LEMOS DE OLIVEIRA",
 "nascimento": "1972-01-08"
 },
@@ -6204,9 +6444,9 @@
 "uf": "RO",
 "partido": "PODE",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RAFAEL BENTO PEREIRA",
 "nascimento": "1990-02-06"
 },
@@ -6216,9 +6456,6 @@
 "uf": "GO",
 "partido": "PSC",
 "leg": [
-57,
-57,
-57,
 57
 ],
 "nome_civil": "SAMUEL JOSE DOS SANTOS",
@@ -6252,7 +6489,6 @@
 "uf": "MG",
 "partido": "PATRIOTA",
 "leg": [
-57,
 57
 ],
 "nome_civil": "FABIANO LOPES FERREIRA CAZECA",
@@ -6275,8 +6511,6 @@
 "uf": "CE",
 "partido": "UNIÃO",
 "leg": [
-57,
-57,
 57
 ],
 "nome_civil": "VALDERLAN ALVES DE SOUZA",
@@ -6310,8 +6544,6 @@
 "uf": "MA",
 "partido": "PATRIOTA",
 "leg": [
-57,
-57,
 57
 ],
 "nome_civil": "AIRES DO ESPIRITO SANTO RIBEIRO NETO",
@@ -6323,8 +6555,6 @@
 "uf": "MG",
 "partido": "PSC",
 "leg": [
-57,
-57,
 57
 ],
 "nome_civil": "ILACIR BICALHO DE BARROS",
@@ -6380,7 +6610,6 @@
 "uf": "MG",
 "partido": "PV",
 "leg": [
-57,
 57
 ],
 "nome_civil": "GLYCON MOREIRA FRANCO",
@@ -6392,7 +6621,6 @@
 "uf": "RJ",
 "partido": "PL",
 "leg": [
-57,
 57
 ],
 "nome_civil": "MARCOS TEIXEIRA BRAZ",
@@ -6424,11 +6652,11 @@
 "id": "62881",
 "nome": "Danilo Forte",
 "uf": "CE",
-"partido": "UNIÃO",
+"partido": "PP",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FRANCISCO DANILO BASTOS FORTE",
 "nascimento": "1958-09-01"
 },
@@ -6440,6 +6668,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JULIO FERRAZ ARCOVERDE",
 "nascimento": "1966-02-14"
 },
@@ -6447,11 +6676,11 @@
 "id": "66828",
 "nome": "Fausto Pinato",
 "uf": "SP",
-"partido": "PP",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FAUSTO RUY PINATO",
 "nascimento": "1977-06-01"
 },
@@ -6474,6 +6703,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOAO CARLOS BACELAR BATISTA",
 "nascimento": "1957-07-09"
 },
@@ -6485,6 +6715,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FELIPE AUGUSTO LYRA CARRERAS",
 "nascimento": "1975-04-16"
 },
@@ -6496,6 +6727,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ARLINDO CHIGNALIA JUNIOR",
 "nascimento": "1949-12-24"
 },
@@ -6507,6 +6739,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CELSO UBIRAJARA RUSSOMANNO",
 "nascimento": "1956-08-20"
 },
@@ -6518,6 +6751,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DARCI POMPEO DE MATTOS",
 "nascimento": "1958-07-12"
 },
@@ -6540,6 +6774,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOÃO ALBERTO FRAGA SILVA",
 "nascimento": "1956-06-02"
 },
@@ -6551,6 +6786,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RUI GOETHE DA COSTA FALCÃO",
 "nascimento": "1943-11-26"
 },
@@ -6558,11 +6794,11 @@
 "id": "73692",
 "nome": "Osmar Terra",
 "uf": "RS",
-"partido": "MDB",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "OSMAR GASPARINI TERRA",
 "nascimento": "1950-02-18"
 },
@@ -6574,6 +6810,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "BENEDITA SOUZA DA SILVA SAMPAIO",
 "nascimento": "1942-04-26"
 },
@@ -6585,6 +6822,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DILCEU JOÃO SPERAFICO",
 "nascimento": "1948-01-26"
 },
@@ -6596,6 +6834,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ CARLOS JORGE HAULY",
 "nascimento": "1950-10-08"
 },
@@ -6607,6 +6846,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RICARDO JOSÉ MAGALHÃES BARROS",
 "nascimento": "1959-11-15"
 },
@@ -6618,6 +6858,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RENILDO VASCONCELOS CALHEIROS",
 "nascimento": "1959-04-20"
 },
@@ -6640,6 +6881,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SÉRGIO LUÍS LACERDA BRITO",
 "nascimento": "1961-06-08"
 },
@@ -6651,6 +6893,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ ALBUQUERQUE COUTO",
 "nascimento": "1945-02-13"
 },
@@ -6658,11 +6901,11 @@
 "id": "74043",
 "nome": "Wellington Roberto",
 "uf": "PB",
-"partido": "PL",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ WELLINGTON ROBERTO",
 "nascimento": "1959-05-19"
 },
@@ -6674,6 +6917,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ WILSON SANTIAGO",
 "nascimento": "1957-06-10"
 },
@@ -6696,6 +6940,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALICE MAZZUCO PORTUGAL",
 "nascimento": "1959-05-16"
 },
@@ -6707,6 +6952,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DANIEL GOMES DE ALMEIDA",
 "nascimento": "1955-01-21"
 },
@@ -6729,6 +6975,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ELCIONE THEREZINHA ZAHLUTH BARBALHO",
 "nascimento": "1944-10-05"
 },
@@ -6740,6 +6987,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ BENITO PRIANTE JÚNIOR",
 "nascimento": "1963-12-02"
 },
@@ -6751,6 +6999,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RAIMUNDO JOSÉ PEREIRA DOS SANTOS",
 "nascimento": "1955-10-10"
 },
@@ -6762,6 +7011,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ÁTILA SIDNEY LINS DE ALBUQUERQUE",
 "nascimento": "1950-11-22"
 },
@@ -6782,7 +7032,6 @@
 "uf": "BA",
 "partido": "PDT",
 "leg": [
-57,
 57
 ],
 "nome_civil": "JOSÉ CARLOS LEÃO DE ARAÚJO",
@@ -6807,6 +7056,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ LEONARDO COSTA MONTEIRO",
 "nascimento": "1951-10-09"
 },
@@ -6818,6 +7068,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MÁRIO LÚCIO HERINGER",
 "nascimento": "1954-09-30"
 },
@@ -6840,6 +7091,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PATRUS ANANIAS DE SOUZA",
 "nascimento": "1952-01-26"
 },
@@ -6851,6 +7103,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "REGINALDO LÁZARO DE OLIVEIRA LOPES",
 "nascimento": "1973-04-02"
 },
@@ -6862,6 +7115,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FRANCISCO RODRIGUES DE ALENCAR FILHO",
 "nascimento": "1949-10-19"
 },
@@ -6873,6 +7127,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JULIO LUIZ BAPTISTA LOPES",
 "nascimento": "1959-04-06"
 },
@@ -6880,11 +7135,11 @@
 "id": "74262",
 "nome": "Carlos Sampaio",
 "uf": "SP",
-"partido": "PSDB",
+"partido": "PSD",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CARLOS HENRIQUE FOCESI SAMPAIO",
 "nascimento": "1963-03-31"
 },
@@ -6892,12 +7147,11 @@
 "id": "74270",
 "nome": "Gilberto Nascimento",
 "uf": "SP",
-"partido": "PSC",
+"partido": "PODE",
 "leg": [
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GILBERTO NASCIMENTO SILVA",
 "nascimento": "1956-07-09"
 },
@@ -6909,6 +7163,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JEFFERSON ALVES DE CAMPOS",
 "nascimento": "1964-10-26"
 },
@@ -6931,6 +7186,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "INÁCIO FRANCISCO DE ASSIS NUNES ARRUDA",
 "nascimento": "1957-05-05"
 },
@@ -6953,6 +7209,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JÚLIO CÉSAR DE CARVALHO LIMA",
 "nascimento": "1948-08-25"
 },
@@ -6964,6 +7221,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "SILAS CÂMARA",
 "nascimento": "1962-12-15"
 },
@@ -6975,6 +7233,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "RUBENS OTONI GOMIDE",
 "nascimento": "1956-02-06"
 },
@@ -6982,11 +7241,11 @@
 "id": "74374",
 "nome": "Geraldo Resende",
 "uf": "MS",
-"partido": "PSDB",
+"partido": "UNIÃO",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GERALDO RESENDE PEREIRA",
 "nascimento": "1955-04-20"
 },
@@ -6998,6 +7257,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "VANDER LUIZ DOS SANTOS LOUBET",
 "nascimento": "1964-01-22"
 },
@@ -7007,7 +7267,6 @@
 "uf": "PR",
 "partido": "PL",
 "leg": [
-57,
 57
 ],
 "nome_civil": "FERNANDO LÚCIO GIACOBO",
@@ -7021,6 +7280,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARIA DO ROSÁRIO NUNES",
 "nascimento": "1966-11-22"
 },
@@ -7032,6 +7292,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PAULO ROBERTO SEVERO PIMENTA",
 "nascimento": "1965-03-19"
 },
@@ -7039,11 +7300,11 @@
 "id": "74428",
 "nome": "Mendonça Filho",
 "uf": "PE",
-"partido": "UNIÃO",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ MENDONÇA BEZERRA FILHO",
 "nascimento": "1966-07-12"
 },
@@ -7055,6 +7316,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "EUNÍCIO LOPES DE OLIVEIRA",
 "nascimento": "1952-09-30"
 },
@@ -7066,6 +7328,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "DAMIÃO FELICIANO DA SILVA",
 "nascimento": "1952-04-28"
 },
@@ -7073,11 +7336,11 @@
 "id": "74478",
 "nome": "Luciano Bivar",
 "uf": "PE",
-"partido": "UNIÃO",
+"partido": "MDB",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUCIANO CALDAS BIVAR",
 "nascimento": "1944-11-29"
 },
@@ -7089,6 +7352,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CLÁUDIO CAJADO SAMPAIO",
 "nascimento": "1963-12-01"
 },
@@ -7100,6 +7364,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOÃO FELIPE DE SOUZA LEÃO",
 "nascimento": "1946-02-27"
 },
@@ -7111,6 +7376,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ ALVES ROCHA",
 "nascimento": "1948-08-18"
 },
@@ -7122,6 +7388,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "PAULO SÉRGIO PARANHOS DE MAGALHÃES",
 "nascimento": "1952-11-28"
 },
@@ -7133,6 +7400,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "GILMAR ALVES MACHADO",
 "nascimento": "1961-11-06"
 },
@@ -7144,6 +7412,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LINCOLN DINIZ PORTELA",
 "nascimento": "1953-11-03"
 },
@@ -7155,6 +7424,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "AÉCIO NEVES DA CUNHA",
 "nascimento": "1960-03-10"
 },
@@ -7177,6 +7447,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZA ERUNDINA DE SOUSA",
 "nascimento": "1934-11-30"
 },
@@ -7188,6 +7459,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JANDIRA FEGHALI",
 "nascimento": "1957-05-17"
 },
@@ -7199,6 +7471,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MARIA LAURA MONTEZA DE SOUZA CARNEIRO",
 "nascimento": "1963-05-01"
 },
@@ -7210,6 +7483,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LUIZ LINDBERGH FARIAS FILHO",
 "nascimento": "1969-12-08"
 },
@@ -7228,11 +7502,11 @@
 "id": "80815",
 "nome": "Léo Prates",
 "uf": "BA",
-"partido": "PDT",
+"partido": "REPUBLICANOS",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LEONARDO SILVA PRATES",
 "nascimento": "1978-04-05"
 },
@@ -7244,6 +7518,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "MÁRCIO JERRY SARAIVA BARROSO",
 "nascimento": "1966-11-14"
 },
@@ -7255,6 +7530,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "CLODOALDO MAGALHÃES OLIVEIRA LYRA",
 "nascimento": "1975-11-13"
 },
@@ -7277,6 +7553,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "WALDEMAR DE ANDRADA IGNÁCIO DE OLIVEIRA",
 "nascimento": "1972-11-29"
 },
@@ -7288,6 +7565,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LEUR ANTONIO DE BRITTO LOMANTO JUNIOR",
 "nascimento": "1976-10-28"
 },
@@ -7306,12 +7584,11 @@
 "id": "92699",
 "nome": "Fernando Monteiro",
 "uf": "PE",
-"partido": "PP",
+"partido": "PSD",
 "leg": [
-57,
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FERNANDO MONTEIRO DE ALBUQUERQUE",
 "nascimento": "1976-09-17"
 },
@@ -7323,6 +7600,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "STEFANO AGUIAR DOS SANTOS",
 "nascimento": "1976-03-03"
 },
@@ -7330,11 +7608,11 @@
 "id": "98057",
 "nome": "Lafayette de Andrada",
 "uf": "MG",
-"partido": "REPUBLICANOS",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "LAFAYETTE LUIZ DOORGAL DE ANDRADA",
 "nascimento": "1966-10-17"
 },
@@ -7346,6 +7624,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "VALDIR VITAL COBALCHINI",
 "nascimento": "1963-09-07"
 },
@@ -7353,11 +7632,11 @@
 "id": "98615",
 "nome": "Ismael",
 "uf": "SC",
-"partido": "PSD",
+"partido": "PL",
 "leg": [
-57,
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ISMAEL DOS SANTOS",
 "nascimento": "1965-07-16"
 }

@@ -40,7 +40,6 @@ ORDEM = ('3', '5', '6', '7', '8')
 
 RES = 'https://resultados.tse.jus.br/oficial/ele2026/{e}/dados/{u}/{u}-c{c:0>4}-e{e:0>6}-u.json'
 FOTO = 'https://resultados.tse.jus.br/oficial/ele2026/{e}/fotos/{u}/{sq}.jpeg'
-APP_TSE = 'https://resultados.tse.jus.br/oficial/app/index.html#/eleicao;e=e{e};uf={u};ufbu={u}/resultados/cargo/{c}'
 CKAN = 'https://dadosabertos.tse.jus.br/api/3/action/package_show?id={id}'
 PACOTE_CAND = 'candidatos-2026'
 ARQ_CAND = 'consulta_cand_2026.zip'
@@ -97,8 +96,8 @@ def baixar_resultados(pasta):
                 r = _get(RES.format(e=e, u=uf.lower(), c=c), ok404=(e == E2))
                 if r is None:
                     continue  # sem 2º turno neste estado
-                with gzip.open(os.path.join(pasta, f'{uf.lower()}-c{c}-e{e}.json.gz'), 'wb', compresslevel=9) as f:
-                    f.write(r.content)
+                with open(os.path.join(pasta, f'{uf.lower()}-c{c}-e{e}.json.gz'), 'wb') as f:
+                    f.write(gzip.compress(r.content, compresslevel=9, mtime=0))  # sem data: só muda se o conteúdo mudar
                 n += 1
     return n
 
@@ -154,10 +153,12 @@ def baixar_candidatos(pasta):
     if faltam:
         print('::warning title=Eleitos 2026::colunas que o TSE não publicou nos arquivos de candidatos: '
               + ', '.join(faltam), flush=True)
-    with gzip.open(os.path.join(pasta, 'candidatos.csv.gz'), 'wt', encoding='utf-8', newline='', compresslevel=9) as f:
-        w = csv.DictWriter(f, fieldnames=COLUNAS, delimiter=';')
-        w.writeheader()
-        w.writerows(sorted(linhas, key=lambda x: (x['SG_UF'], x['CD_CARGO'], x['SQ_CANDIDATO'], x['NR_TURNO'])))
+    texto = io.StringIO(newline='')
+    w = csv.DictWriter(texto, fieldnames=COLUNAS, delimiter=';')
+    w.writeheader()
+    w.writerows(sorted(linhas, key=lambda x: (x['SG_UF'], x['CD_CARGO'], x['SQ_CANDIDATO'], x['NR_TURNO'])))
+    with open(os.path.join(pasta, 'candidatos.csv.gz'), 'wb') as f:
+        f.write(gzip.compress(texto.getvalue().encode('utf-8'), compresslevel=9, mtime=0))
     return url, r.headers.get('last-modified', ''), len(linhas)
 
 
@@ -191,9 +192,19 @@ def baixar_camara(pasta, legislaturas=(57, 58)):
                     raise
                 break  # legislatura que ainda não começou (a API responde erro ou lista vazia)
             for x in d['dados']:
-                vistos.setdefault(str(x['id']), {'id': str(x['id']), 'nome': x['nome'], 'uf': x['siglaUf'],
-                                                 'partido': x['siglaPartido'], 'leg': [] })['leg'].append(leg)
+                dep = vistos.setdefault(str(x['id']), {'id': str(x['id']), 'nome': x['nome'], 'uf': x['siglaUf'],
+                                                       'partido': x['siglaPartido'], 'leg': []})
+                if leg not in dep['leg']:  # a lista repete a pessoa uma vez por nome ou partido que ela usou
+                    dep['leg'].append(leg)
             url = next((ln['href'] for ln in d.get('links', []) if ln.get('rel') == 'next'), None)
+    # quem está no exercício do mandato hoje, com o partido de hoje (a lista da legislatura pode trazer um partido antigo)
+    url = f'{CAMARA}/deputados?itens=100&ordem=ASC&ordenarPor=nome'
+    while url:
+        d = _get(url, tentativas=6, headers={'Accept': 'application/json'}).json()
+        for x in d['dados']:
+            dep = vistos.setdefault(str(x['id']), {'id': str(x['id']), 'nome': x['nome'], 'uf': x['siglaUf'], 'leg': [x['idLegislatura']]})
+            dep.update({'partido': x['siglaPartido'], 'em_exercicio': True})
+        url = next((ln['href'] for ln in d.get('links', []) if ln.get('rel') == 'next'), None)
     # Nome civil e nascimento: a API só dá um deputado por consulta (/deputados/{id}, mais de 600 consultas) e respondeu
     # 504 no meio da lista (04/11/2026). O arquivo oficial de deputados da Câmara traz os dois campos de todos de uma
     # vez; a API fica para quem faltar no arquivo.
@@ -329,17 +340,37 @@ def _data_iso(s):
     return f'{m.group(3)}-{m.group(2)}-{m.group(1)}' if m else (s or '')[:10]
 
 
+PARTICULAS = {'DE', 'DA', 'DO', 'DAS', 'DOS', 'E', 'D'}
+
+
+def _parecido(a, b):
+    """Mesmo nome, abreviado ("A" e "ALVES") ou com uma letra trocada ("MURILO" e "MURILLO", "BONFIM" e "BOMFIM")."""
+    if a == b or (len(a) == 1 and b.startswith(a)) or (len(b) == 1 and a.startswith(b)):
+        return True
+    if min(len(a), len(b)) < 5 or abs(len(a) - len(b)) > 1:
+        return False
+    # distância de edição até 1
+    if len(a) == len(b):
+        return sum(x != y for x, y in zip(a, b)) <= 1
+    curto, longo = sorted((a, b), key=len)
+    return any(longo[:i] + longo[i + 1:] == curto for i in range(len(longo)))
+
+
 def mesma_pessoa(nome_tse, nasc_tse, nome_casa, nasc_casa):
-    """Mesmo dia de nascimento e o mesmo nome civil (ou o mesmo primeiro nome e pelo menos mais dois nomes iguais:
-    a Câmara às vezes encurta o nome civil)."""
+    """Mesmo dia de nascimento, o mesmo primeiro nome e pelo menos 75% dos nomes do mais curto no mais longo (sem contar
+    "de", "da", "dos"...). A Câmara às vezes encurta ou abrevia o nome civil, e o TSE pode juntar ou separar sobrenomes
+    ("ABDELAZIZ" e "ABDEL AZIZ"). Irmãos gêmeos têm o mesmo nascimento e quase o mesmo nome: o primeiro nome os separa."""
     if not nasc_tse or _data_iso(nasc_tse) != _data_iso(nasc_casa):
         return False
-    a, b = normal(nome_tse).split(), normal(nome_casa).split()
-    if not a or not b:
+    a = [w for w in normal(nome_tse).split() if w not in PARTICULAS]
+    b = [w for w in normal(nome_casa).split() if w not in PARTICULAS]
+    if not a or not b or not _parecido(a[0], b[0]) or min(len(a[0]), len(b[0])) < 2:
         return False
-    if a == b:
+    if a == b or ''.join(a) == ''.join(b):
         return True
-    return a[0] == b[0] and len(set(a) & set(b)) >= 3
+    curto, longo = sorted((a, b), key=len)
+    iguais = sum(1 for w in curto if any(_parecido(w, x) for x in longo))
+    return len(curto) >= 2 and iguais >= 2 and iguais / len(curto) >= 0.75
 
 
 def ligar(eleitos, camara, senado):
@@ -357,9 +388,30 @@ def ligar(eleitos, camara, senado):
             el['hoje'] = {'casa': casa, 'id': ('dep-' if casa == 'camara' else 'sen-') + x['id'], 'nome': x['nome'],
                           'partido': x.get('partido', ''), 'uf': x.get('uf', ''),
                           'url': (PERFIL_CAMARA if casa == 'camara' else PERFIL_SENADO).format(id=x['id']),
+                          'exercicio': casa == 'senado' or bool(x.get('em_exercicio')),
                           **({'leg': x['leg']} if 'leg' in x else {}),
                           **({'fim': x['fim_mandato']} if x.get('fim_mandato') else {})}
     return eleitos
+
+
+def reeleito(el, r):
+    """'S' (reeleito: já tem o mesmo cargo hoje), 'N' (novo no cargo) ou '' (sem informação oficial).
+    Primeiro o campo ST_REELEICAO do TSE. Em 2026 o TSE publicou esse campo vazio ('#NE', conferido em 04/11/2026); então,
+    para deputado federal e senador, vale quem está no exercício do mesmo cargo hoje, segundo as APIs da Câmara e do
+    Senado. Para governador e deputado estadual não há fonte oficial de quem está no cargo hoje: fica sem informação."""
+    tse = (r.get('ST_REELEICAO') or '').strip().upper()
+    if tse in ('S', 'N'):
+        return tse
+    h = el.get('hoje') or {}
+    if el['c'] == '6':
+        return 'S' if h.get('casa') == 'camara' and h.get('exercicio') else 'N'
+    if el['c'] == '5':
+        return 'S' if h.get('casa') == 'senado' and h.get('fim', '')[:4] == '2027' else 'N'
+    return ''
+
+
+def fonte_reeleicao(cand_csv):
+    return 'tse' if any((r.get('ST_REELEICAO') or '').strip().upper() in ('S', 'N') for r in cand_csv) else 'camara_senado'
 
 
 def montar_eleitos(pasta):
@@ -390,8 +442,8 @@ def montar_eleitos(pasta):
                 'nc': titulo(el['nm']), 'p': el['p'], 'fed': el['fed'], 'col': el['col'], 'comp': el['comp'],
                 'v': el['v'], 'pv': el['pv'], 'st': el['st'], 'e': el['e'],
                 'foto': FOTO.format(e=el['e'], u=el['uf'].lower(), sq=el['sq']),
-                'tse': APP_TSE.format(e=el['e'], u=el['uf'].lower(), c=el['c']),
-                're': r.get('ST_REELEICAO', ''), 'g': titulo(r.get('DS_GENERO', '')),
+                'tse': RES.format(e=el['e'], u=el['uf'].lower(), c=el['c']),  # o arquivo oficial de onde vêm os números
+                're': reeleito(el, r), 'g': titulo(r.get('DS_GENERO', '')),
                 'oc': r.get('DS_OCUPACAO', '').capitalize(), 'gi': r.get('DS_GRAU_INSTRUCAO', '').capitalize()}
         if el['dvt'] and not el['dvt'].lower().startswith('válido'):
             item['dvt'] = el['dvt']  # votos ainda sub judice ou anulados: a página avisa
@@ -405,18 +457,24 @@ def montar_eleitos(pasta):
     continuam = [{'id': 'sen-' + s['id'], 'nm': s['nome'], 'p': s['partido'], 'uf': s['uf'], 'fim': s['fim_mandato'],
                   'part': s['participacao'], 'url': PERFIL_SENADO.format(id=s['id'])}
                  for s in senado if s.get('fim_mandato', '')[:4] == '2031']
-    # quem tentou a reeleição (ST_REELEICAO = S) e não se elegeu, por cargo: só a contagem
+    # quem tentou a reeleição (ST_REELEICAO = S) e não se elegeu, por cargo: só se o TSE preencher o campo
     sq_eleitos = {x['sq'] for x in lista}
     tentou = Counter(r['CD_CARGO'] for r in {r['SQ_CANDIDATO']: r for r in cand_csv}.values()
                      if r.get('ST_REELEICAO') == 'S' and r['SQ_CANDIDATO'] not in sq_eleitos)
     reeleitos = Counter(x['c'] for x in lista if x['re'] == 'S')
+    sem_info = Counter(x['c'] for x in lista if x['re'] not in ('S', 'N'))
+    # quem tem o cargo hoje e não volta em 2027 (não concorreu, perdeu ou foi eleito para outro cargo)
+    voltam = {x['hoje']['id'] for x in lista if x.get('hoje') and x['re'] == 'S'}
+    nao_voltam = {'6': sum(1 for d in camara if d.get('em_exercicio') and 'dep-' + d['id'] not in voltam),
+                  '5': sum(1 for s in senado if s.get('fim_mandato', '')[:4] == '2027' and 'sen-' + s['id'] not in voltam)}
     vaga = {(v['SG_UF'], v['CD_CARGO']): int(v['QT_VAGA'] or 0) for v in vagas}
     dg = sorted({a['dg'] for a in apur if a['dg']})
     D = {
         'coletado_em': coleta.get('coletado_em', ''), 'totalizado_em': dg[-1] if dg else '',
         'fontes': coleta.get('fontes', {}), 'cargos': CARGOS,
         'vagas': {c: sum(n for (uf, cc), n in vaga.items() if cc == c) for c in CARGOS},
-        'reeleitos': dict(reeleitos), 'tentaram_e_perderam': dict(tentou),
+        'reeleitos': dict(reeleitos), 'tentaram_e_perderam': dict(tentou), 'sem_info_reeleicao': dict(sem_info),
+        'nao_voltam': nao_voltam, 'fonte_reeleicao': fonte_reeleicao(cand_csv),
         'eleitos': lista, 'senado_continua': sorted(continuam, key=lambda x: (x['uf'], x['nm'])),
     }
     return D, erros

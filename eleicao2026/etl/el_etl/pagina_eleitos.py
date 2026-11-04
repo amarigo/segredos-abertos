@@ -83,6 +83,8 @@ def pagina(D):
     with open(os.path.join(SITE, 'eleitos.html'), encoding='utf-8') as f:
         corpo = f.read()
     # o JSON vai dentro de <script>: "</" não pode aparecer cru
+    if D:  # na página, o link da foto e do TSE é montado no navegador (página menor); nos arquivos para baixar, vai inteiro
+        D = {**D, 'eleitos': [{k: v for k, v in x.items() if k not in ('foto', 'tse')} for x in D['eleitos']]}
     dados = json.dumps(D, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/') if D else 'null'
     corpo = corpo.replace('/*DATA*/', dados)
     return ('<!doctype html>\n<html lang="pt-BR">\n<head>\n' + CABECA.format(d=DESCRICAO, u=URL) + '<style>'

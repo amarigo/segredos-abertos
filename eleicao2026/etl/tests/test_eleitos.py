@@ -2,6 +2,7 @@
 quem já tem mandato e a página. Tudo com um TSE de mentira, no mesmo formato dos arquivos oficiais."""
 import csv
 import gzip
+import hashlib
 import json
 import os
 
@@ -25,6 +26,13 @@ def arquivo(uf, cargo, e, cands, pst='100,00'):
                                'par': [{'n': '10', 'sg': 'AAA', 'nfed': '901', 'cand': cands}]}]}]}
 
 
+def nome(uf, c, i):
+    """Um nome diferente para cada candidato (a comparação de nomes ignora números)."""
+    h = hashlib.md5(f'{uf}{c}{i}'.encode()).hexdigest()
+    cod = ''.join(chr(65 + int(x, 16)) for x in h)
+    return f'ANA {cod[:8]} {cod[8:16]} SOUZA'
+
+
 def tse_de_mentira(pasta, mudar=None):
     """27 estados; em SP o governador vai ao 2º turno. Devolve as linhas do arquivo de candidatos."""
     res = os.path.join(pasta, 'resultados')
@@ -37,7 +45,7 @@ def tse_de_mentira(pasta, mudar=None):
                 sq = f'{uf}{c}{i:03d}'
                 st = ('2º turno' if (uf == 'SP' and c == '3' and i < 2) else
                       'Eleito por QP' if i < VAGAS[c] else 'Não eleito')
-                cs.append(cand(sq, f'{c}{i}', f'PESSOA {uf} CARGO {c} NUMERO {i}', st, 1000 - i,
+                cs.append(cand(sq, f'{c}{i}', nome(uf, c, i), st, 1000 - i,
                                vs=[{'tp': 'v', 'nm': 'VICE', 'nmu': 'VICE FULANO', 'sgp': 'AAA'}] if c == '3' else []))
                 linhas.append({'SQ_CANDIDATO': sq, 'SG_UF': uf, 'CD_CARGO': c, 'NR_TURNO': '1',
                                'NM_URNA_CANDIDATO': 'x', 'DS_SIT_TOT_TURNO': st.upper(),
@@ -49,14 +57,14 @@ def tse_de_mentira(pasta, mudar=None):
             vagas.append({'SG_UF': uf, 'CD_CARGO': c, 'QT_VAGA': str(VAGAS[c])})
     # 2º turno de governador em SP: ganha o SP3001
     with gzip.open(os.path.join(res, f'sp-c3-e{eleitos.E2}.json.gz'), 'wt', encoding='utf-8') as f:
-        json.dump(arquivo('SP', '3', eleitos.E2, [cand('SP3000', '30', 'PESSOA SP UM', 'Não eleito', 900),
-                                                   cand('SP3001', '31', 'PESSOA SP DOIS', 'Eleito', 1100)]), f)
+        json.dump(arquivo('SP', '3', eleitos.E2, [cand('SP3000', '30', nome('SP', '3', 0), 'Não eleito', 900),
+                                                   cand('SP3001', '31', nome('SP', '3', 1), 'Eleito', 1100)]), f)
     for x in list(linhas):
         if x['SQ_CANDIDATO'] in ('SP3000', 'SP3001'):
             linhas.append({**x, 'NR_TURNO': '2', 'DS_SIT_TOT_TURNO': 'ELEITO' if x['SQ_CANDIDATO'] == 'SP3001' else 'NÃO ELEITO'})
     gravar_csv(pasta, linhas, vagas)
     with open(os.path.join(pasta, 'camara.json'), 'w', encoding='utf-8') as f:
-        json.dump([{'id': '204554', 'nome': 'Pessoa Mg', 'nome_civil': 'PESSOA MG CARGO 6 NUMERO 0', 'uf': 'MG',
+        json.dump([{'id': '204554', 'nome': 'Pessoa Mg', 'nome_civil': nome('MG', '6', 0), 'uf': 'MG',
                     'partido': 'AAA', 'nascimento': '1970-01-01', 'leg': [57]}], f)
     with open(os.path.join(pasta, 'senado.json'), 'w', encoding='utf-8') as f:
         json.dump([{'id': '5672', 'nome': 'Fica', 'nome_civil': 'FICA ATE 2031', 'uf': 'AC', 'partido': 'BBB',
@@ -137,6 +145,12 @@ def test_falta_um_estado_bloqueia(tmp_path):
     ('JOSE ABILIO SILVA DE SANTANA', 'JOSE ABILIO SANTANA', True),   # Câmara encurta o nome civil
     ('JOSE ABILIO SILVA DE SANTANA', 'JOSE CARLOS SILVA', False),
     ('MARIA DA SILVA', 'MARIA DA SILVA', True),
+    ('OMAR JOSE ABDELAZIZ', 'Omar José Abdel Aziz', True),            # sobrenome junto ou separado
+    ('PEDRO HENRIQUE DE ANDRADE LIMA CARNEIRO CAMPOS', 'PEDRO HENRIQUE DE A. L. C. CAMPOS', True),  # abreviado
+    ('CÁSSIO MURILLO GALDINO DE ARAÚJO', 'CÁSSIO MURILO GALDINO DE ARAÚJO', True),  # uma letra a mais
+    ('ANDERSON FERREIRA RODRIGUES', 'ANDRÉ FERREIRA RODRIGUES', False),  # irmãos gêmeos: outro primeiro nome
+    ('FABRICIO BEVILACQUA FURLAN', 'CRISTIANO BEVILACQUA FURLAN', False),
+    ('ERIKA HILTON', 'ERIKA SANTOS SILVA', False),  # nome social: sem como confirmar, não liga
 ])
 def test_mesma_pessoa(tse, casa, igual):
     assert eleitos.mesma_pessoa(tse, '13/02/1965', casa, '1965-02-13') is igual
@@ -163,3 +177,23 @@ def test_pagina_em_conferencia_sem_numeros(tmp_path):
     html = (tmp_path / 'site' / 'eleitos' / 'index.html').read_text(encoding='utf-8')
     assert 'JSON.parse' in html and '>null</script>' in html
     assert not (tmp_path / 'site' / 'eleitos' / 'dados' / 'eleitos.json').exists()
+
+
+def test_reeleicao_sem_o_campo_do_tse_usa_camara_e_senado(tmp_path):
+    """Em 2026 o TSE publicou ST_REELEICAO vazio ('#NE'): vale quem está no exercício do mesmo cargo hoje."""
+    linhas = tse_de_mentira(str(tmp_path))
+    vagas = eleitos.ler_csv(os.path.join(str(tmp_path), 'vagas.csv'))
+    gravar_csv(str(tmp_path), [{**x, 'ST_REELEICAO': '#NE'} for x in linhas], vagas)
+    with open(os.path.join(str(tmp_path), 'camara.json'), 'w', encoding='utf-8') as f:
+        json.dump([{'id': '1', 'nome': 'A', 'nome_civil': nome('MG', '6', 0), 'uf': 'MG', 'partido': 'AAA',
+                    'nascimento': '1970-01-01', 'leg': [57], 'em_exercicio': True},
+                   {'id': '2', 'nome': 'B', 'nome_civil': nome('SP', '6', 1), 'uf': 'SP', 'partido': 'AAA',
+                    'nascimento': '1970-01-01', 'leg': [57]},  # foi suplente e saiu: não é reeleito
+                   {'id': '3', 'nome': 'C', 'nome_civil': 'QUEM NAO VOLTA', 'uf': 'RJ', 'partido': 'AAA',
+                    'nascimento': '1980-01-01', 'leg': [57], 'em_exercicio': True}], f)
+    D, erros = eleitos.montar_eleitos(str(tmp_path))
+    assert erros == [] and D['fonte_reeleicao'] == 'camara_senado'
+    re = {x['sq']: x['re'] for x in D['eleitos']}
+    assert re['MG6000'] == 'S' and re['SP6001'] == 'N' and re['BA6000'] == 'N'
+    assert re['MG3000'] == '' and re['MG7000'] == ''  # governador e estadual: sem fonte oficial, sem marca
+    assert D['reeleitos'] == {'6': 1} and D['nao_voltam']['6'] == 1  # o deputado 3 está no cargo e não foi eleito
