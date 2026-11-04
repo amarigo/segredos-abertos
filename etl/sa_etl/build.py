@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import logging
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -826,6 +827,21 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
         gravar_incentivos(dados, saida, anos, inc, pag)
     if com_financas:  # depois de tudo: usa as emendas e a verba de gabinete já gravadas
         coletar_financas(saida, cache)
+    regravar_avisos(saida)
+
+
+def regravar_avisos(saida: Path) -> None:
+    """Os avisos das etapas que rodam depois de montar() (incentivos, arrecadação e gastos) também vão para o
+    meta.json. Antes, uma falha nessas etapas tirava a página do site sem aviso nenhum: o meta.json já estava gravado,
+    e o painel de status e o tentar-de-novo.yml não ficavam sabendo."""
+    f = saida / "meta.json"
+    try:
+        meta = json.loads(f.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    if meta.get("avisos") != util.AVISOS or meta.get("avisos_tentar") != util.avisos_para_tentar():
+        meta["avisos"], meta["avisos_tentar"] = list(util.AVISOS), util.avisos_para_tentar()
+        write_json(f, meta)
 
 
 def coletar_tramitacao(saida: Path, cache: Path, politicos: list[dict]) -> None:
@@ -834,6 +850,7 @@ def coletar_tramitacao(saida: Path, cache: Path, politicos: list[dict]) -> None:
         tramitacao.coletar(saida, cache, politicos)
     except Exception:  # noqa: BLE001
         log.exception("Projetos em andamento: erro; a página não foi atualizada")
+        util.avisar("Projetos em andamento: a coleta falhou; a página ficou de fora desta atualização")
 
 
 def coletar_tribunais(saida: Path, cache: Path, minutos: float) -> None:
@@ -848,9 +865,14 @@ def coletar_tribunais(saida: Path, cache: Path, minutos: float) -> None:
 def coletar_financas(saida: Path, cache: Path) -> None:
     """Aba de arrecadação e gastos. Se falhar, o resto do site segue."""
     try:
-        financas.coletar(saida, cache)
+        r = financas.coletar(saida, cache)
     except Exception:  # noqa: BLE001
         log.exception("Arrecadação e gastos: erro; a aba não foi atualizada")
+        util.avisar("Arrecadação e gastos: a coleta falhou; a aba ficou de fora desta atualização")
+        return
+    if r is None:  # sem a aba, os avisos dela (que iriam na própria aba) vão para o aviso geral do site
+        for a in financas.AVISOS:
+            util.avisar(a)
 
 
 def destino_pix(anos: list[int], cache: Path, saida: Path, minutos: float) -> None:
@@ -924,6 +946,7 @@ def gravar_incentivos(dados: dict, saida: Path, anos: list[int], inc: tuple[dict
         incentivos.gravar(saida, anos, inc[0], inc[1], pag, dados.get("emendas_autores") or {}, rec, paginas)
     except Exception:  # noqa: BLE001
         log.exception("Incentivos: erro ao gravar a página")
+        util.avisar("Incentivos: a página não foi gravada nesta atualização (erro na coleta)")
 
 
 def juntar_emendas(dados: dict, anos: list[int], cache: Path, saida: Path, pag: dict | None) -> None:

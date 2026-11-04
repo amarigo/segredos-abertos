@@ -271,7 +271,9 @@ def por_empresa(geral: dict | None, ren: dict | None, docs: set[str]) -> dict[st
 def gravar(saida: Path, anos: list[int], geral: dict | None, ren: dict | None, pag: dict | None, nomes: dict[str, dict],
            rec: Receita, paginas: set[str]) -> dict:
     pasta = saida / "incentivos"
-    idx = {"anos": [], "anos_renuncia": [], "fontes": FONTES, "ate_emendas": (pag or {}).get("ate", "")}
+    # arquivos_parados: o Portal recusa os arquivos diários nesta coleta; a página não diz que a leitura avança
+    idx = {"anos": [], "anos_renuncia": [], "fontes": FONTES, "ate_emendas": (pag or {}).get("ate", ""),
+           "arquivos_parados": pagamentos.recusa_em_curso()}
     for ano in anos:
         por = ((geral or {}).get("anos") or {}).get(ano)
         pg = ((pag or {}).get("anos") or {}).get(ano)
