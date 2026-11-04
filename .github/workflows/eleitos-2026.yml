@@ -1,0 +1,44 @@
+# Eleitos de 2026 (mandato a partir de 2027): baixa do TSE, da Câmara e do Senado, confere com a segunda fonte do TSE
+# e guarda em eleicao2026/dados/eleitos/ no próprio branch. O site lê dali todo dia (job "publicar" de dados-e-site.yml).
+# Roda quando o coletor muda (PR) e à mão (Actions > Eleitos 2026 > Run workflow), por exemplo depois de uma decisão
+# da Justiça Eleitoral que mude um resultado, ou em fevereiro de 2027, para ligar os novos deputados às suas páginas.
+name: Eleitos 2026
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: [eleicao2026/etl/el_etl/eleitos.py, .github/workflows/eleitos-2026.yml]
+permissions:
+  contents: write
+concurrency:
+  group: eleitos-2026-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r etl/requirements.txt
+      - name: Baixar e conferir os eleitos
+        id: conferir
+        working-directory: eleicao2026/etl
+        run: python -m el_etl.build eleitos --baixar | tee -a "$GITHUB_STEP_SUMMARY"
+      # Guarda o que foi baixado mesmo se a conferência falhar: as diferenças ficam à vista no git, e a página dos
+      # eleitos não mostra números enquanto não baterem (montar_eleitos em build.py).
+      - name: Guardar no branch
+        if: always() && hashFiles('eleicao2026/dados/eleitos/coleta.json') != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add eleicao2026/dados/eleitos
+          if git diff --cached --quiet -- eleicao2026/dados/eleitos ':!eleicao2026/dados/eleitos/coleta.json'; then
+            echo "Nada mudou nos eleitos."
+          else
+            git commit -m "Eleitos 2026: dados do TSE, da Câmara e do Senado atualizados"
+            git push
+          fi
