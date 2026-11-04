@@ -79,6 +79,8 @@ export interface AnoDetalhe extends AnoResumo {
   meses: { mes: number; valor: number }[];
   fornecedores: Fornecedor[];
   maiores_notas: Nota[];
+  /** Quantas notas há na lista completa do ano (p/notas/{id}-{ano}.json); ausente nos anos sem lista completa */
+  n_notas?: number;
   sem_nota_meses?: { mes: number; valor: number; url: string }[];
   passagens_da_lista?: { n: number; valor: number };
   /** Notas que a fonte publica mas que o total oficial não soma (por exemplo, Senado sem tipo de despesa); fora do total */
@@ -87,6 +89,8 @@ export interface AnoDetalhe extends AnoResumo {
 }
 export interface Fornecedor { doc: string; tipo: string; nome: string; valor: number; n: number; ficha: boolean; socios: string[] }
 export interface Nota { data: string; categoria: string; fornecedor: string; doc: string; valor: number; url: string; link?: string; detalhe?: string }
+/** Todas as notas de um político num ano. Cada nota é uma lista na ordem de colunas; temas: tipo de despesa oficial -> tema simples */
+export interface NotasPolitico { colunas: string[]; temas: Record<string, string>; notas: (string | number)[][] }
 export interface Politico extends Resumo {
   anos: Record<string, AnoDetalhe>;
   temas?: Record<string, { Sim?: number; "Não"?: number; Outros?: number; contra_partido?: number }>;

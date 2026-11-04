@@ -29,6 +29,9 @@ def test_so_politicos_de_mg(mg):
     assert [p["id"] for p in pols] == esperado and esperado
     assert {p["casa"] for p in pols} == {"camara", "senado"}
     assert sorted(f.stem for f in (saida / "p").glob("*.json")) == sorted(esperado)
+    # a lista completa de notas vai junto, só dos políticos de MG
+    notas = {f.name for f in (saida / "p" / "notas").glob("*.json")}
+    assert notas and notas == {f.name for f in (nac / "p" / "notas").glob("*.json") if f.name.rsplit("-", 1)[0] in esperado}
 
 
 def test_votacao_mostra_bancada_de_mg_e_placar_da_casa(mg):

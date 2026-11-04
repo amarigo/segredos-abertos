@@ -166,6 +166,12 @@ def parse_cota(rows, ids: set[str]) -> list[dict]:
         if valor == 0:
             continue
         cat = r.get("txtDescricao") or ""
+        if valor < 0 < to_float(r.get("vlrDocumento")) and "MORADIA" in cat.upper():
+            # Complementação do auxílio-moradia: o arquivo anual traz o valor líquido negativo (em 2025, todas as 834
+            # linhas), mas é um gasto da cota. A página oficial de cada deputado soma o valor positivo (vlrDocumento):
+            # conferido em novembro de 2026 mês a mês (dep. 204422, jan/2025: 41.135,65 + 2 x 2.841,54 = 46.818,73,
+            # igual à página). Com o sinal trocado, o total ficava menor e a diferença virava "sem nota".
+            valor = -valor
         url = url_segura(r.get("urlDocumento"))
         nu = (r.get("nuDeputadoId") or "").strip()
         ano, mes = int(to_float(r.get("numAno"))), int(to_float(r.get("numMes")))

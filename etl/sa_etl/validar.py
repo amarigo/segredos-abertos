@@ -105,7 +105,7 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
     anos = [str(a) for a in meta.get("anos", [])]
 
     # ---------------- nomes de arquivo
-    for pasta in ("p", "v", "e", "e/notas"):
+    for pasta in ("p", "p/notas", "v", "e", "e/notas"):
         for f in (saida / pasta).glob("*.json") if (saida / pasta).exists() else []:
             if not NOME_ARQ.match(f.name):
                 r.erro(f"Nome de arquivo inseguro: {pasta}/{f.name}")
@@ -274,11 +274,34 @@ def _conferir_politico(saida: Path, p: dict, r: Resultado) -> None:
             r.erro(f"{p['id']} {ano}: soma dos meses diferente do total")
         if any(not 1 <= m["mes"] <= 12 for m in meses):
             r.alerta(f"{p['id']} {ano}: despesa com mês fora de 1 a 12")
+        _conferir_notas_politico(saida, p["id"], ano, a, r)
     vs = Counter(v["votacao"] for v in d.get("votos") or [])
     if any(n > 1 for n in vs.values()):
         r.erro(f"{p['id']}: a mesma votação aparece mais de uma vez nos votos")
     if d.get("n_votos") != len(d.get("votos") or []):
         r.erro(f"{p['id']}: n_votos diferente da lista de votos")
+
+
+def _conferir_notas_politico(saida: Path, pid: str, ano: str, a: dict, r: Resultado) -> None:
+    """Lista completa de notas (p/notas/{id}-{ano}.json): todas as notas somadas, mais os valores sem nota que o site
+    completa com a página oficial, dão o total do ano. Uma nota que faltasse no arquivo sumiria da lista do site."""
+    if "n_notas" not in a:  # versão antiga dos dados, sem a lista completa
+        return
+    f = saida / "p" / "notas" / f"{pid}-{ano}.json"
+    if not a["n_notas"]:
+        return
+    x = _ler(f, r)
+    if x is None:
+        return
+    ns = x.get("notas") or []
+    if len(ns) != a["n_notas"]:
+        r.erro(f"{pid} {ano}: {len(ns)} notas na lista completa, mas o resumo diz {a['n_notas']}")
+    i_cat, i_valor = x["colunas"].index("categoria"), x["colunas"].index("valor")
+    if any(n[i_cat] not in (x.get("temas") or {}) for n in ns):
+        r.erro(f"{pid} {ano}: nota com tipo de despesa sem tema na lista completa")
+    sem_nota = sum(m["valor"] for m in a.get("sem_nota_meses") or [])
+    if not _perto(a["total"], sum(n[i_valor] for n in ns) + sem_nota, len(ns)):
+        r.erro(f"{pid} {ano}: soma da lista completa de notas diferente do total ({a['total']})")
 
 
 def _conferir_empresa(saida: Path, f: Path, por_id: dict, r: Resultado) -> None:
