@@ -226,6 +226,15 @@ def test_resumo_geral_ignora_arquivo_com_defeito(tmp_path):
     assert r["anos"][2025]["12345678000195"]["orgaos"] == {"M": 10} and r["cobertura"][2025]["dias"] == 1
 
 
+def test_renuncia_diz_quando_a_cgu_publicou_o_arquivo(coleta):
+    """O site mostra a data da publicação oficial: sem ela, um ano antigo parecia coleta parada."""
+    coleta.usar(FakeGov())
+    saida = coleta.rodar()
+    idx = coleta.ler(saida, "incentivos/indice.json")
+    assert {x["publicado_em"] for x in idx["anos_renuncia"]} == {"2024-12-05"}
+    assert coleta.ler(saida, "incentivos/renuncia-2024.json")["publicado_em"] == "2024-12-05"
+
+
 def test_renuncia_baixa_com_cara_de_navegador(coleta):
     """O servidor de arquivos da CGU recusa pedidos que pedem JSON ou não parecem de navegador."""
     gov = coleta.usar(FakeGov())

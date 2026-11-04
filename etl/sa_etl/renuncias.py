@@ -24,6 +24,7 @@ import shutil
 import time
 import zipfile
 from collections import defaultdict
+from email.utils import parsedate_to_datetime
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Iterator
@@ -126,6 +127,7 @@ def _baixar_url(url: str, dest: Path) -> str | None:
                     tmp.unlink(missing_ok=True)
                     break
                 tmp.replace(dest)
+                _guardar_publicacao(dest, r.headers.get("last-modified"))
                 log.info("Renúncias: baixado %s (%.1f MB)", r.url, dest.stat().st_size / 1e6)
                 return None
             except SiteForaDoAr as e:
@@ -134,6 +136,37 @@ def _baixar_url(url: str, dest: Path) -> str | None:
                 motivo = str(e)[:120]
                 time.sleep(2 ** (tentativa + 1))
     return motivo
+
+
+def _publicacao_f(dest: Path) -> Path:
+    return dest.with_name(dest.name + ".json")
+
+
+def _guardar_publicacao(dest: Path, last_modified: str | None) -> str:
+    """Guarda o dia em que a CGU publicou o arquivo (cabeçalho Last-Modified do servidor). O site mostra essa data:
+    em 11/2026 os arquivos de 2023 e 2024 eram de 05/12/2024, e sem ela parecia que a coleta tinha parado."""
+    try:
+        dia = parsedate_to_datetime(last_modified).date().isoformat() if last_modified else ""
+    except (TypeError, ValueError):
+        dia = ""
+    if dia:
+        _publicacao_f(dest).write_text(json.dumps({"publicado_em": dia}))
+    return dia
+
+
+def publicado_em(ano: int, dest: Path) -> str:
+    """Dia da publicação do arquivo do ano (AAAA-MM-DD), ou "" se não deu para saber. Sem a anotação (arquivo
+    baixado antes desta versão), pergunta ao servidor só o cabeçalho."""
+    try:
+        return json.loads(_publicacao_f(dest).read_text())["publicado_em"]
+    except (OSError, ValueError, KeyError):
+        pass
+    try:
+        r = _session.head(URLS[0].format(ano=ano), timeout=60, allow_redirects=True,
+                          headers={"Accept": "application/zip,*/*", "User-Agent": NAVEGADOR})
+        return _guardar_publicacao(dest, r.headers.get("last-modified")) if r.status_code == 200 else ""
+    except Exception:  # noqa: BLE001
+        return ""
 
 
 def baixar(ano: int, cache: Path, max_horas: float = 24 * 7) -> Path | None:
@@ -624,6 +657,7 @@ def coletar(cache: Path, ano_atual: int, n_anos: int = N_ANOS, chave: str | None
             if not r:
                 continue
             anos[ano], emps = r
+            anos[ano]["publicado_em"] = publicado_em(ano, z)
             for doc, x in emps.items():
                 por_emp[doc][ano] = x
     if not anos:

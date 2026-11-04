@@ -229,7 +229,10 @@ class FakeGov:
                                      or "json" in h.get("Accept", "")):
             return self._resp(403, b"<Error>AccessDenied</Error>", full, "application/xml")
         status, corpo, tipo = self._rota(method, url, params or {})
-        return self._resp(status, corpo, full, tipo)
+        r = self._resp(status, corpo, full, tipo)
+        if status == 200 and url.endswith("_RenunciasFiscais.zip"):  # o S3 da CGU diz quando o arquivo foi publicado
+            r.headers["last-modified"] = "Thu, 05 Dec 2024 23:26:16 GMT"
+        return r
 
     def _falha(self, modo: str, url: str) -> requests.Response:
         if modo == "timeout":
