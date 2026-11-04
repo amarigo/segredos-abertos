@@ -1,0 +1,7364 @@
+[
+{
+"id": "100689",
+"nome": "Hildo do Candango",
+"uf": "GO",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "OSMARILDO ALVES DE SOUSA",
+"nascimento": "1970-12-06"
+},
+{
+"id": "103758",
+"nome": "Luciano Azevedo",
+"uf": "RS",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "LUCIANO PALMA DE AZEVEDO",
+"nascimento": "1969-05-24"
+},
+{
+"id": "104552",
+"nome": "Socorro Neri",
+"uf": "AC",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "MARIA DO SOCORRO NERI MEDEIROS DE SOUZA",
+"nascimento": "1966-05-19"
+},
+{
+"id": "107283",
+"nome": "Gleisi Hoffmann",
+"uf": "PR",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "GLEISI HELENA HOFFMANN",
+"nascimento": "1965-09-06"
+},
+{
+"id": "107970",
+"nome": "Ana Paula Leão",
+"uf": "MG",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "ANA PAULA PROCOPIO JUNQUEIRA",
+"nascimento": "1965-08-22"
+},
+{
+"id": "109429",
+"nome": "Benes Leocádio",
+"uf": "RN",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "LUIZ BENES LEOCADIO DE ARAUJO",
+"nascimento": "1966-04-22"
+},
+{
+"id": "115200",
+"nome": "Raniery Paulino",
+"uf": "PB",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "ROBERTO RANIERY DE AQUINO PAULINO",
+"nascimento": "1978-10-18"
+},
+{
+"id": "116379",
+"nome": "Darci de Matos",
+"uf": "SC",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "DARCI DE MATOS",
+"nascimento": "1961-11-08"
+},
+{
+"id": "121948",
+"nome": "Adriano do Baldy",
+"uf": "GO",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "ADRIANO ANTÔNIO AVELAR",
+"nascimento": "1969-09-06"
+},
+{
+"id": "122158",
+"nome": "Pedro Paulo",
+"uf": "RJ",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "PEDRO PAULO CARVALHO TEIXEIRA",
+"nascimento": "1972-06-29"
+},
+{
+"id": "122195",
+"nome": "Leonardo Gadelha",
+"uf": "PB",
+"partido": "PSC",
+"leg": [
+57,
+57
+],
+"nome_civil": "LEONARDO DE MELO GADELHA",
+"nascimento": "1975-05-12"
+},
+{
+"id": "122974",
+"nome": "Pedro Lucas Fernandes",
+"uf": "MA",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "PEDRO LUCAS ANDRADE FERNANDES RIBEIRO",
+"nascimento": "1979-11-01"
+},
+{
+"id": "123086",
+"nome": "Átila Lira",
+"uf": "PI",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "ÁTILA DE MELO LIRA",
+"nascimento": "1980-04-01"
+},
+{
+"id": "123756",
+"nome": "Antônia Lúcia",
+"uf": "AC",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "ANTÔNIA LUCILÉIA CRUZ RAMOS CÂMARA",
+"nascimento": "1970-07-17"
+},
+{
+"id": "128760",
+"nome": "Paulo Marinho Jr",
+"uf": "MA",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "PAULO CELSO FONSECA MARINHO JÚNIOR",
+"nascimento": "1985-02-09"
+},
+{
+"id": "129618",
+"nome": "Gorete Pereira",
+"uf": "CE",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "MARIA GORETE PEREIRA",
+"nascimento": "1952-04-10"
+},
+{
+"id": "132504",
+"nome": "Enio Verri",
+"uf": "PR",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ENIO JOSÉ VERRI",
+"nascimento": "1961-03-27"
+},
+{
+"id": "133439",
+"nome": "André Figueiredo",
+"uf": "CE",
+"partido": "PDT",
+"leg": [
+57
+],
+"nome_civil": "ANDRÉ PEIXOTO FIGUEIREDO LIMA",
+"nascimento": "1966-11-10"
+},
+{
+"id": "133810",
+"nome": "Marcelo Moraes",
+"uf": "RS",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "MARCELO PIRES MORAES",
+"nascimento": "1979-08-07"
+},
+{
+"id": "136811",
+"nome": "Afonso Hamm",
+"uf": "RS",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ ALFONSO EBERT HAMM",
+"nascimento": "1962-04-25"
+},
+{
+"id": "137070",
+"nome": "Vicentinho Júnior",
+"uf": "TO",
+"partido": "PP",
+"leg": [
+57,
+57
+],
+"nome_civil": "VICENTE ALVES DE OLIVEIRA JUNIOR",
+"nascimento": "1985-04-11"
+},
+{
+"id": "138286",
+"nome": "Luciano Alves",
+"uf": "PR",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "LUCIANO ALVES DOS SANTOS",
+"nascimento": "1973-01-08"
+},
+{
+"id": "139285",
+"nome": "Lídice da Mata",
+"uf": "BA",
+"partido": "PSB",
+"leg": [
+57
+],
+"nome_civil": "LÍDICE DA MATA E SOUZA",
+"nascimento": "1956-03-12"
+},
+{
+"id": "141391",
+"nome": "Arnaldo Jardim",
+"uf": "SP",
+"partido": "CIDADANIA",
+"leg": [
+57
+],
+"nome_civil": "ARNALDO CALIL PEREIRA JARDIM",
+"nascimento": "1955-05-08"
+},
+{
+"id": "141398",
+"nome": "Carlos Zarattini",
+"uf": "SP",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "CARLOS ALBERTO ROLIM ZARATTINI",
+"nascimento": "1959-06-08"
+},
+{
+"id": "141408",
+"nome": "Cleber Verde",
+"uf": "MA",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "CLEBER VERDE CORDEIRO MENDES",
+"nascimento": "1972-05-10"
+},
+{
+"id": "141411",
+"nome": "Dagoberto Nogueira",
+"uf": "MS",
+"partido": "PSDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "DAGOBERTO NOGUEIRA FILHO",
+"nascimento": "1955-07-21"
+},
+{
+"id": "141421",
+"nome": "Eduardo da Fonte",
+"uf": "PE",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "EDUARDO HENRIQUE DA FONTE DE ALBUQUERQUE SILVA",
+"nascimento": "1972-10-17"
+},
+{
+"id": "141431",
+"nome": "Fernando Coelho Filho",
+"uf": "PE",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "FERNANDO BEZERRA DE SOUZA COELHO FILHO",
+"nascimento": "1984-02-28"
+},
+{
+"id": "141450",
+"nome": "Hugo Leal",
+"uf": "RJ",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "HUGO LEAL MELO DA SILVA",
+"nascimento": "1962-08-06"
+},
+{
+"id": "141456",
+"nome": "Jilmar Tatto",
+"uf": "SP",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "JILMAR AUGUSTINHO TATTO",
+"nascimento": "1965-06-25"
+},
+{
+"id": "141458",
+"nome": "João Carlos Bacelar",
+"uf": "BA",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "JOÃO CARLOS PAOLILO BACELAR FILHO",
+"nascimento": "1972-10-08"
+},
+{
+"id": "141459",
+"nome": "João Maia",
+"uf": "RN",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "JOÃO DA SILVA MAIA",
+"nascimento": "1953-09-20"
+},
+{
+"id": "141464",
+"nome": "José Airton Félix Cirilo",
+"uf": "CE",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ AIRTON FÉLIX CIRILO DA SILVA",
+"nascimento": "1957-02-21"
+},
+{
+"id": "141470",
+"nome": "José Guimarães",
+"uf": "CE",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ NOBRE GUIMARÃES",
+"nascimento": "1957-02-13"
+},
+{
+"id": "141480",
+"nome": "Lázaro Botelho",
+"uf": "TO",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "LÁZARO BOTELHO MARTINS",
+"nascimento": "1947-02-11"
+},
+{
+"id": "141485",
+"nome": "Luiz Carlos Busato",
+"uf": "RS",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "LUIZ CARLOS GHIORZZI BUSATO",
+"nascimento": "1948-11-06"
+},
+{
+"id": "141487",
+"nome": "Luiz Fernando Faria",
+"uf": "MG",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "LUIZ FERNANDO RAMOS FARIA",
+"nascimento": "1957-09-12"
+},
+{
+"id": "141488",
+"nome": "Paulo Teixeira",
+"uf": "SP",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "LUIZ PAULO TEIXEIRA FERREIRA",
+"nascimento": "1961-05-06"
+},
+{
+"id": "141516",
+"nome": "Paulo Abi-Ackel",
+"uf": "MG",
+"partido": "PSDB",
+"leg": [
+57
+],
+"nome_civil": "PAULO ABI-ACKEL",
+"nascimento": "1963-06-21"
+},
+{
+"id": "141518",
+"nome": "Paulinho da Força",
+"uf": "SP",
+"partido": "SOLIDARIEDADE",
+"leg": [
+57
+],
+"nome_civil": "PAULO PEREIRA DA SILVA",
+"nascimento": "1956-02-25"
+},
+{
+"id": "141531",
+"nome": "Rodrigo de Castro",
+"uf": "MG",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "RODRIGO BATISTA DE CASTRO",
+"nascimento": "1971-07-15"
+},
+{
+"id": "141533",
+"nome": "Rodrigo Rollemberg",
+"uf": "DF",
+"partido": "PSB",
+"leg": [
+57
+],
+"nome_civil": "RODRIGO SOBRAL ROLLEMBERG",
+"nascimento": "1959-07-13"
+},
+{
+"id": "141555",
+"nome": "Vinicius Carvalho",
+"uf": "SP",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "VINICIUS RAPOZO DE CARVALHO",
+"nascimento": "1966-01-07"
+},
+{
+"id": "143084",
+"nome": "Tiago Dimas",
+"uf": "TO",
+"partido": "PODE",
+"leg": [
+57
+],
+"nome_civil": "Tiago Dimas Braga Pereira",
+"nascimento": "1988-08-04"
+},
+{
+"id": "143632",
+"nome": "Domingos Neto",
+"uf": "CE",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "DOMINGOS GOMES DE AGUIAR NETO",
+"nascimento": "1988-04-29"
+},
+{
+"id": "143942",
+"nome": "Caio Vianna",
+"uf": "RJ",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "CAIO SANTOS VIANNA",
+"nascimento": "1988-12-08"
+},
+{
+"id": "150418",
+"nome": "Márcio Marinho",
+"uf": "BA",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "MÁRCIO CARLOS MARINHO",
+"nascimento": "1970-12-12"
+},
+{
+"id": "152605",
+"nome": "Glauber Braga",
+"uf": "RJ",
+"partido": "PSOL",
+"leg": [
+57
+],
+"nome_civil": "GLAUBER DE MEDEIROS BRAGA",
+"nascimento": "1982-06-26"
+},
+{
+"id": "153423",
+"nome": "Renilce Nicodemos",
+"uf": "PA",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "RENILCE CONCEIÇÃO NICODEMOS DE ALBUQUERQUE",
+"nascimento": "1976-12-08"
+},
+{
+"id": "154178",
+"nome": "Milton Vieira",
+"uf": "SP",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "MILTON VIEIRA PINTO",
+"nascimento": "1962-09-16"
+},
+{
+"id": "154700",
+"nome": "Paulo Soares",
+"uf": "SP",
+"partido": "PODE",
+"leg": [
+57,
+57
+],
+"nome_civil": "PAULO ROMEIRO DE ALMEIDA SOARES",
+"nascimento": "1985-02-25"
+},
+{
+"id": "156190",
+"nome": "Marcel van Hattem",
+"uf": "RS",
+"partido": "NOVO",
+"leg": [
+57
+],
+"nome_civil": "MARCEL VAN HATTEM",
+"nascimento": "1985-11-08"
+},
+{
+"id": "157130",
+"nome": "Túlio Gadêlha",
+"uf": "PE",
+"partido": "REDE",
+"leg": [
+57,
+57
+],
+"nome_civil": "TÚLIO GADÊLHA SALES DE MELO",
+"nascimento": "1987-11-12"
+},
+{
+"id": "160161",
+"nome": "Marcelo Queiroz",
+"uf": "RJ",
+"partido": "PP",
+"leg": [
+57,
+57
+],
+"nome_civil": "MARCELO ANDRE CID HERACLITO DO PORTO QUEIROZ",
+"nascimento": "1984-11-03"
+},
+{
+"id": "160508",
+"nome": "Afonso Florence",
+"uf": "BA",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "AFONSO BANDEIRA FLORENCE",
+"nascimento": "1960-10-15"
+},
+{
+"id": "160510",
+"nome": "Luis Tibé",
+"uf": "MG",
+"partido": "AVANTE",
+"leg": [
+57
+],
+"nome_civil": "LUIS HENRIQUE DE OLIVEIRA RESENDE",
+"nascimento": "1971-07-23"
+},
+{
+"id": "160512",
+"nome": "Aureo Ribeiro",
+"uf": "RJ",
+"partido": "SOLIDARIEDADE",
+"leg": [
+57
+],
+"nome_civil": "AUREO LIDIO MOREIRA RIBEIRO",
+"nascimento": "1979-02-17"
+},
+{
+"id": "160517",
+"nome": "Paulo Foletto",
+"uf": "ES",
+"partido": "PSB",
+"leg": [
+57,
+57
+],
+"nome_civil": "PAULO ROBERTO FOLLETTO",
+"nascimento": "1956-04-30"
+},
+{
+"id": "160518",
+"nome": "Weliton Prado",
+"uf": "MG",
+"partido": "PROS",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "WELITON FERNANDES PRADO",
+"nascimento": "1975-08-24"
+},
+{
+"id": "160527",
+"nome": "Aguinaldo Ribeiro",
+"uf": "PB",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "AGUINALDO VELLOSO BORGES RIBEIRO",
+"nascimento": "1969-02-13"
+},
+{
+"id": "160531",
+"nome": "Jhonatan de Jesus",
+"uf": "RR",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "JOHNATHAN PEREIRA DE JESUS",
+"nascimento": "1983-09-03"
+},
+{
+"id": "160535",
+"nome": "Marcon",
+"uf": "RS",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "DIONILSO MATEUS MARCON",
+"nascimento": "1964-09-21"
+},
+{
+"id": "160538",
+"nome": "Bohn Gass",
+"uf": "RS",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ELVINO JOSÉ BOHN GASS",
+"nascimento": "1962-02-05"
+},
+{
+"id": "160541",
+"nome": "Arthur Lira",
+"uf": "AL",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "ARTHUR CÉSAR PEREIRA DE LIRA",
+"nascimento": "1969-06-25"
+},
+{
+"id": "160545",
+"nome": "Alexandre Leite",
+"uf": "SP",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "ALEXANDRE LEITE DA SILVA",
+"nascimento": "1989-04-18"
+},
+{
+"id": "160548",
+"nome": "Jonas Donizette",
+"uf": "SP",
+"partido": "PSB",
+"leg": [
+57
+],
+"nome_civil": "JONAS DONIZETTE FERREIRA",
+"nascimento": "1965-06-25"
+},
+{
+"id": "160552",
+"nome": "Danrlei de Deus Hinterholz",
+"uf": "RS",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "DANRLEI DE DEUS HINTERHOLZ",
+"nascimento": "1973-04-18"
+},
+{
+"id": "160553",
+"nome": "Antonio Brito",
+"uf": "BA",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "ANTONIO LUIZ PARANHOS RIBEIRO LEITE DE BRITO",
+"nascimento": "1969-01-17"
+},
+{
+"id": "160556",
+"nome": "Padre João",
+"uf": "MG",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "JOÃO CARLOS SIQUEIRA",
+"nascimento": "1967-02-28"
+},
+{
+"id": "160558",
+"nome": "Paulo Freire Costa",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "PAULO ROBERTO FREIRE DA COSTA",
+"nascimento": "1955-02-14"
+},
+{
+"id": "160559",
+"nome": "Alceu Moreira",
+"uf": "RS",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "ALCEU MOREIRA DA SILVA",
+"nascimento": "1954-06-04"
+},
+{
+"id": "160561",
+"nome": "Missionário José Olimpio",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ OLIMPIO SILVEIRA MORAES",
+"nascimento": "1956-12-11"
+},
+{
+"id": "160569",
+"nome": "Waldenor Pereira",
+"uf": "BA",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "WALDENOR ALVES PEREIRA FILHO",
+"nascimento": "1954-03-08"
+},
+{
+"id": "160575",
+"nome": "Erika Kokay",
+"uf": "DF",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ÉRIKA JUCÁ KOKAY",
+"nascimento": "1957-08-15"
+},
+{
+"id": "160588",
+"nome": "Diego Andrade",
+"uf": "MG",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "DIEGO LEONARDO DE ANDRADE CARVALHO",
+"nascimento": "1977-08-08"
+},
+{
+"id": "160591",
+"nome": "Vinicius Gurgel",
+"uf": "AP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "VINICIUS DE AZEVEDO GURGEL",
+"nascimento": "1978-07-31"
+},
+{
+"id": "160592",
+"nome": "Zeca Dirceu",
+"uf": "PR",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ CARLOS BECKER DE OLIVEIRA E SILVA",
+"nascimento": "1978-06-21"
+},
+{
+"id": "160598",
+"nome": "Flávia Morais",
+"uf": "GO",
+"partido": "PDT",
+"leg": [
+57,
+57
+],
+"nome_civil": "FLÁVIA CARREIRO ALBUQUERQUE MORAIS",
+"nascimento": "1969-04-26"
+},
+{
+"id": "160599",
+"nome": "Dimas Fabiano",
+"uf": "MG",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "DIMAS FABIANO TOLEDO JÚNIOR",
+"nascimento": "1973-05-23"
+},
+{
+"id": "160600",
+"nome": "Arthur Oliveira Maia",
+"uf": "BA",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "ARTHUR DE OLIVEIRA MAIA DA SILVA",
+"nascimento": "1964-08-17"
+},
+{
+"id": "160601",
+"nome": "Pr. Marco Feliciano",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "MARCO ANTÔNIO FELICIANO",
+"nascimento": "1972-10-12"
+},
+{
+"id": "160604",
+"nome": "Pedro Uczai",
+"uf": "SC",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "PEDRO FRANCISCO UCZAI",
+"nascimento": "1963-03-10"
+},
+{
+"id": "160610",
+"nome": "Valmir Assunção",
+"uf": "BA",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "VALMIR CARLOS DA ASSUNÇÃO",
+"nascimento": "1964-12-17"
+},
+{
+"id": "160621",
+"nome": "Sandro Alex",
+"uf": "PR",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "SANDRO ALEX CRUZ DE OLIVEIRA",
+"nascimento": "1972-11-25"
+},
+{
+"id": "160629",
+"nome": "Romero Rodrigues",
+"uf": "PB",
+"partido": "PSC",
+"leg": [
+57,
+57
+],
+"nome_civil": "ROMERO RODRIGUES VEIGA",
+"nascimento": "1966-01-09"
+},
+{
+"id": "160632",
+"nome": "Zé Silva",
+"uf": "MG",
+"partido": "SOLIDARIEDADE",
+"leg": [
+57,
+57
+],
+"nome_civil": "JOSÉ SILVA SOARES",
+"nascimento": "1963-05-11"
+},
+{
+"id": "160635",
+"nome": "Ruy Carneiro",
+"uf": "PB",
+"partido": "PSC",
+"leg": [
+57,
+57
+],
+"nome_civil": "RUY MANUEL CARNEIRO BARBOSA DE ACA BELCHIOR",
+"nascimento": "1970-08-17"
+},
+{
+"id": "160640",
+"nome": "Eros Biondini",
+"uf": "MG",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "EROS FERREIRA BIONDINI",
+"nascimento": "1971-05-20"
+},
+{
+"id": "160641",
+"nome": "Professora Marcivania",
+"uf": "AP",
+"partido": "PCdoB",
+"leg": [
+57
+],
+"nome_civil": "MARCIVANIA DO SOCORRO DA ROCHA FLEXA",
+"nascimento": "1973-06-21"
+},
+{
+"id": "160642",
+"nome": "Pastor Eurico",
+"uf": "PE",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "FRANCISCO EURICO DA SILVA",
+"nascimento": "1962-09-12"
+},
+{
+"id": "160665",
+"nome": "Augusto Coutinho",
+"uf": "PE",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "AUGUSTO RODRIGUES COUTINHO DE MELO",
+"nascimento": "1962-10-22"
+},
+{
+"id": "160666",
+"nome": "Félix Mendonça Júnior",
+"uf": "BA",
+"partido": "PDT",
+"leg": [
+57
+],
+"nome_civil": "FELIX DE ALMEIDA MENDONÇA JÚNIOR",
+"nascimento": "1963-11-29"
+},
+{
+"id": "160673",
+"nome": "Giovani Cherini",
+"uf": "RS",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "GIOVANI CHERINI",
+"nascimento": "1960-06-23"
+},
+{
+"id": "160674",
+"nome": "Hugo Motta",
+"uf": "PB",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "HUGO MOTTA WANDERLEY DA NÓBREGA",
+"nascimento": "1989-09-11"
+},
+{
+"id": "160758",
+"nome": "Domingos Sávio",
+"uf": "MG",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "DOMINGOS SÁVIO CAMPOS RESENDE",
+"nascimento": "1957-03-25"
+},
+{
+"id": "160976",
+"nome": "Tiririca",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "FRANCISCO EVERARDO TIRIRICA OLIVEIRA SILVA",
+"nascimento": "1965-05-01"
+},
+{
+"id": "161440",
+"nome": "Pezenti",
+"uf": "SC",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "RAFAEL PEZENTI",
+"nascimento": "1987-06-06"
+},
+{
+"id": "161550",
+"nome": "Emidinho Madeira",
+"uf": "MG",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "EMIDIO ALVES MADEIRA JUNIOR",
+"nascimento": "1967-03-10"
+},
+{
+"id": "162067",
+"nome": "Kiko Celeguim",
+"uf": "SP",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "FRANCISCO DANIEL CELEGUIM DE MORAIS",
+"nascimento": "1984-05-05"
+},
+{
+"id": "162332",
+"nome": "Luiz Nishimori",
+"uf": "PR",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "LUIZ HILOSHI NISHIMORI",
+"nascimento": "1949-04-09"
+},
+{
+"id": "163321",
+"nome": "Ronaldo Nogueira",
+"uf": "RS",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "RONALDO NOGUEIRA DE OLIVEIRA",
+"nascimento": "1966-04-25"
+},
+{
+"id": "164360",
+"nome": "Carmen Zanotto",
+"uf": "SC",
+"partido": "CIDADANIA",
+"leg": [
+57
+],
+"nome_civil": "CARMEN EMÍLIA BONFÁ ZANOTTO",
+"nascimento": "1962-10-06"
+},
+{
+"id": "165470",
+"nome": "Rodrigo Valadares",
+"uf": "SE",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "RODRIGO SANTANA VALADARES",
+"nascimento": "1989-08-06"
+},
+{
+"id": "166402",
+"nome": "Magda Mofatto",
+"uf": "GO",
+"partido": "PL",
+"leg": [
+57,
+57,
+57,
+57
+],
+"nome_civil": "MAGDA MOFATTO HON",
+"nascimento": "1948-10-26"
+},
+{
+"id": "171139",
+"nome": "Loreny",
+"uf": "SP",
+"partido": "SOLIDARIEDADE",
+"leg": [
+57
+],
+"nome_civil": "LORENY MAYARA CAETANO ROBERTO",
+"nascimento": "1991-07-11"
+},
+{
+"id": "171617",
+"nome": "Paulão",
+"uf": "AL",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "PAULO FERNANDO DOS SANTOS",
+"nascimento": "1957-09-15"
+},
+{
+"id": "171623",
+"nome": "Fabio Reis",
+"uf": "SE",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "FABIO DE ALMEIDA REIS",
+"nascimento": "1977-04-15"
+},
+{
+"id": "171786",
+"nome": "Miguel Ângelo",
+"uf": "MG",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "MIGUEL ÂNGELO MONTEIRO ANDRADE",
+"nascimento": "1991-10-11"
+},
+{
+"id": "175765",
+"nome": "Ribamar Silva",
+"uf": "SP",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "RIBAMAR ANTONIO DA SILVA",
+"nascimento": "1975-05-27"
+},
+{
+"id": "178829",
+"nome": "Capitão Augusto",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "JOSE AUGUSTO ROSA",
+"nascimento": "1966-10-04"
+},
+{
+"id": "178831",
+"nome": "ANDRÉ ABDON",
+"uf": "AP",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "ANDRE DOS SANTOS ABDON",
+"nascimento": "1970-11-10"
+},
+{
+"id": "178832",
+"nome": "Leandre",
+"uf": "PR",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "LEANDRE DAL PONTE",
+"nascimento": "1975-12-20"
+},
+{
+"id": "178835",
+"nome": "Afonso Motta",
+"uf": "RS",
+"partido": "PDT",
+"leg": [
+57
+],
+"nome_civil": "AFONSO ANTUNES DA MOTTA",
+"nascimento": "1950-01-08"
+},
+{
+"id": "178843",
+"nome": "Marx Beltrão",
+"uf": "AL",
+"partido": "PP",
+"leg": [
+57,
+57
+],
+"nome_civil": "MARX BELTRÃO LIMA SIQUEIRA",
+"nascimento": "1979-11-28"
+},
+{
+"id": "178854",
+"nome": "Elmar Nascimento",
+"uf": "BA",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "ELMAR JOSE VIEIRA NASCIMENTO",
+"nascimento": "1970-07-06"
+},
+{
+"id": "178857",
+"nome": "Jorge Solla",
+"uf": "BA",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "JORGE JOSE SANTOS PEREIRA SOLLA",
+"nascimento": "1961-04-11"
+},
+{
+"id": "178858",
+"nome": "Mário Negromonte Jr.",
+"uf": "BA",
+"partido": "PP",
+"leg": [
+57,
+57
+],
+"nome_civil": "MARIO SILVIO MENDES NEGROMONTE JÚNIOR",
+"nascimento": "1980-08-31"
+},
+{
+"id": "178860",
+"nome": "Paulo Azi",
+"uf": "BA",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "PAULO VELLOSO DANTAS AZI",
+"nascimento": "1963-01-14"
+},
+{
+"id": "178866",
+"nome": "Luizianne Lins",
+"uf": "CE",
+"partido": "PT",
+"leg": [
+57,
+57
+],
+"nome_civil": "LUIZIANNE DE OLIVEIRA LINS",
+"nascimento": "1968-11-18"
+},
+{
+"id": "178871",
+"nome": "Evair Vieira de Melo",
+"uf": "ES",
+"partido": "PP",
+"leg": [
+57,
+57
+],
+"nome_civil": "EVAIR VIEIRA DE MELO",
+"nascimento": "1972-04-02"
+},
+{
+"id": "178873",
+"nome": "Helder Salomão",
+"uf": "ES",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "HELDER IGNACIO SALOMAO",
+"nascimento": "1964-03-08"
+},
+{
+"id": "178876",
+"nome": "Célio Silveira",
+"uf": "GO",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "CELIO ANTONIO DA SILVEIRA",
+"nascimento": "1959-09-19"
+},
+{
+"id": "178881",
+"nome": "Aluisio Mendes",
+"uf": "MA",
+"partido": "PSC",
+"leg": [
+57,
+57
+],
+"nome_civil": "ALUISIO GUIMARAES MENDES FILHO",
+"nascimento": "1961-11-11"
+},
+{
+"id": "178882",
+"nome": "André Fufuca",
+"uf": "MA",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "ANDRE LUIZ CARVALHO RIBEIRO",
+"nascimento": "1989-08-27"
+},
+{
+"id": "178884",
+"nome": "Hildo Rocha",
+"uf": "MA",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "HILDO AUGUSTO DA ROCHA NETO",
+"nascimento": "1960-04-22"
+},
+{
+"id": "178886",
+"nome": "Juscelino Filho",
+"uf": "MA",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "JOSE JUSCELINO DOS SANTOS REZENDE FILHO",
+"nascimento": "1984-11-06"
+},
+{
+"id": "178887",
+"nome": "Rubens Pereira Júnior",
+"uf": "MA",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "RUBENS PEREIRA E SILVA JUNIOR",
+"nascimento": "1984-03-16"
+},
+{
+"id": "178895",
+"nome": "Misael Varella",
+"uf": "MG",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "MISAEL ARTUR FERREIRA VARELLA",
+"nascimento": "1959-11-27"
+},
+{
+"id": "178896",
+"nome": "Newton Cardoso Jr",
+"uf": "MG",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "NEWTON CARDOSO JUNIOR",
+"nascimento": "1979-11-11"
+},
+{
+"id": "178905",
+"nome": "Fabio Garcia",
+"uf": "MT",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "FABIO PAULINO GARCIA",
+"nascimento": "1977-06-29"
+},
+{
+"id": "178908",
+"nome": "Delegado Éder Mauro",
+"uf": "PA",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "EDER MAURO CARDOSO BARRA",
+"nascimento": "1960-12-14"
+},
+{
+"id": "178909",
+"nome": "Hélio Leite",
+"uf": "PA",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "HELIO LEITE DA SILVA",
+"nascimento": "1957-12-09"
+},
+{
+"id": "178910",
+"nome": "Joaquim Passarinho",
+"uf": "PA",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "JOAQUIM PASSARINHO PINTO DE SOUZA PORTO",
+"nascimento": "1961-12-02"
+},
+{
+"id": "178927",
+"nome": "Aliel Machado",
+"uf": "PR",
+"partido": "PV",
+"leg": [
+57
+],
+"nome_civil": "ALIEL MACHADO BARK",
+"nascimento": "1989-02-26"
+},
+{
+"id": "178929",
+"nome": "Diego Garcia",
+"uf": "PR",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "DIEGO ALEXSANDER GONCALO PAULA GARCIA",
+"nascimento": "1984-10-10"
+},
+{
+"id": "178931",
+"nome": "Luciano Ducci",
+"uf": "PR",
+"partido": "PSB",
+"leg": [
+57
+],
+"nome_civil": "LUCIANO DUCCI",
+"nascimento": "1955-03-23"
+},
+{
+"id": "178933",
+"nome": "Sergio Souza",
+"uf": "PR",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "SERGIO DE SOUZA",
+"nascimento": "1971-03-13"
+},
+{
+"id": "178934",
+"nome": "Toninho Wandscheer",
+"uf": "PR",
+"partido": "PROS",
+"leg": [
+57,
+57
+],
+"nome_civil": "ANTONIO WANDSCHEER",
+"nascimento": "1950-08-31"
+},
+{
+"id": "178937",
+"nome": "Altineu Côrtes",
+"uf": "RJ",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "ALTINEU CÔRTES FREITAS COUTINHO",
+"nascimento": "1968-09-13"
+},
+{
+"id": "178943",
+"nome": "Marcos Soares",
+"uf": "RJ",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "MARCOS BEZERRA RIBEIRO SOARES",
+"nascimento": "1978-05-16"
+},
+{
+"id": "178945",
+"nome": "Rosangela Gomes",
+"uf": "RJ",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "ROSANGELA DE SOUZA GOMES",
+"nascimento": "1966-12-27"
+},
+{
+"id": "178946",
+"nome": "Soraya Santos",
+"uf": "RJ",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "SORAYA ALENCAR DOS SANTOS",
+"nascimento": "1958-12-04"
+},
+{
+"id": "178947",
+"nome": "Sóstenes Cavalcante",
+"uf": "RJ",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "SOSTENES SILVA CAVALCANTE",
+"nascimento": "1975-01-16"
+},
+{
+"id": "178954",
+"nome": "Lucio Mosquini",
+"uf": "RO",
+"partido": "MDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "LUCIO ANTONIO MOSQUINI",
+"nascimento": "1969-07-23"
+},
+{
+"id": "178962",
+"nome": "Carlos Gomes",
+"uf": "RS",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "ANTONIO CARLOS GOMES DA SILVA",
+"nascimento": "1972-06-13"
+},
+{
+"id": "178963",
+"nome": "Covatti Filho",
+"uf": "RS",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "LUIS ANTONIO FRANCISCATTO COVATTI",
+"nascimento": "1987-07-25"
+},
+{
+"id": "178964",
+"nome": "Heitor Schuch",
+"uf": "RS",
+"partido": "PSB",
+"leg": [
+57,
+57
+],
+"nome_civil": "HEITOR JOSE SCHUCH",
+"nascimento": "1962-03-25"
+},
+{
+"id": "178966",
+"nome": "Geovania de Sá",
+"uf": "SC",
+"partido": "PSDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "Geovânia de Sá",
+"nascimento": "1972-03-30"
+},
+{
+"id": "178970",
+"nome": "João Daniel",
+"uf": "SE",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "JOAO SOMARIVA DANIEL",
+"nascimento": "1967-08-22"
+},
+{
+"id": "178972",
+"nome": "Alex Manente",
+"uf": "SP",
+"partido": "CIDADANIA",
+"leg": [
+57
+],
+"nome_civil": "ALEX SPINELLI MANENTE",
+"nascimento": "1979-08-22"
+},
+{
+"id": "178975",
+"nome": "Baleia Rossi",
+"uf": "SP",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "LUIZ FELIPE BALEIA TENUTO ROSSI",
+"nascimento": "1972-06-09"
+},
+{
+"id": "178983",
+"nome": "Marcio Alvino",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "MARCIO LUIZ ALVINO DE SOUZA",
+"nascimento": "1969-06-14"
+},
+{
+"id": "178985",
+"nome": "Miguel Lombardi",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "MIGUEL LOMBARDI",
+"nascimento": "1964-01-29"
+},
+{
+"id": "178986",
+"nome": "Nilto Tatto",
+"uf": "SP",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "NILTO IGNACIO TATTO",
+"nascimento": "1963-07-31"
+},
+{
+"id": "178987",
+"nome": "Orlando Silva",
+"uf": "SP",
+"partido": "PCdoB",
+"leg": [
+57
+],
+"nome_civil": "ORLANDO SILVA DE JESUS JUNIOR",
+"nascimento": "1971-05-27"
+},
+{
+"id": "178989",
+"nome": "Renata Abreu",
+"uf": "SP",
+"partido": "PODE",
+"leg": [
+57
+],
+"nome_civil": "RENATA HELLMEISTER DE ABREU MELO",
+"nascimento": "1982-04-15"
+},
+{
+"id": "178992",
+"nome": "Vitor Lippi",
+"uf": "SP",
+"partido": "PSDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "VITOR LIPPI",
+"nascimento": "1959-05-18"
+},
+{
+"id": "178993",
+"nome": "Carlos Henrique Gaguim",
+"uf": "TO",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "CARLOS HENRIQUE AMORIM",
+"nascimento": "1961-04-21"
+},
+{
+"id": "178997",
+"nome": "Moses Rodrigues",
+"uf": "CE",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "MOSES HAENDEL MELO RODRIGUES",
+"nascimento": "1978-06-06"
+},
+{
+"id": "179000",
+"nome": "Marcelo Álvaro Antônio",
+"uf": "MG",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "MARCELO HENRIQUE TEIXEIRA DIAS",
+"nascimento": "1974-02-16"
+},
+{
+"id": "179001",
+"nome": "Márcio Biolchi",
+"uf": "RS",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "MARCIO DELLA VALLE BIOLCHI",
+"nascimento": "1979-05-23"
+},
+{
+"id": "180214",
+"nome": "Pastor Diniz",
+"uf": "RR",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "RAIMUNDO DINIZ ARAÚJO",
+"nascimento": "1980-03-21"
+},
+{
+"id": "182146",
+"nome": "Wolmer Araújo",
+"uf": "MA",
+"partido": "PATRIOTA",
+"leg": [
+57,
+57
+],
+"nome_civil": "WOLMER DE AZEVEDO ARAUJO",
+"nascimento": "1977-08-11"
+},
+{
+"id": "188097",
+"nome": "Merlong Solano",
+"uf": "PI",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "MERLONG SOLANO NOGUEIRA",
+"nascimento": "1958-09-17"
+},
+{
+"id": "191923",
+"nome": "Flávio Nogueira",
+"uf": "PI",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "FLÁVIO RODRIGUES NOGUEIRA",
+"nascimento": "1953-02-27"
+},
+{
+"id": "194260",
+"nome": "Nivaldo Albuquerque",
+"uf": "AL",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "NIVALDO FERREIRA DE ALBUQUERQUE NETO",
+"nascimento": "1988-01-07"
+},
+{
+"id": "198197",
+"nome": "Greyce Elias",
+"uf": "MG",
+"partido": "AVANTE",
+"leg": [
+57,
+57
+],
+"nome_civil": "GREYCE DE QUEIROZ ELIAS",
+"nascimento": "1981-12-15"
+},
+{
+"id": "198783",
+"nome": "Emanuel Pinheiro Neto",
+"uf": "MT",
+"partido": "MDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "EMANUEL PINHEIRO DA SILVA PRIMO",
+"nascimento": "1995-01-05"
+},
+{
+"id": "204351",
+"nome": "Dr. Luiz Ovando",
+"uf": "MS",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "LUIZ ALBERTO OVANDO",
+"nascimento": "1949-09-25"
+},
+{
+"id": "204353",
+"nome": "Aline Gurgel",
+"uf": "AP",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "ALINE PARANHOS VARONIL GURGEL",
+"nascimento": "1980-11-25"
+},
+{
+"id": "204355",
+"nome": "Da Vitoria",
+"uf": "ES",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "JOSIAS MARIO DA VITORIA",
+"nascimento": "1971-06-02"
+},
+{
+"id": "204356",
+"nome": "Amaro Neto",
+"uf": "ES",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "AMARO ROCHA NASCIMENTO NETO",
+"nascimento": "1976-12-04"
+},
+{
+"id": "204358",
+"nome": "Beto Pereira",
+"uf": "MS",
+"partido": "PSDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "HUMBERTO REZENDE PEREIRA",
+"nascimento": "1977-11-14"
+},
+{
+"id": "204360",
+"nome": "Silvia Cristina",
+"uf": "RO",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "SILVIA CRISTINA AMANCIO CHAGAS",
+"nascimento": "1974-01-15"
+},
+{
+"id": "204361",
+"nome": "Carlos Chiodini",
+"uf": "SC",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "CARLOS ALBERTO CHIODINI",
+"nascimento": "1982-03-08"
+},
+{
+"id": "204362",
+"nome": "Ricardo Guidi",
+"uf": "SC",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "RICARDO ZANATTA GUIDI",
+"nascimento": "1977-09-28"
+},
+{
+"id": "204364",
+"nome": "Eli Borges",
+"uf": "TO",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "ELI DIAS BORGES",
+"nascimento": "1960-09-01"
+},
+{
+"id": "204365",
+"nome": "Gilson Marques",
+"uf": "SC",
+"partido": "NOVO",
+"leg": [
+57
+],
+"nome_civil": "GILSON MARQUES VIEIRA",
+"nascimento": "1981-04-12"
+},
+{
+"id": "204367",
+"nome": "Daniel Freitas",
+"uf": "SC",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "DANIEL COSTA DE FREITAS",
+"nascimento": "1982-04-03"
+},
+{
+"id": "204368",
+"nome": "Fabio Schiochet",
+"uf": "SC",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "FÁBIO LUIZ SCHIOCHET FILHO",
+"nascimento": "1988-05-31"
+},
+{
+"id": "204369",
+"nome": "Caroline de Toni",
+"uf": "SC",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "CAROLINE RODRIGUES DE TONI",
+"nascimento": "1986-09-01"
+},
+{
+"id": "204372",
+"nome": "Julio Cesar Ribeiro",
+"uf": "DF",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "JULIO CESAR RIBEIRO",
+"nascimento": "1975-02-24"
+},
+{
+"id": "204374",
+"nome": "Bia Kicis",
+"uf": "DF",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "BEATRIZ KICIS TORRENTS DE SORDI",
+"nascimento": "1961-09-19"
+},
+{
+"id": "204376",
+"nome": "Coronel Armando",
+"uf": "SC",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "LUIZ ARMANDO SCHROEDER REIS",
+"nascimento": "1957-06-23"
+},
+{
+"id": "204378",
+"nome": "Coronel Chrisóstomo",
+"uf": "RO",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "JOÃO CHRISÓSTOMO DE MOURA",
+"nascimento": "1959-06-23"
+},
+{
+"id": "204379",
+"nome": "Acácio Favacho",
+"uf": "AP",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "ACÁCIO DA SILVA FAVACHO NETO",
+"nascimento": "1983-09-28"
+},
+{
+"id": "204387",
+"nome": "Sargento Fahur",
+"uf": "PR",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "GILSON CARDOSO FAHUR",
+"nascimento": "1963-11-06"
+},
+{
+"id": "204388",
+"nome": "Bibo Nunes",
+"uf": "RS",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "ALCIBIO MESQUITA BIBO NUNES",
+"nascimento": "1957-01-09"
+},
+{
+"id": "204390",
+"nome": "Professor Alcides",
+"uf": "GO",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "ALCIDES RIBEIRO FILHO",
+"nascimento": "1953-10-25"
+},
+{
+"id": "204391",
+"nome": "José Nelto",
+"uf": "GO",
+"partido": "PP",
+"leg": [
+57,
+57
+],
+"nome_civil": "JOSÉ NELTO LAGARES DAS MERCEZ",
+"nascimento": "1960-09-19"
+},
+{
+"id": "204394",
+"nome": "Gervásio Maia",
+"uf": "PB",
+"partido": "PSB",
+"leg": [
+57,
+57
+],
+"nome_civil": "GERVÁSIO AGRIPINO MAIA",
+"nascimento": "1975-04-14"
+},
+{
+"id": "204395",
+"nome": "Pedro Lupion",
+"uf": "PR",
+"partido": "PP",
+"leg": [
+57,
+57
+],
+"nome_civil": "PEDRO DEBONI LUPION MELLO",
+"nascimento": "1983-06-04"
+},
+{
+"id": "204396",
+"nome": "Vermelho",
+"uf": "PR",
+"partido": "PL",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "NELSI COGUETTO MARIA",
+"nascimento": "1959-03-01"
+},
+{
+"id": "204398",
+"nome": "Felipe Francischini",
+"uf": "PR",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "LUIS FELIPE BONATTO FRANCISCHINI",
+"nascimento": "1991-10-02"
+},
+{
+"id": "204404",
+"nome": "Lucas Redecker",
+"uf": "RS",
+"partido": "PSDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "LUCAS BELLO REDECKER",
+"nascimento": "1981-05-26"
+},
+{
+"id": "204406",
+"nome": "Pedro Westphalen",
+"uf": "RS",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "PEDRO BANDARRA WESTPHALEN",
+"nascimento": "1950-12-19"
+},
+{
+"id": "204407",
+"nome": "Fernanda Melchionna",
+"uf": "RS",
+"partido": "PSOL",
+"leg": [
+57
+],
+"nome_civil": "FERNANDA MELCHIONNA E SILVA",
+"nascimento": "1984-02-02"
+},
+{
+"id": "204408",
+"nome": "Gustinho Ribeiro",
+"uf": "SE",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "LUIZ AUGUSTO CARVALHO RIBEIRO FILHO",
+"nascimento": "1982-02-16"
+},
+{
+"id": "204409",
+"nome": "Daniel Trzeciak",
+"uf": "RS",
+"partido": "PSDB",
+"leg": [
+57
+],
+"nome_civil": "DANIEL TRZECIAK DUARTE",
+"nascimento": "1986-11-04"
+},
+{
+"id": "204410",
+"nome": "Luisa Canziani",
+"uf": "PR",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "LUISA CANZIANI DOS SANTOS SILVEIRA",
+"nascimento": "1996-04-11"
+},
+{
+"id": "204411",
+"nome": "Filipe Barros",
+"uf": "PR",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "FILIPE BARROS BAPTISTA DE TOLEDO RIBEIRO",
+"nascimento": "1991-05-29"
+},
+{
+"id": "204412",
+"nome": "Dr. Zacharias Calil",
+"uf": "GO",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "ZACARIAS CALIL HAMU",
+"nascimento": "1953-11-05"
+},
+{
+"id": "204416",
+"nome": "Sanderson",
+"uf": "RS",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "UBIRATAN ANTUNES SANDERSON",
+"nascimento": "1969-12-01"
+},
+{
+"id": "204419",
+"nome": "Glaustin da Fokus",
+"uf": "GO",
+"partido": "PSC",
+"leg": [
+57,
+57
+],
+"nome_civil": "GLAUSKSTON BATISTA RIOS",
+"nascimento": "1973-12-22"
+},
+{
+"id": "204422",
+"nome": "Ossesio Silva",
+"uf": "PE",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "OSSESIO JOSE DA SILVA",
+"nascimento": "1954-12-09"
+},
+{
+"id": "204423",
+"nome": "André Ferreira",
+"uf": "PE",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "ANDRÉ FERREIRA RODRIGUES",
+"nascimento": "1972-12-10"
+},
+{
+"id": "204425",
+"nome": "Silvio Costa Filho",
+"uf": "PE",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "SILVIO SERAFIM COSTA FILHO",
+"nascimento": "1982-03-05"
+},
+{
+"id": "204426",
+"nome": "Carlos Veras",
+"uf": "PE",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ CARLOS VERAS DOS SANTOS",
+"nascimento": "1981-08-10"
+},
+{
+"id": "204427",
+"nome": "Fernando Rodolfo",
+"uf": "PE",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "FERNANDO RODOLFO TENORIO DE VASCONCELOS",
+"nascimento": "1983-11-17"
+},
+{
+"id": "204431",
+"nome": "Marcos Aurélio Sampaio",
+"uf": "PI",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "MARCOS AURÉLIO  PÁDUA RIBEIRO GONÇALVES DE SAMPAIO",
+"nascimento": "1991-09-19"
+},
+{
+"id": "204433",
+"nome": "Marcelo Calero",
+"uf": "RJ",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "MARCELO CALERO FARIA GARCIA",
+"nascimento": "1982-07-07"
+},
+{
+"id": "204436",
+"nome": "Isnaldo Bulhões Jr.",
+"uf": "AL",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "ISNALDO BULHOES BARROS JUNIOR",
+"nascimento": "1976-10-30"
+},
+{
+"id": "204441",
+"nome": "Otoni de Paula",
+"uf": "RJ",
+"partido": "MDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "OTONI MOURA DE PAULO JUNIOR",
+"nascimento": "1976-11-22"
+},
+{
+"id": "204444",
+"nome": "Helio Lopes",
+"uf": "RJ",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "HELIO FERNANDO BARBOSA LOPES",
+"nascimento": "1969-03-28"
+},
+{
+"id": "204445",
+"nome": "Fernando Mineiro",
+"uf": "RN",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "FERNANDO WANDERLEY VARGAS DA SILVA",
+"nascimento": "1956-12-06"
+},
+{
+"id": "204448",
+"nome": "Luiz Antonio Corrêa",
+"uf": "RJ",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "LUIZ ANTONIO C. C. CORRÊA DA SILVA",
+"nascimento": "1940-12-27"
+},
+{
+"id": "204449",
+"nome": "Nelson Barbudo",
+"uf": "MT",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "NELSON NED PREVIDENTE",
+"nascimento": "1960-02-14"
+},
+{
+"id": "204450",
+"nome": "Doutor Luizinho",
+"uf": "RJ",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "LUIZ ANTONIO DE SOUZA TEIXEIRA JÚNIOR",
+"nascimento": "1973-12-15"
+},
+{
+"id": "204453",
+"nome": "Natália Bonavides",
+"uf": "RN",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "NATÁLIA BASTOS BONAVIDES",
+"nascimento": "1988-06-15"
+},
+{
+"id": "204455",
+"nome": "Luiz Lima",
+"uf": "RJ",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "LUIZ EDUARDO CARNEIRO DA SILVA DE SOUZA LIMA",
+"nascimento": "1977-12-10"
+},
+{
+"id": "204456",
+"nome": "Gutemberg Reis",
+"uf": "RJ",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "GUTEMBERG REIS DE OLIVEIRA",
+"nascimento": "1979-09-09"
+},
+{
+"id": "204457",
+"nome": "Juninho do Pneu",
+"uf": "RJ",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "ROGERIO TEIXEIRA JUNIOR",
+"nascimento": "1976-10-23"
+},
+{
+"id": "204459",
+"nome": "Daniela do Waguinho",
+"uf": "RJ",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "DANIELA MOTE DE SOUZA CARNEIRO",
+"nascimento": "1976-02-10"
+},
+{
+"id": "204460",
+"nome": "Carlos Jordy",
+"uf": "RJ",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "Carlos Roberto Jordy Coelho de Mattos",
+"nascimento": "1982-02-08"
+},
+{
+"id": "204462",
+"nome": "Chris Tonietto",
+"uf": "RJ",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "CHRISTINE NOGUEIRA DOS REIS TONIETTO",
+"nascimento": "1991-05-14"
+},
+{
+"id": "204464",
+"nome": "Talíria Petrone",
+"uf": "RJ",
+"partido": "PSOL",
+"leg": [
+57
+],
+"nome_civil": "TALIRIA PETRONE SOARES",
+"nascimento": "1985-04-09"
+},
+{
+"id": "204472",
+"nome": "José Medeiros",
+"uf": "MT",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "JOSE ANTONIO DOS SANTOS MEDEIROS",
+"nascimento": "1970-03-19"
+},
+{
+"id": "204473",
+"nome": "General Girão",
+"uf": "RN",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "ELIÉSER GIRÃO MONTEIRO FILHO",
+"nascimento": "1955-05-08"
+},
+{
+"id": "204474",
+"nome": "Juarez Costa",
+"uf": "MT",
+"partido": "MDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "JUAREZ ALVES DA COSTA",
+"nascimento": "1960-01-20"
+},
+{
+"id": "204476",
+"nome": "Chiquinho Brazão",
+"uf": "RJ",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "JOÃO FRANCISCO INÁCIO BRAZÃO",
+"nascimento": "1962-02-22"
+},
+{
+"id": "204479",
+"nome": "Nicoletti",
+"uf": "RR",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "ANTONIO CARLOS NICOLETTI",
+"nascimento": "1981-07-21"
+},
+{
+"id": "204480",
+"nome": "Rogério Correia",
+"uf": "MG",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ROGÉRIO CORREIA DE MOURA BAPTISTA",
+"nascimento": "1958-01-11"
+},
+{
+"id": "204481",
+"nome": "Dr. Jaziel",
+"uf": "CE",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "JAZIEL PEREIRA DE SOUSA",
+"nascimento": "1961-05-03"
+},
+{
+"id": "204482",
+"nome": "Euclydes Pettersen",
+"uf": "MG",
+"partido": "PSC",
+"leg": [
+57,
+57
+],
+"nome_civil": "EUCLYDES MARCOS PETTERSEN NETO",
+"nascimento": "1984-08-15"
+},
+{
+"id": "204485",
+"nome": "Luiz Carlos Motta",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "LUIZ CARLOS MOTTA",
+"nascimento": "1959-04-24"
+},
+{
+"id": "204486",
+"nome": "Mauro Benevides Filho",
+"uf": "CE",
+"partido": "PDT",
+"leg": [
+57,
+57
+],
+"nome_civil": "CARLOS MAURO BENEVIDES FILHO",
+"nascimento": "1959-03-09"
+},
+{
+"id": "204488",
+"nome": "Célio Studart",
+"uf": "CE",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "CELIO STUDART BARBOSA",
+"nascimento": "1987-06-19"
+},
+{
+"id": "204489",
+"nome": "Robério Monteiro",
+"uf": "CE",
+"partido": "PDT",
+"leg": [
+57,
+57
+],
+"nome_civil": "MARCOS ROBERIO RIBEIRO MONTEIRO",
+"nascimento": "1970-02-15"
+},
+{
+"id": "204491",
+"nome": "Gilberto Abramo",
+"uf": "MG",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "GILBERTO APARECIDO ABRAMO",
+"nascimento": "1966-08-06"
+},
+{
+"id": "204492",
+"nome": "Paulo Guedes",
+"uf": "MG",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "PAULO JOSE CARLOS GUEDES",
+"nascimento": "1970-10-01"
+},
+{
+"id": "204494",
+"nome": "Fred Costa",
+"uf": "MG",
+"partido": "PATRIOTA",
+"leg": [
+57,
+57
+],
+"nome_civil": "FREDERICO BORGES DA COSTA",
+"nascimento": "1977-07-12"
+},
+{
+"id": "204495",
+"nome": "Airton Faleiro",
+"uf": "PA",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "AIRTON LUIZ FALEIRO",
+"nascimento": "1959-03-16"
+},
+{
+"id": "204496",
+"nome": "Celso Sabino",
+"uf": "PA",
+"partido": "UNIÃO",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "CELSO SABINO DE OLIVEIRA",
+"nascimento": "1978-08-29"
+},
+{
+"id": "204497",
+"nome": "Júnior Ferrari",
+"uf": "PA",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "JOÃO FERRARI JÚNIOR",
+"nascimento": "1967-07-13"
+},
+{
+"id": "204498",
+"nome": "Olival Marques",
+"uf": "PA",
+"partido": "MDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "OLIVAL HENRIQUE MARQUES DE SOUZA",
+"nascimento": "1982-01-09"
+},
+{
+"id": "204501",
+"nome": "Alencar Santana",
+"uf": "SP",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ALENCAR SANTANA BRAGA",
+"nascimento": "1976-03-14"
+},
+{
+"id": "204503",
+"nome": "Alexandre Padilha",
+"uf": "SP",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ALEXANDRE ROCHA SANTOS PADILHA",
+"nascimento": "1971-09-14"
+},
+{
+"id": "204504",
+"nome": "Cezinha de Madureira",
+"uf": "SP",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "ANTONIO CEZAR CORREIA FREIRE",
+"nascimento": "1973-12-12"
+},
+{
+"id": "204506",
+"nome": "Marcos Pereira",
+"uf": "SP",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "MARCOS ANTONIO PEREIRA",
+"nascimento": "1972-04-04"
+},
+{
+"id": "204507",
+"nome": "Carla Zambelli",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "CARLA ZAMBELLI SALGADO DE OLIVEIRA",
+"nascimento": "1980-07-03"
+},
+{
+"id": "204508",
+"nome": "Igor Timo",
+"uf": "MG",
+"partido": "PODE",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "IGOR TARCIANO TIMO",
+"nascimento": "1982-04-10"
+},
+{
+"id": "204511",
+"nome": "David Soares",
+"uf": "SP",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "DAVID BEZERRA RIBEIRO SOARES",
+"nascimento": "1973-12-21"
+},
+{
+"id": "204512",
+"nome": "Delegado Marcelo Freitas",
+"uf": "MG",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "MARCELO EDUARDO FREITAS",
+"nascimento": "1976-03-04"
+},
+{
+"id": "204514",
+"nome": "Coronel Tadeu",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "MARCIO TADEU ANHAIA DE LEMOS",
+"nascimento": "1965-09-30"
+},
+{
+"id": "204515",
+"nome": "André Janones",
+"uf": "MG",
+"partido": "AVANTE",
+"leg": [
+57,
+57
+],
+"nome_civil": "ANDRE LUIS GASPAR JANONES",
+"nascimento": "1984-05-05"
+},
+{
+"id": "204517",
+"nome": "Zé Vitor",
+"uf": "MG",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "JOSE VITOR DE RESENDE AGUIAR",
+"nascimento": "1984-11-01"
+},
+{
+"id": "204518",
+"nome": "Dr. Frederico",
+"uf": "MG",
+"partido": "PATRIOTA",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "FREDERICO DE CASTRO ESCALEIRA",
+"nascimento": "1977-03-24"
+},
+{
+"id": "204520",
+"nome": "Junio Amaral",
+"uf": "MG",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "GERALDO JUNIO DO AMARAL",
+"nascimento": "1987-06-30"
+},
+{
+"id": "204522",
+"nome": "Marco Bertaiolli",
+"uf": "SP",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "MARCO AURELIO BERTAIOLLI",
+"nascimento": "1968-04-30"
+},
+{
+"id": "204524",
+"nome": "Pinheirinho",
+"uf": "MG",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "ANTÔNIO PINHEIRO NETO",
+"nascimento": "1991-05-30"
+},
+{
+"id": "204525",
+"nome": "Rosana Valle",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "ROSANA DE OLIVEIRA VALLE",
+"nascimento": "1969-05-08"
+},
+{
+"id": "204526",
+"nome": "Luiz Philippe de Orleans e Bragança",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "LUIZ PHILIPPE DE ORLEANS BRAGANÇA",
+"nascimento": "1969-04-03"
+},
+{
+"id": "204528",
+"nome": "Adriana Ventura",
+"uf": "SP",
+"partido": "NOVO",
+"leg": [
+57
+],
+"nome_civil": "ADRIANA MIGUEL VENTURA",
+"nascimento": "1969-03-06"
+},
+{
+"id": "204531",
+"nome": "Guilherme Derrite",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "GUILHERME MURARO DERRITE",
+"nascimento": "1984-10-10"
+},
+{
+"id": "204533",
+"nome": "Idilvan Alencar",
+"uf": "CE",
+"partido": "PDT",
+"leg": [
+57,
+57
+],
+"nome_civil": "ANTONIO IDILVAN DE LIMA ALENCAR",
+"nascimento": "1968-09-23"
+},
+{
+"id": "204534",
+"nome": "Tabata Amaral",
+"uf": "SP",
+"partido": "PSB",
+"leg": [
+57
+],
+"nome_civil": "TABATA CLAUDIA AMARAL DE PONTES",
+"nascimento": "1993-11-14"
+},
+{
+"id": "204535",
+"nome": "Sâmia Bomfim",
+"uf": "SP",
+"partido": "PSOL",
+"leg": [
+57
+],
+"nome_civil": "SAMIA DE SOUZA BOMFIM",
+"nascimento": "1989-08-22"
+},
+{
+"id": "204536",
+"nome": "Kim Kataguiri",
+"uf": "SP",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "KIM PATROCA KATAGUIRI",
+"nascimento": "1996-01-28"
+},
+{
+"id": "204539",
+"nome": "Hercílio Coelho Diniz",
+"uf": "MG",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "HERCÍLIO ARAÚJO DINIZ FILHO",
+"nascimento": "1963-09-14"
+},
+{
+"id": "204540",
+"nome": "Maria Rosas",
+"uf": "SP",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "MARIA DO PARTO MENDES ROSAS",
+"nascimento": "1965-10-01"
+},
+{
+"id": "204541",
+"nome": "Eduardo Bismarck",
+"uf": "CE",
+"partido": "PDT",
+"leg": [
+57,
+57
+],
+"nome_civil": "EDUARDO HENRIQUE MAIA BISMARCK",
+"nascimento": "1981-11-14"
+},
+{
+"id": "204549",
+"nome": "AJ Albuquerque",
+"uf": "CE",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "ANTONIO JOSE AGUIAR ALBUQUERQUE",
+"nascimento": "1983-09-26"
+},
+{
+"id": "204550",
+"nome": "Júnior Mano",
+"uf": "CE",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "ANTÔNIO LUIZ RODRIGUES MANO JÚNIOR",
+"nascimento": "1985-04-16"
+},
+{
+"id": "204553",
+"nome": "Pastor Sargento Isidório",
+"uf": "BA",
+"partido": "AVANTE",
+"leg": [
+57
+],
+"nome_civil": "MANOEL ISIDORIO DE SANTANA JUNIOR",
+"nascimento": "1962-07-28"
+},
+{
+"id": "204557",
+"nome": "Sidney Leite",
+"uf": "AM",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "SIDNEY RICARDO DE OLIVEIRA LEITE",
+"nascimento": "1967-04-08"
+},
+{
+"id": "204558",
+"nome": "Marcelo Nilo",
+"uf": "BA",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ MARCELO DO NASCIMENTO NILO",
+"nascimento": "1955-04-26"
+},
+{
+"id": "204559",
+"nome": "Zé Neto",
+"uf": "BA",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ CERQUEIRA DE SANTANA NETO",
+"nascimento": "1964-03-30"
+},
+{
+"id": "204560",
+"nome": "Adolfo Viana",
+"uf": "BA",
+"partido": "PSDB",
+"leg": [
+57
+],
+"nome_civil": "ADOLFO VIANA DE CASTRO NETO",
+"nascimento": "1981-02-02"
+},
+{
+"id": "204563",
+"nome": "Josimar Maranhãozinho",
+"uf": "MA",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "JOSIMAR CUNHA RODRIGUES",
+"nascimento": "1976-11-13"
+},
+{
+"id": "204566",
+"nome": "Marreca Filho",
+"uf": "MA",
+"partido": "PATRIOTA",
+"leg": [
+57,
+57
+],
+"nome_civil": "ANTONIO DA CRUZ FILGUEIRA NETO",
+"nascimento": "1992-04-25"
+},
+{
+"id": "204567",
+"nome": "Raimundo Costa",
+"uf": "BA",
+"partido": "PODE",
+"leg": [
+57,
+57
+],
+"nome_civil": "RAIMUNDO MAGALHÃES COSTA",
+"nascimento": "1961-03-09"
+},
+{
+"id": "204570",
+"nome": "Pastor Gil",
+"uf": "MA",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "GILDENEMIR DE LIMA SOUSA",
+"nascimento": "1971-11-08"
+},
+{
+"id": "204571",
+"nome": "Alex Santana",
+"uf": "BA",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "ALEX MARCO SANTANA SOUSA",
+"nascimento": "1972-06-22"
+},
+{
+"id": "204572",
+"nome": "Capitão Alberto Neto",
+"uf": "AM",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "ALBERTO BARROS CAVALCANTE NETO",
+"nascimento": "1982-05-05"
+},
+{
+"id": "204573",
+"nome": "Otto Alencar Filho",
+"uf": "BA",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "OTTO ROBERTO MENDONÇA DE ALENCAR FILHO",
+"nascimento": "1977-07-07"
+},
+{
+"id": "204574",
+"nome": "Junior Lourenço",
+"uf": "MA",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "JOSE LOURENÇO BOMFIM JUNIOR",
+"nascimento": "1978-10-18"
+},
+{
+"id": "205476",
+"nome": "Charles Fernandes",
+"uf": "BA",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "CHARLES FERNANDES SILVEIRA SANTANA",
+"nascimento": "1965-03-15"
+},
+{
+"id": "205550",
+"nome": "Jorge Braz",
+"uf": "RJ",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "JORGE BRAZ DE OLIVEIRA",
+"nascimento": "1953-07-13"
+},
+{
+"id": "205865",
+"nome": "Reinhold Stephanes",
+"uf": "PR",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "REINHOLD STEPHANES JUNIOR",
+"nascimento": "1965-07-26"
+},
+{
+"id": "206018",
+"nome": "Célia Xakriabá",
+"uf": "MG",
+"partido": "PSOL",
+"leg": [
+57
+],
+"nome_civil": "CÉLIA NUNES CORREA",
+"nascimento": "1989-05-10"
+},
+{
+"id": "208297",
+"nome": "Katia Dias",
+"uf": "MG",
+"partido": "PSC",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "KATIA REGINA OLIVEIRA DIAS",
+"nascimento": "1978-02-27"
+},
+{
+"id": "209189",
+"nome": "Joseildo Ramos",
+"uf": "BA",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "JOSEILDO RIBEIRO RAMOS",
+"nascimento": "1957-08-23"
+},
+{
+"id": "209787",
+"nome": "Nikolas Ferreira",
+"uf": "MG",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "NIKOLAS FERREIRA DE OLIVEIRA",
+"nascimento": "1996-05-30"
+},
+{
+"id": "210989",
+"nome": "Bruno Farias",
+"uf": "MG",
+"partido": "AVANTE",
+"leg": [
+57,
+57
+],
+"nome_civil": "BRUNO SOUZA FARIAS",
+"nascimento": "1982-10-07"
+},
+{
+"id": "212625",
+"nome": "Dr. Gonçalo",
+"uf": "MA",
+"partido": "PODE",
+"leg": [
+57
+],
+"nome_civil": "ANTONIO ELIZABETH GONÇALO DE SOUSA",
+"nascimento": "1953-07-08"
+},
+{
+"id": "213274",
+"nome": "Ricardo Silva",
+"uf": "SP",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "RICARDO AUGUSTO MACHADO DA SILVA",
+"nascimento": "1985-09-01"
+},
+{
+"id": "213762",
+"nome": "Carla Dickson",
+"uf": "RN",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "HILKEA CARLA DE SOUZA MEDEIROS LIMA",
+"nascimento": "1976-07-02"
+},
+{
+"id": "214694",
+"nome": "Jorge Goetten",
+"uf": "SC",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "JORGE GOETTEN DE LIMA",
+"nascimento": "1962-04-10"
+},
+{
+"id": "215043",
+"nome": "Josivaldo JP",
+"uf": "MA",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "JOSIVALDO DOS SANTOS MELO",
+"nascimento": "1983-11-29"
+},
+{
+"id": "217480",
+"nome": "Jones Moura",
+"uf": "RJ",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "JONES BARBOSA DE MOURA",
+"nascimento": "1974-06-16"
+},
+{
+"id": "218086",
+"nome": "Ely Santos",
+"uf": "SP",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "ELIANE DE SOUSA ALVES",
+"nascimento": "1977-01-13"
+},
+{
+"id": "219585",
+"nome": "Marco Brasil",
+"uf": "PR",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "MARCO AURELIO RIBEIRO",
+"nascimento": "1966-01-28"
+},
+{
+"id": "220008",
+"nome": "Eliza Virgínia",
+"uf": "PB",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "ELIZA VIRGINIA DE SOUZA FERNANDES",
+"nascimento": "1972-04-02"
+},
+{
+"id": "220526",
+"nome": "Gilvan da Federal",
+"uf": "ES",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "GILVAN AGUIAR COSTA",
+"nascimento": "1976-09-24"
+},
+{
+"id": "220527",
+"nome": "Jack Rocha",
+"uf": "ES",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "JACKELINE OLIVEIRA ROCHA",
+"nascimento": "1983-08-26"
+},
+{
+"id": "220528",
+"nome": "Dr. Victor Linhalis",
+"uf": "ES",
+"partido": "PODE",
+"leg": [
+57,
+57
+],
+"nome_civil": "VICTOR GAROZI LINHALIS",
+"nascimento": "1986-01-02"
+},
+{
+"id": "220529",
+"nome": "Gilson Daniel",
+"uf": "ES",
+"partido": "PODE",
+"leg": [
+57
+],
+"nome_civil": "GILSON DANIEL BATISTA",
+"nascimento": "1978-07-17"
+},
+{
+"id": "220530",
+"nome": "Messias Donato",
+"uf": "ES",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "Manoel Messias Donato Bezerra",
+"nascimento": "1976-08-06"
+},
+{
+"id": "220531",
+"nome": "Gilvan Maximo",
+"uf": "DF",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "GILVAM MAXIMO",
+"nascimento": "1969-05-10"
+},
+{
+"id": "220532",
+"nome": "Rafael Prudente",
+"uf": "DF",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "RAFAEL CAVALCANTI PRUDENTE",
+"nascimento": "1983-11-05"
+},
+{
+"id": "220533",
+"nome": "Prof. Reginaldo Veras",
+"uf": "DF",
+"partido": "PV",
+"leg": [
+57
+],
+"nome_civil": "Reginaldo Veras Coelho",
+"nascimento": "1973-01-02"
+},
+{
+"id": "220534",
+"nome": "Fred Linhares",
+"uf": "DF",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "DAVYS FREDERICO TEIXEIRA LINHARES",
+"nascimento": "1980-01-26"
+},
+{
+"id": "220536",
+"nome": "Zé Haroldo Cathedral",
+"uf": "RR",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "JOSÉ HAROLDO FIGUEIREDO CAMPOS",
+"nascimento": "1982-03-22"
+},
+{
+"id": "220537",
+"nome": "Helena Lima",
+"uf": "RR",
+"partido": "MDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "MARIA HELENA TEIXEIRA LIMA",
+"nascimento": "1976-03-30"
+},
+{
+"id": "220538",
+"nome": "Albuquerque",
+"uf": "RR",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ FRANCISCO LOPES DE ALBUQUERQUE",
+"nascimento": "1974-01-25"
+},
+{
+"id": "220539",
+"nome": "Defensor Stélio Dener",
+"uf": "RR",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "STÉLIO DENER DE SOUZA CRUZ",
+"nascimento": "1972-11-16"
+},
+{
+"id": "220540",
+"nome": "Duda Ramos",
+"uf": "RR",
+"partido": "MDB",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "DUDA BRITO RAMOS",
+"nascimento": "1974-05-19"
+},
+{
+"id": "220542",
+"nome": "Alexandre Guimarães",
+"uf": "TO",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "JOSÉ ALEXANDRE DOMINGUES GUIMARÃES",
+"nascimento": "1986-02-19"
+},
+{
+"id": "220543",
+"nome": "Ricardo Ayres",
+"uf": "TO",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "RICARDO AYRES DE CARVALHO",
+"nascimento": "1979-01-17"
+},
+{
+"id": "220544",
+"nome": "Antonio Andrade",
+"uf": "TO",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "ANTONIO POINCARE ANDRADE FILHO",
+"nascimento": "1958-10-22"
+},
+{
+"id": "220545",
+"nome": "Filipe Martins",
+"uf": "TO",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "FILIPE MARTINS DOS SANTOS",
+"nascimento": "1984-04-01"
+},
+{
+"id": "220546",
+"nome": "Rodolfo Nogueira",
+"uf": "MS",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "RODOLFO OLIVEIRA NOGUEIRA",
+"nascimento": "1973-11-24"
+},
+{
+"id": "220547",
+"nome": "Marcos Pollon",
+"uf": "MS",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "MARCOS SBOROWSKI POLLON",
+"nascimento": "1981-01-19"
+},
+{
+"id": "220548",
+"nome": "Camila Jara",
+"uf": "MS",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "CAMILA BAZACHI JARA MARZOCHI",
+"nascimento": "1995-02-10"
+},
+{
+"id": "220549",
+"nome": "Any Ortiz",
+"uf": "RS",
+"partido": "CIDADANIA",
+"leg": [
+57,
+57
+],
+"nome_civil": "ANY MACHADO ORTIZ",
+"nascimento": "1983-10-19"
+},
+{
+"id": "220550",
+"nome": "Mauricio Marcon",
+"uf": "RS",
+"partido": "PODE",
+"leg": [
+57,
+57
+],
+"nome_civil": "MAURICIO BEDIN MARCON",
+"nascimento": "1987-01-24"
+},
+{
+"id": "220551",
+"nome": "Franciane Bayer",
+"uf": "RS",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "FRANCIANE ABADE BAYER MULLER",
+"nascimento": "1987-10-09"
+},
+{
+"id": "220552",
+"nome": "Tenente Coronel Zucco",
+"uf": "RS",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57,
+57,
+57
+],
+"nome_civil": "LUCIANO LORENZINI ZUCCO",
+"nascimento": "1974-03-09"
+},
+{
+"id": "220553",
+"nome": "Denise Pessôa",
+"uf": "RS",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "DENISE DA SILVA PESSÔA",
+"nascimento": "1983-06-17"
+},
+{
+"id": "220554",
+"nome": "Alexandre Lindenmeyer",
+"uf": "RS",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ALEXANDRE DUARTE LINDENMEYER",
+"nascimento": "1963-12-23"
+},
+{
+"id": "220555",
+"nome": "Daiana Santos",
+"uf": "RS",
+"partido": "PCdoB",
+"leg": [
+57
+],
+"nome_civil": "DAIANA SILVA DOS SANTOS",
+"nascimento": "1982-01-29"
+},
+{
+"id": "220556",
+"nome": "Ana Paula Lima",
+"uf": "SC",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ANA PAULA DE SOUZA LIMA",
+"nascimento": "1964-04-19"
+},
+{
+"id": "220557",
+"nome": "Daniela Reinehr",
+"uf": "SC",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "DANIELA CRISTINA REINEHR",
+"nascimento": "1977-04-04"
+},
+{
+"id": "220558",
+"nome": "Zé Trovão",
+"uf": "SC",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "MARCOS ANTONIO PEREIRA GOMES",
+"nascimento": "1988-07-22"
+},
+{
+"id": "220559",
+"nome": "Julia Zanatta",
+"uf": "SC",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "JULIA PEDROSO ZANATTA",
+"nascimento": "1985-03-20"
+},
+{
+"id": "220560",
+"nome": "Thiago de Joaldo",
+"uf": "SE",
+"partido": "PP",
+"leg": [
+57,
+57
+],
+"nome_civil": "JOSE THIAGO ALVES DE CARVALHO",
+"nascimento": "1982-06-20"
+},
+{
+"id": "220561",
+"nome": "Delegada Katarina",
+"uf": "SE",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "KATARINA FEITOZA LIMA SANTANA",
+"nascimento": "1973-10-05"
+},
+{
+"id": "220563",
+"nome": "Icaro de Valmir",
+"uf": "SE",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "ICARO BARBOSA COSTA",
+"nascimento": "2001-04-10"
+},
+{
+"id": "220564",
+"nome": "Yandra Moura",
+"uf": "SE",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "YANDRA BARRETO FERREIRA",
+"nascimento": "1994-04-25"
+},
+{
+"id": "220565",
+"nome": "Delegada Adriana Accorsi",
+"uf": "GO",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ADRIANA SAUTHIER ACCORSI",
+"nascimento": "1973-03-17"
+},
+{
+"id": "220566",
+"nome": "Lêda Borges",
+"uf": "GO",
+"partido": "PSDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "Lêda Borges de Moura",
+"nascimento": "1961-11-02"
+},
+{
+"id": "220567",
+"nome": "Jeferson Rodrigues",
+"uf": "GO",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "JEFERSON RODRIGUES LEMOS",
+"nascimento": "1975-05-01"
+},
+{
+"id": "220568",
+"nome": "Gustavo Gayer",
+"uf": "GO",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "GUSTAVO GAYER MACHADO DE ARAUJO",
+"nascimento": "1981-04-13"
+},
+{
+"id": "220569",
+"nome": "Silvye Alves",
+"uf": "GO",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "SILVYE ALVES DA SILVA",
+"nascimento": "1980-11-08"
+},
+{
+"id": "220570",
+"nome": "Dr. Ismael Alexandrino",
+"uf": "GO",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "ISMAEL ALEXANDRINO JUNIOR",
+"nascimento": "1983-07-26"
+},
+{
+"id": "220571",
+"nome": "Daniel Agrobom",
+"uf": "GO",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "DANIEL VIEIRA RAMOS",
+"nascimento": "1968-07-02"
+},
+{
+"id": "220572",
+"nome": "Marussa Boldrin",
+"uf": "GO",
+"partido": "MDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "MARUSSA CASSIA FAVARO BOLDRIN",
+"nascimento": "1990-06-25"
+},
+{
+"id": "220573",
+"nome": "Dorinaldo Malafaia",
+"uf": "AP",
+"partido": "PDT",
+"leg": [
+57
+],
+"nome_civil": "DORINALDO BARBOSA MALAFAIA",
+"nascimento": "1976-02-23"
+},
+{
+"id": "220574",
+"nome": "Cabo Gilberto Silva",
+"uf": "PB",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "GILBERTO GOMES DA SILVA",
+"nascimento": "1981-04-01"
+},
+{
+"id": "220575",
+"nome": "Sonize Barbosa",
+"uf": "AP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "SONIZE PIMENTEL DOS SANTOS BARBOSA",
+"nascimento": "1971-05-12"
+},
+{
+"id": "220576",
+"nome": "Alfredo Gaspar",
+"uf": "AL",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "ALFREDO GASPAR DE MENDONÇA NETO",
+"nascimento": "1970-08-13"
+},
+{
+"id": "220577",
+"nome": "Augusto Pupio",
+"uf": "AP",
+"partido": "MDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "JOSÉ AUGUSTO PUPPIO REIS JÚNIOR",
+"nascimento": "1982-05-09"
+},
+{
+"id": "220578",
+"nome": "Josenildo",
+"uf": "AP",
+"partido": "PDT",
+"leg": [
+57
+],
+"nome_civil": "JOSENILDO SANTOS ABRANTES",
+"nascimento": "1973-03-29"
+},
+{
+"id": "220579",
+"nome": "Silvia Waiãpi",
+"uf": "AP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "SILVIA NOBRE LOPES",
+"nascimento": "1975-08-29"
+},
+{
+"id": "220580",
+"nome": "Professora Goreth",
+"uf": "AP",
+"partido": "PDT",
+"leg": [
+57
+],
+"nome_civil": "MARIA GORETH DA SILVA E SOUSA",
+"nascimento": "1963-09-09"
+},
+{
+"id": "220581",
+"nome": "Luciano Amaral",
+"uf": "AL",
+"partido": "PV",
+"leg": [
+57,
+57
+],
+"nome_civil": "LUCIANO SURUAGY DO AMARAL FILHO",
+"nascimento": "1986-06-27"
+},
+{
+"id": "220582",
+"nome": "Daniel Barbosa",
+"uf": "AL",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "DANIEL BARBOSA DE ALMEIDA SILVA",
+"nascimento": "1984-10-27"
+},
+{
+"id": "220583",
+"nome": "Delegado Fabio Costa",
+"uf": "AL",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "FABIO MICHEY COSTA DA SILVA",
+"nascimento": "1980-10-15"
+},
+{
+"id": "220584",
+"nome": "Murilo Galdino",
+"uf": "PB",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "CÁSSIO MURILO GALDINO DE ARAÚJO",
+"nascimento": "1980-07-02"
+},
+{
+"id": "220585",
+"nome": "Mersinho Lucena",
+"uf": "PB",
+"partido": "PP",
+"leg": [
+57,
+57
+],
+"nome_civil": "FRANCISCO EMERSON ASSIS DE LUCENA",
+"nascimento": "1981-02-08"
+},
+{
+"id": "220586",
+"nome": "Rafael Brito",
+"uf": "AL",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "RAFAEL DE GOES BRITO",
+"nascimento": "1981-08-25"
+},
+{
+"id": "220587",
+"nome": "Gerlen Diniz",
+"uf": "AC",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "GEHLEN DINIZ ANDRADE",
+"nascimento": "1974-04-08"
+},
+{
+"id": "220588",
+"nome": "Roberto Duarte",
+"uf": "AC",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "ROBERTO DUARTE JUNIOR",
+"nascimento": "1975-04-25"
+},
+{
+"id": "220589",
+"nome": "Eduardo Velloso",
+"uf": "AC",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "EDUARDO OVÍDIO BORGES DE VELLOSO VIANNA",
+"nascimento": "1976-07-08"
+},
+{
+"id": "220590",
+"nome": "Coronel Ulysses",
+"uf": "AC",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "ULYSSES FREITAS PEREIRA DE ARAÚJO",
+"nascimento": "1972-10-19"
+},
+{
+"id": "220591",
+"nome": "Meire Serafim",
+"uf": "AC",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "ROZIMEIRE RIBEIRO ANDRADE",
+"nascimento": "1975-02-10"
+},
+{
+"id": "220592",
+"nome": "Zezinho Barbary",
+"uf": "AC",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ ESTEPHAN AMORIM BARBARY FILHO",
+"nascimento": "1966-05-28"
+},
+{
+"id": "220593",
+"nome": "Abilio Brunini",
+"uf": "MT",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "ABILIO JACQUES BRUNINI MOUMER",
+"nascimento": "1984-01-31"
+},
+{
+"id": "220594",
+"nome": "Coronel Assis",
+"uf": "MT",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "JONILDO JOSÉ DE ASSIS",
+"nascimento": "1976-04-16"
+},
+{
+"id": "220595",
+"nome": "Coronel Fernanda",
+"uf": "MT",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "RUBIA FERNANDA DINIZ ROBSON SANTOS DE SIQUEIRA",
+"nascimento": "1974-11-13"
+},
+{
+"id": "220596",
+"nome": "Amália Barros",
+"uf": "MT",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "AMÁLIA SCUDELER DE BARROS SANTOS",
+"nascimento": "1985-03-22"
+},
+{
+"id": "220597",
+"nome": "Thiago Flores",
+"uf": "RO",
+"partido": "MDB",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "THIAGO LEITE FLORES PEREIRA",
+"nascimento": "1980-07-03"
+},
+{
+"id": "220598",
+"nome": "Tarcísio Motta",
+"uf": "RJ",
+"partido": "PSOL",
+"leg": [
+57
+],
+"nome_civil": "TARCISIO MOTTA DE CARVALHO",
+"nascimento": "1975-01-28"
+},
+{
+"id": "220599",
+"nome": "Marcelo Crivella",
+"uf": "RJ",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "MARCELO BEZERRA  CRIVELLA",
+"nascimento": "1957-10-09"
+},
+{
+"id": "220600",
+"nome": "Lebrão",
+"uf": "RO",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "JOSE EURIPEDES CLEMENTE",
+"nascimento": "1955-03-10"
+},
+{
+"id": "220601",
+"nome": "Washington Quaquá",
+"uf": "RJ",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "WASHINGTON LUIZ CARDOSO SIQUEIRA",
+"nascimento": "1971-05-31"
+},
+{
+"id": "220602",
+"nome": "Dimas Gadelha",
+"uf": "RJ",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "DIMAS DE PAIVA GADELHA JUNIOR",
+"nascimento": "1975-05-03"
+},
+{
+"id": "220603",
+"nome": "Dani Cunha",
+"uf": "RJ",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "DANIELLE DYTZ DA CUNHA",
+"nascimento": "1987-05-19"
+},
+{
+"id": "220604",
+"nome": "Marcos Tavares",
+"uf": "RJ",
+"partido": "PDT",
+"leg": [
+57
+],
+"nome_civil": "MARCOS PAULO BARBOSA TAVARES",
+"nascimento": "1978-01-28"
+},
+{
+"id": "220605",
+"nome": "Bandeira de Mello",
+"uf": "RJ",
+"partido": "PSB",
+"leg": [
+57,
+57
+],
+"nome_civil": "EDUARDO CARVALHO BANDEIRA DE MELLO",
+"nascimento": "1953-03-22"
+},
+{
+"id": "220606",
+"nome": "Reimont",
+"uf": "RJ",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "REIMONT LUIZ OTONI SANTA BARBARA",
+"nascimento": "1961-09-02"
+},
+{
+"id": "220607",
+"nome": "Max Lemos",
+"uf": "RJ",
+"partido": "PROS",
+"leg": [
+57,
+57,
+57,
+57
+],
+"nome_civil": "MAX RODRIGUES LEMOS",
+"nascimento": "1966-01-17"
+},
+{
+"id": "220608",
+"nome": "Cristiane Lopes",
+"uf": "RO",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "CRISTIANE LOPES DA LUZ",
+"nascimento": "1983-11-17"
+},
+{
+"id": "220609",
+"nome": "Maurício Carvalho",
+"uf": "RO",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "MAURICIO FONSECA RIBEIRO CARVALHO DE MORAES",
+"nascimento": "1988-06-25"
+},
+{
+"id": "220610",
+"nome": "Dr. Fernando Máximo",
+"uf": "RO",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "FERNANDO RODRIGUES MÁXIMO",
+"nascimento": "1979-10-04"
+},
+{
+"id": "220611",
+"nome": "General Pazuello",
+"uf": "RJ",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "EDUARDO PAZUELLO",
+"nascimento": "1963-07-19"
+},
+{
+"id": "220612",
+"nome": "Bebeto",
+"uf": "RJ",
+"partido": "PTB",
+"leg": [
+57,
+57
+],
+"nome_civil": "Carlos Roberto Rodrigues",
+"nascimento": "1963-07-31"
+},
+{
+"id": "220613",
+"nome": "Roberto Monteiro",
+"uf": "RJ",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "ROBERTO LUIZ RODRIGUES DE OLIVEIRA",
+"nascimento": "1956-12-08"
+},
+{
+"id": "220614",
+"nome": "Daniel Soranz",
+"uf": "RJ",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "DANIEL RICARDO SORANZ PINTO",
+"nascimento": "1979-02-16"
+},
+{
+"id": "220615",
+"nome": "Pastor Henrique Vieira",
+"uf": "RJ",
+"partido": "PSOL",
+"leg": [
+57
+],
+"nome_civil": "HENRIQUE DOS SANTOS VIEIRA LIMA",
+"nascimento": "1987-04-15"
+},
+{
+"id": "220616",
+"nome": "Luciano Vieira",
+"uf": "RJ",
+"partido": "PL",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "LUCIANO VIEIRA MENDES",
+"nascimento": "1988-04-26"
+},
+{
+"id": "220617",
+"nome": "Murillo Gouvea",
+"uf": "RJ",
+"partido": "UNIÃO",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "MURILLO GOUVEA RODRIGUES",
+"nascimento": "1986-09-22"
+},
+{
+"id": "220618",
+"nome": "Sargento Portugal",
+"uf": "RJ",
+"partido": "PODE",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ PORTUGAL NETO",
+"nascimento": "1976-08-26"
+},
+{
+"id": "220619",
+"nome": "Delegado Ramagem",
+"uf": "RJ",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "ALEXANDRE RAMAGEM RODRIGUES",
+"nascimento": "1972-05-08"
+},
+{
+"id": "220620",
+"nome": "Rosângela Reis",
+"uf": "MG",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "ROSANGELA DE OLIVEIRA CAMPOS REIS",
+"nascimento": "1963-04-18"
+},
+{
+"id": "220621",
+"nome": "Sargento Gonçalves",
+"uf": "RN",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "EVANDRO GONÇALVES DA SILVA JÚNIOR",
+"nascimento": "1984-02-27"
+},
+{
+"id": "220622",
+"nome": "Nely Aquino",
+"uf": "MG",
+"partido": "PODE",
+"leg": [
+57
+],
+"nome_civil": "NELI PEREIRA DE AQUINO",
+"nascimento": "1972-11-17"
+},
+{
+"id": "220623",
+"nome": "Duda Salabert",
+"uf": "MG",
+"partido": "PDT",
+"leg": [
+57,
+57
+],
+"nome_civil": "DUDA SALABERT ROSA",
+"nascimento": "1981-05-02"
+},
+{
+"id": "220624",
+"nome": "Robinson Faria",
+"uf": "RN",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "ROBINSON MESQUITA DE FARIA",
+"nascimento": "1959-04-12"
+},
+{
+"id": "220625",
+"nome": "Delegada Ione",
+"uf": "MG",
+"partido": "AVANTE",
+"leg": [
+57,
+57
+],
+"nome_civil": "IONE MARIA MOREIRA DIAS BARBOSA",
+"nascimento": "1974-03-20"
+},
+{
+"id": "220626",
+"nome": "Rafael Simoes",
+"uf": "MG",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "RAFAEL TADEU SIMÕES",
+"nascimento": "1964-11-29"
+},
+{
+"id": "220627",
+"nome": "Paulinho Freire",
+"uf": "RN",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "PAULO EDUARDO DA COSTA FREIRE",
+"nascimento": "1964-10-22"
+},
+{
+"id": "220628",
+"nome": "Mauricio do Vôlei",
+"uf": "MG",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "MAURICIO LUIZ DE SOUZA",
+"nascimento": "1988-09-29"
+},
+{
+"id": "220629",
+"nome": "Dandara",
+"uf": "MG",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "DANDARA TONANTZIN SILVA CASTRO",
+"nascimento": "1994-01-23"
+},
+{
+"id": "220630",
+"nome": "Pedro Aihara",
+"uf": "MG",
+"partido": "PATRIOTA",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "PEDRO DOSHIKAZU PIANCHAO AIHARA",
+"nascimento": "1993-02-16"
+},
+{
+"id": "220631",
+"nome": "Samuel Viana",
+"uf": "MG",
+"partido": "PL",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "SAMUEL JOSÉ RODRIGUES DE VIANA",
+"nascimento": "1992-03-05"
+},
+{
+"id": "220632",
+"nome": "Ana Pimentel",
+"uf": "MG",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ANA CRISTINA DE LIMA PIMENTEL",
+"nascimento": "1982-05-15"
+},
+{
+"id": "220633",
+"nome": "Ricardo Salles",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "RICARDO DE AQUINO SALLES",
+"nascimento": "1975-06-08"
+},
+{
+"id": "220634",
+"nome": "Marcelo Lima",
+"uf": "SP",
+"partido": "SOLIDARIEDADE",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "MARCELO DE LIMA FERNANDES",
+"nascimento": "1983-03-21"
+},
+{
+"id": "220635",
+"nome": "Bruno Ganem",
+"uf": "SP",
+"partido": "PODE",
+"leg": [
+57
+],
+"nome_civil": "BRUNO AREVALO GANEM",
+"nascimento": "1986-09-15"
+},
+{
+"id": "220636",
+"nome": "Luiz Marinho",
+"uf": "SP",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "LUIZ MARINHO",
+"nascimento": "1959-05-20"
+},
+{
+"id": "220637",
+"nome": "Marina Silva",
+"uf": "SP",
+"partido": "REDE",
+"leg": [
+57
+],
+"nome_civil": "MARIA OSMARINA MARINA DA SILVA VAZ DE LIMA",
+"nascimento": "1958-02-08"
+},
+{
+"id": "220638",
+"nome": "Antonio Carlos Rodrigues",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "ANTONIO CARLOS RODRIGUES",
+"nascimento": "1950-05-17"
+},
+{
+"id": "220639",
+"nome": "Guilherme Boulos",
+"uf": "SP",
+"partido": "PSOL",
+"leg": [
+57
+],
+"nome_civil": "GUILHERME CASTRO BOULOS",
+"nascimento": "1982-06-19"
+},
+{
+"id": "220640",
+"nome": "Juliana Cardoso",
+"uf": "SP",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "JULIANA CARDOSO",
+"nascimento": "1979-10-22"
+},
+{
+"id": "220641",
+"nome": "Rodrigo Gambale",
+"uf": "SP",
+"partido": "PODE",
+"leg": [
+57
+],
+"nome_civil": "RODRIGO GAMBALE VIEIRA",
+"nascimento": "1984-03-17"
+},
+{
+"id": "220642",
+"nome": "Delegado Bruno Lima",
+"uf": "SP",
+"partido": "PP",
+"leg": [
+57,
+57
+],
+"nome_civil": "BRUNO MARCELLO DE OLIVEIRA LIMA",
+"nascimento": "1986-08-25"
+},
+{
+"id": "220643",
+"nome": "Sônia Guajajara",
+"uf": "SP",
+"partido": "PSOL",
+"leg": [
+57
+],
+"nome_civil": "SONIA BONE DE SOUSA SILVA",
+"nascimento": "1974-03-06"
+},
+{
+"id": "220644",
+"nome": "Rosângela Moro",
+"uf": "SP",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "ROSANGELA MARIA WOLFF DE QUADROS MORO",
+"nascimento": "1974-05-28"
+},
+{
+"id": "220645",
+"nome": "Erika Hilton",
+"uf": "SP",
+"partido": "PSOL",
+"leg": [
+57
+],
+"nome_civil": "ERIKA SANTOS SILVA",
+"nascimento": "1992-12-09"
+},
+{
+"id": "220646",
+"nome": "Felipe Becari",
+"uf": "SP",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "FELIPE BECARI COMENALE",
+"nascimento": "1987-03-06"
+},
+{
+"id": "220647",
+"nome": "Mauricio Neves",
+"uf": "SP",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "MANOEL MAURICIO SILVA NEVES",
+"nascimento": "1979-11-05"
+},
+{
+"id": "220648",
+"nome": "Marangoni",
+"uf": "SP",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "FERNANDO JOSE DE SOUZA MARANGONI",
+"nascimento": "1980-01-22"
+},
+{
+"id": "220649",
+"nome": "Delegado da Cunha",
+"uf": "SP",
+"partido": "PP",
+"leg": [
+57,
+57
+],
+"nome_civil": "CARLOS ALBERTO DA CUNHA",
+"nascimento": "1977-10-14"
+},
+{
+"id": "220650",
+"nome": "Paulo Alexandre Barbosa",
+"uf": "SP",
+"partido": "PSDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "PAULO ALEXANDRE PEREIRA BARBOSA",
+"nascimento": "1979-01-09"
+},
+{
+"id": "220651",
+"nome": "Simone Marquetto",
+"uf": "SP",
+"partido": "MDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "SIMONE APARECIDA MARQUETO CURRALADAS",
+"nascimento": "1975-09-20"
+},
+{
+"id": "220652",
+"nome": "Delegado Palumbo",
+"uf": "SP",
+"partido": "MDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "MARIO PALUMBO JUNIOR",
+"nascimento": "1974-08-16"
+},
+{
+"id": "220653",
+"nome": "Fábio Teruel",
+"uf": "SP",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "Fábio Eduardo de Oliveira Teruel",
+"nascimento": "1971-10-22"
+},
+{
+"id": "220654",
+"nome": "Delegado Paulo Bilynskyj",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "PAULO FRANCISCO MUNIZ BILYNSKYJ",
+"nascimento": "1987-03-10"
+},
+{
+"id": "220655",
+"nome": "Mario Frias",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "MARIO LUIS FRIAS",
+"nascimento": "1971-10-09"
+},
+{
+"id": "220656",
+"nome": "Fernanda Pessoa",
+"uf": "CE",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "FERNANDA ENEIDA PESSOA CARACAS DE SOUZA",
+"nascimento": "1966-06-08"
+},
+{
+"id": "220657",
+"nome": "André Fernandes",
+"uf": "CE",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "ANDRÉ FERNANDES DE MOURA",
+"nascimento": "1997-12-10"
+},
+{
+"id": "220658",
+"nome": "Luiz Gastão",
+"uf": "CE",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "LUIZ GASTÃO BITTENCOURT DA SILVA",
+"nascimento": "1962-08-19"
+},
+{
+"id": "220659",
+"nome": "Dayany Bittencourt",
+"uf": "CE",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "DAYANY BITTENCOURT SANTIL",
+"nascimento": "1981-09-13"
+},
+{
+"id": "220660",
+"nome": "Yury Bruno",
+"uf": "CE",
+"partido": "PL",
+"leg": [
+57,
+57,
+57,
+57,
+57,
+57
+],
+"nome_civil": "YURY BRUNO ALENCAR ARAUJO",
+"nascimento": "1988-05-31"
+},
+{
+"id": "220661",
+"nome": "Matheus Noronha",
+"uf": "CE",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "MATHEUS SOARES NORONHA",
+"nascimento": "1998-09-10"
+},
+{
+"id": "220662",
+"nome": "Lucas Ramos",
+"uf": "PE",
+"partido": "PSB",
+"leg": [
+57
+],
+"nome_civil": "LUCAS CAVALCANTI RAMOS",
+"nascimento": "1986-02-14"
+},
+{
+"id": "220663",
+"nome": "Eriberto Medeiros",
+"uf": "PE",
+"partido": "PSB",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ ERIBERTO MEDEIROS DE OLIVEIRA",
+"nascimento": "1965-09-26"
+},
+{
+"id": "220664",
+"nome": "Guilherme Uchoa",
+"uf": "PE",
+"partido": "PSB",
+"leg": [
+57,
+57
+],
+"nome_civil": "GUILHERME A. UCHOA CAVALCANTI PESSOA DE MELO JUNIOR",
+"nascimento": "1971-04-27"
+},
+{
+"id": "220665",
+"nome": "Clarissa Tércio",
+"uf": "PE",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "ERICA CLARISSA BORBA CORDEIRO DE MOURA",
+"nascimento": "1984-12-26"
+},
+{
+"id": "220666",
+"nome": "Coronel Meira",
+"uf": "PE",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "LUIZ DE FRANÇA E SILVA MEIRA",
+"nascimento": "1958-01-07"
+},
+{
+"id": "220667",
+"nome": "Pedro Campos",
+"uf": "PE",
+"partido": "PSB",
+"leg": [
+57
+],
+"nome_civil": "PEDRO HENRIQUE DE A. L. C. CAMPOS",
+"nascimento": "1995-10-28"
+},
+{
+"id": "220668",
+"nome": "Maria Arraes",
+"uf": "PE",
+"partido": "SOLIDARIEDADE",
+"leg": [
+57,
+57
+],
+"nome_civil": "MARIA LEAL ARRAES DE ALENCAR",
+"nascimento": "1994-02-24"
+},
+{
+"id": "220669",
+"nome": "Lula da Fonte",
+"uf": "PE",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "LUIZ EDUARDO DE QUEIROZ CAMPOS DA FONTE ALBUQUERQUE",
+"nascimento": "2000-12-08"
+},
+{
+"id": "220670",
+"nome": "Iza Arruda",
+"uf": "PE",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "IZA PAULA DE DEUS E MELLO ALBUQUERQUE ARRUDA",
+"nascimento": "1987-09-06"
+},
+{
+"id": "220671",
+"nome": "Dilvanda Faro",
+"uf": "PA",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "DILVANDA FURTADO FARO",
+"nascimento": "1969-05-08"
+},
+{
+"id": "220672",
+"nome": "Henderson Pinto",
+"uf": "PA",
+"partido": "MDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "HENDERSON LIRA PINTO",
+"nascimento": "1976-04-25"
+},
+{
+"id": "220673",
+"nome": "Delegado Caveira",
+"uf": "PA",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "LENILDO MENDES DOS SANTOS SERTÃO",
+"nascimento": "1979-04-27"
+},
+{
+"id": "220674",
+"nome": "Dra. Alessandra Haber",
+"uf": "PA",
+"partido": "MDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "ALESSANDRA HABER CARVALHO SANTOS",
+"nascimento": "1988-09-15"
+},
+{
+"id": "220675",
+"nome": "Antônio Doido",
+"uf": "PA",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "ANTONIO LEOCÁDIO DOS SANTOS",
+"nascimento": "1976-08-26"
+},
+{
+"id": "220676",
+"nome": "Andreia Siqueira",
+"uf": "PA",
+"partido": "MDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "ANDREIA BRITO GONÇALVES SIQUEIRA",
+"nascimento": "1992-08-19"
+},
+{
+"id": "220677",
+"nome": "Keniston Braga",
+"uf": "PA",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "KENISTON DE JESUS REGO BRAGA",
+"nascimento": "1967-06-02"
+},
+{
+"id": "220681",
+"nome": "Fábio Macedo",
+"uf": "MA",
+"partido": "PODE",
+"leg": [
+57
+],
+"nome_civil": "FÁBIO HENRIQUE DIAS DE  MACEDO",
+"nascimento": "1981-09-18"
+},
+{
+"id": "220682",
+"nome": "Tadeu Veneri",
+"uf": "PR",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ANTONIO TADEU VENERI",
+"nascimento": "1953-02-10"
+},
+{
+"id": "220683",
+"nome": "Beto Richa",
+"uf": "PR",
+"partido": "PSDB",
+"leg": [
+57
+],
+"nome_civil": "CARLOS ALBERTO RICHA",
+"nascimento": "1965-07-29"
+},
+{
+"id": "220684",
+"nome": "Tião Medeiros",
+"uf": "PR",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "SEBASTIÃO HENRIQUE DE MEDEIROS",
+"nascimento": "1983-01-08"
+},
+{
+"id": "220685",
+"nome": "Paulo Litro",
+"uf": "PR",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "PAULO HENRIQUE COLETTI FERNANDES",
+"nascimento": "1991-10-30"
+},
+{
+"id": "220686",
+"nome": "Duarte",
+"uf": "MA",
+"partido": "PSB",
+"leg": [
+57,
+57,
+57,
+57
+],
+"nome_civil": "HILDELIS SILVA DUARTE JUNIOR",
+"nascimento": "1986-09-15"
+},
+{
+"id": "220687",
+"nome": "Márcio Honaiser",
+"uf": "MA",
+"partido": "PDT",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "MARCIO JOSE HONAISER",
+"nascimento": "1967-04-04"
+},
+{
+"id": "220688",
+"nome": "Dr. Francisco",
+"uf": "PI",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "FRANCISCO DE ASSIS DE OLIVEIRA COSTA",
+"nascimento": "1979-10-14"
+},
+{
+"id": "220689",
+"nome": "Detinha",
+"uf": "MA",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "MARIA DEUSDETE LIMA CUNHA RODRIGUES",
+"nascimento": "1979-01-25"
+},
+{
+"id": "220690",
+"nome": "Capitão Alden",
+"uf": "BA",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "ALDEN JOSE LAZARO DA SILVA",
+"nascimento": "1980-04-19"
+},
+{
+"id": "220691",
+"nome": "Diego Coronel",
+"uf": "BA",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "DIEGO HENRIQUE SILVA CERQUEIRA MARTINS",
+"nascimento": "1983-01-22"
+},
+{
+"id": "220692",
+"nome": "Dal Barreto",
+"uf": "BA",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "ADALBERTO ROSA BARRETO",
+"nascimento": "1979-03-16"
+},
+{
+"id": "220693",
+"nome": "Roberta Roma",
+"uf": "BA",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "Roberta de Araujo Costa Roma",
+"nascimento": "1980-05-11"
+},
+{
+"id": "220694",
+"nome": "Ricardo Maia",
+"uf": "BA",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "RICARDO MAIA CHAVES DE SOUZA",
+"nascimento": "1975-08-26"
+},
+{
+"id": "220695",
+"nome": "Rogéria Santos",
+"uf": "BA",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "ROGÉRIA DE ALMEIDA PEREIRA DOS SANTOS",
+"nascimento": "1966-08-19"
+},
+{
+"id": "220696",
+"nome": "Ivoneide Caetano",
+"uf": "BA",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "IVONEIDE SOUZA CAETANO",
+"nascimento": "1972-09-10"
+},
+{
+"id": "220697",
+"nome": "Jadyel Alencar",
+"uf": "PI",
+"partido": "PV",
+"leg": [
+57,
+57
+],
+"nome_civil": "JADYEL SILVA ALENCAR",
+"nascimento": "1987-07-23"
+},
+{
+"id": "220698",
+"nome": "Beto Preto",
+"uf": "PR",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "CARLOS ALBERTO GEBRIM PRETO",
+"nascimento": "1968-02-17"
+},
+{
+"id": "220699",
+"nome": "Castro Neto",
+"uf": "PI",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "JOSÉ DIAS DE CASTRO NETO",
+"nascimento": "1974-04-23"
+},
+{
+"id": "220700",
+"nome": "Florentino Neto",
+"uf": "PI",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "FLORENTINO ALVES VERAS NETO",
+"nascimento": "1969-10-05"
+},
+{
+"id": "220701",
+"nome": "Delegado Matheus Laiola",
+"uf": "PR",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "MATHEUS ARAUJO LAIOLA",
+"nascimento": "1982-12-24"
+},
+{
+"id": "220702",
+"nome": "Geraldo Mendes",
+"uf": "PR",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "GERALDO GABRIEL MENDES",
+"nascimento": "1985-12-05"
+},
+{
+"id": "220703",
+"nome": "Neto Carletto",
+"uf": "BA",
+"partido": "PP",
+"leg": [
+57,
+57
+],
+"nome_civil": "ORLANDO SULZ DE ALMEIDA NETO",
+"nascimento": "1996-05-28"
+},
+{
+"id": "220704",
+"nome": "Carol Dartora",
+"uf": "PR",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ANA CAROLINA MOURA MELO DARTORA",
+"nascimento": "1983-05-01"
+},
+{
+"id": "220705",
+"nome": "Deltan Dallagnol",
+"uf": "PR",
+"partido": "PODE",
+"leg": [
+57
+],
+"nome_civil": "DELTAN MARTINAZZO DALLAGNOL",
+"nascimento": "1980-01-15"
+},
+{
+"id": "220706",
+"nome": "Padovani",
+"uf": "PR",
+"partido": "UNIÃO",
+"leg": [
+57,
+57,
+57,
+57
+],
+"nome_civil": "NELSON FERNANDO PADOVANI",
+"nascimento": "1977-10-29"
+},
+{
+"id": "220707",
+"nome": "Amanda Gentil",
+"uf": "MA",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "AMANDA KELLY GENTIL GUIMARÃES ROSA",
+"nascimento": "1998-12-25"
+},
+{
+"id": "220708",
+"nome": "Gabriel Nunes",
+"uf": "BA",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "GABRIEL JOSE MOURA NUNES SOARES",
+"nascimento": "1983-07-23"
+},
+{
+"id": "220712",
+"nome": "Fausto Jr.",
+"uf": "AM",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "FAUSTO VIEIRA DOS SANTOS JUNIOR",
+"nascimento": "1992-12-20"
+},
+{
+"id": "220713",
+"nome": "Saullo Vianna",
+"uf": "AM",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "SAULLO VELAME VIANNA",
+"nascimento": "1984-06-22"
+},
+{
+"id": "220714",
+"nome": "Adail Filho",
+"uf": "AM",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "ADAIL JOSÉ FIGUEIREDO PINHEIRO",
+"nascimento": "1992-02-16"
+},
+{
+"id": "220715",
+"nome": "Amom Mandel",
+"uf": "AM",
+"partido": "CIDADANIA",
+"leg": [
+57,
+57
+],
+"nome_civil": "AMOM MANDEL LINS FILHO",
+"nascimento": "2001-01-02"
+},
+{
+"id": "221148",
+"nome": "Alfredinho",
+"uf": "SP",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ALFREDO ALVES CAVALCANTE",
+"nascimento": "1959-06-24"
+},
+{
+"id": "221328",
+"nome": "Adilson Barroso",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "ADILSON BARROSO OLIVEIRA",
+"nascimento": "1964-06-14"
+},
+{
+"id": "221329",
+"nome": "Ricardo Abrão",
+"uf": "RJ",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "RICARDO MARTINS DAVID",
+"nascimento": "1972-09-13"
+},
+{
+"id": "221338",
+"nome": "Professora Luciene Cavalcante",
+"uf": "SP",
+"partido": "PSOL",
+"leg": [
+57
+],
+"nome_civil": "LUCIENE CAVALCANTE DA SILVA",
+"nascimento": "1979-12-21"
+},
+{
+"id": "221339",
+"nome": "Dr Benjamim",
+"uf": "MA",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "BENJAMIM DE OLIVEIRA",
+"nascimento": "1973-02-07"
+},
+{
+"id": "221378",
+"nome": "Reginete Bispo",
+"uf": "RS",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "REGINETE SOUZA BISPO",
+"nascimento": "1963-01-23"
+},
+{
+"id": "222142",
+"nome": "Coronel Telhada",
+"uf": "SP",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "PAULO ADRIANO LOPES LUCINDA TELHADA",
+"nascimento": "1961-10-10"
+},
+{
+"id": "222429",
+"nome": "Luis Carlos Gomes",
+"uf": "RJ",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "LUIS CARLOS GOMES DA SILVA",
+"nascimento": "1966-05-05"
+},
+{
+"id": "222565",
+"nome": "Soldado Noelio",
+"uf": "CE",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "NOELIO DA ROCHA OLIVEIRA",
+"nascimento": "1985-04-16"
+},
+{
+"id": "223128",
+"nome": "Rodrigo Estacho",
+"uf": "PR",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "RODRIGO TLUSTIK VENEK",
+"nascimento": "1989-01-16"
+},
+{
+"id": "223398",
+"nome": "Ulisses Guimarães",
+"uf": "MG",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "ULISSES SUAID PORTO GUIMARÃES BORGES",
+"nascimento": "1989-02-22"
+},
+{
+"id": "224117",
+"nome": "Gabriel Mota",
+"uf": "RR",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "GABRIEL MOTA E SILVA",
+"nascimento": "1982-12-24"
+},
+{
+"id": "224333",
+"nome": "Welter",
+"uf": "PR",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ELTON CARLOS WELTER",
+"nascimento": "1968-11-23"
+},
+{
+"id": "225386",
+"nome": "Renan Ferreirinha",
+"uf": "RJ",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "RENAN FERREIRINHA CARNEIRO",
+"nascimento": "1993-10-23"
+},
+{
+"id": "225727",
+"nome": "Flavinha",
+"uf": "MT",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "ANA FLÁVIA RODRIGUES RAMIRO",
+"nascimento": "1990-11-08"
+},
+{
+"id": "225730",
+"nome": "Enfermeira Ana Paula",
+"uf": "CE",
+"partido": "PDT",
+"leg": [
+57,
+57
+],
+"nome_civil": "ANA PAULA BRANDÃO DA SILVA FARIAS",
+"nascimento": "1983-11-17"
+},
+{
+"id": "225846",
+"nome": "Itamar Paim",
+"uf": "PR",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "ITAMAR PAIM PRUCH",
+"nascimento": "1977-04-05"
+},
+{
+"id": "226075",
+"nome": "Priscila Costa",
+"uf": "CE",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "PRISCILA BEZERRA DA COSTA",
+"nascimento": "1984-09-12"
+},
+{
+"id": "226179",
+"nome": "Gisela Simona",
+"uf": "MT",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "GISELA SIMONA VIANA DE SOUZA",
+"nascimento": "1977-04-28"
+},
+{
+"id": "226410",
+"nome": "Márcio Correa",
+"uf": "GO",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "MÁRCIO AURÉLIO CORRÊA",
+"nascimento": "1980-05-31"
+},
+{
+"id": "226553",
+"nome": "Eliane Braz",
+"uf": "CE",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "FRANCISCA ELIANE BRAZ DE CARVALHO",
+"nascimento": "1976-09-08"
+},
+{
+"id": "226708",
+"nome": "Allan Garcês",
+"uf": "MA",
+"partido": "PP",
+"leg": [
+57,
+57
+],
+"nome_civil": "ALLAN QUADROS GARCÊS",
+"nascimento": "1969-08-30"
+},
+{
+"id": "226837",
+"nome": "Saulo Pedroso",
+"uf": "SP",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "SAULO PEDROSO DE SOUZA",
+"nascimento": "1983-01-21"
+},
+{
+"id": "227275",
+"nome": "Mariana Carvalho",
+"uf": "MA",
+"partido": "PSC",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "TACILLA MARIANA CARVALHO SILVA",
+"nascimento": "1994-07-02"
+},
+{
+"id": "227310",
+"nome": "Silvio Antonio",
+"uf": "MA",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "SILVIO ANTONIO GUIMARAES MACHADO",
+"nascimento": "1969-08-06"
+},
+{
+"id": "227323",
+"nome": "Luciano Galego",
+"uf": "MA",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "LUCIANO RODRIGUES SEIDEL",
+"nascimento": "1984-07-16"
+},
+{
+"id": "227324",
+"nome": "Henrique Júnior",
+"uf": "MA",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "HENRIQUE CESAR FERREIRA DE MELO LIMA JUNIOR",
+"nascimento": "1985-09-18"
+},
+{
+"id": "227370",
+"nome": "Felipe Saliba",
+"uf": "MG",
+"partido": "PATRIOTA",
+"leg": [
+57,
+57
+],
+"nome_civil": "FELIPE MAURÍCIO SALIBA DE SOUZA",
+"nascimento": "1980-06-12"
+},
+{
+"id": "227401",
+"nome": "Dr Fabio Rueda",
+"uf": "AC",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "FABIO GONÇALVES DE RUEDA",
+"nascimento": "1977-07-17"
+},
+{
+"id": "227433",
+"nome": "Douglas Viegas",
+"uf": "SP",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "DOUGLAS DE PAULO VIEGAS",
+"nascimento": "1979-06-19"
+},
+{
+"id": "227660",
+"nome": "Nitinho",
+"uf": "SE",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "JOSENITO VITALE DE JESUS",
+"nascimento": "1966-05-31"
+},
+{
+"id": "227800",
+"nome": "Duarte Gonçalves Jr",
+"uf": "MG",
+"partido": "PSC",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "DUARTE EUSTÁQUIO GONÇALVES JUNIOR",
+"nascimento": "1980-09-11"
+},
+{
+"id": "227991",
+"nome": "Dr Flávio",
+"uf": "RJ",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "FLAVIO CAMPOS FERREIRA",
+"nascimento": "1971-02-25"
+},
+{
+"id": "228042",
+"nome": "Naumi Amorim",
+"uf": "CE",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "NAUMI GOMES DE AMORIM",
+"nascimento": "1967-01-30"
+},
+{
+"id": "228272",
+"nome": "Délio Pinheiro",
+"uf": "MG",
+"partido": "PDT",
+"leg": [
+57
+],
+"nome_civil": "DELIO PINHEIRO NETO",
+"nascimento": "1977-09-27"
+},
+{
+"id": "228616",
+"nome": "Dr. Remy Soares",
+"uf": "MA",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "REMY ALVES SOARES FILHO",
+"nascimento": "1990-10-04"
+},
+{
+"id": "228797",
+"nome": "Júlio Oliveira",
+"uf": "TO",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "JÚLIO DA SILVA OLIVEIRA",
+"nascimento": "1974-03-03"
+},
+{
+"id": "228837",
+"nome": "Juliana Kolankiewicz",
+"uf": "MT",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "JULIANA ROSA DE SOUZA KOLANKIEWICZ",
+"nascimento": "1979-08-11"
+},
+{
+"id": "228941",
+"nome": "Daniel José",
+"uf": "SP",
+"partido": "PODE",
+"leg": [
+57
+],
+"nome_civil": "DANIEL JOSÉ DA SILVA OLIVEIRA",
+"nascimento": "1988-02-14"
+},
+{
+"id": "229069",
+"nome": "Capitão Samuel",
+"uf": "SE",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "SAMUEL ALVES BARRETO",
+"nascimento": "1970-02-03"
+},
+{
+"id": "229082",
+"nome": "Lucyana Genésio",
+"uf": "MA",
+"partido": "PDT",
+"leg": [
+57
+],
+"nome_civil": "KARLA LUCYANA SOARES CANTO COSTA",
+"nascimento": "1979-10-08"
+},
+{
+"id": "229106",
+"nome": "Carla Ayres",
+"uf": "SC",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "CARLA SIMARA LUCIANA DA SILVA AYRES",
+"nascimento": "1988-03-15"
+},
+{
+"id": "229112",
+"nome": "Pedro Jr",
+"uf": "TO",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "PEDRO SOUZA CATINGUEIRO JUNIOR",
+"nascimento": "1970-03-29"
+},
+{
+"id": "229225",
+"nome": "Missionária Michele Collins",
+"uf": "PE",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "DAÍZE MICHELE DE AGUIAR GONÇALVES COLLINS",
+"nascimento": "1977-10-17"
+},
+{
+"id": "229259",
+"nome": "Pedro Tourinho",
+"uf": "SP",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "PEDRO TOURINHO DE SIQUEIRA",
+"nascimento": "1981-12-19"
+},
+{
+"id": "229333",
+"nome": "Gláucia Santiago",
+"uf": "MG",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "GLÁUCIA MARIA SANTIAGO RODRIGUES",
+"nascimento": "1960-02-20"
+},
+{
+"id": "229432",
+"nome": "Luiz Fernando Vampiro",
+"uf": "SC",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "LUIZ FERNANDO CARDOSO",
+"nascimento": "1973-11-07"
+},
+{
+"id": "229585",
+"nome": "Elisangela Araujo",
+"uf": "BA",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ELISANGELA DOS SANTOS ARAUJO",
+"nascimento": "1973-08-29"
+},
+{
+"id": "229939",
+"nome": "Newton Bonin",
+"uf": "PR",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "NEWTON BONIN",
+"nascimento": "1960-08-29"
+},
+{
+"id": "230088",
+"nome": "Dra. Mayra Pinheiro",
+"uf": "CE",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "MAYRA ISABEL CORREIA PINHEIRO",
+"nascimento": "1966-11-21"
+},
+{
+"id": "230177",
+"nome": "Tadeu Oliveira",
+"uf": "CE",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "TADEU MAGELA DE OLIVEIRA",
+"nascimento": "1966-10-25"
+},
+{
+"id": "230762",
+"nome": "Pastor Claudio Mariano",
+"uf": "PA",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "CLAUDIO MARIANO SILVA",
+"nascimento": "1976-12-16"
+},
+{
+"id": "230764",
+"nome": "Ivan Junior",
+"uf": "MA",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "MAURO IVAN F. SANTIAGO JR",
+"nascimento": "1982-07-05"
+},
+{
+"id": "230765",
+"nome": "Enfermeira Rejane",
+"uf": "RJ",
+"partido": "PCdoB",
+"leg": [
+57
+],
+"nome_civil": "REJANE DE ALMEIDA",
+"nascimento": "1963-08-24"
+},
+{
+"id": "230767",
+"nome": "Rodrigo da Zaeli",
+"uf": "MT",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "RODRIGO LUGLI",
+"nascimento": "1975-11-26"
+},
+{
+"id": "230768",
+"nome": "Zé Adriano",
+"uf": "AC",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "JOSE ADRIANO RIBEIRO DA SILVA",
+"nascimento": "1966-03-18"
+},
+{
+"id": "230957",
+"nome": "João Cury",
+"uf": "SP",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "João Cury Neto",
+"nascimento": "1973-10-22"
+},
+{
+"id": "231911",
+"nome": "Lenir de Assis",
+"uf": "PR",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "LENIR CANDIDA DE ASSIS",
+"nascimento": "1969-09-18"
+},
+{
+"id": "233218",
+"nome": "Nelinho Freitas",
+"uf": "CE",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "RONDINELLE PEREIRA DE FREITAS",
+"nascimento": "1983-03-07"
+},
+{
+"id": "233592",
+"nome": "Paulo Lemos",
+"uf": "AP",
+"partido": "PSOL",
+"leg": [
+57,
+57
+],
+"nome_civil": "PAULO CESAR LEMOS DE OLIVEIRA",
+"nascimento": "1972-01-08"
+},
+{
+"id": "233594",
+"nome": "Rafael Fera",
+"uf": "RO",
+"partido": "PODE",
+"leg": [
+57,
+57
+],
+"nome_civil": "RAFAEL BENTO PEREIRA",
+"nascimento": "1990-02-06"
+},
+{
+"id": "233598",
+"nome": "Samuel dos Santos",
+"uf": "GO",
+"partido": "PSC",
+"leg": [
+57,
+57,
+57,
+57
+],
+"nome_civil": "SAMUEL JOSE DOS SANTOS",
+"nascimento": "1971-10-03"
+},
+{
+"id": "234253",
+"nome": "Lucas Abrahao",
+"uf": "AP",
+"partido": "REDE",
+"leg": [
+57
+],
+"nome_civil": "LUCAS ABRAHAO ROSA CEZARIO DE ALMEIDA",
+"nascimento": "1992-03-16"
+},
+{
+"id": "234310",
+"nome": "Ricardo Galvão",
+"uf": "SP",
+"partido": "REDE",
+"leg": [
+57
+],
+"nome_civil": "RICARDO MAGNUS OSÓRIO GALVÃO",
+"nascimento": "1947-12-21"
+},
+{
+"id": "234388",
+"nome": "Fabiano Cazeca",
+"uf": "MG",
+"partido": "PATRIOTA",
+"leg": [
+57,
+57
+],
+"nome_civil": "FABIANO LOPES FERREIRA CAZECA",
+"nascimento": "1954-11-06"
+},
+{
+"id": "234406",
+"nome": "Elmano Férrer",
+"uf": "PI",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "ELMANO FÉRRER DE ALMEIDA",
+"nascimento": "1942-08-01"
+},
+{
+"id": "234673",
+"nome": "Vanderlan Alves",
+"uf": "CE",
+"partido": "UNIÃO",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "VALDERLAN ALVES DE SOUZA",
+"nascimento": "1987-06-01"
+},
+{
+"id": "234788",
+"nome": "Heloísa Helena",
+"uf": "RJ",
+"partido": "REDE",
+"leg": [
+57
+],
+"nome_civil": "HELOÍSA HELENA LIMA DE MORAES CARVALHO",
+"nascimento": "1962-06-06"
+},
+{
+"id": "234840",
+"nome": "Cristiano Furlan",
+"uf": "AP",
+"partido": "REDE",
+"leg": [
+57
+],
+"nome_civil": "CRISTIANO BEVILACQUA FURLAN",
+"nascimento": "1976-12-01"
+},
+{
+"id": "235088",
+"nome": "Ribeiro Neto",
+"uf": "MA",
+"partido": "PATRIOTA",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "AIRES DO ESPIRITO SANTO RIBEIRO NETO",
+"nascimento": "1991-04-20"
+},
+{
+"id": "235620",
+"nome": "Ilacir Bicalho",
+"uf": "MG",
+"partido": "PSC",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "ILACIR BICALHO DE BARROS",
+"nascimento": "1954-10-06"
+},
+{
+"id": "235712",
+"nome": "Vavá",
+"uf": "MG",
+"partido": "AVANTE",
+"leg": [
+57
+],
+"nome_civil": "HEBER GOMES NEIVA",
+"nascimento": "1975-03-08"
+},
+{
+"id": "235776",
+"nome": "Sérgio Turra",
+"uf": "RS",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "SERGIO BERGONSI TURRA",
+"nascimento": "1971-11-25"
+},
+{
+"id": "235800",
+"nome": "Jorge Araújo",
+"uf": "BA",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "JORGE SILVA DE ARAÚJO",
+"nascimento": "1978-07-25"
+},
+{
+"id": "235869",
+"nome": "João Carlos",
+"uf": "AM",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "JOÃO CARLOS DOS SANTOS MELLO",
+"nascimento": "1976-08-06"
+},
+{
+"id": "236284",
+"nome": "Glaycon Franco",
+"uf": "MG",
+"partido": "PV",
+"leg": [
+57,
+57
+],
+"nome_civil": "GLYCON MOREIRA FRANCO",
+"nascimento": "1967-04-16"
+},
+{
+"id": "236375",
+"nome": "Marcos Braz",
+"uf": "RJ",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "MARCOS TEIXEIRA BRAZ",
+"nascimento": "1971-04-21"
+},
+{
+"id": "236423",
+"nome": "Valdir Trindade",
+"uf": "PB",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "VALDIR TRINDADE DOS SANTOS",
+"nascimento": "1973-07-18"
+},
+{
+"id": "236518",
+"nome": "Santin Roveda",
+"uf": "PR",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "HILTON SANTIN ROVEDA",
+"nascimento": "1981-12-26"
+},
+{
+"id": "62881",
+"nome": "Danilo Forte",
+"uf": "CE",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "FRANCISCO DANILO BASTOS FORTE",
+"nascimento": "1958-09-01"
+},
+{
+"id": "66385",
+"nome": "Julio Arcoverde",
+"uf": "PI",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "JULIO FERRAZ ARCOVERDE",
+"nascimento": "1966-02-14"
+},
+{
+"id": "66828",
+"nome": "Fausto Pinato",
+"uf": "SP",
+"partido": "PP",
+"leg": [
+57,
+57
+],
+"nome_civil": "FAUSTO RUY PINATO",
+"nascimento": "1977-06-01"
+},
+{
+"id": "68720",
+"nome": "Fábio Henrique",
+"uf": "SE",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "FABIO HENRIQUE SANTANA DE CARVALHO",
+"nascimento": "1972-06-19"
+},
+{
+"id": "69871",
+"nome": "Bacelar",
+"uf": "BA",
+"partido": "PV",
+"leg": [
+57
+],
+"nome_civil": "JOAO CARLOS BACELAR BATISTA",
+"nascimento": "1957-07-09"
+},
+{
+"id": "72442",
+"nome": "Felipe Carreras",
+"uf": "PE",
+"partido": "PSB",
+"leg": [
+57
+],
+"nome_civil": "FELIPE AUGUSTO LYRA CARRERAS",
+"nascimento": "1975-04-16"
+},
+{
+"id": "73433",
+"nome": "Arlindo Chinaglia",
+"uf": "SP",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ARLINDO CHIGNALIA JUNIOR",
+"nascimento": "1949-12-24"
+},
+{
+"id": "73441",
+"nome": "Celso Russomanno",
+"uf": "SP",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "CELSO UBIRAJARA RUSSOMANNO",
+"nascimento": "1956-08-20"
+},
+{
+"id": "73486",
+"nome": "Pompeo de Mattos",
+"uf": "RS",
+"partido": "PDT",
+"leg": [
+57
+],
+"nome_civil": "DARCI POMPEO DE MATTOS",
+"nascimento": "1958-07-12"
+},
+{
+"id": "73531",
+"nome": "Ivan Valente",
+"uf": "SP",
+"partido": "PSOL",
+"leg": [
+57
+],
+"nome_civil": "IVAN VALENTE",
+"nascimento": "1946-07-05"
+},
+{
+"id": "73579",
+"nome": "Alberto Fraga",
+"uf": "DF",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "JOÃO ALBERTO FRAGA SILVA",
+"nascimento": "1956-06-02"
+},
+{
+"id": "73604",
+"nome": "Rui Falcão",
+"uf": "SP",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "RUI GOETHE DA COSTA FALCÃO",
+"nascimento": "1943-11-26"
+},
+{
+"id": "73692",
+"nome": "Osmar Terra",
+"uf": "RS",
+"partido": "MDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "OSMAR GASPARINI TERRA",
+"nascimento": "1950-02-18"
+},
+{
+"id": "73701",
+"nome": "Benedita da Silva",
+"uf": "RJ",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "BENEDITA SOUZA DA SILVA SAMPAIO",
+"nascimento": "1942-04-26"
+},
+{
+"id": "73768",
+"nome": "Dilceu Sperafico",
+"uf": "PR",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "DILCEU JOÃO SPERAFICO",
+"nascimento": "1948-01-26"
+},
+{
+"id": "73778",
+"nome": "Luiz Carlos Hauly",
+"uf": "PR",
+"partido": "PODE",
+"leg": [
+57
+],
+"nome_civil": "LUIZ CARLOS JORGE HAULY",
+"nascimento": "1950-10-08"
+},
+{
+"id": "73788",
+"nome": "Ricardo Barros",
+"uf": "PR",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "RICARDO JOSÉ MAGALHÃES BARROS",
+"nascimento": "1959-11-15"
+},
+{
+"id": "73801",
+"nome": "Renildo Calheiros",
+"uf": "PE",
+"partido": "PCdoB",
+"leg": [
+57
+],
+"nome_civil": "RENILDO VASCONCELOS CALHEIROS",
+"nascimento": "1959-04-20"
+},
+{
+"id": "73806",
+"nome": "Roseana Sarney",
+"uf": "MA",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "Roseana Sarney Murad",
+"nascimento": "1953-06-01"
+},
+{
+"id": "73808",
+"nome": "Sérgio Brito",
+"uf": "BA",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "SÉRGIO LUÍS LACERDA BRITO",
+"nascimento": "1961-06-08"
+},
+{
+"id": "74041",
+"nome": "Luiz Couto",
+"uf": "PB",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "LUIZ ALBUQUERQUE COUTO",
+"nascimento": "1945-02-13"
+},
+{
+"id": "74043",
+"nome": "Wellington Roberto",
+"uf": "PB",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "JOSÉ WELLINGTON ROBERTO",
+"nascimento": "1959-05-19"
+},
+{
+"id": "74044",
+"nome": "Wilson Santiago",
+"uf": "PB",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ WILSON SANTIAGO",
+"nascimento": "1957-06-10"
+},
+{
+"id": "74052",
+"nome": "Bosco Costa",
+"uf": "SE",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "JOÃO BOSCO DA COSTA",
+"nascimento": "1950-09-28"
+},
+{
+"id": "74057",
+"nome": "Alice Portugal",
+"uf": "BA",
+"partido": "PCdoB",
+"leg": [
+57
+],
+"nome_civil": "ALICE MAZZUCO PORTUGAL",
+"nascimento": "1959-05-16"
+},
+{
+"id": "74060",
+"nome": "Daniel Almeida",
+"uf": "BA",
+"partido": "PCdoB",
+"leg": [
+57
+],
+"nome_civil": "DANIEL GOMES DE ALMEIDA",
+"nascimento": "1955-01-21"
+},
+{
+"id": "74065",
+"nome": "Fatima Pelaes",
+"uf": "AP",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "FÁTIMA LÚCIA PELAES",
+"nascimento": "1959-02-13"
+},
+{
+"id": "74075",
+"nome": "Elcione Barbalho",
+"uf": "PA",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "ELCIONE THEREZINHA ZAHLUTH BARBALHO",
+"nascimento": "1944-10-05"
+},
+{
+"id": "74079",
+"nome": "José Priante",
+"uf": "PA",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ BENITO PRIANTE JÚNIOR",
+"nascimento": "1963-12-02"
+},
+{
+"id": "74084",
+"nome": "Raimundo Santos",
+"uf": "PA",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "RAIMUNDO JOSÉ PEREIRA DOS SANTOS",
+"nascimento": "1955-10-10"
+},
+{
+"id": "74090",
+"nome": "Átila Lins",
+"uf": "AM",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "ÁTILA SIDNEY LINS DE ALBUQUERQUE",
+"nascimento": "1950-11-22"
+},
+{
+"id": "74095",
+"nome": "Pauderney Avelino",
+"uf": "AM",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "PAUDERNEY TOMAZ AVELINO",
+"nascimento": "1954-09-24"
+},
+{
+"id": "74140",
+"nome": "José Carlos Araujo",
+"uf": "BA",
+"partido": "PDT",
+"leg": [
+57,
+57
+],
+"nome_civil": "JOSÉ CARLOS LEÃO DE ARAÚJO",
+"nascimento": "1944-12-21"
+},
+{
+"id": "74141",
+"nome": "Josias Gomes",
+"uf": "BA",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "JOSIAS GOMES DA SILVA",
+"nascimento": "1956-10-14"
+},
+{
+"id": "74156",
+"nome": "Leonardo Monteiro",
+"uf": "MG",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ LEONARDO COSTA MONTEIRO",
+"nascimento": "1951-10-09"
+},
+{
+"id": "74158",
+"nome": "Mário Heringer",
+"uf": "MG",
+"partido": "PDT",
+"leg": [
+57
+],
+"nome_civil": "MÁRIO LÚCIO HERINGER",
+"nascimento": "1954-09-30"
+},
+{
+"id": "74159",
+"nome": "Odair Cunha",
+"uf": "MG",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "ODAIR JOSÉ DA CUNHA",
+"nascimento": "1976-06-18"
+},
+{
+"id": "74160",
+"nome": "Patrus Ananias",
+"uf": "MG",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "PATRUS ANANIAS DE SOUZA",
+"nascimento": "1952-01-26"
+},
+{
+"id": "74161",
+"nome": "Reginaldo Lopes",
+"uf": "MG",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "REGINALDO LÁZARO DE OLIVEIRA LOPES",
+"nascimento": "1973-04-02"
+},
+{
+"id": "74171",
+"nome": "Chico Alencar",
+"uf": "RJ",
+"partido": "PSOL",
+"leg": [
+57
+],
+"nome_civil": "FRANCISCO RODRIGUES DE ALENCAR FILHO",
+"nascimento": "1949-10-19"
+},
+{
+"id": "74253",
+"nome": "Julio Lopes",
+"uf": "RJ",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "JULIO LUIZ BAPTISTA LOPES",
+"nascimento": "1959-04-06"
+},
+{
+"id": "74262",
+"nome": "Carlos Sampaio",
+"uf": "SP",
+"partido": "PSDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "CARLOS HENRIQUE FOCESI SAMPAIO",
+"nascimento": "1963-03-31"
+},
+{
+"id": "74270",
+"nome": "Gilberto Nascimento",
+"uf": "SP",
+"partido": "PSC",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "GILBERTO NASCIMENTO SILVA",
+"nascimento": "1956-07-09"
+},
+{
+"id": "74273",
+"nome": "Jefferson Campos",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "JEFFERSON ALVES DE CAMPOS",
+"nascimento": "1964-10-26"
+},
+{
+"id": "74283",
+"nome": "Vicentinho",
+"uf": "SP",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "VICENTE PAULO DA SILVA",
+"nascimento": "1956-04-08"
+},
+{
+"id": "74295",
+"nome": "Inácio Arruda",
+"uf": "CE",
+"partido": "PCdoB",
+"leg": [
+57
+],
+"nome_civil": "INÁCIO FRANCISCO DE ASSIS NUNES ARRUDA",
+"nascimento": "1957-05-05"
+},
+{
+"id": "74299",
+"nome": "Leônidas Cristino",
+"uf": "CE",
+"partido": "PDT",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ LEÔNIDAS DE MENEZES CRISTINO",
+"nascimento": "1957-06-03"
+},
+{
+"id": "74317",
+"nome": "Júlio Cesar",
+"uf": "PI",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "JÚLIO CÉSAR DE CARVALHO LIMA",
+"nascimento": "1948-08-25"
+},
+{
+"id": "74356",
+"nome": "Silas Câmara",
+"uf": "AM",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "SILAS CÂMARA",
+"nascimento": "1962-12-15"
+},
+{
+"id": "74371",
+"nome": "Rubens Otoni",
+"uf": "GO",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "RUBENS OTONI GOMIDE",
+"nascimento": "1956-02-06"
+},
+{
+"id": "74374",
+"nome": "Geraldo Resende",
+"uf": "MS",
+"partido": "PSDB",
+"leg": [
+57,
+57
+],
+"nome_civil": "GERALDO RESENDE PEREIRA",
+"nascimento": "1955-04-20"
+},
+{
+"id": "74376",
+"nome": "Vander Loubet",
+"uf": "MS",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "VANDER LUIZ DOS SANTOS LOUBET",
+"nascimento": "1964-01-22"
+},
+{
+"id": "74383",
+"nome": "Giacobo",
+"uf": "PR",
+"partido": "PL",
+"leg": [
+57,
+57
+],
+"nome_civil": "FERNANDO LÚCIO GIACOBO",
+"nascimento": "1970-12-17"
+},
+{
+"id": "74398",
+"nome": "Maria do Rosário",
+"uf": "RS",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "MARIA DO ROSÁRIO NUNES",
+"nascimento": "1966-11-22"
+},
+{
+"id": "74400",
+"nome": "Paulo Pimenta",
+"uf": "RS",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "PAULO ROBERTO SEVERO PIMENTA",
+"nascimento": "1965-03-19"
+},
+{
+"id": "74428",
+"nome": "Mendonça Filho",
+"uf": "PE",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "JOSÉ MENDONÇA BEZERRA FILHO",
+"nascimento": "1966-07-12"
+},
+{
+"id": "74454",
+"nome": "Eunício Oliveira",
+"uf": "CE",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "EUNÍCIO LOPES DE OLIVEIRA",
+"nascimento": "1952-09-30"
+},
+{
+"id": "74467",
+"nome": "Damião Feliciano",
+"uf": "PB",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "DAMIÃO FELICIANO DA SILVA",
+"nascimento": "1952-04-28"
+},
+{
+"id": "74478",
+"nome": "Luciano Bivar",
+"uf": "PE",
+"partido": "UNIÃO",
+"leg": [
+57,
+57
+],
+"nome_civil": "LUCIANO CALDAS BIVAR",
+"nascimento": "1944-11-29"
+},
+{
+"id": "74537",
+"nome": "Claudio Cajado",
+"uf": "BA",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "CLÁUDIO CAJADO SAMPAIO",
+"nascimento": "1963-12-01"
+},
+{
+"id": "74550",
+"nome": "João Leão",
+"uf": "BA",
+"partido": "PP",
+"leg": [
+57
+],
+"nome_civil": "JOÃO FELIPE DE SOUZA LEÃO",
+"nascimento": "1946-02-27"
+},
+{
+"id": "74554",
+"nome": "José Rocha",
+"uf": "BA",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "JOSÉ ALVES ROCHA",
+"nascimento": "1948-08-18"
+},
+{
+"id": "74574",
+"nome": "Paulo Magalhães",
+"uf": "BA",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "PAULO SÉRGIO PARANHOS DE MAGALHÃES",
+"nascimento": "1952-11-28"
+},
+{
+"id": "74581",
+"nome": "Gilmar Machado",
+"uf": "MG",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "GILMAR ALVES MACHADO",
+"nascimento": "1961-11-06"
+},
+{
+"id": "74585",
+"nome": "Lincoln Portela",
+"uf": "MG",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "LINCOLN DINIZ PORTELA",
+"nascimento": "1953-11-03"
+},
+{
+"id": "74646",
+"nome": "Aécio Neves",
+"uf": "MG",
+"partido": "PSDB",
+"leg": [
+57
+],
+"nome_civil": "AÉCIO NEVES DA CUNHA",
+"nascimento": "1960-03-10"
+},
+{
+"id": "74696",
+"nome": "Alberto Mourão",
+"uf": "SP",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "ALBERTO PEREIRA MOURÃO",
+"nascimento": "1954-04-26"
+},
+{
+"id": "74784",
+"nome": "Luiza Erundina",
+"uf": "SP",
+"partido": "PSOL",
+"leg": [
+57
+],
+"nome_civil": "LUIZA ERUNDINA DE SOUSA",
+"nascimento": "1934-11-30"
+},
+{
+"id": "74848",
+"nome": "Jandira Feghali",
+"uf": "RJ",
+"partido": "PCdoB",
+"leg": [
+57
+],
+"nome_civil": "JANDIRA FEGHALI",
+"nascimento": "1957-05-17"
+},
+{
+"id": "74856",
+"nome": "Laura Carneiro",
+"uf": "RJ",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "MARIA LAURA MONTEZA DE SOUZA CARNEIRO",
+"nascimento": "1963-05-01"
+},
+{
+"id": "74858",
+"nome": "Lindbergh Farias",
+"uf": "RJ",
+"partido": "PT",
+"leg": [
+57
+],
+"nome_civil": "LUIZ LINDBERGH FARIAS FILHO",
+"nascimento": "1969-12-08"
+},
+{
+"id": "77003",
+"nome": "Sergio Santos Rodrigues",
+"uf": "MG",
+"partido": "PODE",
+"leg": [
+57
+],
+"nome_civil": "SERGIO AUGUSTO SANTOS RODRIGUES",
+"nascimento": "1982-09-16"
+},
+{
+"id": "80815",
+"nome": "Léo Prates",
+"uf": "BA",
+"partido": "PDT",
+"leg": [
+57,
+57
+],
+"nome_civil": "LEONARDO SILVA PRATES",
+"nascimento": "1978-04-05"
+},
+{
+"id": "81055",
+"nome": "Márcio Jerry",
+"uf": "MA",
+"partido": "PCdoB",
+"leg": [
+57
+],
+"nome_civil": "MÁRCIO JERRY SARAIVA BARROSO",
+"nascimento": "1966-11-14"
+},
+{
+"id": "88256",
+"nome": "Clodoaldo Magalhães",
+"uf": "PE",
+"partido": "PV",
+"leg": [
+57
+],
+"nome_civil": "CLODOALDO MAGALHÃES OLIVEIRA LYRA",
+"nascimento": "1975-11-13"
+},
+{
+"id": "89536",
+"nome": "Prof. Paulo Fernando",
+"uf": "DF",
+"partido": "REPUBLICANOS",
+"leg": [
+57
+],
+"nome_civil": "PAULO FERNANDO MELO DA COSTA",
+"nascimento": "1967-06-11"
+},
+{
+"id": "91228",
+"nome": "Waldemar Oliveira",
+"uf": "PE",
+"partido": "AVANTE",
+"leg": [
+57
+],
+"nome_civil": "WALDEMAR DE ANDRADA IGNÁCIO DE OLIVEIRA",
+"nascimento": "1972-11-29"
+},
+{
+"id": "92102",
+"nome": "Leur Lomanto Júnior",
+"uf": "BA",
+"partido": "UNIÃO",
+"leg": [
+57
+],
+"nome_civil": "LEUR ANTONIO DE BRITTO LOMANTO JUNIOR",
+"nascimento": "1976-10-28"
+},
+{
+"id": "92346",
+"nome": "Eduardo Bolsonaro",
+"uf": "SP",
+"partido": "PL",
+"leg": [
+57
+],
+"nome_civil": "EDUARDO NANTES BOLSONARO",
+"nascimento": "1984-07-10"
+},
+{
+"id": "92699",
+"nome": "Fernando Monteiro",
+"uf": "PE",
+"partido": "PP",
+"leg": [
+57,
+57,
+57
+],
+"nome_civil": "FERNANDO MONTEIRO DE ALBUQUERQUE",
+"nascimento": "1976-09-17"
+},
+{
+"id": "92776",
+"nome": "Stefano Aguiar",
+"uf": "MG",
+"partido": "PSD",
+"leg": [
+57
+],
+"nome_civil": "STEFANO AGUIAR DOS SANTOS",
+"nascimento": "1976-03-03"
+},
+{
+"id": "98057",
+"nome": "Lafayette de Andrada",
+"uf": "MG",
+"partido": "REPUBLICANOS",
+"leg": [
+57,
+57
+],
+"nome_civil": "LAFAYETTE LUIZ DOORGAL DE ANDRADA",
+"nascimento": "1966-10-17"
+},
+{
+"id": "98148",
+"nome": "Cobalchini",
+"uf": "SC",
+"partido": "MDB",
+"leg": [
+57
+],
+"nome_civil": "VALDIR VITAL COBALCHINI",
+"nascimento": "1963-09-07"
+},
+{
+"id": "98615",
+"nome": "Ismael",
+"uf": "SC",
+"partido": "PSD",
+"leg": [
+57,
+57
+],
+"nome_civil": "ISMAEL DOS SANTOS",
+"nascimento": "1965-07-16"
+}
+]
