@@ -33,40 +33,73 @@ def url_api(recurso: str, **params) -> str:
     return API + recurso + "?" + urlencode(params)
 
 
-def consultar(recurso: str, cache: Path, completo: bool, **params) -> list[dict]:
+def consultar(recurso: str, cache: Path, completo: bool, so_copia: bool = False, **params) -> list[dict]:
     """Todas as linhas da consulta (a API devolve até 5000 por página). Anos fechados ficam no cache para sempre;
-    o ano corrente é relido a cada 20 horas."""
+    o ano corrente é relido a cada 20 horas. so_copia: o Siconfi já falhou nesta consulta; só a cópia guardada serve
+    (sem cópia, devolve vazio em vez de esperar de novo cada tentativa)."""
     nome = "_".join(f"{k}-{v}" for k, v in sorted(params.items())).replace(" ", "")
     arq = cache / "siconfi" / f"{recurso}_{nome}.json"
     if arq.exists() and (completo or time.time() - arq.stat().st_mtime < 20 * 3600):
         return json.loads(arq.read_text(encoding="utf-8"))
+    if so_copia:
+        return _copia(arq, recurso, nome, params, "o Siconfi não respondeu nesta coleta") if arq.exists() else []
     itens: list[dict] = []
     offset = 0
-    while True:
-        p = dict(params, offset=offset) if offset else params
-        j = get_json(API + recurso, params=p, timeout=240)
-        itens += j.get("items") or []
-        if not j.get("hasMore"):
-            break
-        offset += int(j.get("limit") or 5000)
+    try:
+        while True:
+            p = dict(params, offset=offset) if offset else params
+            j = get_json(API + recurso, params=p, timeout=240)
+            itens += j.get("items") or []
+            if not j.get("hasMore"):
+                break
+            offset += int(j.get("limit") or 5000)
+    except Exception as e:
+        # Siconfi fora do ar: o ano corrente usa a última cópia boa, com aviso e a data dela. Antes, o ano inteiro
+        # sumia da aba e o ano anterior aparecia como o mais recente.
+        if not (arq.exists() and arq.stat().st_size > 0):
+            raise
+        return _copia(arq, recurso, nome, params, str(e)[:160])
     arq.parent.mkdir(parents=True, exist_ok=True)
     if itens:  # resposta vazia não vai para o cache: o relatório pode sair amanhã
         arq.write_text(json.dumps(itens, ensure_ascii=False), encoding="utf-8")
     return itens
 
 
+def _copia(arq: Path, recurso: str, nome: str, params: dict, motivo: str) -> list[dict]:
+    from . import financas  # aqui dentro: financas importa este módulo
+    from .util import data_do_arquivo
+    log.warning("Siconfi %s %s: %s; usando a cópia de %s", recurso, nome, motivo, data_do_arquivo(arq))
+    financas.avisar(f"Arrecadação e gastos: o Tesouro Nacional (Siconfi) não respondeu; o ano "
+                    f"{params.get('an_exercicio', '')} usa a cópia de {data_do_arquivo(arq)}")
+    return json.loads(arq.read_text(encoding="utf-8"))
+
+
 # ---------------------------------------------------------------- RREO
 
 def rreo(ano: int, anexo: str, cache: Path, ano_atual: int) -> tuple[int, list[dict]] | None:
     """(bimestre, linhas) do último bimestre publicado do ano."""
-    for per in range(6, 0, -1):
-        params = dict(an_exercicio=ano, nr_periodo=per, co_tipo_demonstrativo="RREO", no_anexo=anexo, co_esfera="U", id_ente=1)
+    return _ultimo_periodo(f"RREO {ano} {anexo}", "bimestre", range(6, 0, -1), lambda per, so_copia: consultar(
+        "rreo", cache, completo=ano < ano_atual, so_copia=so_copia,
+        **dict(an_exercicio=ano, nr_periodo=per, co_tipo_demonstrativo="RREO", no_anexo=anexo, co_esfera="U", id_ente=1)))
+
+
+def _ultimo_periodo(nome: str, unidade: str, periodos, buscar) -> tuple[int, list[dict]] | None:
+    """O período mais recente com dados. Se a consulta de um período falhar, os anteriores vêm só do cache, e o site
+    avisa que o mais recente não foi lido. Antes, uma falha no período mais novo (ainda sem cópia) fazia o ano
+    inteiro sumir da aba, mesmo com os períodos anteriores guardados."""
+    falhou = None
+    for per in periodos:
         try:
-            itens = consultar("rreo", cache, completo=ano < ano_atual, **params)
+            itens = buscar(per, falhou is not None)
         except Exception as e:  # noqa: BLE001
-            log.warning("RREO %d %s bimestre %d: %s", ano, anexo, per, str(e)[:160])
-            return None
+            log.warning("%s %s %d: %s", nome, unidade, per, str(e)[:160])
+            falhou = falhou or per
+            continue
         if itens:
+            if falhou:
+                from . import financas  # aqui dentro: financas importa este módulo
+                financas.avisar(f"Arrecadação e gastos: o Tesouro Nacional (Siconfi) não respondeu sobre o {unidade} "
+                                f"{falhou} do {nome}; mostramos até o {unidade} {per}")
             return per, itens
     return None
 
@@ -284,17 +317,10 @@ ROTULO_EXECUTIVO = {"União": "Executivo federal", "Distrito Federal": "Polícia
 
 
 def rgf(ano: int, poder: str, cache: Path, ano_atual: int) -> tuple[int, list[dict]] | None:
-    for per in (3, 2, 1):
-        params = dict(an_exercicio=ano, in_periodicidade="Q", nr_periodo=per, co_tipo_demonstrativo="RGF",
-                      no_anexo="RGF-Anexo 01", co_esfera="U", co_poder=poder, id_ente=1)
-        try:
-            itens = consultar("rgf", cache, completo=ano < ano_atual, **params)
-        except Exception as e:  # noqa: BLE001
-            log.warning("RGF %d poder %s: %s", ano, poder, str(e)[:160])
-            return None
-        if itens:
-            return per, itens
-    return None
+    return _ultimo_periodo(f"RGF {ano} (poder {poder})", "quadrimestre", (3, 2, 1), lambda per, so_copia: consultar(
+        "rgf", cache, completo=ano < ano_atual, so_copia=so_copia,
+        **dict(an_exercicio=ano, in_periodicidade="Q", nr_periodo=per, co_tipo_demonstrativo="RGF",
+               no_anexo="RGF-Anexo 01", co_esfera="U", co_poder=poder, id_ente=1)))
 
 
 def ler_rgf(poder: str, itens: list[dict]) -> list[dict]:
