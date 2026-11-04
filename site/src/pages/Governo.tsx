@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Abrir, Barras, Colunas, Explain, Loading, OndeVer, useData } from "../components/ui";
 import { Fragment, useState } from "react";
+import { FotoPerfil } from "../components/Foto";
 import { corPartido, dataBR, linkSeguro, numero, partidoComHoje, reais, type EquipeGoverno, type Governo, type PessoaEquipe, type ViagensDetalhe } from "../data";
 
 /** Governo de Minas: quem foi eleito governador e vice, e onde achar salários, viagens e pagamentos do governo */
@@ -22,6 +23,7 @@ export default function GovernoPage() {
           <div className="grid">
             <div className="card stat">
               <span className="label">Governador</span>
+              <FotoPerfil url={atual.governador.foto} nome={atual.governador.nome} />
               <span className="value cidade-quem">{atual.governador.nome}</span>
               <span className="partido-tag"><i className="partido-cor" style={{ background: corPartido(atual.governador.partido_hoje) }} />{partidoComHoje(atual.governador.partido, atual.governador.partido_hoje)}</span>
               <span className="hint">{numero(atual.governador.votos)} votos ({atual.governador.pct.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% dos válidos){atual.turnos > 1 ? " no 2º turno" : ""}.</span>
@@ -29,6 +31,7 @@ export default function GovernoPage() {
             <div className="card stat">
               <span className="label">Vice-governador</span>
               {atual.vice ? <>
+                <FotoPerfil url={atual.vice.foto} nome={atual.vice.nome} />
                 <span className="value cidade-quem">{atual.vice.nome}</span>
                 <span className="partido-tag"><i className="partido-cor" style={{ background: corPartido(atual.vice.partido_hoje) }} />{partidoComHoje(atual.vice.partido, atual.vice.partido_hoje)}</span>
               </> : <span className="muted">Não encontrado na lista de candidatos do TSE</span>}

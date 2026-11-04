@@ -2160,5 +2160,9 @@
 "{0} ainda não foi publicado": "{0} todavía no fue publicado",
 "{0} e {1} ainda não foram publicados": "{0} y {1} todavía no fueron publicados",
 "e {0} saiu incompleto": "y {0} salió incompleto",
-"; mostramos {0}, o último ano completo.": "; mostramos {0}, el último año completo."
+"; mostramos {0}, o último ano completo.": "; mostramos {0}, el último año completo.",
+"Foto oficial de {*}": "Foto oficial de {*}",
+"{*} (sem foto oficial)": "{*} (sin foto oficial)",
+"Foto:": "Foto:",
+"Foto oficial publicada por: {*}": "Foto oficial publicada por: {*}"
 }

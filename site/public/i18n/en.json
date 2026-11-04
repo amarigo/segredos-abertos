@@ -2160,5 +2160,9 @@
 "{0} ainda não foi publicado": "{0} has not been published yet",
 "{0} e {1} ainda não foram publicados": "{0} and {1} have not been published yet",
 "e {0} saiu incompleto": "and {0} came out incomplete",
-"; mostramos {0}, o último ano completo.": "; we show {0}, the latest complete year."
+"; mostramos {0}, o último ano completo.": "; we show {0}, the latest complete year.",
+"Foto oficial de {*}": "Official photo of {*}",
+"{*} (sem foto oficial)": "{*} (no official photo)",
+"Foto:": "Photo:",
+"Foto oficial publicada por: {*}": "Official photo published by: {*}"
 }

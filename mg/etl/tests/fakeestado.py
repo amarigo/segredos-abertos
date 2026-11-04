@@ -76,6 +76,8 @@ class FakeEstado:
         # Quem está no arquivo com outro nome (o nome antigo também acha a pessoa na busca)
         self.nome_no_arquivo = {20005: "Professor Fulano 05"}
         self.legislaturas_saiu = "19,20"
+        # A ALMG não tem foto publicada deste deputado: o site mostra as iniciais
+        self.sem_foto = {20007}
         self.esperado: dict = {}
         self._emendas()
 
@@ -359,6 +361,11 @@ class FakeEstado:
                 return 200, self.deputados_csv(), "text/csv"
             if u.path == "/arquivo/proposicoes/download":
                 return 200, self.proposicoes_csv(int(q.get("ano", 0))), "text/csv"
+        m = re.fullmatch(r"/export/sites/portal/a-assembleia/deputados/fotos/(\d+)\.jpg", u.path)
+        if u.netloc == "www.almg.gov.br" and m:
+            if int(m.group(1)) in self.sem_foto:  # como a ALMG: a página de erro vem em HTML
+                return 404, b"<html>Pagina nao encontrada</html>", "text/html"
+            return 200, b"\xff\xd8\xff\xe0" + b"\0" * 4000, "image/jpeg"
         if u.netloc == "www.almg.gov.br" and "emendas-parlamentares" in u.path:
             return 200, self.pagina_emendas(), "text/html"
         if u.netloc == "mediaserver.almg.gov.br" and u.path.endswith(".csv"):

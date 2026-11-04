@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Barras, COR_GRUPO, Explain, Loading, useAno, useData } from "../components/ui";
-import { basePeriodo, corPartido, cotaNoAno, nomePeriodo, GRUPO_CURTO, GRUPO_EXPLICA, linkSeguro, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
+import { basePeriodo, corPartido, cotaNoAno, nomePeriodo, GRUPO_CURTO, GRUPO_EXPLICA, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
 import { GastoPartidos } from "./Partidos";
 import { MG, SITE } from "../recorte";
 import type { CidadeResumo } from "../data";
 import { AvisosFim, SelosResumo } from "../components/Selo";
 import { Kpi, MapaAnos } from "../components/graficos";
 import { ParaOndeVai } from "../components/ParaOndeVai";
+import { FotoPolitico } from "../components/Foto";
 import { EspectroPartidos } from "../components/EspectroPartidos";
 
 export default function Home() {
@@ -192,7 +193,7 @@ export default function Home() {
 export function PessoaLinha({ p, extra }: { p: Resumo; extra?: React.ReactNode }) {
   return (
     <Link to={`/p/${p.id}`} className="person">
-      {linkSeguro(p.foto) ? <img src={linkSeguro(p.foto)} alt="" loading="lazy" /> : <span className="avatar" />}
+      <FotoPolitico url={p.foto} nome={p.nome} decorativa />
       <div style={{ minWidth: 0 }}>
         <div className="pname">{p.nome}</div>
         <div className="meta">{p.cargo} · {p.partido}-{p.uf}{p.em_exercicio === false && <> · <span className="fora-cargo">fora do cargo hoje</span></>}</div>

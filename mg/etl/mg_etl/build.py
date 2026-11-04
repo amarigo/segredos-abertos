@@ -106,6 +106,10 @@ def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[
     cont["contas_estado"] = len((contas_mg or {}).get("anos") or [])
     gov = _seguro("Governo de MG (TSE)", lambda: governo.coletar(cache)) or {"eleicoes": [], "links": governo.LINKS,
                                                                             "fonte_tse": governo.FONTE_TSE}
+    _seguro("Fotos do governador e do vice (TSE)", lambda: governo.fotos(gov, saida, cache / "tse"))
+    for e in gov["eleicoes"]:  # sem foto achada, o número interno do TSE não vai para o site
+        for p in (e.get("governador"), e.get("vice")):
+            (p or {}).pop("sq", None)
     gov["equipe"] = _seguro("Salários e viagens do governo de MG", lambda: equipe.coletar(cache))
     for vid, det in ((gov["equipe"] or {}).pop("viagens_detalhe", None) or {}).items():
         util.write_json(saida / "estado" / "viagens" / f"{vid}.json", det)
