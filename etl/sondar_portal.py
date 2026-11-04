@@ -1,13 +1,21 @@
-"""Sonda temporária: onde começa cada ano na consulta de renúncia do Portal e quanto a API aguenta em paralelo."""
+"""Sonda temporária: a API de renúncia traz os mesmos dados dos arquivos .zip? (contagem de linhas e valores)"""
+import csv
+import io
+import json
+import random
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor
+import zipfile
 
 sys.path.insert(0, ".")
-from sa_etl.util import _session, chave_portal  # noqa: E402
+from sa_etl.util import _session, chave_portal, digits  # noqa: E402
 
 H = {"chave-api-dados": chave_portal(), "Accept": "application/json"}
 API = "https://api.portaldatransparencia.gov.br/api-de-dados/renuncias-valor"
+ZIP = "https://dadosabertos-download.cgu.gov.br/PortalDaTransparencia/saida/renuncias/{ano}_RenunciasFiscais.zip"
+NAV = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+INICIO = {2023: 39978, 2024: 47258, 2025: 50144}
+ULTIMA = 50144
 
 
 def p(*a):
@@ -20,43 +28,51 @@ def pagina(n):
             r = _session.get(API, params={"pagina": n}, headers=H, timeout=120)
             if r.status_code == 200:
                 return r.json()
-            p("  falha", n, r.status_code, r.text[:100])
         except Exception as e:  # noqa: BLE001
             p("  erro", n, e)
         time.sleep(3)
     return None
 
 
-ULTIMA = 50144
-anos_ult = sorted({x["ano"] for x in pagina(ULTIMA) or []})
-p("ULTIMA", ULTIMA, anos_ult, "seguinte:", len(pagina(ULTIMA + 1) or []))
+ult = pagina(ULTIMA)
+p("CAMPOS", json.dumps(ult[0], ensure_ascii=False))
 
 
-def inicio_do_ano(ano, lo=1, hi=ULTIMA):
-    """Primeira página que tem alguma linha do ano (ou mais novo)."""
-    while hi - lo > 1:
-        mid = (lo + hi) // 2
-        d = pagina(mid) or []
-        if d and max(x["ano"] for x in d) >= ano:
-            hi = mid
-        else:
-            lo = mid
-    return hi
+def linhas_api_do_ano(ano):
+    """Linhas do ano: páginas inteiras entre o início e o fim, mais as pontas."""
+    ini, fim = INICIO[ano], INICIO[ano + 1]
+    a = [x for x in pagina(ini) if x["ano"] == ano]
+    b = [x for x in pagina(fim) if x["ano"] == ano]
+    return len(a) + (fim - ini - 1) * 15 + len(b) if fim > ini else len(a)
 
 
-inicios = {}
-for ano in (2021, 2022, 2023, 2024, 2025):
-    inicios[ano] = inicio_do_ano(ano)
-    p("ANO", ano, "começa na página", inicios[ano])
-for ano in (2021, 2022, 2023, 2024):
-    fim = inicios.get(ano + 1, ULTIMA + 1)
-    p("PAGINAS DO ANO", ano, fim - inicios[ano], "≈ linhas", (fim - inicios[ano]) * 15)
-
-# soma do ano 2024 numa amostra: as primeiras 30 páginas do ano (para comparar com o .zip, que tem 11732 empresas)
-for par in (6, 12, 20):
-    t = time.time()
-    with ThreadPoolExecutor(par) as pool:
-        res = list(pool.map(pagina, range(ULTIMA - 200 - par * 2, ULTIMA - 200)))
-    s = time.time() - t
-    p("PARALELO", par, "páginas", len(res), "ok", sum(r is not None for r in res), "em", round(s, 1), "s =>",
-      round(len(res) / s * 60), "páginas/min")
+for ano in (2023, 2024):
+    r = _session.get(ZIP.format(ano=ano), headers={"User-Agent": NAV, "Accept": "application/zip,*/*"}, timeout=300)
+    p("ZIP", ano, r.status_code, len(r.content), r.headers.get("last-modified"))
+    z = zipfile.ZipFile(io.BytesIO(r.content))
+    p("  arquivos", z.namelist())
+    nome = next(n for n in z.namelist() if n.lower().endswith(".csv") and "benefici" not in n.lower()
+                and not any(x in n.lower() for x in ("habilitad", "imune", "isent")))
+    rows = list(csv.DictReader(io.TextIOWrapper(z.open(nome), encoding="latin-1", newline=""), delimiter=";"))
+    p("  colunas", list(rows[0].keys()))
+    col_v = next(c for c in rows[0] if "valor" in c.lower())
+    col_c = next(c for c in rows[0] if "cnpj" in c.lower())
+    total = sum(float(x[col_v].replace(".", "").replace(",", ".") or 0) for x in rows)
+    p("  ZIP linhas", len(rows), "total", round(total, 2))
+    n_api = linhas_api_do_ano(ano)
+    p("  API linhas (pelas páginas)", n_api)
+    # amostra: 10 páginas do meio do ano na API, cada linha procurada no .zip pelo CNPJ e valor
+    idx = {}
+    for x in rows:
+        idx.setdefault(digits(x[col_c]).zfill(14), set()).add(round(float(x[col_v].replace(".", "").replace(",", ".") or 0), 2))
+    achadas = faltam = 0
+    random.seed(1)
+    for pg in random.sample(range(INICIO[ano] + 1, INICIO[ano + 1]), 10):
+        for x in pagina(pg) or []:
+            if round(float(x["valorRenunciado"]), 2) in idx.get(digits(str(x["cnpj"])).zfill(14), set()):
+                achadas += 1
+            else:
+                faltam += 1
+                if faltam <= 3:
+                    p("    na API e não no zip:", json.dumps(x, ensure_ascii=False)[:300])
+    p("  AMOSTRA", ano, "linhas da API achadas no zip:", achadas, "não achadas:", faltam)
