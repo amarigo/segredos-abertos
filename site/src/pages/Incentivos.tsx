@@ -15,7 +15,7 @@ type Tipo = "empresa" | "entidade" | "publico" | "outro" | "sem_dados";
 interface Dono { donos: string[]; n_outras: number; pagina: boolean }
 interface AutorCurto { nome: string; politico: string | null; partido: string; valor: number }
 interface Indice {
-  anos: number[]; anos_renuncia: { ano: number; total: number; parcial: boolean }[];
+  anos: number[]; anos_renuncia: { ano: number; total: number; parcial: boolean; publicado_em?: string }[];
   fontes: Record<"pagamentos" | "pagamentos_api" | "renuncias" | "emendas" | "receita" | "pessoa_juridica", string>; ate_emendas: string;
 }
 interface Pagamentos {
@@ -57,6 +57,14 @@ const pctDe = (v: number, t: number) => (t ? `${((v / t) * 100).toLocaleString("
 
 type Fonte = "pagamentos" | "renuncia" | "emendas";
 const FONTE_NOME: Record<Fonte, string> = { pagamentos: "Recebeu do governo", renuncia: "Deixou de pagar imposto", emendas: "Recebeu de emendas" };
+
+// "2026 ainda não foi publicado" ou "2025 e 2026 ainda não foram publicados": todos os anos depois do último que existe
+function naoPublicados(ultimo: number | undefined, anoSite: number): string {
+  const de = ultimo ? Math.min(ultimo + 1, anoSite) : anoSite;
+  const anos = Array.from({ length: anoSite - de + 1 }, (_, i) => de + i);
+  if (anos.length <= 1) return `${anoSite} ainda não foi publicado`;
+  return `${anos.slice(0, -1).join(", ")} e ${anos[anos.length - 1]} ainda não foram publicados`;
+}
 
 export default function Incentivos() {
   const { ano: anoSite } = useAno();
@@ -104,9 +112,9 @@ export default function Incentivos() {
             <span className="value">{ren ? reaisCurto(ren.total) : "—"}</span>
             {anosR.length > 1 && <Faisca serie={anosR.filter((a) => !a.parcial).map((a) => [String(a.ano), a.total])} marcado={String(anoR)} />}
             <span className="hint">{ren ? `${plural(ren.n, "empresa", "empresas")} com benefício fiscal. ` : ""}{anosR.length
-              ? <>A Receita publica com atraso. {String(anoR) === anoSite ? null
+              ? <>A Receita publica com atraso{ultimoR?.publicado_em ? <>; a última publicação oficial é de {dataBR(ultimoR.publicado_em)}</> : null}. {String(anoR) === anoSite ? null
                 : ultimoR && String(ultimoR.ano) === anoSite ? <>{anoSite} saiu incompleto; mostramos {anoR}, o último ano completo.</>
-                : <>{anoSite} ainda não foi publicado{ultimoR && ultimoR.parcial && ultimoR.ano !== anoR ? <> e {ultimoR.ano} saiu incompleto</> : null}; mostramos {anoR}, o {ultimoR?.ano === anoR ? "ano mais recente" : "último ano completo"}.</>}</>
+                : <>{naoPublicados(ultimoR?.ano, Number(anoSite))}{ultimoR && ultimoR.parcial && ultimoR.ano !== anoR ? <> e {ultimoR.ano} saiu incompleto</> : null}; mostramos {anoR}, o {ultimoR?.ano === anoR ? "ano mais recente" : "último ano completo"}.</>}</>
               : "O arquivo ainda não foi baixado do Portal da Transparência"}</span></div>
           <div className="card stat kpi"><span className="label">Emendas pagas a empresas e entidades</span>
             <span className={`ano-tag ${ano === anoSite ? "" : "outro"}`}>{ano}</span>

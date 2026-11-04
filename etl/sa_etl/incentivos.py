@@ -295,7 +295,8 @@ def gravar(saida: Path, anos: list[int], geral: dict | None, ren: dict | None, p
                 e["tipo"] = rec.tipo(e["cnpj"])
                 e["donos"] = rec.donos(e["cnpj"])
         write_json(pasta / f"renuncia-{ano}.json", {"fonte": renuncias.FONTE, "url": renuncias.URLS[0].format(ano=ano), **r})
-        idx["anos_renuncia"].append({"ano": ano, "total": r["total"], "parcial": r.get("parcial", False)})
+        idx["anos_renuncia"].append({"ano": ano, "total": r["total"], "parcial": r.get("parcial", False),
+                                     "publicado_em": r.get("publicado_em") or ""})
     write_json(pasta / "indice.json", idx)
     log.info("Incentivos: anos %s, renúncia %s", idx["anos"], [x["ano"] for x in idx["anos_renuncia"]])
     return idx

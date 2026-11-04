@@ -197,6 +197,26 @@ def test_portal_fora_do_ar_nao_derruba_o_site(coleta):
     assert coleta.validar(saida).erros == []
 
 
+def test_portal_que_recusa_robos_nao_dispara_nova_coleta(coleta):
+    """Desde 29/10/2026 o Portal recusa os arquivos diários a robôs (HTTP 405). O aviso fica no site, mas não vai
+    para "avisos_tentar": tentar-de-novo.yml rodava a coleta inteira a cada 2 horas sem nunca resolver."""
+    gov = coleta.usar(FakeGov())
+    gov.falhar("/download-de-dados/despesas/", "405")
+    saida = coleta.rodar()
+    meta = coleta.ler(saida, "meta.json")
+    aviso = next(a for a in meta["avisos"] if a.startswith("Pagamentos a empresas"))
+    assert "HTTP 405, CloudFront" in aviso and "API" in aviso
+    assert aviso not in meta["avisos_tentar"]
+
+
+def test_portal_fora_do_ar_dispara_nova_coleta(coleta):
+    """Falha passageira (HTTP 500): outra coleta daqui a 2 horas pode resolver."""
+    gov = coleta.usar(FakeGov())
+    gov.falhar("/download-de-dados/despesas/", "500")
+    meta = coleta.ler(coleta.rodar(), "meta.json")
+    assert any(a.startswith("Pagamentos a empresas") for a in meta["avisos_tentar"])
+
+
 def test_resumo_geral_ignora_arquivo_com_defeito(tmp_path):
     bom = tmp_path / "20250102-geral-v1.json.gz"
     bom.write_bytes(gzip.compress(json.dumps({"f": {"12345678000195": ["X", {"contrato": 10}, 1, {"0": 10}]}, "o": ["M"]}).encode()))
@@ -204,6 +224,15 @@ def test_resumo_geral_ignora_arquivo_com_defeito(tmp_path):
     ruim.write_bytes(b"lixo")
     r = pagamentos.resumir_geral([bom, ruim], [2025], hoje=dt.date(2025, 1, 4))
     assert r["anos"][2025]["12345678000195"]["orgaos"] == {"M": 10} and r["cobertura"][2025]["dias"] == 1
+
+
+def test_renuncia_diz_quando_a_cgu_publicou_o_arquivo(coleta):
+    """O site mostra a data da publicação oficial: sem ela, um ano antigo parecia coleta parada."""
+    coleta.usar(FakeGov())
+    saida = coleta.rodar()
+    idx = coleta.ler(saida, "incentivos/indice.json")
+    assert {x["publicado_em"] for x in idx["anos_renuncia"]} == {"2024-12-05"}
+    assert coleta.ler(saida, "incentivos/renuncia-2024.json")["publicado_em"] == "2024-12-05"
 
 
 def test_renuncia_baixa_com_cara_de_navegador(coleta):
@@ -303,13 +332,25 @@ def test_api_relida_todo_mes_sem_tirar_os_dados_do_site(tmp_path, monkeypatch):
     assert sorted(api.anos(4)) == [2024, 2025]
 
 
-def test_com_chave_a_api_vem_primeiro(coleta, monkeypatch):
-    """Regra do projeto: a API oficial é a primeira opção; os arquivos só entram se ela não der."""
+def test_com_chave_os_arquivos_vem_primeiro_e_a_api_so_confere_o_ano(coleta, monkeypatch):
+    """A API tem as mesmas linhas dos arquivos, mas leva horas (conferido em 04/11/2026; veja renuncias.coletar).
+    Com os arquivos em dia, a API só responde qual é o ano mais novo dela, em poucos pedidos."""
     monkeypatch.setenv("PORTAL_TRANSPARENCIA_CHAVE", "chave-de-teste")
     gov = coleta.usar(FakeGov())
     saida = coleta.rodar()
-    assert not any("RenunciasFiscais.zip" in c or "/download-de-dados/renuncias/" in c for c in gov.chamadas)
-    assert coleta.ler(saida, "incentivos/renuncia-2024.json")["url"] == renuncias.CONSULTA
+    assert len([c for c in gov.chamadas if "/renuncias-valor" in c]) < 15
+    r = coleta.ler(saida, "incentivos/renuncia-2024.json")
+    assert r["url"] == renuncias.URLS[0].format(ano=2024) and r["publicado_em"] == "2024-12-05"
+
+
+def test_api_entra_quando_tem_ano_mais_novo_que_os_arquivos(coleta, monkeypatch):
+    monkeypatch.setenv("PORTAL_TRANSPARENCIA_CHAVE", "chave-de-teste")
+    gov = coleta.usar(FakeGov())
+    gov.falhar("2025_RenunciasFiscais.zip", "404").falhar("/download-de-dados/renuncias/2025", "404")
+    saida = coleta.rodar()
+    idx = coleta.ler(saida, "incentivos/indice.json")
+    assert [x["ano"] for x in idx["anos_renuncia"]] == [2024, 2025]
+    assert coleta.ler(saida, "incentivos/renuncia-2025.json")["url"] == renuncias.CONSULTA
 
 
 def test_renuncia_tem_recorte_de_minas():
@@ -323,3 +364,69 @@ def test_renuncia_tem_recorte_de_minas():
     assert mg["total"] == 400 and mg["n"] == 2
     assert [e["nome"] for e in mg["top"]] == ["Mineira Ltda", "Outra Mineira Sa"], "só empresas de MG, da maior para a menor"
     assert mg["por_municipio"][0] == ["Itajuba", 300, 1]
+
+
+def _api_ordenada(n_paginas: int = 100, por_ano: int = 10, repetir: int | None = None):
+    """Como a API real: linhas em ordem de ano (2015 nas primeiras páginas, o ano mais novo nas últimas)."""
+    pedidas: list[int] = []
+
+    def pedir(self, filtro, pagina):
+        pedidas.append(pagina)
+        if pagina > n_paginas:
+            return [], ""
+        ano = 2015 + (pagina - 1) // por_ano
+        linhas = [{"ano": ano, "cnpj": f"{pagina:08d}{i:04d}95", "razaoSocial": "EMPRESA", "tipoRenuncia": "X",
+                   "descricaoBeneficioFiscal": "Sudene", "tributo": "IRPJ", "valorRenunciado": 10.0,
+                   "uf": "MINAS GERAIS", "municipio": "BELO HORIZONTE"} for i in range(15)]
+        if repetir and pagina == repetir:  # a página seguinte "andou" e repete a última linha desta
+            linhas[0] = {**linhas[0], "cnpj": f"{pagina + 1:08d}{14:04d}95"}
+        return linhas, ""
+    return pedir, pedidas
+
+
+def test_api_le_do_fim_e_para_nos_anos_que_o_site_mostra(tmp_path, monkeypatch):
+    """A API não filtra por ano e põe os anos mais novos no fim: a leitura começa na última página e para quando
+    chega a um ano mais velho que os mostrados. Antes lia da página 1 (2015) e nunca chegava aos anos do site."""
+    pedir, pedidas = _api_ordenada()
+    monkeypatch.setattr(renuncias.ApiRenuncia, "_pedir", pedir)
+    monkeypatch.setattr(renuncias.time, "sleep", lambda s: None)
+    api = renuncias.ApiRenuncia(tmp_path, "chave", n_anos=2)
+    assert api.coletar(5)
+    # só a busca da última página (dobrando o passo e dividindo ao meio) passa pelas páginas de 2015 a 2021
+    assert len([p for p in pedidas if p <= 60]) <= 8 and len(pedidas) < 45
+    anos = api.anos(2)
+    assert sorted(anos) == [2023, 2024]
+    assert anos[2024][0]["n"] == 150 and anos[2023][0]["total"] == 1500.0  # 10 páginas de 15 linhas de R$ 10 cada
+    assert anos[2024][0]["por_uf"][0][0] == "MG"  # a API manda o nome do estado por extenso
+
+    # Um mês depois: a última página é achada em poucos pedidos, a partir da leitura anterior
+    est = tmp_path / "api" / "estado.json"
+    e = json.loads(est.read_text())
+    e["fim_em"] -= 40 * 86400
+    est.write_text(json.dumps(e))
+    pedidas.clear()
+    assert api.coletar(5)
+    assert pedidas[:2] == [100, 101]
+
+
+def test_linha_repetida_entre_paginas_conta_uma_vez(tmp_path, monkeypatch):
+    """A leitura leva dias; se a Receita acrescenta linhas, as páginas andam e uma linha pode vir duas vezes."""
+    pedir, _ = _api_ordenada(repetir=95)
+    monkeypatch.setattr(renuncias.ApiRenuncia, "_pedir", pedir)
+    monkeypatch.setattr(renuncias.time, "sleep", lambda s: None)
+    api = renuncias.ApiRenuncia(tmp_path, "chave", n_anos=1)
+    assert api.coletar(5)
+    assert api.anos(1)[2024][0]["n"] == 149
+
+
+def test_leitura_antiga_da_api_sai_do_cache(tmp_path, monkeypatch):
+    """A leitura do jeito antigo (da página 1 em diante) ocupava o cache com 26 mil páginas de 2015 a 2020."""
+    monkeypatch.setenv("PORTAL_TRANSPARENCIA_CHAVE", "chave-de-teste")
+    from fakegov import instalar
+    instalar(monkeypatch, FakeGov())
+    lendo = tmp_path / "api-lendo"
+    lendo.mkdir()
+    (lendo / "estado.json").write_text(json.dumps({"filtros": [{}], "i": 0, "pagina": 26573, "fim": False, "paginas": 26572}))
+    (lendo / "p000000.json.gz").write_bytes(b"x")
+    r = renuncias.coletar(tmp_path, 2026)
+    assert sorted(r["anos"]) == [2024, 2025] and not (lendo / "p000000.json.gz").exists()

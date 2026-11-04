@@ -36,9 +36,13 @@ jobs:
             resumo "Não consegui ler o meta.json publicado; fica para a próxima tentativa."
             exit 0
           fi
-          avisos=$(jq -r '(.avisos // [])[]' <<< "$meta")
+          # Só os avisos que outra coleta pode resolver ("avisos_tentar"). Os outros (por exemplo, arquivos que o
+          # Portal recusa a robôs, já lidos por outro caminho) ficam no site, mas não disparam coleta nova.
+          avisos=$(jq -r '(.avisos_tentar // .avisos // [])[]' <<< "$meta")
           if [ -z "$avisos" ]; then
-            resumo "A última coleta publicada está completa ($(jq -r '.atualizado_em // "?"' <<< "$meta")). Nada a fazer."
+            resumo "A última coleta publicada não tem nada que uma nova tentativa resolva ($(jq -r '.atualizado_em // "?"' <<< "$meta")). Nada a fazer."
+            fixos=$(jq -r '(.avisos // []) - (.avisos_tentar // .avisos // []) | .[]' <<< "$meta")
+            [ -z "$fixos" ] || { resumo "Avisos que esperam outro caminho (não adianta coletar de novo):"; while IFS= read -r a; do resumo "- $a"; done <<< "$fixos"; }
             exit 0
           fi
 

@@ -476,7 +476,8 @@ def montar(dados: dict, saida: Path, anos: list[int]) -> None:
     write_json(saida / "meta.json", {
         "mesmo_periodo": periodo,
         "empresas_por_ano": totais_empresas(lista_emp, anos),
-        "atualizado_em": hoje, "anos": anos, "avisos": list(util.AVISOS), "grupos": GRUPOS, "medias": medias,
+        "atualizado_em": hoje, "anos": anos, "avisos": list(util.AVISOS),
+        "avisos_tentar": util.avisos_para_tentar(), "grupos": GRUPOS, "medias": medias,
         "fora_da_lista": dados.get("fora_da_lista") or {},
         "contagens": {"politicos": len(politicos), "despesas": len(despesas), "votacoes": len(votacoes),
                       "empresas_com_socios": len(emps)},
@@ -869,7 +870,7 @@ def coletar_incentivos(anos: list[int], cache: Path, minutos: float, max_dias: i
         atual = geral["cobertura"].get(max(anos)) or {}
         if atual.get("origem") == "api" and atual.get("ate") and (dt.date.today() - dt.date.fromisoformat(atual["ate"])).days <= 40:
             # a API cobre o ano atual: a falha dos arquivos diários não deixa o site incompleto
-            util.AVISOS[:] = [x for x in util.AVISOS if not x.startswith("Pagamentos a empresas: o Portal da Transparência falhou")]
+            util.AVISOS[:] = [x for x in util.AVISOS if not x.startswith("Pagamentos a empresas: o Portal da Transparência")]
         return geral
     except Exception:  # noqa: BLE001
         log.exception("Incentivos: erro nos pagamentos a empresas")
