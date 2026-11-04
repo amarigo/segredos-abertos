@@ -333,3 +333,56 @@ test("caos: se os dados das cidades não carregarem, avisa e os testes continuam
   await expect(page.locator("#m-card")).toContainText("Não foi possível carregar");
   await expect(page.locator("#m-tests .test")).toHaveCount(5);
 });
+
+// ---------- Quem assume em 2027 (eleitos/) ----------
+// Os números esperados vêm do eleitos.json gerado no mesmo build (conferido com as vagas e o arquivo de candidatos do TSE).
+const temEleitos = (() => { try { dados("eleitos/dados/eleitos.json"); return true; } catch { return false; } })();
+type Eleito = { c: string; uf: string; nm: string; p: string; re: string; v: number; hoje?: { id: string } };
+
+test("página dos eleitos: o número de eleitos de cada cargo é o do arquivo conferido", async ({ page }) => {
+  test.skip(!temEleitos, "eleitos ainda não baixados do TSE");
+  const D = dados("eleitos/dados/eleitos.json");
+  const el: Eleito[] = D.eleitos;
+  const erros = semErros(page);
+  await page.route("**/data/*.json", (r) => r.fulfill({ json: [] })); // sem o site do Brasil: a página continua
+  await page.goto("./eleitos/");
+  await expect(page.locator("h1")).toHaveText("Quem assume em 2027");
+  for (const [c, nome] of [["6", "Deputados federais"], ["5", "Senadores"], ["3", "Governadores"]]) {
+    await page.locator("#f-cargo button", { hasText: nome }).click();
+    await expect(page.locator("#contagem")).toHaveText(`${fmt(el.filter((x) => x.c === c).length)} eleitos`);
+  }
+  // um estado, um partido e só os reeleitos
+  await page.locator("#f-cargo button", { hasText: "Deputados federais" }).click();
+  await page.selectOption("#f-uf", "MG");
+  const mg = el.filter((x) => x.c === "6" && x.uf === "MG");
+  await expect(page.locator("#contagem")).toHaveText(`${fmt(mg.length)} eleitos em Minas Gerais`);
+  await page.locator("#f-re button", { hasText: "Só reeleitos" }).click();
+  const re = mg.filter((x) => x.re === "S");
+  await expect(page.locator("#lista > li")).toHaveCount(Math.min(re.length, 60));
+  await expect(page.locator("#lista .tag.nv")).toHaveCount(0);
+  // o mais votado aparece primeiro, com os votos do TSE
+  if (re.length) await expect(page.locator("#lista > li").first()).toContainText(fmt(re[0].v));
+  expect(erros).toEqual([]);
+});
+
+test("página dos eleitos: quem já tem mandato liga aos gastos e votos do site do Brasil", async ({ page }) => {
+  test.skip(!temEleitos, "eleitos ainda não baixados do TSE");
+  const el: Eleito[] = dados("eleitos/dados/eleitos.json").eleitos;
+  const x = el.find((e) => e.c === "6" && e.hoje);
+  test.skip(!x, "nenhum eleito com mandato hoje");
+  await page.route("**/data/politicos.json", (r) => r.fulfill({ json: [{ id: x!.hoje!.id, total: 123456, rotulo: "Centro" }] }));
+  await page.route("**/data/partidos.json", (r) => r.fulfill({ json: [{ casa: "camara", sigla: x!.p, posicao: 0 }] }));
+  await page.goto("./eleitos/");
+  await page.fill("#f-q", x!.nm);
+  const card = page.locator("#lista > li").first();
+  await expect(card).toContainText("R$ 123.456");
+  await expect(card.getByRole("link", { name: "Gastos e votos de hoje" })).toHaveAttribute("href", `../../#/p/${x!.hoje!.id}`);
+  await expect(page.locator("#lados .lbar")).toBeVisible();
+});
+
+test("página principal liga à página dos eleitos", async ({ page }) => {
+  await page.goto("./");
+  await page.getByRole("link", { name: /Quem assume em 2027/ }).click();
+  await expect(page).toHaveURL(/\/eleitos\/$/);
+  await expect(page.locator("h1")).toHaveText("Quem assume em 2027");
+});

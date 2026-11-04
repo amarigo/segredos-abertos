@@ -11,8 +11,8 @@ De onde vem cada dado (API primeiro):
    (CKAN, dadosabertos.tse.jus.br/api/3): "Candidatos" (situação final de cada candidato e se ele concorreu à
    reeleição, campo ST_REELEICAO) e "Vagas" (quantas cadeiras cada cargo tem em cada estado). Não há API com esses
    campos: o portal só publica os arquivos CSV dentro de ZIP.
-3. Quem já tem mandato hoje: API da Câmara (/deputados, /deputados/{id}) e API do Senado (/senador/lista/atual,
-   /senador/{codigo}). Liga o eleito ao que o site já mostra de gastos e votos desta legislatura.
+3. Quem já tem mandato hoje: API da Câmara (/deputados?idLegislatura=N; o nome civil e o nascimento vêm do arquivo
+   oficial de deputados da Câmara, veja baixar_camara) e API do Senado (/senador/lista/atual, /senador/{codigo}). Liga o eleito ao que o site já mostra de gastos e votos desta legislatura.
 
 Nada aqui guarda CPF, e-mail ou título de eleitor: do arquivo de candidatos ficam só as colunas abaixo (COLUNAS).
 """
@@ -51,6 +51,7 @@ RESERVA = {ARQ_CAND: 'https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_ca
 PAGINA_CAND = 'https://dadosabertos.tse.jus.br/dataset/candidatos-2026'
 
 CAMARA = 'https://dadosabertos.camara.leg.br/api/v2'
+ARQ_DEPUTADOS = 'https://dadosabertos.camara.leg.br/arquivos/deputados/json/deputados.json'
 SENADO = 'https://legis.senado.leg.br/dadosabertos'
 PERFIL_CAMARA = 'https://www.camara.leg.br/deputados/{id}'
 PERFIL_SENADO = 'https://www25.senado.leg.br/web/senadores/senador/-/perfil/{id}'
@@ -171,11 +172,17 @@ def baixar_camara(pasta, legislaturas=(57, 58)):
                 vistos.setdefault(str(x['id']), {'id': str(x['id']), 'nome': x['nome'], 'uf': x['siglaUf'],
                                                  'partido': x['siglaPartido'], 'leg': [] })['leg'].append(leg)
             url = next((ln['href'] for ln in d.get('links', []) if ln.get('rel') == 'next'), None)
+    # Nome civil e nascimento: a API só dá um deputado por consulta (/deputados/{id}, mais de 600 consultas) e respondeu
+    # 504 no meio da lista (04/11/2026). O arquivo oficial de deputados da Câmara traz os dois campos de todos de uma
+    # vez; a API fica para quem faltar no arquivo.
+    try:
+        arq = {str(x['uri']).rsplit('/', 1)[-1]: x for x in _get(ARQ_DEPUTADOS, timeout=180, tentativas=4).json()['dados']}
+    except (requests.RequestException, KeyError, ValueError):
+        arq = {}
     for i, dep in vistos.items():
-        det = _get(f'{CAMARA}/deputados/{i}', headers={'Accept': 'application/json'}).json()['dados']
+        det = arq.get(i) or _get(f'{CAMARA}/deputados/{i}', headers={'Accept': 'application/json'}).json()['dados']
         dep['nome_civil'] = det.get('nomeCivil') or ''
         dep['nascimento'] = det.get('dataNascimento') or ''
-        dep['situacao'] = (det.get('ultimoStatus') or {}).get('situacao') or ''
     lista = sorted(vistos.values(), key=lambda x: x['id'])
     with open(os.path.join(pasta, 'camara.json'), 'w', encoding='utf-8') as f:
         json.dump(lista, f, ensure_ascii=False, indent=0)
