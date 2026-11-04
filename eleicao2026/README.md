@@ -83,7 +83,11 @@ dados/eleitos/coleta.json   quando foi baixado e de onde
    eleitos de cada cargo em cada estado tem que ser igual ao de vagas, cada eleito tem que constar como eleito no
    arquivo de candidatos (e vice-versa) e a apuração tem que estar em 100%. Se algo não bater, a página não mostra
    nenhum número, só diz que os eleitos estão em conferência; o resto do site da eleição continua.
-3. "Reeleito" é o campo `ST_REELEICAO` do registro da candidatura no TSE (já tinha o cargo e concorreu de novo).
+3. "Reeleito": primeiro o campo `ST_REELEICAO` do registro da candidatura no TSE. Em 2026 o TSE publicou esse campo
+   vazio (`#NE`, no arquivo complementar; conferido em 04/11/2026). Por isso, para deputado federal e senador, vale quem
+   está no exercício do mesmo cargo hoje, segundo as APIs da Câmara e do Senado. Para governador e deputado estadual
+   não há fonte oficial única de quem está no cargo hoje: a página não marca reeleito nem novo. Se o TSE preencher o
+   campo, ele passa a valer sozinho na próxima coleta.
 4. Quem já é deputado federal ou senador é achado nas APIs da Câmara e do Senado pelo dia de nascimento e pelo nome
    civil. O eleito ganha o link para o perfil oficial e para os gastos e votos que o Segredos Abertos já mostra.
 5. A página também lê, no navegador, o `politicos.json` e o `partidos.json` do site do Brasil: a cota usada neste
@@ -138,3 +142,7 @@ No 1º turno, o TSE conta como nulo o voto no número 28 (candidatura que não v
 | Gráfico da noite diferente do oficial | `test_noite`, `test_ponta_a_ponta::test_site_completo`, e2e confere que a última parcial é igual ao total oficial | a página mostra a conferência e as seções sem hora |
 | Boletim lido errado | `test_boletim` (boletim de urna verdadeiro do TSE) | soma tem que bater com o oficial |
 | Página quebrada ou número diferente do oficial na tela | `site/e2e/eleicao2026.spec.ts` (computador e celular, com caos) | testes no navegador antes de publicar |
+| Eleito faltando, sobrando ou trocado | `test_eleitos::test_falta_um_eleito_bloqueia`, `test_falta_um_estado_bloqueia`, `test_apuracao_incompleta_bloqueia` | número de eleitos = vagas do TSE e cada eleito consta como eleito no arquivo de candidatos; se não, a página dos eleitos não mostra números |
+| Ligar o eleito à pessoa errada (homônimo, irmão gêmeo) | `test_eleitos::test_mesma_pessoa` | mesmo dia de nascimento e mesmo primeiro nome; com dúvida (mais de uma pessoa), não liga |
+| Marcar reeleito sem fonte | `test_eleitos::test_reeleicao_sem_o_campo_do_tse_usa_camara_e_senado` | sem o campo do TSE, só deputado federal e senador são marcados, pelo exercício do cargo hoje |
+| Página dos eleitos quebrada ou com número diferente do arquivo | `site/e2e/eleicao2026.spec.ts` (eleitos, computador e celular, sem os dados do site do Brasil) | testes no navegador antes de publicar |

@@ -226,7 +226,7 @@ function iniciar(){
   resumo();cargoBtns();opcoes();
   const sen=D.eleitos.filter(x=>x.c==="5").length;
   $("sen-n").textContent=fmt(sen);$("sen-c").textContent=fmt(D.senado_continua.length);
-  $("sen-lista").innerHTML=D.senado_continua.map(s=>`<li>${ext(s.url,esc(s.nm))} (${esc(s.p)}-${esc(s.uf)})${s.part&&s.part!=="Titular"?` · ${esc(s.part)}`:""}</li>`).join("");
+  $("sen-lista").innerHTML=D.senado_continua.map(s=>`<li>${ext(s.url,esc(s.nm))} (${esc(s.p)}-${esc(s.uf)})${s.part&&s.part!=="Titular"?` · ${esc(s.part)}`:""}${s.eleito?` · <b>eleito ${esc(s.eleito.toLowerCase())} em 2026</b>: se tomar posse, o suplente fica com a cadeira`:""}</li>`).join("");
   const F=D.fontes||{};
   $("fontes").innerHTML=[
     F.resultados&&`<li>Resultado de cada cargo e estado: ${ext(F.resultados.url,"site de resultados do TSE")} (arquivos JSON oficiais).</li>`,

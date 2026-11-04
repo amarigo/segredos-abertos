@@ -457,6 +457,11 @@ def montar_eleitos(pasta):
     continuam = [{'id': 'sen-' + s['id'], 'nm': s['nome'], 'p': s['partido'], 'uf': s['uf'], 'fim': s['fim_mandato'],
                   'part': s['participacao'], 'url': PERFIL_SENADO.format(id=s['id'])}
                  for s in senado if s.get('fim_mandato', '')[:4] == '2031']
+    # senador com mandato até 2031 eleito agora para outro cargo (governador, por exemplo): o suplente assume a cadeira
+    outro = {x['hoje']['id']: CARGOS[x['c']] for x in lista if x.get('hoje', {}).get('casa') == 'senado' and x['c'] != '5'}
+    for s in continuam:
+        if s['id'] in outro:
+            s['eleito'] = outro[s['id']]
     # quem tentou a reeleição (ST_REELEICAO = S) e não se elegeu, por cargo: só se o TSE preencher o campo
     sq_eleitos = {x['sq'] for x in lista}
     tentou = Counter(r['CD_CARGO'] for r in {r['SQ_CANDIDATO']: r for r in cand_csv}.values()
