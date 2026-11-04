@@ -29,8 +29,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Iterator
 
-from .emendas import SIGLAS, achar_colunas, bonito
-from .util import SiteForaDoAr, _session, avisar, chave_portal, data_do_arquivo, digits, to_float
+from .emendas import SIGLAS, UFS, achar_colunas, bonito
+from .util import SiteForaDoAr, _session, avisar, chave_portal, data_do_arquivo, digits, norm_name, to_float
 
 log = logging.getLogger("sa_etl.renuncias")
 
@@ -308,7 +308,7 @@ def resumir(ano: int, ben, det, n_top: int = N_TOP) -> tuple[dict, dict[str, dic
 API = "https://api.portaldatransparencia.gov.br/api-de-dados/renuncias-valor"
 API_TESTE = "https://api.portaldatransparencia.gov.br/api-de-dados/orgaos-siafi"  # consulta simples, para testar a chave
 API_CADASTRO = "https://portaldatransparencia.gov.br/api-de-dados/cadastrar-email"
-API_EM_PARALELO = 12  # pedidos ao mesmo tempo (a API leva de 4 a 14 segundos por página)
+API_EM_PARALELO = 6  # pedidos ao mesmo tempo. Mais não ajuda: em 04/11/2026, com 6, 12 ou 20, a API deu 41 a 49 páginas por minuto
 API_POR_MINUTO = 300  # o limite do Portal é 400 por minuto (700 de madrugada); acima disso a chave fica suspensa por 8 horas
 API_REFAZER_DIAS = 30  # a Receita atualiza a renúncia uma ou duas vezes por ano; relemos tudo uma vez por mês
 # Como a leitura anda. A consulta não aceita filtro de ano (só UF, código IBGE e CNPJ; conferido na documentação
@@ -576,6 +576,36 @@ class ApiRenuncia:
         self.motivo = ""
         return True
 
+    def limpar_leitura_antiga(self) -> None:
+        """Apaga do cache a leitura do jeito antigo (da página 1 em diante; em 11/2026, 26 mil páginas de 2015 a 2020)."""
+        try:
+            versao = json.loads(self.estado_f.read_text()).get("versao")
+        except (OSError, ValueError):
+            return
+        if versao != VERSAO_LEITURA:
+            shutil.rmtree(self.lendo, ignore_errors=True)
+            self.lendo.mkdir(parents=True, exist_ok=True)
+            log.info("Renúncias (API): apagada a leitura antiga, que começava em 2015")
+
+    def ano_mais_novo(self, dias: float = 7) -> int | None:
+        """O ano mais novo que a API tem (o da última página), conferido uma vez por semana. Com a última página da
+        vez anterior como palpite, custa 2 pedidos. Serve para saber se a API já tem um ano que os arquivos não têm."""
+        f = self.pasta.parent / "api-fim.json"
+        try:
+            x = json.loads(f.read_text())
+        except (OSError, ValueError):
+            x = {}
+        if x.get("ano") and time.time() - x.get("em", 0) < dias * 86400:
+            return x["ano"]
+        n, linhas, motivo = self._ultima_pagina({}, int(x.get("pagina") or self._palpite(0)))
+        if n is None or not linhas:
+            log.info("Renúncias (API): não deu para ver o ano mais novo (%s)", motivo or "sem linhas")
+            return x.get("ano")
+        ano = max(_ano(r) for r in linhas)
+        f.write_text(json.dumps({"pagina": n, "ano": ano, "em": time.time()}))
+        log.info("Renúncias (API): última página %d, ano mais novo %d", n, ano)
+        return ano
+
     def anos(self, n_anos: int) -> dict[int, tuple[dict, dict]]:
         """Os resumos por ano, do mesmo jeito que os do arquivo .zip."""
         det_por_ano: dict[int, list[dict]] = defaultdict(list)
@@ -598,6 +628,8 @@ class ApiRenuncia:
                         return {}
                 g = {k: (r.get(c) or "").strip() if c else "" for k, c in col.items()}
                 g["valor"] = _valor_api(g["valor"])
+                if g["uf"] and g["uf"].upper() not in SIGLAS:  # a API real manda o nome ("RIO DE JANEIRO"), não a sigla
+                    g["uf"] = UFS.get(norm_name(g["uf"]), "")
                 a = digits(g["ano"])[:4]
                 if a:
                     det_por_ano[int(a)].append(g)
@@ -615,51 +647,61 @@ class ApiRenuncia:
         return out
 
 
-# Minutos de leitura da API por execução. A leitura completa tem dezenas de milhares de páginas (uns 5 segundos cada);
-# com 20 minutos ela levava semanas, e o site ficava com os arquivos de download, que param em 2024 (2025 dá HTTP 403).
-# Com 40 minutos ela termina na metade do tempo e a coleta ainda cabe folgada no limite de 120 minutos do workflow.
+# Minutos de leitura da API por execução, quando ela é usada (arquivos fora do ar, ou ano novo só na API). A API
+# responde umas 45 páginas por minuto: 40 minutos são umas 1.800 páginas, e os 4 anos do site são 22 mil.
 MINUTOS_API = 40
 
 
 def coletar(cache: Path, ano_atual: int, n_anos: int = N_ANOS, chave: str | None = None, minutos_api: float = MINUTOS_API) -> dict:
     """Os anos-calendário mais recentes que o Portal tiver. {"anos": {ano: resumo}, "empresas": {cnpj: {ano: {...}}}}
 
-    A API de dados do Portal vem primeiro (pede uma chave, cadastro grátis por e-mail). Enquanto a primeira leitura
-    pela API não termina, ou se ela falhar, usamos os arquivos de download."""
+    Por que os arquivos vêm antes da API (exceção à regra "API primeiro", conferida com dados reais em 04/11/2026):
+    a API renuncias-valor traz exatamente as mesmas linhas dos arquivos (2024: 43.292 linhas nos dois; 300 linhas
+    sorteadas da API, todas no .zip com o mesmo valor), mas não filtra por ano e responde umas 45 páginas de 15 linhas
+    por minuto, com qualquer número de pedidos em paralelo: os 4 anos do site são 22 mil páginas, umas 8 horas. O
+    .zip do ano tem 3 a 16 MB e baixa em segundos. A API fica de reserva: entra se os arquivos não vierem, ou se ela
+    tiver um ano mais novo que os arquivos (conferido uma vez por semana, em 2 pedidos)."""
     cache.mkdir(parents=True, exist_ok=True)
     anos: dict[int, dict] = {}
     _falhas.clear()
     por_emp: dict[str, dict] = defaultdict(dict)
     chave = chave if chave is not None else chave_portal()
+    for ano in range(ano_atual, ano_atual - n_anos - 3, -1):
+        if len(anos) >= n_anos:
+            break
+        z = baixar(ano, cache)
+        if not z:
+            continue
+        try:
+            r = ler_ano(z, ano)
+        except (zipfile.BadZipFile, OSError, ValueError) as e:
+            log.warning("Renúncias %d: arquivo com problema (%s)", ano, e)
+            r = None
+        if not r:
+            continue
+        anos[ano], emps = r
+        anos[ano]["publicado_em"] = publicado_em(ano, z)
+        for doc, x in emps.items():
+            por_emp[doc][ano] = x
     api_motivo = ""
     if chave:
         api = ApiRenuncia(cache, chave, n_anos)
-        if api.coletar(minutos_api):
-            for ano, (r, emps) in api.anos(n_anos).items():
-                anos[ano] = r
-                for doc, x in emps.items():
-                    por_emp[doc][ano] = x
-        if not anos:
-            api_motivo = f"API: {api.motivo}" if api.motivo else "API: leitura em andamento, continua na próxima execução"
-            log.info("Renúncias: %s; tentando os arquivos de download", api_motivo)
-    if not anos:
-        for ano in range(ano_atual, ano_atual - n_anos - 3, -1):
-            if len(anos) >= n_anos:
-                break
-            z = baixar(ano, cache)
-            if not z:
-                continue
-            try:
-                r = ler_ano(z, ano)
-            except (zipfile.BadZipFile, OSError, ValueError) as e:
-                log.warning("Renúncias %d: arquivo com problema (%s)", ano, e)
-                r = None
-            if not r:
-                continue
-            anos[ano], emps = r
-            anos[ano]["publicado_em"] = publicado_em(ano, z)
-            for doc, x in emps.items():
-                por_emp[doc][ano] = x
+        api.limpar_leitura_antiga()
+        novo = None if not anos else api.ano_mais_novo()
+        if not anos or (novo and novo > max(anos)):
+            if anos:
+                log.info("Renúncias: a API já tem %d e os arquivos param em %d; lendo pela API", novo, max(anos))
+            if api.coletar(minutos_api):
+                pela_api = api.anos(n_anos)
+                if pela_api and (not anos or max(pela_api) > max(anos)):
+                    anos, por_emp = {}, defaultdict(dict)
+                    for ano, (r, emps) in pela_api.items():
+                        anos[ano] = r
+                        for doc, x in emps.items():
+                            por_emp[doc][ano] = x
+            if not anos:
+                api_motivo = f"API: {api.motivo}" if api.motivo else "API: leitura em andamento, continua na próxima execução"
+                log.info("Renúncias: %s", api_motivo)
     if not anos:
         motivos = "; ".join([f"{a}: {m}" for a, m in sorted(_falhas.items(), reverse=True)[:3]] + ([api_motivo] if api_motivo else []))
         dica = "" if chave else f"; para usar a API, cadastre uma chave em {API_CADASTRO} e guarde no secret PORTAL_TRANSPARENCIA_CHAVE"

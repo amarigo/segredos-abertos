@@ -332,13 +332,25 @@ def test_api_relida_todo_mes_sem_tirar_os_dados_do_site(tmp_path, monkeypatch):
     assert sorted(api.anos(4)) == [2024, 2025]
 
 
-def test_com_chave_a_api_vem_primeiro(coleta, monkeypatch):
-    """Regra do projeto: a API oficial é a primeira opção; os arquivos só entram se ela não der."""
+def test_com_chave_os_arquivos_vem_primeiro_e_a_api_so_confere_o_ano(coleta, monkeypatch):
+    """A API tem as mesmas linhas dos arquivos, mas leva horas (conferido em 04/11/2026; veja renuncias.coletar).
+    Com os arquivos em dia, a API só responde qual é o ano mais novo dela, em poucos pedidos."""
     monkeypatch.setenv("PORTAL_TRANSPARENCIA_CHAVE", "chave-de-teste")
     gov = coleta.usar(FakeGov())
     saida = coleta.rodar()
-    assert not any("RenunciasFiscais.zip" in c or "/download-de-dados/renuncias/" in c for c in gov.chamadas)
-    assert coleta.ler(saida, "incentivos/renuncia-2024.json")["url"] == renuncias.CONSULTA
+    assert len([c for c in gov.chamadas if "/renuncias-valor" in c]) < 15
+    r = coleta.ler(saida, "incentivos/renuncia-2024.json")
+    assert r["url"] == renuncias.URLS[0].format(ano=2024) and r["publicado_em"] == "2024-12-05"
+
+
+def test_api_entra_quando_tem_ano_mais_novo_que_os_arquivos(coleta, monkeypatch):
+    monkeypatch.setenv("PORTAL_TRANSPARENCIA_CHAVE", "chave-de-teste")
+    gov = coleta.usar(FakeGov())
+    gov.falhar("2025_RenunciasFiscais.zip", "404").falhar("/download-de-dados/renuncias/2025", "404")
+    saida = coleta.rodar()
+    idx = coleta.ler(saida, "incentivos/indice.json")
+    assert [x["ano"] for x in idx["anos_renuncia"]] == [2024, 2025]
+    assert coleta.ler(saida, "incentivos/renuncia-2025.json")["url"] == renuncias.CONSULTA
 
 
 def test_renuncia_tem_recorte_de_minas():
@@ -364,7 +376,8 @@ def _api_ordenada(n_paginas: int = 100, por_ano: int = 10, repetir: int | None =
             return [], ""
         ano = 2015 + (pagina - 1) // por_ano
         linhas = [{"ano": ano, "cnpj": f"{pagina:08d}{i:04d}95", "razaoSocial": "EMPRESA", "tipoRenuncia": "X",
-                   "descricaoBeneficioFiscal": "Sudene", "tributo": "IRPJ", "valorRenunciado": 10.0} for i in range(15)]
+                   "descricaoBeneficioFiscal": "Sudene", "tributo": "IRPJ", "valorRenunciado": 10.0,
+                   "uf": "MINAS GERAIS", "municipio": "BELO HORIZONTE"} for i in range(15)]
         if repetir and pagina == repetir:  # a página seguinte "andou" e repete a última linha desta
             linhas[0] = {**linhas[0], "cnpj": f"{pagina + 1:08d}{14:04d}95"}
         return linhas, ""
@@ -384,6 +397,7 @@ def test_api_le_do_fim_e_para_nos_anos_que_o_site_mostra(tmp_path, monkeypatch):
     anos = api.anos(2)
     assert sorted(anos) == [2023, 2024]
     assert anos[2024][0]["n"] == 150 and anos[2023][0]["total"] == 1500.0  # 10 páginas de 15 linhas de R$ 10 cada
+    assert anos[2024][0]["por_uf"][0][0] == "MG"  # a API manda o nome do estado por extenso
 
     # Um mês depois: a última página é achada em poucos pedidos, a partir da leitura anterior
     est = tmp_path / "api" / "estado.json"
@@ -403,3 +417,16 @@ def test_linha_repetida_entre_paginas_conta_uma_vez(tmp_path, monkeypatch):
     api = renuncias.ApiRenuncia(tmp_path, "chave", n_anos=1)
     assert api.coletar(5)
     assert api.anos(1)[2024][0]["n"] == 149
+
+
+def test_leitura_antiga_da_api_sai_do_cache(tmp_path, monkeypatch):
+    """A leitura do jeito antigo (da página 1 em diante) ocupava o cache com 26 mil páginas de 2015 a 2020."""
+    monkeypatch.setenv("PORTAL_TRANSPARENCIA_CHAVE", "chave-de-teste")
+    from fakegov import instalar
+    instalar(monkeypatch, FakeGov())
+    lendo = tmp_path / "api-lendo"
+    lendo.mkdir()
+    (lendo / "estado.json").write_text(json.dumps({"filtros": [{}], "i": 0, "pagina": 26573, "fim": False, "paginas": 26572}))
+    (lendo / "p000000.json.gz").write_bytes(b"x")
+    r = renuncias.coletar(tmp_path, 2026)
+    assert sorted(r["anos"]) == [2024, 2025] and not (lendo / "p000000.json.gz").exists()
