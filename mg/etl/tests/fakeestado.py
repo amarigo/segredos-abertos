@@ -250,8 +250,14 @@ class FakeEstado:
                                    "Unidade Orçamentária Descrição": "FUNDO ESTADUAL DE SAÚDE", "Função Descrição": "SAÚDE",
                                    "Município ": cidade, "Estado": "MINAS GERAIS", "Descrição do Tipo de Beneficiário": "MUNICÍPIO",
                                    "Nome Beneficiário": f"MUNICIPIO DE {cidade}", "Número do CNPJ do Beneficiário": "1,80259E+13",
-                                   "Descrição da Indicação": "Custeio (SES) - compra de ambulância", "Valor Indicado": _reais(ind),
-                                   "Valor Pago Atualizado": _reais(pago), "Status": "Pago Total" if pago == ind else "Pago Parcial",
+                                   # "Não há": a ALMG escreve isso quando o deputado não descreveu a indicação
+                                   "Descrição da Indicação": "Não há" if c % 2 else "Custeio (SES) - compra de ambulância",
+                                   "Categoria": "CUSTEIO" if c % 2 else "INVESTIMENTO", "Especificação": "-",
+                                   "Tipo de Aplicação": "ATENÇÃO PRIMÁRIA À SAÚDE" if c % 2 else "AQUISIÇÃO DE VEÍCULO",
+                                   "Nome da Ação": "ATENÇÃO PRIMÁRIA À SAÚDE", "Grupo de Despesa Descrição":
+                                   "OUTRAS DESPESAS CORRENTES" if c % 2 else "INVESTIMENTOS", "Valor Indicado": _reais(ind),
+                                   "Valor Empenhado no Ano": _reais(ind), "Valor Pago Atualizado": _reais(pago),
+                                   "Status": "Pago Total" if pago == ind else "Pago Parcial",
                                    "Justificativa de Reprovação": "-", "Tipo de autoria": "Individual"})
                     num += 1
             # reprovada (não vira dinheiro), com justificativa de várias linhas dentro das aspas
@@ -266,6 +272,16 @@ class FakeEstado:
                                "Valor Indicado": "R$70.000,00", "Valor Pago Atualizado": "R$70.000,00", "Status": "Pago Total",
                                "Função Descrição": "SAÚDE", "Tipo de autoria": "Individual"})
                 num += 1
+            # bloco parlamentar, execução direta pelo órgão do estado (município ainda a definir)
+            linhas.append({"Ano da Indicação": ano, "Número da Indicação": num, "Status da Indicação": "APROVADO",
+                           "Tipo de Indicação": "EXECUÇÃO DIRETA", "Autor": "BLOCO MINAS EM FRENTE",
+                           "Unidade Orçamentária Descrição": "POLÍCIA MILITAR DO ESTADO DE MINAS GERAIS",
+                           "Nome da Ação": "ESTRUTURAÇÃO E MODERNIZAÇÃO", "Grupo de Despesa Descrição": "INVESTIMENTOS",
+                           "Município ": "A SER DEFINIDO PELO ÓRGÃO", "Nome Beneficiário": "A SER DEFINIDO PELO ÓRGÃO",
+                           "Descrição da Indicação": "Aquisição de armamento para o 39º BPM de Contagem.",
+                           "Valor Indicado": "R$300.000,00", "Valor Empenhado no Ano": "R$300.000,00",
+                           "Valor Pago Atualizado": "R$0,00", "Status": "Empenhado", "Tipo de autoria": "Bloco/Bancada"})
+            num += 1
             # autor que não está no arquivo de deputados (nome escrito de outro jeito)
             linhas.append({"Ano da Indicação": ano, "Número da Indicação": num, "Status da Indicação": "APROVADO", "Autor": "EX DEPUTADO ANTIGO",
                            "Município ": "PARAISÓPOLIS", "Nome Beneficiário": "ASSOCIACAO DE MORADORES", "Valor Indicado": "R$50.000,00",

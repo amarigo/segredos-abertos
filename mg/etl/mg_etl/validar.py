@@ -141,6 +141,19 @@ def conferir_estado(saida: Path, r: Resultado) -> None:
                 r.erro(f"Emendas estaduais {ano}: soma por deputado maior que o total")
             if e["pago"] > e["indicado"] * 1.5 + 1:
                 r.alerta(f"Emendas estaduais {ano}: pago bem maior que o indicado")
+            for chave in ("orgaos", "tipos", "areas", "grupos"):
+                if e.get(chave) and not _perto(sum(x["indicado"] for x in e[chave]), e["indicado"], len(e[chave])):
+                    r.erro(f"Emendas estaduais {ano}: soma por {chave} diferente do total")
+            lf = saida / "estado" / "emendas" / f"{ano}.json"
+            if lf.exists():
+                lista = _ler(lf, r) or {}
+                _sem_cpf(lista, f"Emendas estaduais {ano} (lista)", r)
+                campos = lista.get("campos") or []
+                if "indicado" in campos:
+                    i = campos.index("indicado")
+                    linhas = lista.get("linhas") or []
+                    if len(linhas) != e["n"] or not _perto(sum(x[i] for x in linhas), e["indicado"], len(linhas)):
+                        r.erro(f"Emendas estaduais {ano}: a lista de indicações não bate com o total")
     gov_f = saida / "estado" / "governo.json"
     if gov_f.exists():
         gov = _ler(gov_f, r) or {}

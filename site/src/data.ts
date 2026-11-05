@@ -325,15 +325,44 @@ export interface ProposicaoAlmg { sigla: string; numero: string; ano: number; em
 export interface EmendasDeputado {
   indicado: number; pago: number; n: number; n_municipios: number;
   municipios: { nome: string; indicado: number; pago: number; n: number }[];
-  beneficiarios: { nome: string; municipio: string; indicado: number; pago: number; n: number; descricao: string; area: string }[];
+  beneficiarios: { nome: string; municipio: string; indicado: number; pago: number; n: number; descricao: string; area: string; orgao?: string }[];
 }
 export interface DeputadoEstadual extends DeputadoEstadualResumo {
   anos: Record<string, { verba: VerbaAno | null; proposicoes: { projetos: number; requerimentos: number; outras: number; coautor: number; aprovadas: number; lista: ProposicaoAlmg[] } | null; emendas: EmendasDeputado | null }>;
 }
+/** Uma soma das emendas estaduais (por cidade, órgão, tipo...) */
+export interface SomaEmenda { nome: string; indicado: number; pago: number; n: number; empenhado?: number }
 export interface EmendasEstado {
   fonte: string;
-  anos: Record<string, { indicado: number; pago: number; n: number; n_municipios: number; municipios: { nome: string; indicado: number; pago: number; n: number }[];
-    autores: { nome: string; deputado: string | null; indicado: number; pago: number; n: number }[] }>;
+  /** endereço do arquivo CSV da ALMG usado na coleta */
+  arquivo?: string;
+  anos: Record<string, { indicado: number; pago: number; n: number; n_municipios: number; municipios: SomaEmenda[];
+    autores: (SomaEmenda & { deputado: string | null })[];
+    empenhado?: number; reprovadas?: number; n_autores?: number; n_beneficiarios?: number;
+    beneficiarios?: (SomaEmenda & { municipio: string; tipo: string })[];
+    /** órgão do estado que executa, forma de execução, área e tipo de despesa */
+    orgaos?: SomaEmenda[]; tipos?: SomaEmenda[]; areas?: SomaEmenda[]; grupos?: SomaEmenda[] }>;
+}
+/** Todas as indicações aprovadas de um ano (estado/emendas/<ano>.json). Os textos ficam uma vez só em "textos";
+    cada linha guarda a posição deles, na ordem de "campos". */
+export interface EmendasEstadoLista {
+  ano: string; fonte: string; campos: string[]; textos: string[]; linhas: (string | number)[][];
+  /** nome do autor -> id do deputado estadual (blocos e quem saiu da Assembleia não têm) */
+  deputados: Record<string, string>; indicado: number; pago: number; n: number;
+}
+export interface IndicacaoEstadual {
+  numero: string; autor: string; municipio: string; beneficiario: string; tipo_beneficiario: string; tipo_indicacao: string;
+  orgao_nome: string; acao: string; area: string; grupo: string; objeto: string; descricao: string; situacao: string; autoria: string;
+  indicado: number; empenhado: number; pago: number;
+}
+/** Abre a lista compacta do arquivo do ano em objetos */
+export function indicacoesEstaduais(l: EmendasEstadoLista): IndicacaoEstadual[] {
+  const NUM = new Set(["indicado", "empenhado", "pago", "numero"]);
+  return (l.linhas || []).map((x) => {
+    const o: Record<string, string | number> = {};
+    l.campos.forEach((c, i) => { o[c] = NUM.has(c) ? (c === "numero" ? String(x[i] ?? "") : Number(x[i]) || 0) : (l.textos[x[i] as number] ?? ""); });
+    return o as unknown as IndicacaoEstadual;
+  });
 }
 /* Minas Nossa: governo do estado */
 export interface PessoaGoverno { nome: string; partido: string; partido_hoje: string; mudou: string | null;
@@ -363,7 +392,8 @@ export interface EquipeGoverno {
   fontes: { salarios: string; viagens: string; portal_salarios: string; portal_viagens: string };
 }
 /* Minas Nossa: dinheiro que chega à cidade e onde a prefeitura gasta */
-export interface EmendaEstadualCidade { ano: number; autor: string; deputado: string | null; beneficiario: string; tipo_beneficiario: string; descricao: string; area: string; orgao: string; indicado: number; pago: number; situacao: string }
+export interface EmendaEstadualCidade { ano: number; autor: string; deputado: string | null; beneficiario: string; tipo_beneficiario: string; descricao: string; area: string; orgao: string; indicado: number; pago: number; situacao: string;
+  orgao_nome?: string; acao?: string; grupo?: string; tipo_indicacao?: string; objeto?: string; empenhado?: number; municipio?: string }
 export interface DinheiroCidade {
   id: string; nome: string;
   estaduais: { fonte: string; lista: EmendaEstadualCidade[] | null } | null;

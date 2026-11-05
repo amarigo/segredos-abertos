@@ -254,7 +254,7 @@ function EmendasDep({ d, ano, colegas, primeiro }: { d: DeputadoEstadual; ano: s
             <tbody>
               {e.beneficiarios.map((b, i) => (
                 <tr key={i}>
-                  <td>{b.nome}<div className="small muted">{b.municipio}{b.area ? ` · ${b.area}` : ""}</div>{b.descricao && <div className="small">{b.descricao}</div>}
+                  <td>{b.nome}<div className="small muted">{[b.municipio, b.area, b.orgao].filter(Boolean).join(" · ")}</div>{b.descricao && <div className="small">{b.descricao}</div>}
                     <div className="small so-celular">Pago: <span className="num">{reais(b.pago)}</span></div></td>
                   <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(b.indicado)}</td>
                   <td className="r num so-largo" style={{ whiteSpace: "nowrap" }}>{reais(b.pago)}</td>
@@ -263,6 +263,7 @@ function EmendasDep({ d, ano, colegas, primeiro }: { d: DeputadoEstadual; ano: s
             </tbody>
           </table>
         </div>
+        <p className="small"><Link to={`/emendas-estaduais?ano=${ano}&dep=${d.id}`}>Ver cada indicação de {d.nome} em {ano}: para quê, quem executa, tipo de despesa e situação ›</Link></p>
         <p className="muted small fonte-linha">Fonte: <a href="https://www.almg.gov.br/atividade-parlamentar/emendas-parlamentares/inicial/" target="_blank" rel="noreferrer">emendas parlamentares na ALMG ↗</a> e <a href="https://dados.mg.gov.br/dataset/portal_emendas_estaduais" target="_blank" rel="noreferrer">execução das emendas no Dados MG ↗</a>.</p>
       </section>
     </>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Barras, Explain, Loading, useData } from "../components/ui";
 import { cnpjFmt, linkSeguro, reais, reaisCurto, type DinheiroCidade as Dinheiro } from "../data";
+import { DetalheEmendaEstadual } from "../components/EmendaEstadual";
 
 /* Aba "Dinheiro" da cidade: onde a prefeitura gasta (contas entregues ao Tesouro) e o dinheiro que chega por
    emendas de deputados e senadores (federais) e de deputados estaduais. Cada bloco termina com o link da fonte. */
@@ -112,7 +113,7 @@ function Estaduais({ d, nome }: { d: Dinheiro; nome: string }) {
                 {lista.slice(0, todos ? 999 : 25).map((x, i) => (
                   <tr key={i}>
                     <td className="small"><span className="num">{x.ano}</span><div>{x.deputado ? <Link to={`/deputado-estadual/${x.deputado}`}>{x.autor}</Link> : x.autor}</div></td>
-                    <td>{x.beneficiario}<div className="small muted">{[x.area, x.orgao, x.situacao].filter(Boolean).join(" · ")}</div>{x.descricao && <div className="small">{x.descricao}</div>}
+                    <td>{x.beneficiario}<DetalheEmendaEstadual x={x} />
                       <div className="small so-celular">Pago: <span className="num">{reais(x.pago)}</span></div></td>
                     <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(x.indicado)}</td>
                     <td className="r num so-largo" style={{ whiteSpace: "nowrap" }}>{reais(x.pago)}</td>
@@ -122,6 +123,7 @@ function Estaduais({ d, nome }: { d: Dinheiro; nome: string }) {
             </table>
           </div>
           {lista.length > 25 && <button className="link" onClick={() => setTodos(!todos)}>{todos ? "Mostrar menos" : `Mostrar as ${lista.length} indicações`}</button>}
+          <p className="small"><Link to={`/emendas-estaduais?cidade=${encodeURIComponent(lista[0]?.municipio || nome)}`}>Comparar com as outras cidades e ver quem mais recebeu emendas estaduais ›</Link></p>
         </>}
       <p className="muted small fonte-linha">Fonte: <a href={linkSeguro(d.estaduais?.fonte || "https://www.almg.gov.br/atividade-parlamentar/emendas-parlamentares/inicial/")} target="_blank" rel="noreferrer">emendas parlamentares na Assembleia de Minas (ALMG) ↗</a>.</p>
     </section>

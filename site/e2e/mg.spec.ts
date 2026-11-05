@@ -279,6 +279,35 @@ test.describe("jornada", () => {
     await expect(page).toHaveURL(/deputado-estadual\/\d+\?aba=emendas/);
     expect(erros).toEqual([]);
   });
+
+  test("emendas estaduais: cada indicação diz quem indicou, para onde, quem executa e como; os filtros somam certo", async ({ page }) => {
+    const erros = vigiar(page);
+    const ano = Object.keys(emEst.anos).sort().pop()!;
+    const lista = dados(`estado/emendas/${ano}.json`);
+    await page.goto("./#/emendas-estaduais");
+    await expect(page.locator("#indicacoes")).toContainText(`${lista.n} indicações`);
+    await expect(page.locator("#indicacoes")).toContainText("Quem executa:");
+    await expect(page.locator("main")).not.toContainText("Não há");
+    await expect(page.locator("main")).toContainText("Quem mais recebeu");
+    // um bloco não tem página de deputado, mas as indicações dele aparecem
+    const bloco = emEst.anos[ano].autores.find((a: { deputado: string | null }) => !a.deputado);
+    await page.locator("#filtro-autor").selectOption(bloco.nome);
+    await expect(page.locator("#indicacoes")).toContainText(`${bloco.n} indicaç`);
+    await expect(page.locator("#indicacoes")).toContainText(brl(bloco.indicado));
+    // a cidade clicada no ranking filtra a lista
+    const cid = emEst.anos[ano].municipios[0];
+    await page.locator("main button.link", { hasText: cid.nome }).first().click();
+    await expect(page).toHaveURL(new RegExp(`cidade=${encodeURIComponent(cid.nome).replace(/%20/g, "(%20|\\+)")}`));
+    await expect(page.locator("#indicacoes")).toContainText(`${cid.n} indicaç`);
+    // da página do deputado para as indicações dele
+    await page.goto(`./#/deputado-estadual/20003?aba=emendas&ano=${ano}`);
+    const link = page.getByRole("link", { name: /Ver cada indicação/ });
+    if (await link.count()) {
+      await link.click();
+      await expect(page.locator("#filtro-autor")).not.toHaveValue("");
+    }
+    expect(erros).toEqual([]);
+  });
 });
 
 test.describe("segurança", () => {
