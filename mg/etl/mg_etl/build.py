@@ -97,7 +97,11 @@ def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[
         cont["deputados_estaduais"] = len(feitos or [])
     if em:
         util.write_json(saida / "estado" / "emendas.json", {
-            "fonte": emendas_mg.PAGINA, "anos": {str(a): e for a, e in sorted(em["estado"].items())}})
+            "fonte": emendas_mg.PAGINA, "arquivo": emendas_mg.ARQUIVO_USADO or emendas_mg.ARQUIVO,
+            "anos": {str(a): e for a, e in sorted(em["estado"].items())}})
+        # Cada indicação do ano, com órgão, ação e tipo de despesa: a página só baixa quando alguém procura
+        for a, lista in em.get("listas", {}).items():
+            util.write_json(saida / "estado" / "emendas" / f"{a}.json", {"ano": a, "fonte": emendas_mg.PAGINA} | lista)
         cont["emendas_estaduais"] = sum(e["n"] for e in em["estado"].values())
     inc = _seguro("Incentivos fiscais de empresas de MG", lambda: incentivos_mg(nacional))
     util.write_json(saida / "estado" / "incentivos.json", inc or {"anos": []})

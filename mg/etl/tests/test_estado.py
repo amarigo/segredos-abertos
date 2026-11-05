@@ -106,6 +106,38 @@ def test_emendas_estaduais_somas_repetidas_e_reprovadas():
     assert d0["n"] == 4 and d0["n_municipios"] == 4
 
 
+def test_emendas_estaduais_detalhe_de_cada_indicacao():
+    """Quem indicou, para onde, o que foi feito (órgão, ação, tipo de despesa) e quem mais recebeu."""
+    assert emendas_mg.limpo("Não há") == "" and emendas_mg.limpo(" NAO HA ") == "" and emendas_mg.limpo("-") == ""
+    assert emendas_mg.limpo("Compra de ambulância") == "Compra de ambulância"
+    fake = FakeEstado()
+    rows = emendas_mg.linhas(fontes.decodificar(fake.emendas_csv()))
+    assert not any("o há" in json.dumps(r, ensure_ascii=False).lower() for r in rows), "'Não há' não vai para a página"
+    pm = [r for r in rows if r["tipo_indicacao"] == "Execução Direta"]
+    assert pm and pm[0]["orgao_nome"] == "Polícia Militar do Estado de Minas Gerais"
+    assert pm[0]["acao"] == "Estruturação e Modernização" and pm[0]["grupo"] == "Investimentos" and pm[0]["empenhado"] == 300_000
+    sem_desc = [r for r in rows if r["aprovada"] and not r["descricao"] and r["autor"] != "EX DEPUTADO ANTIGO" and r["objeto"]]
+    assert sem_desc and sem_desc[0]["objeto"] == "Custeio · Atenção Primária à Saúde", "sem descrição, o objeto explica o gasto"
+    deps = {fontes.chave_nome(d["nome"]): str(d["id"]) for d in fake.deputados}
+    r = emendas_mg.resumir(rows, deps, MAPA_CIDADES)
+    for ano, e in r["estado"].items():
+        lista = r["listas"][ano]
+        assert lista["n"] == e["n"] == len(lista["linhas"])
+        i = lista["campos"].index("indicado")
+        assert sum(x[i] for x in lista["linhas"]) == pytest.approx(e["indicado"]), "a lista soma o total do ano"
+        for chave in ("orgaos", "tipos", "areas", "grupos"):
+            assert sum(x["indicado"] for x in e[chave]) == pytest.approx(e["indicado"]), chave
+        assert e["reprovadas"] == 1
+        assert e["beneficiarios"][0]["indicado"] >= e["beneficiarios"][-1]["indicado"]
+        assert any(o["nome"] == "Polícia Militar do Estado de Minas Gerais" for o in e["orgaos"])
+        bloco = [a for a in e["autores"] if a["nome"] == "Bloco Minas em Frente"]
+        assert bloco and bloco[0]["deputado"] is None, "blocos aparecem como autores, sem página de deputado"
+        t = lista["textos"]
+        autores = {t[x[lista["campos"].index("autor")]] for x in lista["linhas"]}
+        assert "Bloco Minas em Frente" in autores
+        assert all(lista["deputados"][n] in deps.values() for n in lista["deputados"])
+
+
 def test_proposicoes_contam_so_o_primeiro_autor_e_projetos_que_viraram_lei():
     fake = FakeEstado()
     ids = {str(d["id"]) for d in fake.deputados}

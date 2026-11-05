@@ -87,7 +87,7 @@ def bonito(s: str) -> str:
     pal = []
     for i, w in enumerate(s.split(" ")):
         lw = w.lower()
-        if i and lw in ("da", "de", "do", "das", "dos", "e", "a", "o", "em", "para", "com"):
+        if i and lw in ("da", "de", "do", "das", "dos", "e", "a", "o", "à", "às", "ao", "aos", "em", "na", "no", "nas", "nos", "para", "com"):
             pal.append(lw)
         elif len(w) <= 3 and w.isalpha() and lw not in PALAVRAS_CURTAS:
             pal.append(w)

@@ -845,3 +845,8 @@ tr.linha-aberta > td { background: var(--tint); }
 .foto-mini { display: inline-flex; align-items: center; gap: 8px; }
 @media (max-width: 520px) { .foto-perfil .avatar { width: 72px !important; height: 72px !important; font-size: 1.1rem !important; } }
 .stat .foto-perfil { justify-items: start; margin: 6px 0 2px; }
+/* Emendas estaduais: detalhe de cada indicação e filtros da lista */
+.emenda-det { display: grid; gap: 2px; margin-top: 4px; }
+.filtros-emendas { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+.filtros-emendas label { display: grid; gap: 4px; min-width: 0; }
+.filtros-emendas select, .filtros-emendas input { width: 100%; font: inherit; padding: 10px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); min-width: 0; }
