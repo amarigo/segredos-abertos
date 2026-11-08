@@ -168,8 +168,8 @@ def test_notas_da_verba_sem_cpf():
 def test_contas_da_prefeitura_sem_contar_duas_vezes(estado, tmp_path):
     c = siconfi.contas("Itajubá", "MG", tmp_path, hoje=HOJE)
     assert c["cod_ibge"] == 3132404, "a Itajubá de MG, não a de mesmo nome em SP"
-    a = c["anos"][0]
-    assert a["ano"] == 2025 and [x["ano"] for x in c["anos"]] == list(range(2025, 2017, -1))
+    a = c["anos"][1]  # o primeiro é 2026, parcial (teste abaixo)
+    assert a["ano"] == 2025 and [x["ano"] for x in c["anos"][1:]] == list(range(2025, 2017, -1))
     saude = next(f for f in a["funcoes"] if f["funcao"] == "Saúde")
     assert saude["liquidado"] == pytest.approx(4_000_000 * 1.7), "intraorçamentárias e restos a pagar ficam de fora"
     assert a["total_liquidado"] == pytest.approx(sum(f["liquidado"] for f in a["funcoes"]))
@@ -179,6 +179,33 @@ def test_contas_da_prefeitura_sem_contar_duas_vezes(estado, tmp_path):
     siconfi._ENTES.clear()
     siconfi.contas("Itajubá", "MG", tmp_path, hoje=HOJE)
     assert not any("/dca" in u for u in estado.chamadas[n:])
+
+
+def test_contas_do_ano_em_curso_pelo_rreo(estado, tmp_path):
+    """2026 ainda não tem DCA: vem do RREO até o último bimestre entregue, comparado ao mesmo bimestre de 2025."""
+    c = siconfi.contas("Itajubá", "MG", tmp_path, hoje=HOJE)
+    a = c["anos"][0]
+    assert a["ano"] == 2026 and a["parcial"] and a["bimestre"] == 4 and a["ate_mes"] == "agosto"
+    assert [x["ano"] for x in c["anos"][1:]] == list(range(2025, 2017, -1)), "os anos fechados continuam vindo da DCA"
+    saude = next(f for f in a["funcoes"] if f["funcao"] == "Saúde")
+    assert saude["codigo"] == "10" and saude["pago"] is None, "o RREO não tem o pago por função"
+    assert saude["liquidado"] == pytest.approx(4_000_000 * 1.8 * 4 / 6), "intraorçamentárias ficam de fora"
+    assert saude["empenhado"] == pytest.approx(saude["liquidado"] * 1.1)
+    assert a["total_liquidado"] == pytest.approx(sum(f["liquidado"] for f in a["funcoes"]))
+    assert [p["nome"] for p in saude["principais"]] == ["Atenção Básica", "Assistência Hospitalar e Ambulatorial"]
+    ant = a["mesmo_periodo_anterior"]
+    assert ant["ano"] == 2025 and ant["liquidado"]["10"] == pytest.approx(4_000_000 * 1.7 * 4 / 6)
+    assert "nr_periodo=4" in a["api"] and "co_esfera=M" in a["api"]
+    e = siconfi.contas_estado(tmp_path, hoje=HOJE)
+    assert e["anos"][0]["parcial"] and "co_esfera=E" in e["anos"][0]["api"]
+
+
+def test_rreo_que_nao_soma_fica_de_fora():
+    linhas = [{"cod_conta": "RREO2TotalDespesas", "coluna": "DESPESAS LIQUIDADAS ATÉ O BIMESTRE (d)", "conta": n, "valor": v}
+              for n, v in (("DESPESAS (EXCETO INTRA-ORÇAMENTÁRIAS) (I)", 100.0), ("Saúde", 60.0), ("Educação", 10.0))]
+    assert siconfi.resumir_rreo2(linhas) is None, "faltam 30: melhor não mostrar o ano do que mostrar errado"
+    linhas[0]["valor"] = 70.0
+    assert siconfi.resumir_rreo2(linhas)["total_liquidado"] == 70.0
 
 
 def test_emendas_federais_na_cidade(tmp_path):
@@ -192,6 +219,13 @@ def test_emendas_federais_na_cidade(tmp_path):
     assert pf and pf[0]["nome"] == "Pessoa física" and pf[0]["url"] == ""
     assert all(f["url"].startswith("https://portaldatransparencia.gov.br/pessoa-juridica/") for f in ita["favorecidos"] if f["cnpj"])
     assert "paraisopolis" not in r
+    # cada quem mandou e cada quem recebeu traz o valor de cada ano, para o filtro de ano da página
+    for ano in ita["por_ano"]:
+        a = str(ano["ano"])
+        assert sum(x["por_ano"].get(a, {}).get("valor", 0) for x in ita["autores"]) == pytest.approx(ano["valor"])
+        assert sum(x["por_ano"].get(a, {}).get("valor", 0) for x in ita["favorecidos"]) == pytest.approx(ano["valor"])
+    for x in ita["autores"] + ita["favorecidos"]:
+        assert sum(y["valor"] for y in x["por_ano"].values()) == pytest.approx(x["valor"])
 
 
 def test_governador_e_vice_da_chapa(estado, tmp_path):

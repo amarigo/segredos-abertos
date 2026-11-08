@@ -398,13 +398,23 @@ export interface DinheiroCidade {
   id: string; nome: string;
   estaduais: { fonte: string; lista: EmendaEstadualCidade[] | null } | null;
   federais: { fonte: string; por_ano: { ano: number; valor: number; n: number }[];
-    favorecidos: { nome: string; cnpj: string; valor: number; anos: number[]; url: string; autores: { nome: string; valor: number }[] }[];
-    autores: { nome: string; politico: string | null; partido: string; valor: number; n: number }[] } | null;
+    favorecidos: { nome: string; cnpj: string; valor: number; anos: number[]; url: string; autores: { nome: string; valor: number }[];
+      /** o valor e os autores de cada ano (ausente nos arquivos antigos) */
+      por_ano?: Record<string, { valor: number; autores: { nome: string; valor: number }[] }> }[];
+    autores: { nome: string; politico: string | null; partido: string; valor: number; n: number; por_ano?: Record<string, { valor: number; n: number }> }[] } | null;
   contas: ContasEnte | null;
 }
 /** Contas entregues ao Tesouro (SICONFI): despesas por área, ano a ano. Prefeituras (cidades/dinheiro) e o estado (estado/contas.json). */
-export interface ContasEnte { cod_ibge: number; fonte: string; api: string; anos: { ano: number; instituicao: string; total_empenhado: number; total_liquidado: number; total_pago: number;
-    funcoes: { codigo: string; funcao: string; empenhado: number; liquidado: number; pago: number; principais: { nome: string; valor: number }[] }[] }[] }
+export interface ContasEnte { cod_ibge: number; fonte: string; api: string; anos: ContasAno[] }
+/** Um ano das contas. O ano em curso vem do RREO (a cada dois meses): parcial, até o mês do bimestre, sem o "pago"
+ *  por área, e com o mesmo período do ano anterior para comparar. */
+export interface ContasAno { ano: number; instituicao: string; total_empenhado: number; total_liquidado: number; total_pago: number | null;
+  parcial?: boolean; bimestre?: number; ate_mes?: string; api?: string;
+  mesmo_periodo_anterior?: { ano: number; total_liquidado: number; liquidado: Record<string, number> } | null;
+  funcoes: { codigo: string; funcao: string; empenhado: number; liquidado: number; pago: number | null; principais: { nome: string; valor: number }[] }[] }
+/** "2026 (até agosto)" no ano parcial; só o ano nos outros */
+export const anoContas = (a: Pick<ContasAno, "ano" | "parcial" | "ate_mes">, curto = false) =>
+  a.parcial && a.ate_mes ? `${a.ano} (até ${curto ? a.ate_mes.slice(0, 3) + "." : a.ate_mes})` : `${a.ano}`;
 /** Renúncia fiscal federal das empresas com sede em MG (estado/incentivos.json) */
 export interface IncentivosMG { fonte: string; anos: { ano: number; parcial: boolean; total_brasil: number; total: number; n: number;
   por_municipio: [string, number, number][]; por_setor: { setor: string; valor: number; n: number }[];
