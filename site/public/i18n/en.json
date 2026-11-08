@@ -2186,5 +2186,15 @@
 "Foto oficial de {*}": "Official photo of {*}",
 "{*} (sem foto oficial)": "{*} (no official photo)",
 "Foto:": "Photo:",
-"Foto oficial publicada por: {*}": "Official photo published by: {*}"
+"Foto oficial publicada por: {*}": "Official photo published by: {*}",
+"Mês a mês": "Month by month",
+"Por tipo de despesa": "By type of expense",
+"Emitente": "Issuer",
+"Data da nota": "Invoice date",
+"Prestação de contas": "Expense report",
+"Número da nota": "Invoice number",
+"Valor reembolsado": "Amount reimbursed",
+"Para conferir no site oficial": "To check on the official website",
+"Ver todas as notas deste fornecedor": "See all invoices from this supplier",
+"Nenhuma nota com esses filtros.": "No invoices with these filters."
 }
