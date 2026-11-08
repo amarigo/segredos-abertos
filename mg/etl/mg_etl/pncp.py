@@ -21,8 +21,9 @@ O que cada compra mostra:
 
 A API responde HTTP 429 (muitas requisições) depois de uns 15 pedidos seguidos sem pausa: há uma pausa entre os
 pedidos. O estado inteiro tem centenas de compras por dia, então a leitura do estado é feita aos poucos, com limite
-de tempo por execução (MINUTOS), mês a mês, e continua de onde parou na execução seguinte. Cada mês lido vale um dia
-se for recente (as compras ainda mudam de situação) e VALIDADE_ANTIGO dias se for mais velho.
+de tempo por execução (MINUTOS), mês a mês e modalidade por modalidade, e continua de onde parou na execução
+seguinte. Cada pedaço lido vale um dia se o mês for recente (as compras ainda mudam de situação) e VALIDADE_ANTIGO
+dias se for mais velho. Depois de 3 falhas seguidas o PNCP é dado como fora do ar e a execução usa só o cache.
 """
 from __future__ import annotations
 
@@ -165,6 +166,9 @@ class Leitor:
         self.hoje = hoje or dt.date.today()
         self.paginas = 0
         self.sem_tempo = False
+        self.falhou = False   # alguma consulta falhou nesta execução (o site avisa)
+        self.falhas = 0       # falhas seguidas
+        self.fora = False     # o PNCP parou de responder: o resto da execução usa só o cache
 
     def _tempo(self) -> None:
         if _agora() > self.fim:
@@ -189,33 +193,45 @@ class Leitor:
             pag += 1
 
     def compras_mes(self, escopo: str, params: dict, ano: int, mes: int, filtro=None, so_cache: bool = False) -> list[dict] | None:
-        """Compras de um mês (todas as modalidades). None: ainda não lido (sem tempo ou fonte fora do ar)."""
-        f = self.cache / f"compras-{escopo}-{ano}{mes:02d}-v{VERSAO}.json.gz"
-        st = _ler_gz(f)
+        """Compras de um mês (todas as modalidades). None: alguma modalidade ainda não foi lida (sem tempo ou fonte
+        fora do ar). Cada modalidade do mês fica no cache separada: se o tempo acabar no meio do mês, o que já foi
+        lido não se perde."""
         recente = (self.hoje - dt.date(ano, mes, 1)).days <= 62
-        if so_cache or not self._vencido(st, recente):
-            return st["linhas"] if st else None
         di, df = _faixa(ano, mes, self.hoje)
-        try:
-            linhas = []
-            for mod in MODALIDADES:
-                linhas += self._todas("contratacoes/publicacao", {**params, "dataInicial": di, "dataFinal": df,
-                                                                   "codigoModalidadeContratacao": mod}, filtro)
-        except SemTempo:
-            return st["linhas"] if st else None
-        except Exception as e:  # noqa: BLE001 - fonte fora do ar: fica a leitura anterior
-            log.warning("PNCP %s %d/%02d: %s", escopo, mes, ano, e)
-            self.falhou = True
-            return st["linhas"] if st else None
-        unicas = list({x["id"]: x for x in linhas}.values())
-        _gravar_gz(f, {"linhas": unicas, "lido_em": self.hoje.isoformat()})
-        return unicas
+        todas, falta = [], False
+        for mod in MODALIDADES:
+            f = self.cache / f"compras-{escopo}-{ano}{mes:02d}-m{mod:02d}-v{VERSAO}.json.gz"
+            st = _ler_gz(f)
+            if not (so_cache or self.sem_tempo or self.fora) and self._vencido(st, recente):
+                try:
+                    linhas = self._todas("contratacoes/publicacao", {**params, "dataInicial": di, "dataFinal": df,
+                                                                      "codigoModalidadeContratacao": mod}, filtro)
+                    st = {"linhas": linhas, "lido_em": self.hoje.isoformat()}
+                    _gravar_gz(f, st)
+                    self.falhas = 0
+                except SemTempo:
+                    pass
+                except Exception as e:  # noqa: BLE001 - fonte fora do ar: fica a leitura anterior
+                    log.warning("PNCP %s %02d/%d modalidade %d: %s", escopo, mes, ano, mod, e)
+                    self._falha()
+            if st is None:
+                falta = True
+            else:
+                todas += st["linhas"]
+        return None if falta else list({x["id"]: x for x in todas}.values())
+
+    def _falha(self) -> None:
+        """Depois de 3 falhas seguidas, o PNCP é dado como fora do ar nesta execução: usa só o cache."""
+        self.falhou = True
+        self.falhas += 1
+        if self.falhas >= 3:
+            self.fora = True
 
     def contratos(self, cnpj: str, ano: int, so_cache: bool = False) -> list[dict] | None:
         """Contratos publicados por um órgão num ano."""
         f = self.cache / f"contratos-{cnpj}-{ano}-v{VERSAO}.json.gz"
         st = _ler_gz(f)
-        if so_cache or not self._vencido(st, ano == self.hoje.year):
+        if so_cache or self.sem_tempo or self.fora or not self._vencido(st, ano == self.hoje.year):
             return st["linhas"] if st else None
         fim = min(dt.date(ano, 12, 31), self.hoje)
         try:
@@ -225,13 +241,12 @@ class Leitor:
             return st["linhas"] if st else None
         except Exception as e:  # noqa: BLE001
             log.warning("PNCP contratos %s %d: %s", cnpj, ano, e)
-            self.falhou = True
+            self._falha()
             return st["linhas"] if st else None
         unicos = list({x["id"]: x for x in linhas}.values())
         _gravar_gz(f, {"linhas": unicos, "lido_em": self.hoje.isoformat()})
+        self.falhas = 0
         return unicos
-
-    falhou = False
 
 
 # ---------------------------------------------------------------- montagem
@@ -367,7 +382,7 @@ def coletar(saida: Path, cache: Path, cidades: list[dict], anos: list[int] | Non
     for local, escopo, params, filtro in locais:
         compras, faltam = [], []
         for a, m in meses:
-            ls = ler.compras_mes(escopo, params, a, m, filtro, so_cache=ler.sem_tempo)
+            ls = ler.compras_mes(escopo, params, a, m, filtro)
             if ls is None:
                 faltam.append(f"{a}-{m:02d}")
             else:
@@ -377,7 +392,7 @@ def coletar(saida: Path, cache: Path, cidades: list[dict], anos: list[int] | Non
         for ano in anos:
             contratos, sem_contratos = [], 0
             for cnpj in cnpjs:
-                ls = ler.contratos(cnpj, ano, so_cache=ler.sem_tempo)
+                ls = ler.contratos(cnpj, ano)
                 if ls is None:
                     sem_contratos += 1
                 else:

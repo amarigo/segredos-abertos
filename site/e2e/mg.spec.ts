@@ -311,6 +311,24 @@ test.describe("jornada", () => {
 });
 
 test.describe("segurança", () => {
+  test("licitações: cidade e estado, com e sem licitação, quem recebeu e sem CPF", async ({ page }) => {
+    const erros = vigiar(page);
+    const lic = dados("licitacoes/itajuba-2025.json");
+    await page.goto("./#/cidade/itajuba?aba=licitacoes");
+    await page.getByLabel("Ano:").selectOption("2025");
+    await expect(page.getByText("Compras publicadas", { exact: true })).toBeVisible();
+    await expect(page.locator(".stat").first()).toContainText(String(lic.total.n));
+    await expect(page.getByText("Por que não houve licitação")).toBeVisible();
+    await expect(page.getByRole("link", { name: /Asfalto para ruas do centro/ })).toHaveAttribute("href", /^https:\/\/pncp\.gov\.br\/app\/editais\//);
+    await page.getByLabel("Com ou sem licitação").selectOption("inexigibilidade");
+    await expect(page.locator("tbody tr").filter({ hasText: "Show da festa" })).toContainText("Pessoa física");
+    expect(await page.locator("main").innerText()).not.toMatch(CPF);
+    await page.goto("./#/licitacoes");
+    await expect(page.getByRole("tab", { name: "Governo de Minas" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("heading", { name: /^Compras do governo de Minas em \d{4}$/ })).toBeVisible();
+    expect(erros).toEqual([]);
+  });
+
   test("nenhum CPF nas páginas do estado (os arquivos de teste trazem CPF de propósito)", async ({ page }) => {
     vigiar(page);
     for (const rota of ["#/deputado-estadual/20003", "#/governo", "#/cidade/itajuba?aba=dinheiro", "#/emendas-estaduais"]) {
