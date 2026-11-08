@@ -341,7 +341,9 @@ export interface EmendasEstado {
     empenhado?: number; reprovadas?: number; n_autores?: number; n_beneficiarios?: number;
     beneficiarios?: (SomaEmenda & { municipio: string; tipo: string })[];
     /** órgão do estado que executa, forma de execução, área e tipo de despesa */
-    orgaos?: SomaEmenda[]; tipos?: SomaEmenda[]; areas?: SomaEmenda[]; grupos?: SomaEmenda[] }>;
+    orgaos?: SomaEmenda[]; tipos?: SomaEmenda[]; areas?: SomaEmenda[]; grupos?: SomaEmenda[];
+    /** lugares do arquivo que não são municípios de Minas (outro estado ou nome fora da lista oficial do Tesouro) */
+    fora_de_mg?: { municipio: string; uf: string; n: number; indicado: number; beneficiarios: string[] }[] }>;
 }
 /** Todas as indicações aprovadas de um ano (estado/emendas/<ano>.json). Os textos ficam uma vez só em "textos";
     cada linha guarda a posição deles, na ordem de "campos". */

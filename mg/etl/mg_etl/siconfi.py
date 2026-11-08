@@ -36,11 +36,19 @@ SUBFUNCAO = re.compile(r"^\s*(\d{2})\.(\d{3})\s*-\s*(.+)$")
 _ENTES: dict[str, list] = {}
 
 
-def codigo_ibge(nome: str, uf: str, cache: Path) -> int | None:
+def municipios(uf: str, cache: Path) -> dict[str, str]:
+    """Nome oficial de cada município de uma UF, pela API do Tesouro (lista de entes): chave sem acento -> nome.
+    Vazio se a API e a cópia guardada faltarem."""
+    entes = _entes(cache)
+    return {re.sub(r"[^A-Z]", "", norm_name(e.get("ente") or "")): e["ente"] for e in entes
+            if e.get("uf") == uf and str(e.get("esfera") or "M").upper().startswith("M") and e.get("ente")}
+
+
+def _entes(cache: Path) -> list[dict]:
     alvo = cache / "siconfi" / "entes.json"
     entes = _ENTES.get(str(alvo))
     if entes is not None:
-        return _achar(entes, nome, uf)
+        return entes
     try:
         entes = get(f"{API}/entes", timeout=60).json()["items"]
         alvo.parent.mkdir(parents=True, exist_ok=True)
@@ -51,7 +59,11 @@ def codigo_ibge(nome: str, uf: str, cache: Path) -> int | None:
             entes = json.loads(alvo.read_text(encoding="utf-8"))
     if entes:
         _ENTES[str(alvo)] = entes
-    return _achar(entes or [], nome, uf)
+    return entes or []
+
+
+def codigo_ibge(nome: str, uf: str, cache: Path) -> int | None:
+    return _achar(_entes(cache), nome, uf)
 
 
 def _achar(entes: list[dict], nome: str, uf: str) -> int | None:

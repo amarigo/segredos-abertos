@@ -90,7 +90,9 @@ def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[
     # Todos que tiveram mandato na legislatura, não só quem está no cargo hoje: quem saiu no meio também gastou
     deps, linhas, completa = _seguro("ALMG (deputados da legislatura)", lambda: almg.deputados(cache), ([], [], False))
     mapa_dep = {fontes.chave_nome(n): d["id"] for d in deps for n in [d["nome"], *d.get("outros_nomes", [])]}
-    em = _seguro("Emendas estaduais (ALMG)", lambda: emendas_mg.coletar(cache, mapa_dep, mapa_cidades))
+    # Nomes oficiais dos municípios de Minas (API do Tesouro), para achar lugares fora de Minas no arquivo de emendas
+    mun_mg = _seguro("Municípios de MG (SICONFI)", lambda: siconfi.municipios("MG", cache), {})
+    em = _seguro("Emendas estaduais (ALMG)", lambda: emendas_mg.coletar(cache, mapa_dep, mapa_cidades, mun_mg))
     if deps:
         feitos = _seguro("Deputados estaduais (ALMG)",
                          lambda: almg.coletar(saida, cache, deps, em, linhas=linhas, completa=completa), [])

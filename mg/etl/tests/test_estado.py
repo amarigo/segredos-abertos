@@ -138,6 +138,34 @@ def test_emendas_estaduais_detalhe_de_cada_indicacao():
         assert all(lista["deputados"][n] in deps.values() for n in lista["deputados"])
 
 
+def test_emendas_estaduais_lugar_fora_de_minas_e_nome_oficial_da_cidade():
+    """'Brasília' não é cidade de Minas: com a coluna Estado, aparece como Brasília (Distrito Federal) e entra na
+    conferência. Cidade de Minas ganha o nome oficial do Tesouro ('UBÁ' vira 'Ubá')."""
+    fake = FakeEstado()
+    rows = emendas_mg.linhas(fontes.decodificar(fake.emendas_csv()))
+    mg = {"UBA": "Ubá", "ITAJUBA": "Itajubá", "PARAISOPOLIS": "Paraisópolis", "BELOHORIZONTE": "Belo Horizonte",
+          "POUSOALEGRE": "Pouso Alegre"}
+    fora = emendas_mg.nomear_locais(rows, mg)
+    uba = [r for r in rows if r["municipio"] == "UBÁ"]
+    assert uba and all(r["local"] == "Ubá" for r in uba)
+    assert uba[0]["beneficiario"] == "Hospital Sao Vicente de Paulo de Ubá"
+    bsb = [r for r in rows if r["municipio"] == "BRASÍLIA"]
+    assert bsb and all(r["local"] == "Brasília (Distrito Federal)" for r in bsb)
+    for ano, lst in fora.items():
+        assert any(x["municipio"] == "Brasília" and x["uf"] == "Distrito Federal" and x["n"] == 1 for x in lst)
+        assert not any(x["municipio"] in ("Pouso Alegre", "Ubá", "Itajubá") for x in lst), "cidade de Minas não é apontada"
+    deps = {fontes.chave_nome(d["nome"]): str(d["id"]) for d in fake.deputados}
+    r = emendas_mg.resumir(rows, deps, MAPA_CIDADES, fora)
+    for ano, e in r["estado"].items():
+        nomes = {m["nome"] for m in e["municipios"]}
+        assert "Brasília (Distrito Federal)" in nomes and "Brasília" not in nomes and "Ubá" in nomes
+        assert e["fora_de_mg"] == fora[ano]
+    # sem a lista oficial (API fora do ar), nada muda de nome e nada é apontado como fora de Minas sem o Estado
+    rows2 = emendas_mg.linhas(fontes.decodificar(fake.emendas_csv()))
+    fora2 = emendas_mg.nomear_locais(rows2, {})
+    assert all(x["uf"] for lst in fora2.values() for x in lst)
+
+
 def test_proposicoes_contam_so_o_primeiro_autor_e_projetos_que_viraram_lei():
     fake = FakeEstado()
     ids = {str(d["id"]) for d in fake.deputados}
