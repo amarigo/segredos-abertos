@@ -17,6 +17,9 @@ def boa_base(tmp_path_factory, nacional):
     tmp = tmp_path_factory.mktemp("mg_boa")
     fake = FakeEstado()
     fake.emendas_federais_zip(emendas_nac.zip_no_cache(tmp / "nac"))
+    import shutil
+    nacional = shutil.copytree(nacional, tmp / "nacional")
+    fake.destino_pix(nacional)  # o plano de ação e os gastos da emenda Pix de Itajubá (Transferegov)
     with pytest.MonkeyPatch.context() as mp:
         instalar(mp, fake)
         mp.setattr(cidades.tse, "anos_ate", lambda hoje=None: ([2016, 2020, 2024], [2018, 2022]))
@@ -113,6 +116,14 @@ DEFEITOS = {
                                                lambda x: [f.update(nome="Maria de Tal") for f in x["federais"]["favorecidos"] if not f["cnpj"]]),
     "link de favorecido de outro site": lambda s: _mudar(s, "cidades/dinheiro/itajuba.json",
                                                          lambda x: x["federais"]["favorecidos"][0].update(url="https://exemplo.com/x")),
+    "emenda sem o link do Portal": lambda s: _mudar(s, "cidades/emendas/itajuba.json",
+                                                    lambda x: x["emendas"][0].update(url="https://exemplo.com/emenda")),
+    "recebido da emenda que não soma": lambda s: _mudar(s, "cidades/emendas/itajuba.json",
+                                                        lambda x: next(e for e in x["emendas"] if e["recebido"]).update(recebido_aqui=1)),
+    "CPF no gasto da prefeitura": lambda s: _mudar(s, "cidades/emendas/itajuba.json", lambda x: next(
+        e for e in x["emendas"] if e["plano"])["plano"]["gastos"][0].update(descricao="pago a 529.982.247-25")),
+    "gastos da prefeitura que não somam": lambda s: _mudar(s, "cidades/emendas/itajuba.json",
+                                                           lambda x: next(e for e in x["emendas"] if e["plano"])["plano"].update(gasto=1)),
 }
 
 
