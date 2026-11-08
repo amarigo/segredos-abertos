@@ -310,6 +310,41 @@ test.describe("jornada", () => {
   });
 });
 
+test.describe("painel por área", () => {
+  test("as áreas somam o total do ano; juntar áreas soma as duas; a cidade filtra", async ({ page }) => {
+    const erros = vigiar(page);
+    const ano = Object.keys(emEst.anos).sort().pop()!;
+    const areas: { nome: string; indicado: number; n: number }[] = emEst.anos[ano].areas;
+    await page.goto("./#/painel");
+    await expect(page.locator("main h1")).toContainText("Painel das emendas por área");
+    for (const a of areas) await expect(page.locator(".painel-area", { hasText: a.nome })).toContainText(brl(a.indicado));
+    const [a1, a2] = areas;
+    await page.locator(".painel-area", { hasText: a1.nome }).click();
+    await expect(page.locator(".painel-area", { hasText: a1.nome })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".painel-resumo")).toContainText(a1.nome);
+    await expect(page.locator(".kpi").first()).toContainText(`${a1.n} indicaç`);
+    if (a2) {
+      await page.locator(".painel-area", { hasText: a2.nome }).click();
+      await expect(page.locator(".kpi").first()).toContainText(`${a1.n + a2.n} indicaç`);
+      await expect(page).toHaveURL(/area=.*area=/);
+    }
+    // cidade na tabela filtra tudo
+    await page.locator(".painel-matriz button.link").first().click();
+    await expect(page.locator("#painel-cidade")).not.toHaveValue("");
+    expect(await page.locator("main").innerText()).not.toMatch(CPF);
+    expect(erros).toEqual([]);
+  });
+
+  test("vários anos de uma vez somam os anos escolhidos", async ({ page }) => {
+    const erros = vigiar(page);
+    const anos = Object.keys(emEst.anos).sort();
+    await page.goto(`./#/painel?${anos.map((a) => `ano=${a}`).join("&")}`);
+    const n = anos.reduce((s, a) => s + emEst.anos[a].n, 0);
+    await expect(page.locator(".kpi").first()).toContainText(`${n.toLocaleString("pt-BR")} indicaç`);
+    expect(erros).toEqual([]);
+  });
+});
+
 test.describe("segurança", () => {
   test("nenhum CPF nas páginas do estado (os arquivos de teste trazem CPF de propósito)", async ({ page }) => {
     vigiar(page);

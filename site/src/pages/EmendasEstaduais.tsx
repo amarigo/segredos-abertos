@@ -91,6 +91,7 @@ export default function EmendasEstaduais() {
             <p className="muted small">Investimento é obra e equipamento, que fica; despesa corrente é custeio do dia a dia, como remédio, salário e manutenção.</p>
             <Barras itens={a.grupos.map((t) => ({ label: t.nome, nota: nota(t), valor: t.indicado, cor: "var(--c6)" }))} /></div>}
           {!!a.areas?.length && <div className="card"><h3>Área</h3>
+            <p className="small"><Link to={`/painel?ano=${ano}`}>Abrir o painel por área ›</Link> junte áreas, cruze com cidade e veja em quê o dinheiro foi usado.</p>
             <Barras itens={a.areas.slice(0, 12).map((t) => ({ label: t.nome, nota: nota(t), valor: t.indicado, cor: "var(--s1)" }))} /></div>}
         </div>
       </section>}

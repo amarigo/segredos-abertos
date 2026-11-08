@@ -13,6 +13,8 @@ O recorte de Minas Gerais do Segredos Abertos, publicado em https://amarigo.gith
 - `etl/mg_etl/fontes.py`: funções comuns; `sem_cpf` apaga qualquer número com cara de CPF de textos livres (nome de fornecedor, motivo de viagem).
 - `etl/mg_etl/validar.py`: a conferência antes de publicar.
 - O site é o mesmo do nacional, montado com `npm run build:mg` (pasta `site/`).
+- Painel por área (`#/painel`, `site/src/pages/PainelAreas.tsx`): soma no navegador as indicações de emendas estaduais
+  dos arquivos `estado/emendas/{ano}.json`, com filtros combinados de área (uma ou várias), anos, cidade, autor e palavra.
 
 Para incluir uma cidade, acrescente-a em `CIDADES` (`etl/mg_etl/cidades.py`).
 

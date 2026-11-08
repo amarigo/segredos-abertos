@@ -1,0 +1,35 @@
+/* Painel das emendas por área (PainelAreas.tsx) */
+.painel-filtros { display: grid; gap: 14px; margin-top: 12px; }
+.painel-grupo { display: grid; gap: 6px; justify-items: start; }
+.painel-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.painel-resumo { margin: 0 0 12px; font-size: 1.02rem; }
+
+/* Barra de quanto já foi pago, dentro do número grande */
+.painel-exec { display: block; height: 6px; border-radius: 999px; background: var(--grid); overflow: hidden; }
+.painel-exec i { display: block; height: 100%; background: var(--s3); border-radius: 999px; }
+
+/* Áreas: cada linha é um botão que liga e desliga o filtro */
+.painel-areas { display: grid; gap: 6px; }
+.painel-area { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; text-align: left; width: 100%;
+  font: inherit; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--raio); padding: 10px 14px;
+  cursor: pointer; transition: border-color .15s, opacity .15s, background .15s; }
+.painel-area:hover { border-color: var(--hot); }
+.painel-area:focus-visible { outline: 3px solid var(--hot); outline-offset: 2px; }
+.painel-area[aria-pressed="true"] { border-color: var(--hot); background: var(--tint); box-shadow: inset 4px 0 0 var(--hot); }
+.painel-area.apagado { opacity: .55; }
+.painel-area.apagado:hover { opacity: 1; }
+.painel-area-nome { font-weight: 700; display: flex; align-items: center; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+.painel-area-val { font-weight: 700; white-space: nowrap; }
+.painel-area-barra { grid-column: 1 / -1; position: relative; height: 12px; border-radius: 999px; background: var(--grid); overflow: hidden; }
+.painel-area-barra i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; transition: width .4s ease; }
+.painel-claro { opacity: .35; }
+.painel-area-nota { grid-column: 1 / -1; }
+.painel-marca { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none; margin-right: 4px; vertical-align: -1px; }
+
+/* Cidades x áreas */
+.painel-matriz th { white-space: nowrap; }
+.painel-cel { white-space: nowrap; }
+.painel-linha-sel td { font-weight: 700; }
+.painel-duas { grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); margin-bottom: 24px; }
+.painel-duas h3 { margin-top: 0; }
+@media (prefers-reduced-motion: reduce) { .painel-area-barra i, .painel-area { transition: none; } }
