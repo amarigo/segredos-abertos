@@ -2,7 +2,7 @@ name: Sonda do PNCP (temporária)
 on:
   push:
     branches: [claude/project-thread-w42wwq]
-    paths: [etl/sondar_pncp.py, .github/workflows/sonda-pncp.yml]
+    paths: [etl/sondar_pncp.py, .github/workflows/sonda-pncp.yml, mg/etl/mg_etl/pncp.py]
 permissions:
   contents: read
 jobs:
@@ -16,4 +16,4 @@ jobs:
           python-version: "3.12"
       - run: pip install -r etl/requirements.txt
       - working-directory: etl
-        run: python sondar_pncp.py
+        run: PYTHONPATH=. python sondar_pncp.py
