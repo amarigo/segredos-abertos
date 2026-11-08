@@ -382,13 +382,17 @@ export interface ViagensPessoa {
   id?: string; n_todas?: number;
 }
 export interface Viagem { inicio: string; fim: string; destinos: string[]; valor: number; diarias?: number; passagens?: number; motivo: string }
-export interface ViagensDetalhe { nome: string; cargo: string; viagens: Viagem[]; fonte: string; portal: string }
+export interface ViagensDetalhe { nome: string; cargo: string; viagens: Viagem[]; fonte: string; portal: string;
+  /** Cada cidade visitada: ponto no mapa de Minas [x, y, nome do IBGE], ou null (fora de Minas ou não achada) */
+  lugares?: Record<string, [number, number, string] | null> }
+/** Contorno de Minas Gerais (IBGE), para o mapa das cidades visitadas */
+export interface MapaMG { vb: string; contorno: string; fonte: string }
 export interface PessoaEquipe {
   nome: string; cargo: string; orgao: string; bruto: number; abate_teto: number; ferias_13: number; eventual: number; jetons: number;
   descontos: number; liquido: number; viagens: ViagensPessoa | null;
 }
 export interface EquipeGoverno {
-  mes_salarios: string | null; pessoas: PessoaEquipe[]; tem_salarios: boolean; tem_viagens: boolean;
+  mes_salarios: string | null; pessoas: PessoaEquipe[]; tem_salarios: boolean; tem_viagens: boolean; mapa?: MapaMG | null;
   fontes: { salarios: string; viagens: string; portal_salarios: string; portal_viagens: string };
 }
 /* Minas Nossa: dinheiro que chega à cidade e onde a prefeitura gasta */

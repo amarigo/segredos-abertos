@@ -535,3 +535,41 @@ def test_nota_tem_numero_e_nunca_cpf():
     n = almg.notas_do_mes(dados)
     assert n[0]["numero"] == "0002 7092"
     assert n[1]["numero"] == "" and n[2]["numero"] == "", "número com cara de CPF (ou de pessoa física) não sai"
+
+
+def test_viagens_no_calendario_e_no_mapa(estado, tmp_path):
+    """Cada viagem tem início e fim (para o calendário) e cada cidade visitada tem seu ponto no mapa de Minas (IBGE)."""
+    e = equipe.coletar(tmp_path, hoje=HOJE)
+    gov = e["pessoas"][0]["viagens"]
+    det = e["viagens_detalhe"][gov["id"]]
+    ita = next(v for v in det["viagens"] if "Itajuba" in v["destinos"])
+    assert (ita["inicio"], ita["fim"]) == ("2026-05-02", "2026-05-04"), "a viagem de três dias ocupa três dias no calendário"
+    assert all("Belo Horizonte" not in v["destinos"] for v in det["viagens"]), "a volta para casa não é cidade visitada"
+    sau = e["viagens_detalhe"]["secretario-da-saude"]["viagens"]
+    assert next(v for v in sau if v["inicio"] == "2026-01-15")["destinos"] == ["Belo Horizonte"], \
+        "viagem sem outro destino mostra a cidade registrada, não 'destino não informado'"
+    assert det["lugares"]["Itajuba"][2] == "Itajubá", "o ponto no mapa leva o nome oficial do IBGE, com acento"
+    assert det["lugares"]["Brasilia"] is None, "Brasília fica fora do mapa de Minas"
+    assert e["mapa"]["vb"].startswith("0 0 600 ") and e["mapa"]["contorno"].startswith("M")
+    assert "cidades" not in e["mapa"], "os 853 pontos não vão para o site, só os das cidades visitadas"
+    assert "ufs" not in gov
+    # o IBGE fora do ar: usa o mapa já baixado; sem cópia, as viagens continuam, sem mapa
+    estado.falhar("servicodados.ibge.gov.br", "fora")
+    try:
+        assert equipe.coletar(tmp_path, hoje=HOJE)["mapa"] == e["mapa"]
+        sem = equipe.coletar(tmp_path / "novo", hoje=HOJE)
+        assert sem["mapa"] is None and sem["pessoas"][0]["viagens"]["anos"]
+    finally:
+        estado.consertar()
+
+
+def test_cidade_com_uf():
+    assert equipe.cidade_uf({"nome": "ITAJUBA - MG"}) == ("Itajuba", "MG")
+    assert equipe.cidade_uf({"nome": "SAO PAULO/SP"}) == ("Sao Paulo", "SP")
+    assert equipe.cidade_uf({"nome": "BRASILIA (DF)"}) == ("Brasilia", "DF")
+    assert equipe.cidade_uf({"nome": "SAO JOAO DEL-REI"})[1] == "", "hífen no nome da cidade não é UF"
+    assert equipe.cidade_uf({"nome": "VITORIA", "sg_uf": "ES"}) == ("Vitoria", "ES")
+    # mesma cidade, outro estado: com a UF, não entra no mapa de Minas
+    mapa = {"cidades": {"ITAJUBA": [1, 2, "Itajubá"]}}
+    assert equipe.lugares([{"destinos": ["Itajuba"]}], {"Itajuba": "SP"}, mapa) == {"Itajuba": None}
+    assert equipe.lugares([{"destinos": ["Itajuba"]}], {}, mapa) == {"Itajuba": [1, 2, "Itajubá"]}

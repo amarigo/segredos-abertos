@@ -9,6 +9,8 @@ O recorte de Minas Gerais do Segredos Abertos, publicado em https://amarigo.gith
   `em_exercicio`, e quem já saiu, pelo arquivo oficial de deputados, coluna `Legislaturas`), com a verba indenizatória nota por nota (API mensal da ALMG; só o ano atual e o anterior, `ANOS_RECENTES`; cada execução baixa até 700 meses, do mais novo para o mais antigo, e o site avisa enquanto um ano está incompleto), projetos e requerimentos.
 - `etl/mg_etl/emendas_mg.py`: emendas estaduais (quem indicou, quem recebeu, quanto foi pago).
 - `etl/mg_etl/governo.py` e `equipe.py`: eleições para governador e vice (TSE) e, pelo Dados MG, o salário e as viagens pagas ao governador, vice e secretários de estado.
+  As viagens aparecem num calendário do ano (cada dia entre a ida e a volta) e num mapa de Minas com as cidades visitadas;
+  `etl/mg_etl/mapa_mg.py` tira o contorno do estado e o ponto central de cada cidade da API de malhas do IBGE.
 - `etl/mg_etl/siconfi.py` e `emendas_federais.py`: o dinheiro de cada cidade (contas da prefeitura no SICONFI e emendas federais no Portal da Transparência).
 - `etl/mg_etl/fontes.py`: funções comuns; `sem_cpf` apaga qualquer número com cara de CPF de textos livres (nome de fornecedor, motivo de viagem).
 - `etl/mg_etl/validar.py`: a conferência antes de publicar.

@@ -215,8 +215,37 @@ test.describe("jornada", () => {
     const det = dados(`estado/viagens/${sec.viagens.id}.json`);
     const doAno = det.viagens.filter((v: { inicio: string }) => v.inicio.startsWith(`${ano.ano}`));
     await expect(page.locator("tr.linha-aberta details.abrir[open] tbody tr")).toHaveCount(doAno.length);
-    await expect(page.locator("tr.linha-aberta details.abrir[open] tbody")).toContainText(doAno[0].destinos[0]);
+    await expect(page.locator("tr.linha-aberta details.abrir[open] tbody")).toContainText(doAno[0].destinos[0] ?? "destino não informado");
     await expect(page.getByRole("link", { name: /Viagens e diárias do governo no Portal da Transparência/ })).toHaveAttribute("href", /transparencia\.mg\.gov\.br/);
+    expect(erros).toEqual([]);
+  });
+
+  test("governo: calendário com cada dia de viagem e mapa das cidades visitadas", async ({ page }) => {
+    const erros = vigiar(page);
+    await page.goto("./#/governo");
+    const g = gov.equipe.pessoas[0];
+    const det = dados(`estado/viagens/${g.viagens.id}.json`);
+    const ano = g.viagens.anos[0].ano;
+    const doAno = det.viagens.filter((v: { inicio: string }) => v.inicio.startsWith(`${ano}`));
+    // cada dia entre a ida e a volta fica pintado
+    const dias = new Set<string>();
+    for (const v of doAno) {
+      for (let d = new Date(`${v.inicio}T12:00:00Z`); d <= new Date(`${v.fim || v.inicio}T12:00:00Z`); d = new Date(d.getTime() + 864e5)) dias.add(d.toISOString().slice(0, 10));
+    }
+    const cal = page.locator(".viagens-ano").first();
+    await expect(cal.locator(".cal-dia.com-viagem")).toHaveCount(dias.size);
+    await expect(cal.locator(".cal-dia")).toHaveCount(ano % 4 === 0 ? 366 : 365);
+    // uma bolinha no mapa para cada cidade de Minas visitada; clicar nela deixa só os dias daquela cidade
+    const emMinas = Object.entries(det.lugares).filter(([, p]) => p) as [string, [number, number, string]][];
+    const visitadas = emMinas.filter(([n]) => doAno.some((v: { destinos: string[] }) => v.destinos.includes(n)));
+    await expect(cal.locator("circle.ponto")).toHaveCount(visitadas.length);
+    const [nome, ponto] = visitadas[0];
+    await cal.getByRole("button", { name: new RegExp(`^${ponto[2]}:`) }).click();
+    const soEla = doAno.filter((v: { destinos: string[] }) => v.destinos.includes(nome));
+    await expect(cal).toContainText(`Mostrando só as viagens para ${nome}`);
+    expect(await cal.locator(".cal-dia.com-viagem").count()).toBeLessThanOrEqual(dias.size);
+    await cal.locator(".cal-dia.com-viagem").first().click();
+    await expect(cal.locator(".card")).toContainText(soEla[soEla.length - 1].destinos[0]);
     expect(erros).toEqual([]);
   });
 
