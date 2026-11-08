@@ -22,7 +22,7 @@ from pathlib import Path
 
 from sa_etl import emendas as emendas_nac, util
 
-from . import almg, cidades, emendas_federais, emendas_mg, equipe, fontes, governo, recorte, siconfi
+from . import almg, cidades, cultura, emendas_federais, emendas_mg, equipe, fontes, governo, recorte, siconfi
 
 log = logging.getLogger("mg_etl.build")
 
@@ -136,6 +136,9 @@ def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[
         })
         n_dinheiro += 1
     cont["cidades_dinheiro"] = n_dinheiro
+    # Shows e cultura: contratação de artistas (PNCP), emendas Pix com show ou evento, Lei Rouanet (SALIC) e população (IBGE)
+    cult = _seguro("Shows e cultura", lambda: cultura.coletar(nacional, saida, cache, ids_mg))
+    cont.update(cult or {})
     return cont
 
 

@@ -10,6 +10,10 @@ O recorte de Minas Gerais do Segredos Abertos, publicado em https://amarigo.gith
 - `etl/mg_etl/emendas_mg.py`: emendas estaduais (quem indicou, quem recebeu, quanto foi pago).
 - `etl/mg_etl/governo.py` e `equipe.py`: eleições para governador e vice (TSE) e, pelo Dados MG, o salário e as viagens pagas ao governador, vice e secretários de estado.
 - `etl/mg_etl/siconfi.py` e `emendas_federais.py`: o dinheiro de cada cidade (contas da prefeitura no SICONFI e emendas federais no Portal da Transparência).
+- `etl/mg_etl/cultura.py`: página "Shows e cultura". Contratação de artistas por prefeituras e pelo estado (API do PNCP,
+  só o amparo legal do art. 74, II da Lei 14.133, com quem recebeu), emendas Pix com show ou evento (dos arquivos do
+  Transferegov já gerados pelo coletor nacional, com o parlamentar que indicou), Lei Rouanet por região de MG (API do SALIC)
+  e população de cada cidade (IBGE). PNCP e SALIC são lidos aos poucos; o que falta continua na execução seguinte.
 - `etl/mg_etl/fontes.py`: funções comuns; `sem_cpf` apaga qualquer número com cara de CPF de textos livres (nome de fornecedor, motivo de viagem).
 - `etl/mg_etl/validar.py`: a conferência antes de publicar.
 - O site é o mesmo do nacional, montado com `npm run build:mg` (pasta `site/`).

@@ -214,7 +214,7 @@ jobs:
       - name: "Minas Nossa: montar os dados de MG"
         id: mg
         continue-on-error: true
-        timeout-minutes: 40
+        timeout-minutes: 55  # inclui até 12 min de leitura aos poucos do PNCP e do SALIC (Shows e cultura)
         working-directory: mg/etl
         env:
           PYTHONPATH: ../../etl

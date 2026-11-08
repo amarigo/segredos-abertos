@@ -362,6 +362,39 @@ class FakeEstado:
     def _rota(self, url: str, params: dict) -> tuple[int, bytes, str]:
         u = urlparse(url)
         q = {**{k: v[0] for k, v in parse_qs(u.query).items()}, **{k: str(v) for k, v in (params or {}).items()}}
+        if u.netloc == "servicodados.ibge.gov.br":  # cidades e população (Shows e cultura)
+            if "/localidades/" in u.path:
+                return 200, json.dumps([{"id": 3132404, "nome": "Itajubá", "regiao-imediata": {
+                    "nome": "Itajubá", "regiao-intermediaria": {"nome": "Pouso Alegre"}}}]).encode(), "application/json"
+            return 200, json.dumps([{"resultados": [{"series": [
+                {"localidade": {"id": "3132404"}, "serie": {"2025": "97000"}}]}]}]).encode(), "application/json"
+        if u.netloc == "pncp.gov.br":  # uma contratação de artista em Itajubá, em março de 2025
+            if u.path.endswith("/contratacoes/publicacao"):
+                if q.get("dataInicial") != "20250301" or q.get("pagina") != "1":
+                    return 204, b"", "application/json"
+                return 200, json.dumps({"data": [{
+                    "numeroControlePNCP": "18025940000109-1-000007/2025", "anoCompra": 2025, "sequencialCompra": 7,
+                    "objetoCompra": "Show artístico da Banda Simulada na Festa de Teste", "valorTotalHomologado": 45000,
+                    "dataPublicacaoPncp": "2025-03-10T09:00:00", "amparoLegal": {"nome": "Lei 14.133/2021, Art. 74, II"},
+                    "orgaoEntidade": {"cnpj": "18025940000109", "razaoSocial": "MUNICIPIO DE ITAJUBA"},
+                    "unidadeOrgao": {"ufSigla": "MG", "municipioNome": "Itajubá", "codigoIbge": "3132404"}}],
+                    "paginasRestantes": 0}).encode(), "application/json"
+            if u.path.endswith("/itens"):
+                return 200, json.dumps([{"numeroItem": 1, "temResultado": True}]).encode(), "application/json"
+            if u.path.endswith("/resultados"):
+                return 200, json.dumps([{"niFornecedor": "11222333000181", "tipoPessoa": "PJ",
+                                         "nomeRazaoSocialFornecedor": "BANDA SIMULADA PRODUCOES LTDA",
+                                         "valorTotalHomologado": 45000}]).encode(), "application/json"
+            return 404, b"", "text/html"
+        if u.netloc == "api.salic.cultura.gov.br":
+            campo = u.path.rstrip("/").rsplit("/", 1)[1]
+            linhas = {"incentivadores": [{"nome": "EMPRESA SIMULADA SA", "cgccpf": "11222333000181", "municipio": "Itajubá",
+                                          "UF": "MG", "tipo_pessoa": "juridica", "total_doado": 120000}],
+                      "projetos": [{"PRONAC": "250001", "nome": "Festival Simulado", "proponente": "Associação Teste",
+                                    "municipio": "Itajubá", "UF": "MG", "ano_projeto": "25", "valor_captado": 80000}]}.get(campo, [])
+            if int(q.get("offset", 0)) > 0:
+                linhas = []
+            return 200, json.dumps({"_embedded": {campo: linhas}, "total": 1}).encode(), "application/json"
         if "tse.jus.br" in u.netloc:
             try:
                 return 200, self.tse.responder(url), "application/zip"
