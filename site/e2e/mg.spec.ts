@@ -178,13 +178,33 @@ test.describe("jornada", () => {
     await expect(page.locator("main")).toContainText(brl(v.total));
     await expect(page.locator("main")).toContainText("Pessoa física");
     await expect(page.getByRole("link", { name: /Prestação de contas de/ })).toHaveAttribute("href", /verba-indenizatoria\/detalhe\.html\?id=20003/);
-    // notas agrupadas por tipo, como na ALMG: abrir o grupo mostra cada nota com o número
+    // as notas ficam no nosso site: nenhuma nota manda para a ALMG, o link oficial fica só no fim, para conferir
+    await expect(page.getByRole("link", { name: /ver na ALMG/ })).toHaveCount(0);
+    // lista completa mês a mês, como a prestação de contas da ALMG: o mês mais novo vem aberto
+    const ultimoMes = Math.max(...v.notas.map((n: { mes: number }) => n.mes));
+    const notasMes = v.notas.filter((n: { mes: number }) => n.mes === ultimoMes);
+    await expect(page.locator("#todas-as-notas details.abrir[open] tbody tr")).toHaveCount(notasMes.length);
+    // clicar numa nota mostra todos os dados dela aqui mesmo
+    const nota = notasMes.find((n: { cnpj: string }) => n.cnpj) || notasMes[0];
+    await page.locator("#todas-as-notas details.abrir[open] button.nota-abrir", { hasText: nota.fornecedor }).first().click();
+    const det = page.locator("#todas-as-notas .nota-detalhe");
+    await expect(det).toBeVisible();
+    await expect(det).toContainText(nota.tipo);
+    await expect(det).toContainText(new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(nota.valor).replace(/\s/g, " "));
+    if (nota.numero) await expect(det).toContainText(nota.numero);
+    // planilha com todas as notas do ano
+    const [arq] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: /Baixar todas as notas/ }).click()]);
+    const csv = (await import("node:fs")).readFileSync(await arq.path(), "utf-8");
+    expect(csv.trim().split("\n").length).toBe(v.notas.length + 1);
+    // por tipo de despesa: abrir o grupo mostra cada nota com o número
+    await page.getByRole("button", { name: "Por tipo de despesa" }).click();
     const tipo = v.tipos[0];
     const notasTipo = v.notas.filter((n: { tipo: string }) => n.tipo === tipo.tipo);
-    await page.locator("details.abrir summary", { hasText: tipo.tipo }).click();
-    await expect(page.locator("details.abrir[open] tbody tr")).toHaveCount(notasTipo.length);
+    const grupo = page.locator("#todas-as-notas details.abrir", { has: page.locator("summary", { hasText: tipo.tipo }) });
+    if (!(await grupo.getAttribute("open") !== null)) await grupo.locator("summary").click();
+    await expect(grupo.locator("tbody tr:not(.nota-aberta)")).toHaveCount(notasTipo.length);
     const comNumero = notasTipo.find((n: { numero?: string }) => n.numero);
-    if (comNumero) await expect(page.locator("details.abrir[open] tbody")).toContainText(comNumero.numero);
+    if (comNumero) await expect(grupo.locator("tbody")).toContainText(comNumero.numero);
     // filtro por tipo: só as notas daquele tipo nas maiores despesas
     await page.locator("#filtro-tipo-nota").selectOption(tipo.tipo);
     await expect(page.locator("main")).toContainText(`${notasTipo.length} nota`);

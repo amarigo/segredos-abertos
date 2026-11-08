@@ -850,3 +850,9 @@ tr.linha-aberta > td { background: var(--tint); }
 .filtros-emendas { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
 .filtros-emendas label { display: grid; gap: 4px; min-width: 0; }
 .filtros-emendas select, .filtros-emendas input { width: 100%; font: inherit; padding: 10px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); min-width: 0; }
+
+/* Nota da verba indenizatória aberta na própria página (deputado estadual) */
+button.nota-abrir { text-align: left; font-weight: 700; }
+tr.nota-aberta > td { background: var(--tint); }
+.nota-detalhe { padding: 6px 2px; }
+.nota-detalhe .kv { margin-bottom: 6px; }

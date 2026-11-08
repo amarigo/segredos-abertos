@@ -2186,5 +2186,15 @@
 "Foto oficial de {*}": "Foto oficial de {*}",
 "{*} (sem foto oficial)": "{*} (sin foto oficial)",
 "Foto:": "Foto:",
-"Foto oficial publicada por: {*}": "Foto oficial publicada por: {*}"
+"Foto oficial publicada por: {*}": "Foto oficial publicada por: {*}",
+"Mês a mês": "Mes a mes",
+"Por tipo de despesa": "Por tipo de gasto",
+"Emitente": "Emisor",
+"Data da nota": "Fecha de la factura",
+"Prestação de contas": "Rendición de cuentas",
+"Número da nota": "Número de la factura",
+"Valor reembolsado": "Monto reembolsado",
+"Para conferir no site oficial": "Para verificar en el sitio oficial",
+"Ver todas as notas deste fornecedor": "Ver todas las facturas de este proveedor",
+"Nenhuma nota com esses filtros.": "Ninguna factura con estos filtros."
 }
