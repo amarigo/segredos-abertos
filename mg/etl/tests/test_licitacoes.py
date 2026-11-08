@@ -66,16 +66,16 @@ def test_cidade_so_orgaos_municipais_com_e_sem_licitacao(estado, tmp_path):
     assert d["fornecedores"][0] == {"nome": "Asfaltos Minas Ltda", "cnpj": "11222333000181", "valor": 800000.0, "n": 1}
     # Câmara municipal também é da cidade; Paraisópolis não publicou nada: o arquivo existe com zero, não some
     assert _json(saida / "licitacoes" / "itajuba-2026.json")["total"]["n"] == 1
-    assert _json(saida / "licitacoes" / "paraisopolis-2025.json")["total"]["n"] == 0
+    assert _json(saida / "licitacoes" / "paraisopolis-2025.json")["total"]["n"] == 0, "compra de outra cidade com o mesmo código fica fora"
     assert util.AVISOS == []
 
 
 def test_estado_so_orgaos_estaduais_e_varias_paginas(estado, tmp_path):
     saida, _ = _coletar(tmp_path)
-    d25 = _json(saida / "licitacoes" / "estado-2025.json")
-    assert d25["total"]["n"] == 61, "60 compras num mês (duas páginas) e a merenda da escola estadual em Itajubá"
+    assert not (saida / "licitacoes" / "estado-2025.json").exists(), "o estado é lido só no ano atual (volume da API)"
     d26 = _json(saida / "licitacoes" / "estado-2026.json")
-    assert d26["total"]["n"] == 1 and d26["compras"][0]["contratos"][0]["fornecedor"] == "Construtora Escolar Ltda"
+    assert d26["total"]["n"] == 62, "60 compras num mês (duas páginas), a merenda da escola estadual em Itajubá e a reforma"
+    assert d26["compras"][0]["contratos"][0]["fornecedor"] == "Construtora Escolar Ltda"
     idx = _json(saida / "licitacoes" / "index.json")
     assert [x["id"] for x in idx["locais"]] == ["itajuba", "paraisopolis", "estado"]
 
@@ -108,7 +108,7 @@ def test_sem_tempo_continua_na_proxima_execucao(estado, tmp_path, monkeypatch):
             break
     else:
         pytest.fail("a leitura aos poucos nunca terminou")
-    assert _json(saida / "licitacoes" / "estado-2025.json")["total"]["n"] == 61
+    assert _json(saida / "licitacoes" / "estado-2026.json")["total"]["n"] == 62
 
 
 @pytest.mark.parametrize("modo", ["fora", "500", "429", "html"])

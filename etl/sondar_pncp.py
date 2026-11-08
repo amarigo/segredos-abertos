@@ -16,7 +16,7 @@ cache, saida = Path("/tmp/cache"), Path("/tmp/saida")
 for c in cidades.CIDADES:
     print(c["nome"], siconfi.codigo_ibge(c["nome"], c["uf"], cache))
 t = time.time()
-print(pncp.coletar(saida, cache, cidades.CIDADES, minutos=10))
+print(pncp.coletar(saida, cache, cidades.CIDADES, minutos=12))
 print("tempo", round(time.time() - t), "s; avisos", util.AVISOS)
 print(json.dumps(json.loads((saida / "licitacoes" / "index.json").read_text()), ensure_ascii=False, indent=1))
 for f in sorted((saida / "licitacoes").glob("*-*.json")):

@@ -386,13 +386,15 @@ class FakeEstado:
             compra(pref, "MUNICIPIO DE ITAJUBA", "M", ita, "Itajubá", 3, 9, "2025-07-01", "Show da festa da cidade", 150000.0, 150000.0, amparo=inex),
             compra(pref, "MUNICIPIO DE ITAJUBA", "M", ita, "Itajubá", 4, 6, "2025-08-01", "Compra cancelada de veículos", 300000.0, None, sit=2),
             compra(cam, "ITAJUBA CAMARA MUNICIPAL", "M", ita, "Itajubá", 1, 8, "2026-02-03", "Papel e material de escritório", 5000.0, None, amparo=dispensa),
+            # código do IBGE que devolve outra cidade (aconteceu na sondagem: um código errado trouxe Paraopeba)
+            compra("18116160000166", "MUNICIPIO DE PARAOPEBA", "M", par, "Paraopeba", 1, 8, "2025-02-04", "Compra de outra cidade", 100.0, 100.0, amparo=dispensa),
             compra(unifei, "UNIVERSIDADE FEDERAL DE ITAJUBA", "F", ita, "Itajubá", 9, 8, "2025-03-15", "Compra da universidade federal", 7000.0, 7000.0, amparo=dispensa),
-            compra(see, "MINAS GERAIS SECRETARIA DE ESTADO DA EDUCACAO", "E", ita, "Itajubá", 5, 8, "2025-03-20", "Merenda escolar", 4000.0, 4000.0, amparo=dispensa),
+            compra(see, "MINAS GERAIS SECRETARIA DE ESTADO DA EDUCACAO", "E", ita, "Itajubá", 5, 8, "2026-03-20", "Merenda escolar", 4000.0, 4000.0, amparo=dispensa),
             compra(see, "MINAS GERAIS SECRETARIA DE ESTADO DA EDUCACAO", "E", 3106200, "Belo Horizonte", 6, 4, "2026-05-05", "Reforma de escolas", 2000000.0, 1800000.0),
         ]
         # Muitas compras do estado num mês, para passar de uma página (50 linhas)
         self.compras_pncp += [compra(see, "MINAS GERAIS SECRETARIA DE ESTADO DA EDUCACAO", "E", 3106200, "Belo Horizonte", 100 + i, 6,
-                                     "2025-04-15", f"Material escolar lote {i}", 1000.0, 1000.0) for i in range(60)]
+                                     "2026-04-15", f"Material escolar lote {i}", 1000.0, 1000.0) for i in range(60)]
 
         def contrato(orgao, compra_seq, ano, seq, tipo, ni, nome, valor, fim):
             return {"numeroControlePncpCompra": f"{orgao}-1-{compra_seq:06d}/{ano}", "orgaoEntidade": {"cnpj": orgao, "esferaId": "M"},

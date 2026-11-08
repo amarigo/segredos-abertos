@@ -19,11 +19,13 @@ O que cada compra mostra:
 - se foi feito: a situação da compra (divulgada, revogada, anulada, suspensa) e o contrato (assinado, em vigor ou já
   encerrado). O PNCP não registra a entrega da obra ou do serviço nem os pagamentos; o site diz isso.
 
-A API responde HTTP 429 (muitas requisições) depois de uns 15 pedidos seguidos sem pausa: há uma pausa entre os
-pedidos. O estado inteiro tem centenas de compras por dia, então a leitura do estado é feita aos poucos, com limite
-de tempo por execução (MINUTOS), mês a mês e modalidade por modalidade, e continua de onde parou na execução
-seguinte. Cada pedaço lido vale um dia se o mês for recente (as compras ainda mudam de situação) e VALIDADE_ANTIGO
-dias se for mais velho. Depois de 3 falhas seguidas o PNCP é dado como fora do ar e a execução usa só o cache.
+A API responde HTTP 429 (muitas requisições) com facilidade: na sondagem, com 1 segundo entre pedidos, foram só
+~10 páginas por minuto. Há PAUSA segundos entre os pedidos e uma espera maior depois de cada 429. Por isso:
+- cidades: uma consulta por modalidade cobrindo o ano inteiro (poucas páginas); anos anteriores e o atual;
+- estado: centenas de compras por dia em MG (de todas as esferas; a API não filtra por esfera). Só o ano atual,
+  mês a mês e modalidade por modalidade, aos poucos, com limite de tempo por execução (MINUTOS), continuando de onde
+  parou na execução seguinte. O mês atual vale um dia; os anteriores, VALIDADE_MES_ESTADO dias.
+Depois de 3 falhas seguidas o PNCP é dado como fora do ar e a execução usa só o cache.
 """
 from __future__ import annotations
 
@@ -46,10 +48,13 @@ API = "https://pncp.gov.br/api/consulta/v1"
 PAGINA = "https://pncp.gov.br/app/editais"
 DOC_API = "https://pncp.gov.br/api/consulta/swagger-ui/index.html"
 TAMANHO = 50          # o máximo que a consulta aceita (500 dá HTTP 400 "Tamanho de página inválido")
-PAUSA = 1.0           # segundos entre pedidos (sem pausa, HTTP 429 depois de ~15 pedidos)
+PAUSA = 4.0           # segundos entre pedidos: com 1 s, HTTP 429 quase o tempo todo (sondagem de 08/11/2026)
+ESPERA_429 = 30       # segundos de espera depois de um HTTP 429
 MINUTOS = 12          # limite de tempo por execução para a leitura do PNCP
-VALIDADE_RECENTE = 1  # dias: meses dos últimos 62 dias
-VALIDADE_ANTIGO = 15  # dias: meses mais antigos
+VALIDADE_RECENTE = 1  # dias: o ano de hoje nas cidades; o mês de hoje no estado
+VALIDADE_ANTIGO = 15  # dias: anos anteriores nas cidades
+VALIDADE_MES_ESTADO = 30  # dias: meses anteriores no estado (cada mês do estado tem centenas de páginas)
+VALIDADE_CONTRATOS_ESTADO = 7  # dias: contratos do ano de hoje dos órgãos do estado (são muitos órgãos)
 MAX_LISTA = 2000      # compras na lista de cada arquivo (as maiores); os totais contam todas
 VERSAO = 1
 
@@ -91,9 +96,19 @@ def _gravar_gz(f: Path, d) -> None:
 
 
 def _pagina(caminho: str, params: dict) -> dict:
-    """Uma página da consulta. HTTP 204 (nada no período) vira página vazia."""
-    time.sleep(PAUSA)
-    r = get(f"{API}/{caminho}", params=params, timeout=90, tries=5)
+    """Uma página da consulta. HTTP 204 (nada no período) vira página vazia. Com HTTP 429 (muitas requisições),
+    espera ESPERA_429 segundos (o dobro a cada vez) antes de tentar de novo."""
+    for tentativa in range(4):
+        time.sleep(PAUSA)
+        try:
+            r = get(f"{API}/{caminho}", params=params, timeout=90, tries=1)
+            break
+        except RuntimeError as e:
+            if tentativa == 3:
+                raise
+            espera = ESPERA_429 * 2 ** tentativa if "429" in str(e) else 10
+            log.info("PNCP: %s; nova tentativa em %ss", str(e)[:80], espera)
+            time.sleep(espera)
     if r.status_code == 204 or not r.content:
         return {"data": [], "totalRegistros": 0, "paginasRestantes": 0}
     try:
@@ -145,16 +160,19 @@ def enxugar_contrato(x: dict) -> dict:
     }
 
 
-def _meses(anos: list[int], hoje: dt.date) -> list[tuple[int, int]]:
-    """Os meses dos anos pedidos até o mês de hoje, do mais novo para o mais antigo."""
-    out = [(a, m) for a in anos for m in range(1, 13) if dt.date(a, m, 1) <= hoje]
-    return sorted(out, reverse=True)
+def _meses(ano: int, hoje: dt.date) -> list[tuple[int, int]]:
+    """Os meses do ano até o mês de hoje, do mais novo para o mais antigo."""
+    return [(ano, m) for m in range(12, 0, -1) if dt.date(ano, m, 1) <= hoje]
 
 
-def _faixa(ano: int, mes: int, hoje: dt.date) -> tuple[str, str]:
+def _faixa_mes(ano: int, mes: int, hoje: dt.date) -> tuple[str, str]:
     ini = dt.date(ano, mes, 1)
     fim = (dt.date(ano + (mes == 12), mes % 12 + 1, 1) - dt.timedelta(days=1))
     return ini.strftime("%Y%m%d"), min(fim, hoje).strftime("%Y%m%d")
+
+
+def _faixa_ano(ano: int, hoje: dt.date) -> tuple[str, str]:
+    return f"{ano}0101", min(dt.date(ano, 12, 31), hoje).strftime("%Y%m%d")
 
 
 class Leitor:
@@ -175,11 +193,10 @@ class Leitor:
             self.sem_tempo = True
             raise SemTempo
 
-    def _vencido(self, st: dict | None, recente: bool) -> bool:
+    def _vencido(self, st: dict | None, validade: int) -> bool:
         if not st or not st.get("lido_em"):
             return True
-        idade = (self.hoje - dt.date.fromisoformat(st["lido_em"])).days
-        return idade >= (VALIDADE_RECENTE if recente else VALIDADE_ANTIGO)
+        return (self.hoje - dt.date.fromisoformat(st["lido_em"])).days >= validade
 
     def _todas(self, caminho: str, params: dict, filtro=None, enxugar=enxugar_compra) -> list[dict]:
         linhas, pag = [], 1
@@ -192,19 +209,18 @@ class Leitor:
                 return linhas
             pag += 1
 
-    def compras_mes(self, escopo: str, params: dict, ano: int, mes: int, filtro=None, so_cache: bool = False) -> list[dict] | None:
-        """Compras de um mês (todas as modalidades). None: alguma modalidade ainda não foi lida (sem tempo ou fonte
-        fora do ar). Cada modalidade do mês fica no cache separada: se o tempo acabar no meio do mês, o que já foi
-        lido não se perde."""
-        recente = (self.hoje - dt.date(ano, mes, 1)).days <= 62
-        di, df = _faixa(ano, mes, self.hoje)
+    def compras(self, escopo: str, params: dict, rotulo: str, faixa: tuple[str, str], validade: int,
+                filtro=None) -> list[dict] | None:
+        """Compras de um período (todas as modalidades). None: alguma modalidade ainda não foi lida (sem tempo ou
+        fonte fora do ar). Cada modalidade fica no cache separada: se o tempo acabar no meio, o que já foi lido não
+        se perde."""
         todas, falta = [], False
         for mod in MODALIDADES:
-            f = self.cache / f"compras-{escopo}-{ano}{mes:02d}-m{mod:02d}-v{VERSAO}.json.gz"
+            f = self.cache / f"compras-{escopo}-{rotulo}-m{mod:02d}-v{VERSAO}.json.gz"
             st = _ler_gz(f)
-            if not (so_cache or self.sem_tempo or self.fora) and self._vencido(st, recente):
+            if not (self.sem_tempo or self.fora) and self._vencido(st, validade):
                 try:
-                    linhas = self._todas("contratacoes/publicacao", {**params, "dataInicial": di, "dataFinal": df,
+                    linhas = self._todas("contratacoes/publicacao", {**params, "dataInicial": faixa[0], "dataFinal": faixa[1],
                                                                       "codigoModalidadeContratacao": mod}, filtro)
                     st = {"linhas": linhas, "lido_em": self.hoje.isoformat()}
                     _gravar_gz(f, st)
@@ -212,7 +228,7 @@ class Leitor:
                 except SemTempo:
                     pass
                 except Exception as e:  # noqa: BLE001 - fonte fora do ar: fica a leitura anterior
-                    log.warning("PNCP %s %02d/%d modalidade %d: %s", escopo, mes, ano, mod, e)
+                    log.warning("PNCP %s %s modalidade %d: %s", escopo, rotulo, mod, e)
                     self._falha()
             if st is None:
                 falta = True
@@ -227,11 +243,11 @@ class Leitor:
         if self.falhas >= 3:
             self.fora = True
 
-    def contratos(self, cnpj: str, ano: int, so_cache: bool = False) -> list[dict] | None:
+    def contratos(self, cnpj: str, ano: int, validade: int) -> list[dict] | None:
         """Contratos publicados por um órgão num ano."""
         f = self.cache / f"contratos-{cnpj}-{ano}-v{VERSAO}.json.gz"
         st = _ler_gz(f)
-        if so_cache or self.sem_tempo or self.fora or not self._vencido(st, ano == self.hoje.year):
+        if self.sem_tempo or self.fora or not self._vencido(st, validade if ano == self.hoje.year else VALIDADE_ANTIGO):
             return st["linhas"] if st else None
         fim = min(dt.date(ano, 12, 31), self.hoje)
         try:
@@ -363,7 +379,8 @@ def coletar(saida: Path, cache: Path, cidades: list[dict], anos: list[int] | Non
     hoje = hoje or dt.date.today()
     anos = anos or [hoje.year - 1, hoje.year]
     ler = Leitor(cache, minutos, hoje)
-    meses = _meses(anos, hoje)
+    esfera = lambda e: lambda x: (x.get("orgaoEntidade") or {}).get("esferaId") == e  # noqa: E731
+    # Cada lugar: (local, escopo do cache, filtros da API, pedaços [(ano, rótulo, faixa, validade)], filtro, validade dos contratos)
     locais = []
     # 1. Cidades: poucas compras, consulta pelo código do IBGE; só os órgãos da prefeitura e da câmara (esfera
     #    municipal). A universidade federal, o exército e as escolas estaduais da cidade ficam de fora.
@@ -372,27 +389,33 @@ def coletar(saida: Path, cache: Path, cidades: list[dict], anos: list[int] | Non
         if not ibge:
             avisar(f"Licitações de {c['nome']}: código do IBGE não encontrado; essa parte ficou sem atualização")
             continue
+        chave = fontes.chave_nome(c["nome"])
+        pedacos = [(a, str(a), _faixa_ano(a, hoje), VALIDADE_RECENTE if a == hoje.year else VALIDADE_ANTIGO) for a in anos]
+        # o município da compra tem de ser a própria cidade (proteção contra código do IBGE trocado)
+        filtro = (lambda chave: lambda x: esfera("M")(x) and fontes.chave_nome((x.get("unidadeOrgao") or {}).get("municipioNome") or "") == chave)(chave)
         locais.append(({"id": c["id"], "nome": c["nome"]}, f"c{ibge}", {"uf": c["uf"], "codigoMunicipioIbge": str(ibge)},
-                       lambda x: (x.get("orgaoEntidade") or {}).get("esferaId") == "M"))
-    # 2. Estado: todas as compras de MG, só as dos órgãos do estado (esfera estadual)
-    locais.append((ESTADO, "mg-estado", {"uf": "MG"}, lambda x: (x.get("orgaoEntidade") or {}).get("esferaId") == "E"))
+                       pedacos, filtro, VALIDADE_RECENTE))
+    # 2. Estado: todas as compras de MG, só as dos órgãos do estado (esfera estadual); só o ano atual
+    pedacos = [(a, f"{a}{m:02d}", _faixa_mes(a, m, hoje), VALIDADE_RECENTE if (a, m) == (hoje.year, hoje.month) else VALIDADE_MES_ESTADO)
+               for a, m in _meses(hoje.year, hoje)]
+    locais.append((ESTADO, "mg-estado", {"uf": "MG"}, pedacos, esfera("E"), VALIDADE_CONTRATOS_ESTADO))
 
     resumo: dict = {}
     indice = []
-    for local, escopo, params, filtro in locais:
+    for local, escopo, params, pedacos, filtro, val_contratos in locais:
         compras, faltam = [], []
-        for a, m in meses:
-            ls = ler.compras_mes(escopo, params, a, m, filtro)
+        for ano, rotulo, faixa, validade in pedacos:
+            ls = ler.compras(escopo, params, rotulo, faixa, validade, filtro)
             if ls is None:
-                faltam.append(f"{a}-{m:02d}")
+                faltam.append(f"{rotulo[:4]}-{rotulo[4:]}" if len(rotulo) == 6 else rotulo)
             else:
                 compras += ls
         cnpjs = sorted({c["cnpj"] for c in compras if c["cnpj"]})
         anos_local = []
-        for ano in anos:
+        for ano in sorted({p[0] for p in pedacos}):
             contratos, sem_contratos = [], 0
             for cnpj in cnpjs:
-                ls = ler.contratos(cnpj, ano)
+                ls = ler.contratos(cnpj, ano, val_contratos)
                 if ls is None:
                     sem_contratos += 1
                 else:
@@ -412,7 +435,7 @@ def coletar(saida: Path, cache: Path, cidades: list[dict], anos: list[int] | Non
         if anos_local:
             indice.append({**local, "anos": sorted(anos_local, key=lambda x: -x["ano"])})
         if faltam:
-            log.info("PNCP %s: faltam %d meses; a leitura continua na próxima execução", local["nome"], len(faltam))
+            log.info("PNCP %s: faltam %s; a leitura continua na próxima execução", local["nome"], ", ".join(faltam))
     if ler.falhou:
         avisar("Licitações (PNCP): o portal não respondeu em parte das consultas; usamos a última leitura guardada")
     incompletos = [x["nome"] for x in indice if not all(a["completo"] for a in x["anos"])]
