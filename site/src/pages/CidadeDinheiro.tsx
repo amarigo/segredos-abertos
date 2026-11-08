@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Barras, Explain, Loading, useData } from "../components/ui";
 import { cnpjFmt, linkSeguro, reais, reaisCurto, type DinheiroCidade as Dinheiro } from "../data";
 import { DetalheEmendaEstadual } from "../components/EmendaEstadual";
+import { EmendasUmaAUma } from "../components/HistoriaEmenda";
 
 /* Aba "Dinheiro" da cidade: onde a prefeitura gasta (contas entregues ao Tesouro) e o dinheiro que chega por
    emendas de deputados e senadores (federais) e de deputados estaduais. Cada bloco termina com o link da fonte. */
@@ -88,6 +89,9 @@ function Federais({ d, nome }: { d: Dinheiro; nome: string }) {
             </table>
           </div>
         </>}
+      <h3 id="emendas-uma-a-uma">As emendas, uma a uma</h3>
+      {d.historias ? <EmendasUmaAUma id={d.id} nome={nome} n={d.historias.n} />
+        : <div className="empty">A história de cada emenda não pôde ser montada nesta atualização (o arquivo de emendas do Portal da Transparência não estava disponível).</div>}
       <p className="muted small fonte-linha">Fonte: <a href={linkSeguro(f?.fonte || "https://portaldatransparencia.gov.br/emendas")} target="_blank" rel="noreferrer">Portal da Transparência (CGU), emendas parlamentares ↗</a>. O nome de quem recebeu leva à página oficial com todos os pagamentos.</p>
     </section>
   );

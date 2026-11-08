@@ -337,26 +337,111 @@ class FakeEstado:
         return json.dumps({"items": itens}, ensure_ascii=False).encode()
 
     # ------------------------------------------------------------ CGU (arquivo do coletor nacional)
+    # Códigos das emendas como no Portal: ano + autor + número
+    EMENDA_PIX = "202541280005"      # emenda Pix para Itajubá, com plano de ação e gastos no Transferegov
+    EMENDA_SAUDE = "202512340002"    # emenda com finalidade definida, paga à Santa Casa de Itajubá
+    EMENDA_SEM_PAGAR = "202541280006"  # emenda Pix para Itajubá ainda não paga
+    CNPJ_ITAJUBA = "18025940000109"
+
     def emendas_federais_zip(self, destino: Path) -> Path:
         cab = ["Código da Emenda", "Código do Autor da Emenda", "Nome do Autor da Emenda", "Número da emenda", "Tipo de Emenda",
                "Ano/Mês", "Código do Favorecido", "Favorecido", "Natureza Jurídica", "Tipo Favorecido", "UF Favorecido",
                "Município Favorecido", "Valor Recebido"]
         fav = [
-            ["1", "1", "FULANO FEDERAL", "1", "Individual", "202405", "18.025.940/0001-09", "MUNICIPIO DE ITAJUBA", "Município",
+            ["202400010001", "1", "FULANO FEDERAL", "1", "Individual", "202405", "18.025.940/0001-09", "MUNICIPIO DE ITAJUBA", "Município",
              "Pessoa Jurídica", "MG", "ITAJUBÁ", "300.000,00"],
-            ["2", "2", "CICLANO SENADOR", "2", "Individual", "202503", "21.035.900/0001-50", "SANTA CASA DE MISERICORDIA DE ITAJUBA",
-             "Entidade", "Pessoa Jurídica", "MG", "ITAJUBA", "150.000,00"],
-            ["3", "1", "FULANO FEDERAL", "3", "Individual", "202503", f"***.{CPF_EMITENTE[3:6]}.{CPF_EMITENTE[6:9]}-**",
+            [self.EMENDA_SAUDE, "2", "CICLANO SENADOR", "2", "Individual", "202503", "21.035.900/0001-50", "SANTA CASA DE MISERICORDIA DE ITAJUBA",
+             "Entidade", "Pessoa Jurídica", "MG", "ITAJUBA", "100.000,00"],
+            [self.EMENDA_SAUDE, "2", "CICLANO SENADOR", "2", "Individual", "202507", "21.035.900/0001-50", "SANTA CASA DE MISERICORDIA DE ITAJUBA",
+             "Entidade", "Pessoa Jurídica", "MG", "ITAJUBA", "50.000,00"],
+            ["202500010003", "1", "FULANO FEDERAL", "3", "Individual", "202503", f"***.{CPF_EMITENTE[3:6]}.{CPF_EMITENTE[6:9]}-**",
              "MARIA DE TAL", "", "Pessoa Física", "MG", "ITAJUBÁ", "1.000,00"],
-            ["4", "1", "FULANO FEDERAL", "4", "Individual", "202503", "46.395.000/0001-39", "MUNICIPIO DE ITAJUBA", "Município",
+            ["202500010004", "1", "FULANO FEDERAL", "4", "Individual", "202503", "46.395.000/0001-39", "MUNICIPIO DE ITAJUBA", "Município",
              "Pessoa Jurídica", "SP", "ITAJUBÁ", "77.000,00"],  # cidade de mesmo nome em outro estado
+            [self.EMENDA_PIX, "4128", "FULANO FEDERAL", "5", "Individual - Transferências Especiais", "202504", "18.025.940/0001-09",
+             "MUNICIPIO DE ITAJUBA", "Município", "Pessoa Jurídica", "MG", "ITAJUBA", "500.000,00"],
+        ]
+        principal_cab = ["Código da Emenda", "Ano da Emenda", "Tipo de Emenda", "Código do Autor da Emenda", "Nome do Autor da Emenda",
+                         "Número da emenda", "Localidade de aplicação do recurso", "Código Município IBGE", "Município", "Código UF IBGE",
+                         "UF", "Nome Função", "Nome Subfunção", "Nome Ação", "Valor Empenhado", "Valor Liquidado", "Valor Pago",
+                         "Valor Restos A Pagar Pagos"]
+        principal = [
+            ["202400010001", "2024", "Emenda Individual - Transferências com Finalidade Definida", "1", "FULANO FEDERAL", "1",
+             "ITAJUBA - MG", "3132404", "ITAJUBÁ", "31", "MINAS GERAIS", "SAUDE", "ATENCAO BASICA", "", "300.000,00", "300.000,00",
+             "300.000,00", "0,00"],
+            # a mesma emenda em duas linhas (duas ações do Orçamento): os valores se somam
+            [self.EMENDA_SAUDE, "2025", "Emenda Individual - Transferências com Finalidade Definida", "1234", "CICLANO SENADOR", "2",
+             "MINAS GERAIS (UF)", "", "", "31", "MINAS GERAIS", "SAUDE", "ASSISTENCIA HOSPITALAR E AMBULATORIAL",
+             "INCREMENTO TEMPORARIO AO CUSTEIO DOS SERVICOS DE ATENCAO ESPECIALIZADA", "120.000,00", "100.000,00", "100.000,00", "0,00"],
+            [self.EMENDA_SAUDE, "2025", "Emenda Individual - Transferências com Finalidade Definida", "1234", "CICLANO SENADOR", "2",
+             "MINAS GERAIS (UF)", "", "", "31", "MINAS GERAIS", "SAUDE", "ASSISTENCIA HOSPITALAR E AMBULATORIAL",
+             "ESTRUTURACAO DE UNIDADES DE ATENCAO ESPECIALIZADA", "30.000,00", "0,00", "0,00", "50.000,00"],
+            ["202500010003", "2025", "Emenda Individual - Transferências com Finalidade Definida", "1", "FULANO FEDERAL", "3",
+             "ITAJUBA - MG", "3132404", "ITAJUBÁ", "31", "MINAS GERAIS", "ASSISTENCIA SOCIAL", "", "", "1.000,00", "1.000,00",
+             "1.000,00", "0,00"],
+            ["202500010004", "2025", "Emenda Individual - Transferências com Finalidade Definida", "1", "FULANO FEDERAL", "4",
+             "ITAJUBA - SP", "3523503", "ITAJUBÁ", "35", "SAO PAULO", "URBANISMO", "", "", "77.000,00", "77.000,00", "77.000,00", "0,00"],
+            [self.EMENDA_PIX, "2025", "Emenda Individual - Transferências Especiais", "4128", "FULANO FEDERAL", "5",
+             "ITAJUBA - MG", "3132404", "ITAJUBÁ", "31", "MINAS GERAIS", "ENCARGOS ESPECIAIS", "TRANSFERENCIAS", "",
+             "500.000,00", "500.000,00", "500.000,00", "0,00"],
+            [self.EMENDA_SEM_PAGAR, "2025", "Emenda Individual - Transferências Especiais", "4128", "FULANO FEDERAL", "6",
+             "ITAJUBA - MG", "3132404", "ITAJUBÁ", "31", "MINAS GERAIS", "ENCARGOS ESPECIAIS", "TRANSFERENCIAS", "",
+             "200.000,00", "0,00", "0,00", "0,00"],
         ]
         destino.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(destino, "w") as z:
             z.writestr("EmendasParlamentares_PorFavorecido.csv", _csv(cab, [dict(zip(cab, f)) for f in fav], sep=";").encode("latin-1"))
-            z.writestr("EmendasParlamentares.csv", "Código da Emenda;Ano da Emenda\r\n1;2024\r\n".encode("latin-1"))
-        self.esperado["federais_itajuba"] = 451_000.0
+            z.writestr("EmendasParlamentares.csv",
+                       _csv(principal_cab, [dict(zip(principal_cab, f)) for f in principal], sep=";").encode("latin-1"))
+        self.esperado["federais_itajuba"] = 951_000.0
         return destino
+
+    def destino_pix(self, nacional: Path, ano: int = 2025) -> None:
+        """Acrescenta aos dados nacionais o plano de ação da emenda Pix de Itajubá, no mesmo formato que o coletor nacional
+        grava a partir da API do Transferegov (sa_etl/transferegov.py: resumir + gravar)."""
+        from sa_etl import transferegov as T
+        pid, eid, rid = 9001, 9002, 9003
+        t = {
+            "beneficiarios": {"linhas": [{"id_beneficiario": 77, "uf_beneficiario": "MG", "nome_beneficiario": "MUNICIPIO DE ITAJUBA",
+                                          "cnpj_beneficiario": self.CNPJ_ITAJUBA}], "completo_em": f"{ano}-11-01"},
+            "planos": {ano: {"completo_em": f"{ano}-11-01", "linhas": [{
+                "id_plano_acao": pid, "codigo_plano_acao": f"09032{ano}-000777", "situacao_plano_acao": "CIENTE",
+                "nome_parlamentar_emenda_plano_acao": "FULANO FEDERAL",
+                "codigo_emenda_parlamentar_formatado_plano_acao": f"{self.EMENDA_PIX}-Fulano Federal",
+                "ano_emenda_parlamentar_plano_acao": ano, "valor_custeio_plano_acao": 500000.0, "valor_investimento_plano_acao": 0.0,
+                "id_beneficiario": 77, "nome_objeto": "Eventos", "detalhamento_objeto": "Realização da Festa do Peão e do Carnaval de rua",
+                "codigo_descricao_areas_politicas_publicas_plano_acao": "13 - Cultura", "motivo_impedimento_plano_acao": None}]}},
+            "executores": {"completo_em": f"{ano}-11-01", "linhas": [{
+                "id_executor": eid, "id_plano_acao": pid, "cnpj_executor": self.CNPJ_ITAJUBA, "nome_executor": "MUNICIPIO DE ITAJUBA",
+                "objeto_executor": "Festa do Peão de Itajubá", "vl_custeio_executor": 500000.0, "vl_investimento_executor": 0.0}]},
+            "metas": {"completo_em": f"{ano}-11-01", "linhas": [{
+                "id_executor": eid, "id_meta": 1, "sequencial_meta": 1, "nome_meta": "Shows artísticos", "desc_meta": "Contratação de 3 shows",
+                "un_medida_meta": "unidade", "qt_unidade_meta": 3, "vl_custeio_emenda_especial_meta": 500000.0,
+                "vl_investimento_emenda_especial_meta": 0.0}]},
+            "relatorios": {"completo_em": f"{ano}-11-01", "linhas": [{
+                "id_relatorio_gestao_novo": rid, "id_plano_acao": pid, "id_executor": eid, "data_relatorio_gestao_novo": f"{ano}-10-30",
+                "valor_executado_relatorio_gestao_novo": 380000.0}]},
+            "gastos": {"lidos": {str(rid): f"{ano}-11-01"}, "por_relatorio": {str(rid): [
+                {"id_relatorio_gestao_dl": 1, "id_relatorio_gestao_novo": rid, "tx_descricao_relatorio_gestao_dl": "Show artístico na Festa do Peão",
+                 "tp_doc_recebedor_relatorio_gestao_dl": "CNPJ", "tx_identificacao_recebedor_mascarado_relatorio_gestao_dl": "11.222.333/0001-81",
+                 "tx_nome_recebedor_relatorio_gestao_dl": "PRODUTORA DE SHOWS LTDA", "vl_pagamento_relatorio_gestao_dl": 300000.0,
+                 "dt_pagamento_relatorio_gestao_dl": f"{ano}-06-15", "tx_natureza_relatorio_gestao_dl": "CUSTEIO"},
+                {"id_relatorio_gestao_dl": 2, "id_relatorio_gestao_novo": rid, "tx_descricao_relatorio_gestao_dl": "Palco e som do Carnaval",
+                 "tp_doc_recebedor_relatorio_gestao_dl": "CPF", "tx_identificacao_recebedor_mascarado_relatorio_gestao_dl": "***.456.789-**",
+                 "tx_nome_recebedor_relatorio_gestao_dl": "FULANO DO SOM", "vl_pagamento_relatorio_gestao_dl": 80000.0,
+                 "dt_pagamento_relatorio_gestao_dl": f"{ano}-02-20", "tx_natureza_relatorio_gestao_dl": "CUSTEIO"}]}},
+            "falta": [],
+        }
+        res = T.resumir(t, [ano])
+        pasta = nacional / "emendas" / "destino"
+        idx_f = pasta / f"{ano}.json"
+        antigo = json.loads(idx_f.read_text(encoding="utf-8")) if idx_f.exists() else None
+        T.gravar(nacional, res, t)
+        if antigo:  # junta com o que o coletor nacional já tinha gravado
+            novo = json.loads(idx_f.read_text(encoding="utf-8"))
+            antigo["beneficiarios"] = [b for b in antigo["beneficiarios"] if b["cnpj"] != self.CNPJ_ITAJUBA] + novo["beneficiarios"]
+            antigo["emendas"] = {**antigo.get("emendas", {}), **novo["emendas"]}
+            idx_f.write_text(json.dumps(antigo, ensure_ascii=False), encoding="utf-8")
 
     # ------------------------------------------------------------ roteador
     def _rota(self, url: str, params: dict) -> tuple[int, bytes, str]:

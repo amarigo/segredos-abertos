@@ -14,6 +14,7 @@ const almgIdx = dados("almg/deputados.json");
 const dep = dados("almg/d/20003.json");
 const gov = dados("estado/governo.json");
 const dinheiroIta = dados("cidades/dinheiro/itajuba.json");
+const historiasIta = dados("cidades/emendas/itajuba.json");
 const emEst = dados("estado/emendas.json");
 const contasMG = dados("estado/contas.json").contas;
 const emps = dados("empresas.json");
@@ -267,6 +268,38 @@ test.describe("jornada", () => {
     for (const a of await main.locator("a[href^='http']").evaluateAll((as) => as.map((x) => (x as HTMLAnchorElement).href))) {
       expect(a).toMatch(/^https:\/\/(siconfi\.tesouro|apidatalake\.tesouro|portaldatransparencia|www\.almg|dados\.mg|www\.transparencia\.mg|dadosabertos\.tse|[a-z.]+\.mg\.(gov|leg)\.br)/);
     }
+    expect(erros).toEqual([]);
+  });
+
+  test("história de cada emenda: se o dinheiro chegou, o plano e em que a prefeitura gastou", async ({ page }) => {
+    const erros = vigiar(page);
+    const pix = historiasIta.emendas.find((e: { plano: unknown }) => e.plano);
+    await page.goto("./#/cidade/itajuba?aba=dinheiro");
+    const main = page.locator("main");
+    await main.getByRole("button", { name: new RegExp(`Abrir as ${dinheiroIta.historias.n} emendas`) }).click();
+    await expect(main.locator(".hist-ficha")).toHaveCount(historiasIta.emendas.filter((e: { ano: number }) => e.ano === historiasIta.anos.at(-1)).length);
+    // a busca acha a emenda pelo que a prefeitura pagou com o dinheiro
+    await main.getByLabel("Procurar nas emendas").fill("festa do peao");
+    await expect(main.locator(".hist-ficha")).toHaveCount(1);
+    const ficha = main.locator(`#emenda-${pix.codigo}`);
+    await ficha.locator("summary").click();
+    await expect(ficha).toContainText("Dinheiro chegou");
+    await expect(ficha).toContainText(pix.plano.gastos[0].descricao);
+    await expect(ficha).toContainText(pix.plano.gastos[0].recebedor);
+    await expect(ficha).toContainText(brl(pix.recebido[0].valor));
+    await expect(ficha.getByRole("link", { name: /Plano de ação no Transferegov/ })).toBeVisible();
+    for (const a of await ficha.locator("a[href^='http']").evaluateAll((as) => as.map((x) => (x as HTMLAnchorElement).href))) {
+      expect(a).toMatch(/^https:\/\/(portaldatransparencia\.gov\.br|especiais\.transferegov\.sistema\.gov\.br)\//);
+    }
+    expect(await ficha.innerText()).not.toMatch(CPF);
+    // filtro pela situação: a emenda ainda não paga
+    await main.getByLabel("Procurar nas emendas").fill("");
+    await main.getByRole("button", { name: /Dinheiro ainda não chegou/ }).click();
+    await expect(main.locator(".hist-ficha").first()).toContainText("Dinheiro não chegou");
+    // link direto de uma emenda abre a ficha dela
+    await page.goto(`./#/cidade/itajuba?aba=dinheiro&emenda=${pix.codigo}`);
+    await expect(page.locator(`#emenda-${pix.codigo}`)).toHaveAttribute("open", "");
+    await expect(page.locator(`#emenda-${pix.codigo}`)).toContainText(pix.plano.objeto);
     expect(erros).toEqual([]);
   });
 

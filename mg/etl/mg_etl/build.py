@@ -125,6 +125,9 @@ def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[
     # None = a fonte falhou (o site diz isso); {} = a fonte respondeu e a cidade não recebeu nada
     fed = _seguro("Emendas federais nas cidades", lambda: emendas_federais.coletar(zip_nac, nacional, mapa_cidades, ids_mg))
     vazio_fed = {"fonte": emendas_federais.PAGINA, "por_ano": [], "favorecidos": [], "autores": []}
+    # A história de cada emenda (Portal da Transparência + Transferegov): um arquivo por cidade, aberto sob demanda
+    hist = _seguro("Histórias das emendas federais",
+                   lambda: emendas_federais.coletar_historias(zip_nac, nacional, mapa_cidades, ids_mg))
     n_dinheiro = 0
     for c in lista_cidades:
         contas = _seguro(f"Contas de {c['nome']} (SICONFI)", lambda c=c: siconfi.contas(c["nome"], c["uf"], cache))
@@ -133,9 +136,16 @@ def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[
             "estaduais": {"fonte": emendas_mg.PAGINA, "lista": em["por_cidade"].get(c["id"], [])} if em else None,
             "federais": (fed.get(c["id"]) or vazio_fed) if fed is not None else None,
             "contas": contas,
+            "historias": {"n": len(hist["cidades"].get(c["id"], [])), "anos": hist["anos"]} if hist else None,
         })
+        if hist:
+            lista_h = hist["cidades"].get(c["id"], [])
+            util.write_json(saida / "cidades" / "emendas" / f"{c['id']}.json", {
+                "id": c["id"], "nome": c["nome"], "anos": hist["anos"], "fonte": emendas_federais.PAGINA,
+                "transferegov": hist["transferegov"], "emendas": lista_h})
         n_dinheiro += 1
     cont["cidades_dinheiro"] = n_dinheiro
+    cont["historias_emendas"] = sum(len(v) for v in hist["cidades"].values()) if hist else 0
     return cont
 
 
