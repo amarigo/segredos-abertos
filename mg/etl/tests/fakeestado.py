@@ -46,6 +46,8 @@ FUNCOES = [("10", "Saúde", [("301", "Atenção Básica"), ("302", "Assistência
            ("04", "Administração", [("122", "Administração Geral")]),
            ("01", "Legislativa", [("031", "Ação Legislativa")])]
 ENTES = {"ITAJUBÁ": 3132404, "PARAISÓPOLIS": 3147303}
+# Outros municípios de Minas na lista de entes do Tesouro (sem contas simuladas)
+OUTROS_MG = {"Belo Horizonte": 3106200, "Pouso Alegre": 3152501, "Ubá": 3169901}
 
 
 def _reais(v: float) -> str:
@@ -282,6 +284,14 @@ class FakeEstado:
                            "Valor Indicado": "R$300.000,00", "Valor Empenhado no Ano": "R$300.000,00",
                            "Valor Pago Atualizado": "R$0,00", "Status": "Empenhado", "Tipo de autoria": "Bloco/Bancada"})
             num += 1
+            # cidade de nome curto, que o arquivo escreve em maiúsculas, e entidade de outro estado
+            for mun, uf, ben in (("UBÁ", "MINAS GERAIS", "HOSPITAL SAO VICENTE DE PAULO DE UBA"),
+                                 ("BRASÍLIA", "DISTRITO FEDERAL", "ASSOCIACAO NACIONAL DE APOIO")):
+                linhas.append({"Ano da Indicação": ano, "Número da Indicação": num, "Status da Indicação": "APROVADO",
+                               "Tipo de Indicação": "CELEBRAÇÃO DE CONVÊNIO", "Autor": self.deputados[1]["nome"].upper(),
+                               "Município ": mun, "Estado": uf, "Nome Beneficiário": ben, "Valor Indicado": "R$40.000,00",
+                               "Valor Pago Atualizado": "R$40.000,00", "Status": "Pago Total", "Função Descrição": "SAÚDE"})
+                num += 1
             # autor que não está no arquivo de deputados (nome escrito de outro jeito)
             linhas.append({"Ano da Indicação": ano, "Número da Indicação": num, "Status da Indicação": "APROVADO", "Autor": "EX DEPUTADO ANTIGO",
                            "Município ": "PARAISÓPOLIS", "Nome Beneficiário": "ASSOCIACAO DE MORADORES", "Valor Indicado": "R$50.000,00",
@@ -311,6 +321,7 @@ class FakeEstado:
     def entes(self) -> bytes:
         itens = [{"cod_ibge": c, "ente": n.title().replace("Itajubá", "Itajubá"), "uf": "MG", "esfera": "M", "exercicio": 2026}
                  for n, c in ENTES.items()]
+        itens += [{"cod_ibge": c, "ente": n, "uf": "MG", "esfera": "M"} for n, c in OUTROS_MG.items()]
         itens.append({"cod_ibge": 31, "ente": "Minas Gerais", "uf": "MG", "esfera": "E"})
         itens.append({"cod_ibge": 3532405, "ente": "Itajubá", "uf": "SP", "esfera": "M"})  # mesmo nome, outro estado
         return json.dumps({"items": itens, "hasMore": False}, ensure_ascii=False).encode()
