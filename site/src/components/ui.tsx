@@ -1,5 +1,5 @@
 import { Component, Fragment, createContext, isValidElement, useContext, useEffect, useState, type ReactNode } from "react";
-import { COR_OUTROS, ComRosca, prepararFatias } from "./graficos";
+import { COR_OUTROS, ComRosca, prepararFatias, useRealce } from "./graficos";
 import { Link } from "react-router-dom";
 import { linkSeguro, load, reais, MESES, type Grupo } from "../data";
 
@@ -189,13 +189,15 @@ export const COR_GRUPO: Record<Grupo, string> = { pessoal: "var(--s1)", escritor
 /* Barras horizontais com rótulo e valor.
    rosca: quando as barras são partes de um todo, mostra em cima a barra das partes (com as mesmas cores) e a parte
    de cada linha em %; passar o mouse numa linha acende o pedaço e vice-versa. total: o todo, quando a lista mostra só as maiores. */
-export function Barras({ itens, cor, max, rosca, formato, fmt: fmtAntigo }: {
+export function Barras({ itens: itensDados, cor, max, rosca, formato, fmt: fmtAntigo }: {
   itens: { label: ReactNode; valor: number; cor?: string; nota?: string; nome?: string }[]; cor?: string; max?: number;
   rosca?: { titulo: string; total?: number; centroRotulo?: string; maxFatias?: number; paleta?: boolean }; formato?: (v: number) => string;
   /** o mesmo que formato (nome usado nas páginas do Minas Nossa) */
   fmt?: (v: number) => string;
 }) {
-  const [ativo, setAtivo] = useState<string | null>(null);
+  const realce = useRealce();
+  // Partes de um todo: do maior para o menor, na mesma ordem da barra das partes (sort estável: empates ficam como vieram).
+  const itens = rosca ? itensDados.slice().sort((a, b) => b.valor - a.valor) : itensDados;
   const m = max ?? Math.max(1, ...itens.map((i) => i.valor));
   const fmt = formato || fmtAntigo || ((v: number) => reais(v));
   // Uma cor só na lista: cada parte ganha a sua, na ordem da paleta. Cores com sentido (partido, lado, grupo) ficam.
@@ -213,8 +215,7 @@ export function Barras({ itens, cor, max, rosca, formato, fmt: fmtAntigo }: {
         const nome = rosca ? nomeDe(i, k) : "";
         const dono = rosca && (fatias.some((f) => f.nome === nome) ? nome : "Outros");
         return (
-          <div className={`bar-row ${rosca && ativo && ativo !== dono ? "apagado" : ""}`} key={k}
-            onMouseEnter={rosca ? () => setAtivo(dono || null) : undefined} onMouseLeave={rosca ? () => setAtivo(null) : undefined}>
+          <div className={`bar-row ${rosca ? realce.classe(dono) : ""}`} key={k} {...(rosca && dono ? realce.linha(dono, corDe(k, i)) : {})}>
             <div style={{ minWidth: 0 }}>{i.label}{i.nota && <div className="muted small">{i.nota}</div>}</div>
             <div className="num">{fmt(i.valor)}{rosca && soma > 0 && <span className="pct-linha">{porcentoCurto(i.valor / soma)}</span>}</div>
             <div className="track" aria-hidden="true"><div className="fill" style={{ width: `${(i.valor / m) * 100}%`, background: corDe(k, i) }} /></div>
@@ -224,7 +225,7 @@ export function Barras({ itens, cor, max, rosca, formato, fmt: fmtAntigo }: {
     </div>
   );
   if (!rosca || fatias.length < 2) return lista;
-  return <ComRosca fatias={fatias} titulo={rosca.titulo} centroRotulo={rosca.centroRotulo} formato={formato || fmtAntigo} ativo={ativo} onAtivo={setAtivo}>{lista}</ComRosca>;
+  return <ComRosca fatias={fatias} titulo={rosca.titulo} centroRotulo={rosca.centroRotulo} formato={formato || fmtAntigo} realce={realce}>{lista}</ComRosca>;
 }
 
 const porcentoCurto = (p: number) => (p < 0.01 ? "<1%" : `${(p * 100).toLocaleString("pt-BR", { maximumFractionDigits: p < 0.1 ? 1 : 0 })}%`);

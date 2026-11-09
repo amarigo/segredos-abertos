@@ -403,6 +403,50 @@ test.describe("gráficos", () => {
     expect(erros).toEqual([]);
   });
 
+  test("lista embaixo da barra das partes: mesma ordem, mesma cor e destaque ao clicar", async ({ page }) => {
+    const erros = vigiar(page);
+    for (const rota of ["./#/dinheiro", "./#/empresas", "./#/emendas"]) {
+      await page.goto(rota);
+      await page.waitForLoadState("networkidle");
+      const caixas = page.locator(".com-rosca");
+      const n = await caixas.count();
+      for (let k = 0; k < n; k++) {
+        const caixa = caixas.nth(k);
+        // ordem e cor de cada pedaço, como estão na tela
+        const pedacos = await caixa.locator(".compo-seg").evaluateAll((els) => els.map((e) => ({ nome: (e as HTMLElement).dataset.nome!, cor: getComputedStyle(e).backgroundColor })));
+        const linhas = await caixa.locator(".com-rosca-lista [data-fatia]").evaluateAll((els) => els.map((e) => ({ nome: (e as HTMLElement).dataset.fatia!, cor: getComputedStyle(e).getPropertyValue("--cor-fatia").trim() })));
+        expect(linhas.length, `${rota}: lista ${k} ligada à barra`).toBeGreaterThan(0);
+        // a ordem das linhas (sem repetir "Outros") é a ordem dos pedaços
+        const ordem = linhas.map((l) => l.nome).filter((x, i, a) => a.indexOf(x) === i);
+        expect(ordem, `${rota}: ordem da lista ${k}`).toEqual(pedacos.map((p) => p.nome).filter((x) => ordem.includes(x)));
+        // a cor da linha é a cor do pedaço (a variável vira cor de verdade no navegador)
+        const cores = await caixa.locator(".com-rosca-lista [data-fatia]").evaluateAll((els) => els.map((e) => {
+          const t = document.createElement("i"); t.style.background = getComputedStyle(e).getPropertyValue("--cor-fatia"); e.append(t);
+          const c = getComputedStyle(t).backgroundColor; t.remove(); return c;
+        }));
+        linhas.forEach((l, i) => expect(cores[i], `${rota}: cor de ${l.nome}`).toBe(pedacos.find((p) => p.nome === l.nome)!.cor));
+        // clicar no pedaço destaca a linha dele e apaga as outras; clicar de novo desfaz
+        const alvo = pedacos[0].nome;
+        const seg = caixa.locator(".compo-seg").first();
+        await seg.scrollIntoViewIfNeeded();
+        await seg.click();
+        await page.mouse.move(0, 0);
+        await expect(caixa.locator(`.com-rosca-lista .realce`).first()).toHaveAttribute("data-fatia", alvo);
+        await expect(caixa.locator(`.com-rosca-lista [data-fatia]:not([data-fatia="${alvo}"])`).first()).toHaveClass(/apagado/);
+        await seg.click();
+        await page.mouse.move(0, 0);
+        await expect(caixa.locator(".com-rosca-lista .realce")).toHaveCount(0);
+        // clicar na linha destaca o pedaço
+        const linha = caixa.locator(".com-rosca-lista [data-fatia]").last();
+        const dono = await linha.getAttribute("data-fatia");
+        await linha.click({ position: { x: 5, y: 5 } });
+        await page.mouse.move(0, 0);
+        await expect(caixa.locator(`.compo-seg[data-nome="${dono}"]`)).toHaveClass(/fixo/);
+      }
+    }
+    expect(erros).toEqual([]);
+  });
+
   test("números grandes cabem no quadro", async ({ page }) => {
     await page.goto("./#/dinheiro");
     await expect(page.locator(".stat .value").first()).toBeVisible();

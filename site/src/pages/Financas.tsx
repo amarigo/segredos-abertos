@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Barras, Explain, Loading, useData, useVarios, useVisivel } from "../components/ui";
-import { ColunasAnos, ComRosca, CompararAnos, Kpi, MapaAnos, prepararFatias, numero, type Fatia } from "../components/graficos";
+import { ColunasAnos, ComRosca, CompararAnos, Kpi, MapaAnos, prepararFatias, numero, useRealce, type Fatia } from "../components/graficos";
 import { linkSeguro, reais } from "../data";
 import "./financas.css";
 import { AvisosFim } from "../components/Selo";
@@ -350,7 +350,7 @@ function QuemPagou({ d, idx }: { d: Ano; idx: Indice }) {
   const a = d.arrecadacao;
   const s = d.setores;
   const [aberto, setAberto] = useState<string | null>(null);
-  const [ativo, setAtivo] = useState<string | null>(null);
+  const realceGrupos = useRealce();
   const [ref, visivel] = useVisivel<HTMLDivElement>();
   const todos = useTodosAnos(idx, visivel);
   const porUf = useMemo(() => {
@@ -361,6 +361,7 @@ function QuemPagou({ d, idx }: { d: Ano; idx: Indice }) {
   }, [todos, a, d]);
   const fatiasGrupos = a ? prepararFatias(a.grupos.slice().sort((x, y) => y.valor - x.valor).map((g) => ({ nome: g.nome, valor: g.valor }))) : [];
   const corGrupo = (n: string) => fatiasGrupos.find((f) => f.nome === n)?.cor || "var(--c-outros)";
+  const donoGrupo = (n: string) => (fatiasGrupos.some((f) => f.nome === n) ? n : "Outros");
   if (!a && !s) {
     return <section id="quem-pagou"><h2>Quem pagou</h2><div className="empty">A Receita Federal não tem dados de arrecadação por imposto para {d.ano}.</div></section>;
   }
@@ -375,11 +376,11 @@ function QuemPagou({ d, idx }: { d: Ano; idx: Indice }) {
       {a && (
         <>
           <h3 className="fin-sub">Sobre o que o imposto foi cobrado · {rs(a.total)}</h3>
-          <ComRosca fatias={fatiasGrupos} titulo="Imposto arrecadado, pelo que foi cobrado" formato={rs} ativo={ativo} onAtivo={setAtivo}>
+          <ComRosca fatias={fatiasGrupos} titulo="Imposto arrecadado, pelo que foi cobrado" formato={rs} realce={realceGrupos}>
           <div className="bars">
             {a.grupos.slice().sort((x, y) => y.valor - x.valor).map((g) => (
               <Fragment key={g.id}>
-                <div className={`bar-row ${ativo && ativo !== g.nome ? "apagado" : ""}`} onMouseEnter={() => setAtivo(g.nome)} onMouseLeave={() => setAtivo(null)}>
+                <div className={`bar-row ${realceGrupos.classe(donoGrupo(g.nome))}`} {...realceGrupos.linha(donoGrupo(g.nome), corGrupo(g.nome))}>
                   <div style={{ minWidth: 0 }}>
                     <button className="link fin-abrir" aria-expanded={aberto === g.id} onClick={() => setAberto(aberto === g.id ? null : g.id)}>{g.nome}</button>
                     <div className="muted small">{g.explica} {pc(g.valor / a.total)} do total.</div>
@@ -422,7 +423,8 @@ function QuemPagou({ d, idx }: { d: Ano; idx: Indice }) {
 
 function Destino({ d, idx }: { d: Ano; idx: Indice }) {
   const [abertas, setAbertas] = useState<string | null>(null);
-  const [ativo, setAtivo] = useState<string | null>(null);
+  const realceTipo = useRealce();
+  const realceFuncao = useRealce();
   const [ref, visivel] = useVisivel<HTMLDivElement>();
   const todos = useTodosAnos(idx, visivel);
   const funcoesAnos = useMemo(() => {
@@ -439,8 +441,16 @@ function Destino({ d, idx }: { d: Ano; idx: Indice }) {
   const fator = ant?.ipca_fator || null;
   const desp = d.rreo.despesas.filter((x) => x.liquidado || x.dotacao);
   const f = d.funcoes;
-  const fatiasTipo = prepararFatias(desp.filter((x) => x.id !== "AmortizacaoRefinanciamentoDaDivida" && x.liquidado > 0).sort((a, b) => b.liquidado - a.liquidado).map((x) => ({ nome: x.nome, valor: x.liquidado })));
-  const fatiasFuncao = f ? prepararFatias(f.funcoes.filter((x) => x.liquidado > 0).map((x) => ({ nome: x.nome, valor: x.liquidado }))) : [];
+  // O gráfico e a lista usam a mesma ordem (do maior para o menor) e a mesma cor. A rolagem da dívida fica fora do
+  // gráfico (é trocar dívida velha por nova) e vai para o fim da lista, sem cor, junto do que ainda não teve gasto.
+  const noGrafico = (x: Ano["rreo"]["despesas"][number]) => x.id !== "AmortizacaoRefinanciamentoDaDivida" && x.liquidado > 0;
+  const despOrdem = [...desp.filter(noGrafico).sort((a, b) => b.liquidado - a.liquidado), ...desp.filter((x) => !noGrafico(x))];
+  const fatiasTipo = prepararFatias(despOrdem.filter(noGrafico).map((x) => ({ nome: x.nome, valor: x.liquidado })));
+  const somaTipo = fatiasTipo.reduce((a, x) => a + x.valor, 0);
+  const donoTipo = (n: string) => (fatiasTipo.some((x) => x.nome === n) ? n : "Outros");
+  const corTipo = (n: string) => fatiasTipo.find((x) => x.nome === donoTipo(n))?.cor || "var(--c-outros)";
+  const funcoesOrdem = f ? f.funcoes.filter((x) => x.liquidado > 0).sort((a, b) => b.liquidado - a.liquidado) : [];
+  const fatiasFuncao = prepararFatias(funcoesOrdem.map((x) => ({ nome: x.nome, valor: x.liquidado })));
   const corFuncao = (n: string) => fatiasFuncao.find((x) => x.nome === n)?.cor || "var(--c-outros)";
   const donoFuncao = (n: string) => (fatiasFuncao.some((x) => x.nome === n) ? n : "Outros");
   const nota = "O ano em andamento vai só até o último relatório do Tesouro, por isso parece menor. Valores sem descontar a inflação.";
@@ -452,20 +462,22 @@ function Destino({ d, idx }: { d: Ano; idx: Indice }) {
         {fator && <> Entre parênteses, a variação contra o mesmo período de {d.ano - 1}, já descontada a inflação (IPCA).</>}
       </Explain>
       <h3 className="fin-sub">Por tipo de gasto</h3>
-      <ComRosca fatias={fatiasTipo} titulo="Gasto por tipo, sem a rolagem da dívida" formato={rs}>
+      <ComRosca fatias={fatiasTipo} titulo="Gasto por tipo, sem a rolagem da dívida" formato={rs} realce={realceTipo}>
       <div className="table-wrap">
         <table className="fin-tabela">
           <thead><tr><th>Gasto</th><th className="r">{d.parcial ? `Até ${d.periodo.mes_nome}` : "No ano"}</th><th className="r">Autorizado no ano</th></tr></thead>
           <tbody>
-            {desp.map((x) => {
+            {despOrdem.map((x) => {
               const a = ant?.despesas[x.id];
               const v = a && fator ? x.liquidado / (a * fator) - 1 : null;
+              const dentro = noGrafico(x);
+              const cor = dentro ? corTipo(x.nome) : "var(--c-outros)";
               return (
-                <tr key={x.id}>
-                  <td><strong>{x.nome}</strong><div className="small muted">{x.explica}</div>
-                    {x.dotacao > 0 && <div className="fin-barra fin-barra-fina" aria-hidden="true"><span style={{ width: `${Math.min(100, (x.liquidado / x.dotacao) * 100)}%` }} /></div>}
+                <tr key={x.id} className={dentro ? `fin-clicavel ${realceTipo.classe(donoTipo(x.nome))}` : realceTipo.foco ? "apagado" : ""} {...(dentro ? realceTipo.linha(donoTipo(x.nome), cor) : {})}>
+                  <td><strong><i className="fin-cor" style={{ background: cor }} aria-hidden="true" />{x.nome}</strong><div className="small muted">{x.explica}{!dentro && " Fica fora do gráfico."}</div>
+                    {x.dotacao > 0 && <div className="fin-barra fin-barra-fina" aria-hidden="true"><span style={{ width: `${Math.min(100, (x.liquidado / x.dotacao) * 100)}%`, background: cor }} /></div>}
                   </td>
-                  <td className="r num">{rs(x.liquidado)}{v != null && <div className={`small ${v > 0 ? "fin-sobe" : "fin-desce"}`}>({v > 0 ? "+" : ""}{pc(v)})</div>}</td>
+                  <td className="r num">{rs(x.liquidado)}{dentro && somaTipo > 0 && <div className="small muted fin-pct">{pc(x.liquidado / somaTipo, 0)} do total</div>}{v != null && <div className={`small ${v > 0 ? "fin-sobe" : "fin-desce"}`}>({v > 0 ? "+" : ""}{pc(v)})</div>}</td>
                   <td className="r num muted">{rs(x.dotacao)}</td>
                 </tr>
               );
@@ -478,17 +490,17 @@ function Destino({ d, idx }: { d: Ano; idx: Indice }) {
         <>
           <h3 className="fin-sub">Por área (função de governo)</h3>
           <p className="small muted">Toque numa área para ver em que ela gastou. "Administração geral" é o custo de manter os órgãos daquela área funcionando.</p>
-          <ComRosca fatias={fatiasFuncao} titulo="Gasto por área de governo" formato={rs} ativo={ativo} onAtivo={setAtivo}>
+          <ComRosca fatias={fatiasFuncao} titulo="Gasto por área de governo" formato={rs} realce={realceFuncao}>
           <div className="bars">
-            {f.funcoes.filter((x) => x.liquidado > 0).map((x) => (
+            {funcoesOrdem.map((x) => (
               <Fragment key={x.nome}>
-                <div className={`bar-row ${ativo && ativo !== donoFuncao(x.nome) ? "apagado" : ""}`} onMouseEnter={() => setAtivo(donoFuncao(x.nome))} onMouseLeave={() => setAtivo(null)}>
+                <div className={`bar-row ${realceFuncao.classe(donoFuncao(x.nome))}`} {...realceFuncao.linha(donoFuncao(x.nome), corFuncao(x.nome))}>
                   <div style={{ minWidth: 0 }}>
                     <button className="link fin-abrir" aria-expanded={abertas === x.nome} onClick={() => setAbertas(abertas === x.nome ? null : x.nome)}>{x.nome}</button>
                     {x.explica && <div className="muted small">{x.explica}</div>}
                   </div>
                   <div className="num">{rs(x.liquidado)}</div>
-                  <div className="track" aria-hidden="true"><div className="fill" style={{ width: `${(x.liquidado / f.funcoes[0].liquidado) * 100}%`, background: corFuncao(x.nome) }} /></div>
+                  <div className="track" aria-hidden="true"><div className="fill" style={{ width: `${(x.liquidado / (funcoesOrdem[0]?.liquidado || 1)) * 100}%`, background: corFuncao(x.nome) }} /></div>
                 </div>
                 {abertas === x.nome && (
                   <div className="fin-detalhe small">
@@ -611,6 +623,11 @@ function Cargos({ d }: { d: Ano }) {
   const ex = d.pessoal_executivo;
   const cam = d.pessoal_camara;
   const sen = d.pessoal_senado;
+  const realceVinculo = useRealce();
+  // A lista na mesma ordem e com as mesmas cores da barra das partes (do maior para o menor).
+  const gruposVinculo = ex ? ex.grupos.slice().sort((a, b) => b.pessoas - a.pessoas) : [];
+  const fatiasVinculo = prepararFatias(gruposVinculo.map((g) => ({ nome: g.nome, valor: g.pessoas })));
+  const somaVinculo = fatiasVinculo.reduce((a, x) => a + x.valor, 0);
   return (
     <section id="cargos">
       <h2>Concursados, cargos de confiança e comissionados</h2>
@@ -622,19 +639,23 @@ function Cargos({ d }: { d: Ano }) {
       {ex ? (
         <>
           <h3 className="fin-sub">Executivo federal · servidores civis em {MES[ex.mes]} de {ex.ano}</h3>
-          <ComRosca fatias={prepararFatias(ex.grupos.slice().sort((a, b) => b.pessoas - a.pessoas).map((g) => ({ nome: g.nome, valor: g.pessoas })))} titulo="Servidores civis do Executivo por tipo de vínculo"
-            formato={(v) => `${numero(v)} pessoas`} centroRotulo="Servidores" centro={numero(ex.pessoas)}>
+          <ComRosca fatias={fatiasVinculo} titulo="Servidores civis do Executivo por tipo de vínculo"
+            formato={(v) => `${numero(v)} pessoas`} centroRotulo="Servidores" centro={numero(ex.pessoas)} realce={realceVinculo}>
           <div className="table-wrap">
             <table className="fin-tabela">
               <thead><tr><th>Grupo</th><th className="r">Pessoas</th><th className="r">Folha do mês</th></tr></thead>
               <tbody>
-                {ex.grupos.map((g) => (
-                  <tr key={g.id} className={g.id === "comissionado" || g.id === "confianca" ? "fin-destaque" : ""}>
-                    <td><strong>{g.nome}</strong><div className="small muted">{g.explica}</div></td>
-                    <td className="r num">{num(g.pessoas)}<div className="small muted">{pc(g.pessoas / Math.max(1, ex.pessoas), 1)}</div></td>
+                {gruposVinculo.map((g) => {
+                  const dono = fatiasVinculo.some((x) => x.nome === g.nome) ? g.nome : "Outros";
+                  const cor = fatiasVinculo.find((x) => x.nome === dono)?.cor || "var(--c-outros)";
+                  return (
+                  <tr key={g.id} className={`fin-clicavel ${g.id === "comissionado" || g.id === "confianca" ? "fin-destaque" : ""} ${realceVinculo.classe(dono)}`} {...realceVinculo.linha(dono, cor)}>
+                    <td><strong><i className="fin-cor" style={{ background: cor }} aria-hidden="true" />{g.nome}</strong><div className="small muted">{g.explica}</div></td>
+                    <td className="r num">{num(g.pessoas)}<div className="small muted">{pc(g.pessoas / Math.max(1, somaVinculo), 1)}</div></td>
                     <td className="r num">{g.id === "sigiloso" ? "—" : rs(g.folha_mes || 0)}</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

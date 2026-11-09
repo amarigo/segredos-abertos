@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { GRUPO_CURTO, GRUPO_EXPLICA, type Grupo, type TemaCota } from "../data";
 import { COR_GRUPO } from "./ui";
-import { Rosca, curto, porcento } from "./graficos";
+import { Rosca, curto, porcento, useRealce } from "./graficos";
 
 const ORDEM: Grupo[] = ["pessoal", "escritorio", "servicos"];
 const pctTxt = (p: number) => (p < 0.01 ? "<1%" : porcento(p, p < 0.1 ? 1 : 0));
@@ -13,6 +13,7 @@ const pctTxt = (p: number) => (p < 0.01 ? "<1%" : porcento(p, p < 0.1 ? 1 : 0));
 export function ParaOndeVai({ temas, ano }: { temas: TemaCota[]; ano: string }) {
   const total = temas.reduce((a, t) => a + t.valor, 0);
   const [aberto, setAberto] = useState<string | null>(null);
+  const realce = useRealce();
   if (!total) return null;
   const porGrupo = ORDEM.map((g) => {
     const ts = temas.filter((t) => t.grupo === g && t.valor > 0).sort((a, b) => b.valor - a.valor);
@@ -21,12 +22,13 @@ export function ParaOndeVai({ temas, ano }: { temas: TemaCota[]; ano: string }) 
   const fatias = porGrupo.map((x) => ({ nome: GRUPO_CURTO[x.g], valor: x.valor, cor: COR_GRUPO[x.g], pct: x.valor / total }));
   return (
     <div className="pov">
-      <Rosca fatias={fatias} titulo={`Cota parlamentar em ${ano}, pelos três grupos de gasto`} centroRotulo={`Cota de todos em ${ano}`} legenda={false} />
+      <Rosca fatias={fatias} titulo={`Cota parlamentar em ${ano}, pelos três grupos de gasto`} centroRotulo={`Cota de todos em ${ano}`} legenda={false} realce={realce} />
       <div className="pov-grupos">
         {porGrupo.map(({ g, ts, valor }) => {
           const maxT = ts[0]?.valor || 1;
           return (
-            <details key={g} className="pov-grupo" open style={{ borderTopColor: COR_GRUPO[g] }}>
+            <details key={g} className={`pov-grupo ${realce.classe(GRUPO_CURTO[g])}`} open style={{ borderTopColor: COR_GRUPO[g] }}
+              data-fatia={GRUPO_CURTO[g]} onMouseEnter={() => realce.marca(GRUPO_CURTO[g])} onMouseLeave={() => realce.marca(null)}>
               <summary>
                 <span className="pov-nome"><i style={{ background: COR_GRUPO[g] }} />{GRUPO_CURTO[g]}</span>
                 <span className="pov-valor num">{curto(valor)} <small>{`${pctTxt(valor / total)} da cota`}</small></span>

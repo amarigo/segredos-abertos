@@ -3,7 +3,7 @@
    leve no celular e funciona sem internet depois de aberto.
    Cores: as do site (styles.css), na mesma ordem em todos os gráficos. A paleta passou no validador de cores
    (daltonismo e contraste) no claro e no escuro; onde o contraste é menor, a lista ao lado traz o nome e o valor. */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { reais } from "../data";
 import { useTip } from "./ui";
 
@@ -46,25 +46,48 @@ export function prepararFatias(fatias: Fatia[], max = 7, total?: number): FatiaP
   return itens;
 }
 
+/** O pedaço em destaque, dividido entre a barra das partes e a lista embaixo (ComRosca).
+ *  Passar o mouse mostra o pedaço; clicar (na barra ou na linha) fixa até clicar de novo. A linha em destaque ganha
+ *  fundo e a cor do pedaço; as outras ficam apagadas. Use `linha(dono, cor)` em cada linha da lista e `classe(dono)` no
+ *  className dela: assim todas as listas do site se comportam igual. */
+export interface Realce {
+  foco: string | null; fixo: string | null;
+  marca: (nome: string | null) => void; fixa: (nome: string) => void;
+  classe: (dono: string | null | undefined) => string;
+  linha: (dono: string, cor?: string) => { "data-fatia": string; style?: CSSProperties; onMouseEnter: () => void; onMouseLeave: () => void; onClick: () => void };
+}
+export function useRealce(): Realce {
+  const [sobre, setSobre] = useState<string | null>(null);
+  const [fixo, setFixo] = useState<string | null>(null);
+  const foco = sobre ?? fixo;
+  // Ao fixar, esquece o "mouse em cima": no celular o toque também conta como mouse em cima e nunca sai.
+  const fixa = (n: string) => { setFixo(fixo === n ? null : n); setSobre(null); };
+  return {
+    foco, fixo, marca: setSobre, fixa,
+    classe: (dono) => (!foco || !dono ? "" : foco === dono ? "realce" : "apagado"),
+    linha: (dono, cor) => ({ "data-fatia": dono, style: cor ? ({ "--cor-fatia": cor } as CSSProperties) : undefined,
+      onMouseEnter: () => setSobre(dono), onMouseLeave: () => setSobre(null), onClick: () => fixa(dono) }),
+  };
+}
+
 /** Partes de um todo: uma barra única dividida em pedaços (do maior para o menor), com o número grande em cima e a
  *  lista de cores embaixo. Substitui a antiga rosca (pizza): comparar comprimentos numa linha é mais fácil que comparar
  *  ângulos, os nomes não ficam espremidos e nada se sobrepõe em tela pequena.
  *  Passar o mouse (ou o teclado) mostra o pedaço; clicar fixa o pedaço até clicar de novo.
+ *  realce: quando há uma lista fora do gráfico (ComRosca), o destaque é dividido com ela.
  *  O nome Rosca ficou para não mudar as páginas que já usam o gráfico. */
-export function Rosca({ fatias, titulo, formato = curto, centro, centroRotulo = "Total", ativo, onAtivo, legenda = true }: {
+export function Rosca({ fatias, titulo, formato = curto, centro, centroRotulo = "Total", realce, legenda = true }: {
   fatias: FatiaPronta[]; titulo: string; formato?: (v: number) => string; centro?: string; centroRotulo?: string;
-  ativo?: string | null; onAtivo?: (nome: string | null) => void; legenda?: boolean;
+  realce?: Realce; legenda?: boolean;
 }) {
   const [aberto, setAberto] = useState(poucoMovimento());
-  const [sobre, setSobre] = useState<string | null>(null);
-  const [fixo, setFixo] = useState<string | null>(null);
+  const proprio = useRealce();
+  const r = realce ?? proprio;
   useEffect(() => { const t = requestAnimationFrame(() => setAberto(true)); return () => cancelAnimationFrame(t); }, []);
   const total = fatias.reduce((a, f) => a + f.valor, 0);
   if (!total) return null;
-  const foco = ativo ?? sobre ?? fixo;
+  const { foco, fixo, marca, fixa } = r;
   const atual = fatias.find((f) => f.nome === foco);
-  const marca = (n: string | null) => { setSobre(n); onAtivo?.(n ?? fixo); };
-  const fixa = (n: string) => { const novo = fixo === n ? null : n; setFixo(novo); onAtivo?.(novo); };
   const pctTxt = (p: number) => (p < 0.01 ? "<1%" : porcento(p, p < 0.1 ? 1 : 0));
   return (
     <figure className="compo">
@@ -75,7 +98,7 @@ export function Rosca({ fatias, titulo, formato = curto, centro, centroRotulo = 
       </div>
       <div className="compo-barra" role="group" aria-label={`${titulo}. ${fatias.map((f) => `${f.nome}: ${formato(f.valor)}, ${porcento(f.pct)}`).join("; ")}`}>
         {fatias.map((f) => (
-          <button key={f.nome} type="button" className={`compo-seg ${foco && foco !== f.nome ? "apagado" : ""} ${fixo === f.nome ? "fixo" : ""}`}
+          <button key={f.nome} type="button" data-nome={f.nome} className={`compo-seg ${foco && foco !== f.nome ? "apagado" : ""} ${fixo === f.nome ? "fixo" : ""}`}
             style={{ width: aberto ? `${f.pct * 100}%` : 0, background: f.cor }} aria-pressed={fixo === f.nome}
             aria-label={`${f.nome}: ${formato(f.valor)}, ${porcento(f.pct)}`} title={`${f.nome}: ${formato(f.valor)} (${porcento(f.pct)})`}
             onMouseEnter={() => marca(f.nome)} onMouseLeave={() => marca(null)} onFocus={() => marca(f.nome)} onBlur={() => marca(null)} onClick={() => fixa(f.nome)}>
@@ -100,15 +123,23 @@ export function Rosca({ fatias, titulo, formato = curto, centro, centroRotulo = 
   );
 }
 
-/** A barra das partes em cima e a lista (com as mesmas cores) embaixo. Passar o mouse numa linha acende o pedaço. */
-export function ComRosca({ fatias, titulo, formato, centro, centroRotulo, children, ativo, onAtivo }: {
+/** A barra das partes em cima e a lista embaixo. A lista deve vir na mesma ordem das fatias (do maior para o menor),
+ *  com a cor de cada fatia, e ligar cada linha ao realce (`realce.linha` e `realce.classe`). Clicar num pedaço destaca
+ *  a linha e, se ela estiver fora da tela, rola até ela. */
+export function ComRosca({ fatias, titulo, formato, centro, centroRotulo, children, realce }: {
   fatias: FatiaPronta[]; titulo: string; formato?: (v: number) => string; centro?: string; centroRotulo?: string; children: ReactNode;
-  ativo?: string | null; onAtivo?: (n: string | null) => void;
+  realce: Realce;
 }) {
+  const lista = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!realce.fixo || !lista.current) return;
+    const el = lista.current.querySelector(`[data-fatia="${CSS.escape(realce.fixo)}"]`);
+    el?.scrollIntoView?.({ block: "nearest", behavior: poucoMovimento() ? "auto" : "smooth" });
+  }, [realce.fixo]);
   return (
     <div className="caixa-graf com-rosca">
-      <Rosca fatias={fatias} titulo={titulo} formato={formato} centro={centro} centroRotulo={centroRotulo} ativo={ativo} onAtivo={onAtivo} legenda={false} />
-      <div className="com-rosca-lista">{children}</div>
+      <Rosca fatias={fatias} titulo={titulo} formato={formato} centro={centro} centroRotulo={centroRotulo} realce={realce} legenda={false} />
+      <div className="com-rosca-lista" ref={lista}>{children}</div>
     </div>
   );
 }
