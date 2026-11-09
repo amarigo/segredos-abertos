@@ -107,7 +107,7 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
     anos = [str(a) for a in meta.get("anos", [])]
 
     # ---------------- nomes de arquivo
-    for pasta in ("p", "p/notas", "v", "e", "e/notas"):
+    for pasta in ("p", "p/notas", "p/agenda", "v", "e", "e/notas"):
         for f in (saida / pasta).glob("*.json") if (saida / pasta).exists() else []:
             if not NOME_ARQ.match(f.name):
                 r.erro(f"Nome de arquivo inseguro: {pasta}/{f.name}")
@@ -278,11 +278,29 @@ def _conferir_politico(saida: Path, p: dict, r: Resultado) -> None:
         if any(not 1 <= m["mes"] <= 12 for m in meses):
             r.alerta(f"{p['id']} {ano}: despesa com mês fora de 1 a 12")
         _conferir_notas_politico(saida, p["id"], ano, a, r)
+        if a.get("agenda"):
+            _conferir_agenda(saida, p["id"], ano, a["agenda"], r)
     vs = Counter(v["votacao"] for v in d.get("votos") or [])
     if any(n > 1 for n in vs.values()):
         r.erro(f"{p['id']}: a mesma votação aparece mais de uma vez nos votos")
     if d.get("n_votos") != len(d.get("votos") or []):
         r.erro(f"{p['id']}: n_votos diferente da lista de votos")
+
+
+def _conferir_agenda(saida: Path, pid: str, ano: str, resumo: dict, r: Resultado) -> None:
+    """Calendário dia a dia (p/agenda/{id}-{ano}.json): o resumo bate com o arquivo, e cada ponto para conferir aponta
+    para um dia com presença registrada em Brasília e uma nota de empresa (CNPJ) de outro estado."""
+    x = _ler(saida / "p" / "agenda" / f"{pid}-{ano}.json", r)
+    if x is None:
+        return
+    if x.get("resumo") != resumo:
+        r.erro(f"{pid} {ano}: resumo do calendário diferente do arquivo p/agenda")
+    dias = x.get("dias") or {}
+    for c in x.get("conferir") or []:
+        evs = {e[6]: e for e in (dias.get(c.get("data")) or {}).get("e") or []}
+        if (not c.get("eventos") or any(not (evs.get(i) or [0] * 7)[5] for i in c["eventos"])
+                or len(str(c.get("doc", ""))) != 14 or c.get("uf") in ("", "DF")):
+            r.erro(f"{pid} {ano}: ponto para conferir em {c.get('data')} sem presença em Brasília ou sem fornecedor de outro estado")
 
 
 def _conferir_notas_politico(saida: Path, pid: str, ano: str, a: dict, r: Resultado) -> None:

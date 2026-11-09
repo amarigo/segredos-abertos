@@ -39,7 +39,20 @@ const pop = (p: number | null) => (p ? `${numero(p)} habitantes` : "população 
 
 export default function CulturaPage() {
   const { data, error } = useData<Cultura>("estado/cultura.json");
-  if (!data) return <Loading error={error} />;
+  if (!data && error) return (
+    <section>
+      <span className="eyebrow">Minas Gerais</span>
+      <h1>Shows e cultura</h1>
+      <div className="alert" role="note">Os dados desta página ainda não foram publicados: a coleta das fontes oficiais (PNCP, Transferegov, Ministério da Cultura e IBGE) ainda não chegou ao site. Quando uma atualização não passa na conferência automática, o site continua com a versão anterior. Nenhum número aparece aqui antes de vir da fonte oficial e ser conferido.</div>
+      <OndeVer titulo="Enquanto isso, veja direto nas fontes oficiais" links={[
+        { nome: "Contratações de artistas no PNCP", url: "https://pncp.gov.br/app/editais?q=&status=todos&ufs=MG&modalidades=9", explica: "inexigibilidades de Minas" },
+        { nome: "Emendas Pix no Transferegov", url: "https://especiais.transferegov.sistema.gov.br/transferencia-especial/plano-acao/consulta" },
+        { nome: "Lei Rouanet (dados abertos do Ministério da Cultura)", url: "https://dados.cultura.gov.br/dataset/incentivos-da-lei-rouanet" },
+        { nome: "População das cidades (IBGE)", url: "https://www.ibge.gov.br/estatisticas/sociais/populacao/9103-estimativas-de-populacao.html" },
+      ]} />
+    </section>
+  );
+  if (!data) return <Loading />;
   const c = data.contratos, p = data.pix, r = data.rouanet;
   return (
     <>

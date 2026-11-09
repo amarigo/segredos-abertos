@@ -232,7 +232,7 @@ jobs:
         run: |
           set -o pipefail
           python -m mg_etl.validar ../../site/public-mg/data --anterior https://amarigo.github.io/segredos-abertos/mg/data/meta.json $IGNORAR_QUEDA \
-            | tee -a "$GITHUB_STEP_SUMMARY"
+            | tee -a "$GITHUB_STEP_SUMMARY" "$RUNNER_TEMP/conferencia-mg.txt"
       - name: "Minas Nossa: se algo falhou, usar a versão publicada"
         id: mg_dados
         env:
@@ -311,7 +311,19 @@ jobs:
       - name: Resumo do Minas Nossa
         if: always()
         continue-on-error: true
-        run: python mg/etl/resumo_mg.py site/public-mg/data | tee -a "$GITHUB_STEP_SUMMARY"
+        env:
+          COLETA: ${{ steps.mg.outcome }}
+          CONFERIDO: ${{ steps.mg_conf.outcome }}
+        run: |
+          python mg/etl/resumo_mg.py site/public-mg/data | tee -a "$GITHUB_STEP_SUMMARY"
+          # No fim do registro (o registro do Actions é longo e só o fim aparece fácil): se o Minas Nossa ficou com a
+          # versão anterior, o motivo aparece aqui, com o resultado da coleta e da conferência
+          echo "Minas Nossa: coleta $COLETA, conferência $CONFERIDO"
+          if [ "$CONFERIDO" != "success" ]; then
+            echo "::warning title=Minas Nossa::coleta $COLETA, conferência $CONFERIDO; publicada a versão anterior"
+            tail -n 60 "$RUNNER_TEMP/conferencia-mg.txt" 2>/dev/null || true
+            grep -E "WARNING|ERROR|Traceback" mg/etl/coleta-mg.log 2>/dev/null | cut -c1-300 | tail -n 40 || true
+          fi
       # No fim do registro, para achar rápido o que aconteceu com os downloads da página de incentivos
       - name: Incentivos no registro da coleta
         if: always()

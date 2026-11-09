@@ -1,10 +1,7 @@
 import { useMemo, useState } from "react";
 import { Loading, useData } from "./ui";
+import { CalendarioAno, type MarcaDia } from "./CalendarioAno";
 import { dataBR, linkSeguro, reais, type MapaMG, type Viagem, type ViagensDetalhe, type ViagensPessoa } from "../data";
-
-const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-const SEMANA = ["D", "S", "T", "Q", "Q", "S", "S"];
-const dia = (a: number, m: number, d: number) => `${a}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
 /** Os dias (aaaa-mm-dd) de uma viagem, do início ao fim. Sem fim, só o dia do início. */
 function diasDaViagem(v: Viagem): string[] {
@@ -43,16 +40,22 @@ export function ViagensAno({ v, mapa }: { v: ViagensPessoa; mapa?: MapaMG | null
     for (const u of viagens) for (const n of u.destinos) c.set(n, (c.get(n) || 0) + 1);
     return [...c.entries()].sort((a, b) => b[1] - a[1]);
   }, [viagens]);
+  const marcas = useMemo(() => {
+    const m = new Map<string, MarcaDia>();
+    for (const [d, us0] of porDia) {
+      const us = us0.filter((u) => !cidade || u.destinos.includes(cidade));
+      if (us.length) m.set(d, { classe: "com-viagem", titulo: `${dataBR(d)}: ${us.map((u) => u.destinos.join(", ") || "destino não informado").join("; ")}` });
+    }
+    return m;
+  }, [porDia, cidade]);
   if (!v.id) return null;
   if (!data) return error ? <p className="small muted">O calendário de viagens não pôde ser carregado.</p> : <Loading />;
   const lugares = data.lugares || {};
   const noMapa = cidades.filter(([n]) => lugares[n]);
   const fora = cidades.filter(([n]) => !lugares[n]);
   const diasNoAno = [...porDia.keys()].filter((d) => d.startsWith(`${ano}`)).length;
-  const marca = (u: Viagem) => !cidade || u.destinos.includes(cidade);
   const doDia = diaSel ? (porDia.get(diaSel) || []) : [];
   const maxVezes = Math.max(1, ...noMapa.map(([, n]) => n));
-  const hoje = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="viagens-ano">
@@ -65,30 +68,7 @@ export function ViagensAno({ v, mapa }: { v: ViagensPessoa; mapa?: MapaMG | null
         {cidade && <> Mostrando só as viagens para <strong>{cidade}</strong>. <button className="link small" onClick={() => setCidade(null)}>Mostrar todas</button></>}
       </p>
       <div className="viagens-grade">
-        <div className="calendario" aria-label={`Calendário das viagens de ${ano}`}>
-          {MESES.map((nome, m) => {
-            const primeiro = new Date(Date.UTC(ano, m, 1)).getUTCDay();
-            const n = new Date(Date.UTC(ano, m + 1, 0)).getUTCDate();
-            return (
-              <div key={m} className="cal-mes">
-                <div className="cal-nome">{nome}</div>
-                <div className="cal-dias">
-                  {SEMANA.map((s, i) => <span key={`s${i}`} className="cal-sem" aria-hidden="true">{s}</span>)}
-                  {Array.from({ length: primeiro }, (_, i) => <span key={`v${i}`} />)}
-                  {Array.from({ length: n }, (_, i) => {
-                    const d = dia(ano, m, i + 1);
-                    const us = (porDia.get(d) || []).filter(marca);
-                    const titulo = us.length ? `${dataBR(d)}: ${us.map((u) => u.destinos.join(", ") || "destino não informado").join("; ")}` : dataBR(d);
-                    return us.length
-                      ? <button key={d} className={`cal-dia com-viagem${diaSel === d ? " sel" : ""}`} title={titulo} aria-label={titulo}
-                          onClick={() => setDiaSel(diaSel === d ? null : d)}>{i + 1}</button>
-                      : <span key={d} className={`cal-dia${d > hoje ? " futuro" : ""}`} title={titulo}>{i + 1}</span>;
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <CalendarioAno ano={ano} marcas={marcas} sel={diaSel} onSel={setDiaSel} rotulo={`Calendário das viagens de ${ano}`} />
         <div className="mapa-viagens">
           {mapa ? (
             <svg viewBox={comMargem(mapa.vb)} role="img" aria-label={`Mapa de Minas Gerais com as cidades visitadas em ${ano}`}>
