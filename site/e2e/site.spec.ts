@@ -104,7 +104,7 @@ test.describe("jornada", () => {
     // endereço com o dia abre direto no dia (dá para mandar o link)
     await page.goto(`./#/p/${p.id}?aba=agenda&dia=${c.data}`);
     await expect(page.locator(".ag-painel h3")).toBeVisible();
-    await expect(page.locator(".ag-ponto")).toHaveCount(ag.conferir.filter((x: { data: string }) => x.data === c.data).length);
+    await expect(page.locator(".ag-refeicoes li")).toHaveCount(ag.conferir.filter((x: { data: string }) => x.data === c.data).length);
     expect(erros).toEqual([]);
   });
 

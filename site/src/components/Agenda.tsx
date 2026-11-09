@@ -166,20 +166,25 @@ export function AgendaPolitico({ p, ano }: { p: Politico; ano: string }) {
                 <h3>{diaLongo(aberto.dia)}</h3>
                 <button className="link small" onClick={() => abrir(null)}>Fechar</button>
               </div>
-              {aberto.conferir.map((c, i) => {
-                const evs = aberto.eventos.filter((e) => c.eventos.includes(e[6]));
+              {aberto.conferir.length > 0 && (() => {
+                const c0 = aberto.conferir[0];
+                const evs = aberto.eventos.filter((e) => aberto.conferir.some((c) => c.eventos.includes(e[6])));
+                const e0 = evs[0];
                 return (
-                  <div className="alert ag-ponto" role="note" key={i}>
+                  <div className="alert ag-ponto" role="note">
                     <div>
                       <strong>Ponto para conferir.</strong> Neste dia, {p.nome} registrou presença em Brasília
                       ({evs.map((e, j) => <span key={e[6]}>{j > 0 && "; "}{e[1]}{e[2] && e[2] !== "PLEN" ? ` da ${e[2]}` : ""} às {e[0]}</span>)})
-                      e pediu reembolso de uma refeição de <strong>{reais(c.valor, true)}</strong> em <strong>{c.cidade} ({c.uf})</strong>, na empresa {c.fornecedor}.
-                      {c.cercado && <> Também registrou presença em Brasília no dia anterior e no dia seguinte.</>}
-                      <p className="alert-nota">Não é acusação. Pode haver explicação: a data da nota pode ser diferente da data da refeição, o {casa} pode ter viajado no mesmo dia, e a Câmara aceita, em algumas reuniões, presença registrada pelo aplicativo. Confira nas fontes: <LinkNota url={c.url} link={c.url ? "nota" : ""} />{evs.map((e) => <span key={e[6]}> · <a href={LINK_EVENTO(e[6])} target="_blank" rel="noreferrer">evento ↗</a> · <a href={API_PRESENCA(e[6])} target="_blank" rel="noreferrer">lista de presença ↗</a></span>)}</p>
+                      e pediu reembolso de {aberto.conferir.length === 1 ? "uma refeição" : `${aberto.conferir.length} refeições`} em outro estado:
+                      <ul className="ag-refeicoes">
+                        {aberto.conferir.map((c, i) => <li key={i}><strong>{reais(c.valor, true)}</strong> em <strong>{c.cidade} ({c.uf})</strong>, na empresa {c.fornecedor} · <LinkNota url={c.url} link={c.url ? "nota" : ""} /></li>)}
+                      </ul>
+                      {c0.cercado && <>Também registrou presença em Brasília no dia anterior e no dia seguinte.</>}
+                      <p className="alert-nota">Não é acusação. Pode haver explicação: a data da nota pode ser diferente da data da refeição, o {casa} pode ter viajado no mesmo dia, e a Câmara aceita, em algumas reuniões, presença registrada pelo aplicativo. Cada evento abaixo tem o link da lista de presença oficial{e0 && <> (por exemplo, <a href={API_PRESENCA(e0[6])} target="_blank" rel="noreferrer">lista de presença ↗</a>)</>}.</p>
                     </div>
                   </div>
                 );
-              })}
+              })()}
 
               <h4>{p.casa === "camara" ? "Onde registrou presença" : "No Plenário do Senado"}</h4>
               {aberto.eventos.length === 0 && aberto.votos.length === 0 && <p className="small muted">Nenhuma presença registrada nesta data.</p>}
