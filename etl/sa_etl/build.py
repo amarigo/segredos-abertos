@@ -12,7 +12,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import (autorias, recursos_recebidos, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
+from . import (autorias, gabinetes, recursos_recebidos, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
                renuncias, senado, temas)
 from .categorias import GRUPOS, tema_de
 from . import util
@@ -700,7 +700,10 @@ def custos_extras(casa: str, r: dict) -> dict:
     verba = (r or {}).get("verba_gasto") or 0
     outros = (r or {}).get("outros_total") or 0  # Senado: gastos fora da cota (correios, diárias...)
     cota = (r or {}).get("cota_oficial")
+    meses = [m["mes"] for m in (r or {}).get("verba_meses") or [] if m.get("valor")]
     return {"salario": round(salario, 2) or None, "verba_gabinete": round(verba, 2) or None,
+            "verba_disponivel": (r or {}).get("verba_disponivel") if verba else None,  # teto do período no cargo
+            "verba_ate_mes": max(meses) if verba and meses else None,
             "outros_gastos": round(outros, 2) or None, "cota_oficial": cota,
             "n_pessoal": (r or {}).get("n_pessoal")}
 
@@ -825,6 +828,8 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
     montar(dados, saida, anos, anos_notas)
     if inc:
         gravar_incentivos(dados, saida, anos, inc, pag)
+    if com_recursos:  # depois de montar(): usa a verba de gabinete já gravada em politicos.json
+        coletar_gabinetes(saida, cache, anos)
     if com_financas:  # depois de tudo: usa as emendas e a verba de gabinete já gravadas
         coletar_financas(saida, cache)
     regravar_avisos(saida)
@@ -842,6 +847,15 @@ def regravar_avisos(saida: Path) -> None:
     if meta.get("avisos") != util.AVISOS or meta.get("avisos_tentar") != util.avisos_para_tentar():
         meta["avisos"], meta["avisos_tentar"] = list(util.AVISOS), util.avisos_para_tentar()
         write_json(f, meta)
+
+
+def coletar_gabinetes(saida: Path, cache: Path, anos: list[int]) -> None:
+    """Comparação justa da verba de gabinete entre os estados. Se falhar, o resto do site segue."""
+    try:
+        gabinetes.coletar(saida, cache, anos)
+    except Exception:  # noqa: BLE001
+        log.exception("Comparação dos gabinetes: erro; a página não foi atualizada")
+        util.avisar("Comparação dos gabinetes: a coleta falhou; a página ficou de fora desta atualização")
 
 
 def coletar_tramitacao(saida: Path, cache: Path, politicos: list[dict]) -> None:
