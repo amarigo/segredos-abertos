@@ -1,4 +1,5 @@
 """Sonda temporária: roda a comparação dos gabinetes com os dados publicados e as APIs reais (apagar antes do merge)."""
+from collections import Counter
 import json, logging, sys, tempfile, time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -13,9 +14,6 @@ def g(u, t=40):
         r = S.get(u, timeout=t); print("GET", r.status_code, round(time.time() - t0, 1), "s", u, flush=True); return r.json()
     except Exception as e:
         print("ERRO", round(time.time() - t0, 1), "s", u, e, flush=True); return None
-for u in (gabinetes.URL_POP, gabinetes.URL_REND):
-    d = g(u, 60)
-    print(json.dumps(d[:3] if isinstance(d, list) else d, ensure_ascii=False), flush=True)
 BASE = "https://amarigo.github.io/segredos-abertos/data"
 pols = g(BASE + "/politicos.json", 120)
 def det(p):
@@ -32,4 +30,11 @@ for p in pols:
             x["verba_ate_mes"] = max(ms) if ms else None
 saida = Path(tempfile.mkdtemp()); (saida / "politicos.json").write_text(json.dumps(pols))
 r = gabinetes.coletar(saida, Path(tempfile.mkdtemp()), [2025, 2026])
-print("RESULTADO", json.dumps(r, ensure_ascii=False), flush=True)
+for ano in ("2025", "2026"):
+    hoje = sum((p["por_ano"].get(ano) or {}).get("verba_gabinete") or 0 for p in pols if p["casa"] == "camara" and p.get("em_exercicio") is not False)
+    fora = sum((p["por_ano"].get(ano) or {}).get("verba_gabinete") or 0 for p in pols if p["casa"] == "camara" and p.get("em_exercicio") is False)
+    meses = Counter(((p["por_ano"].get(ano) or {}).get("verba_ate_mes")) for p in pols if p["casa"] == "camara" and (p["por_ano"].get(ano) or {}).get("verba_gabinete"))
+    print("VERBA", ano, "no cargo hoje", round(hoje, 2), "sairam", round(fora, 2), "meses", sorted(meses.items(), key=str), flush=True)
+for u in (gabinetes.URL_POP, gabinetes.URL_REND):
+    d = g(u, 60)
+    print("SIDRA", json.dumps(d[:2] if isinstance(d, list) else d, ensure_ascii=False), flush=True)
