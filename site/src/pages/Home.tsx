@@ -104,6 +104,7 @@ export default function Home() {
             <Link to="/assembleia" className="card cidade-card"><strong>Deputados estaduais</strong><span className="small muted">{meta.estado?.deputados_estaduais ? `${meta.estado.deputados_estaduais} deputados: ` : ""}gastos da verba indenizatória nota por nota, projetos apresentados e aprovados.</span></Link>
             <Link to="/emendas-estaduais" className="card cidade-card"><strong>Emendas estaduais</strong><span className="small muted">Quanto cada deputado estadual indicou do orçamento de Minas, para quais cidades e quem recebeu.</span></Link>
             <Link to="/cultura" className="card cidade-card"><strong>Shows e cultura</strong><span className="small muted">Quanto as prefeituras gastam com shows e artistas, quem indicou o dinheiro e a Lei Rouanet em cada região, com a população das cidades.</span></Link>
+            <Link to="/painel" className="card cidade-card"><strong>Painel por área</strong><span className="small muted">Saúde, educação, cultura, esporte: quanto as emendas estaduais mandaram para cada área, onde e em quê. Junte áreas e filtre por cidade.</span></Link>
             <Link to="/politicos" className="card cidade-card"><strong>Deputados federais e senadores</strong><span className="small muted">Os {meta.contagens.politicos} que representam Minas em Brasília: cota parlamentar, empresas e votos.</span></Link>
           </div>
         </section>

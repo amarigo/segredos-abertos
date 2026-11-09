@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Abrir, Barras, Explain, GastoMensal, Loading, OndeVer, useData } from "../components/ui";
 import { norm } from "./Home";
-import { cnpjFmt, dataBR, linkSeguro, reais, type AlmgIndice, type DeputadoEstadual, type ProposicaoAlmg, type VerbaAno } from "../data";
+import { cnpjFmt, dataBR, linkSeguro, reais, type AlmgIndice, type DeputadoEstadual, type NotaAlmg, type ProposicaoAlmg, type VerbaAno } from "../data";
 import { Metrica } from "./Atuacao";
 import { FotoPerfil } from "../components/Foto";
 import { AvisosFim } from "../components/Selo";
@@ -74,6 +74,9 @@ function Gastos({ d, ano, colegas, primeiro }: { d: DeputadoEstadual; ano: strin
   const [mes, setMes] = useState(0);
   const [busca, setBusca] = useState("");
   const [todasMaiores, setTodasMaiores] = useState(false);
+  // Nota aberta para ver o detalhe aqui mesmo (sem ir ao site da ALMG) e o jeito de agrupar a lista completa
+  const [aberta, setAberta] = useState<NotaAlmg | null>(null);
+  const [agrupar, setAgrupar] = useState<"mes" | "tipo">("mes");
   const v = d.anos[ano]?.verba;
   if (!v) return <div className="empty">A ALMG não publicou gastos da verba indenizatória de {d.nome} em {ano}.</div>;
   const urlAlmg = linkSeguro(d.url_verba || `https://www.almg.gov.br/transparencia/prestacao-de-contas/deputados/verba-indenizatoria/detalhe.html?id=${d.id}`);
@@ -89,7 +92,15 @@ function Gastos({ d, ano, colegas, primeiro }: { d: DeputadoEstadual; ano: strin
     return acc;
   }, {} as Record<string, VerbaAno["fornecedores"][number]>)).sort((a, b) => b.valor - a.valor) : v.fornecedores;
   const totalFiltrado = notas.reduce((a, n) => a + n.valor, 0);
-  const grupos = v.tipos.map((t) => ({ ...t, notas: notas.filter((n) => n.tipo === t.tipo).sort((a, b) => a.data.localeCompare(b.data)) })).filter((g) => g.notas.length);
+  const porData = (a: NotaAlmg, b: NotaAlmg) => a.data.localeCompare(b.data) || a.tipo.localeCompare(b.tipo);
+  // Lista completa: mês a mês, como a prestação de contas da ALMG (o mês mais novo primeiro), ou por tipo de despesa
+  const grupos = agrupar === "mes"
+    ? [...new Set(notas.map((n) => n.mes))].sort((a, b) => b - a).map((m) => ({ chave: `m${m}`, nome: `${MESES[m - 1][0].toUpperCase()}${MESES[m - 1].slice(1)} de ${ano}`, notas: notas.filter((n) => n.mes === m).sort(porData) }))
+    : v.tipos.map((t) => ({ chave: t.tipo, nome: t.tipo, notas: notas.filter((n) => n.tipo === t.tipo).sort(porData) })).filter((g) => g.notas.length);
+  const abrir = (n: NotaAlmg) => setAberta(aberta === n ? null : n);
+  const detalhe = (n: NotaAlmg, colunas: number) => aberta === n && (
+    <tr className="nota-aberta"><td colSpan={colunas}><NotaDetalhe n={n} ano={ano} todas={v.notas} procurar={(x) => { setBusca(x); setAberta(null); }} /></td></tr>
+  );
   const mesesNotas = [...new Set(v.notas.map((n) => n.mes))].sort((a, b) => a - b);
   const notasCortadas = v.notas.length < v.n_notas;
   return (
@@ -142,18 +153,21 @@ function Gastos({ d, ano, colegas, primeiro }: { d: DeputadoEstadual; ano: strin
           </div>
           <div>
             <h3>Maiores despesas</h3>
-            <p className="muted small">As notas de maior valor. O número é o da nota fiscal.</p>
+            <p className="muted small">As notas de maior valor. Clique numa nota para ver todos os dados dela.</p>
             <div className="table-wrap">
               <table>
                 <thead><tr><th>Nota</th><th className="r">Valor</th></tr></thead>
                 <tbody>
                   {notas.slice(0, todasMaiores ? 100 : 15).map((n, i) => (
-                    <tr key={i}>
-                      <td>{n.fornecedor}{n.pf && <span className="pf-tag small"> (pessoa física)</span>}
-                        <div className="small muted">{n.tipo}</div>
-                        <div className="small muted num">{dataBR(n.data)}{n.numero ? ` · nota nº ${n.numero}` : ""}{urlAlmg && <> · <a href={urlAlmg} target="_blank" rel="noreferrer">ver na ALMG ↗</a></>}</div></td>
-                      <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(n.valor, true)}</td>
-                    </tr>
+                    <Fragment key={i}>
+                      <tr>
+                        <td><button className="link nota-abrir" aria-expanded={aberta === n} onClick={() => abrir(n)}>{n.fornecedor}</button>{n.pf && <span className="pf-tag small"> (pessoa física)</span>}
+                          <div className="small muted">{n.tipo}</div>
+                          <div className="small muted num">{dataBR(n.data)}{n.numero ? ` · nota nº ${n.numero}` : ""}</div></td>
+                        <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(n.valor, true)}</td>
+                      </tr>
+                      {detalhe(n, 2)}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
@@ -164,34 +178,47 @@ function Gastos({ d, ano, colegas, primeiro }: { d: DeputadoEstadual; ano: strin
         <h3>Gasto mês a mês</h3>
         <GastoMensal meses={filtrando ? Array.from({ length: 12 }, (_, k) => ({ mes: k + 1, valor: notas.filter((n) => n.mes === k + 1).reduce((a, n) => a + n.valor, 0) })) : v.meses} ano={ano} cor="var(--s2)" />
       </section>
-      <section>
-        <h2>Todas as notas, por tipo de despesa</h2>
-        <Explain>Como na prestação de contas da Assembleia: abra um grupo para ver cada nota, com quem emitiu, o CNPJ, a data, o número da nota e o valor reembolsado. O CNPJ leva à página da empresa no Portal da Transparência.</Explain>
+      <section id="todas-as-notas">
+        <h2>Todas as notas de {ano}</h2>
+        <Explain>Cada nota que {primeiro} apresentou à Assembleia em {ano}, com quem emitiu, o CNPJ, a data, o número e o valor reembolsado. Clique numa nota para ver todos os dados dela aqui mesmo. A busca e os filtros acima valem também para esta lista.</Explain>
+        <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+          <div className="toggle" role="group" aria-label="Agrupar as notas">
+            <button aria-pressed={agrupar === "mes"} onClick={() => setAgrupar("mes")}>Mês a mês</button>
+            <button aria-pressed={agrupar === "tipo"} onClick={() => setAgrupar("tipo")}>Por tipo de despesa</button>
+          </div>
+          <button className="btn alt" onClick={() => baixarNotas(notas, `verba-indenizatoria-almg-${d.id}-${ano}${filtrando ? "-filtrada" : ""}.csv`)}>Baixar {filtrando ? "estas" : "todas as"} notas (planilha)</button>
+        </div>
         {notasCortadas && <p className="muted small">Este arquivo traz só as {v.notas.length} maiores notas do ano. A lista completa aparece na próxima atualização.</p>}
-        {grupos.map((g) => {
+        {!grupos.length && <p className="muted small">Nenhuma nota com esses filtros.</p>}
+        {grupos.map((g, gi) => {
           const soma = g.notas.reduce((a, n) => a + n.valor, 0);
           return (
-            <Abrir key={g.tipo} titulo={<span className="row" style={{ justifyContent: "space-between", gap: 8, display: "inline-flex", width: "calc(100% - 24px)" }}><span>{g.tipo}</span><span className="num chip">{reais(soma, true)}</span></span>}>
+            <Abrir key={`${agrupar}-${g.chave}-${filtrando}`} aberto={gi === 0} titulo={<span className="row" style={{ justifyContent: "space-between", gap: 8, display: "inline-flex", width: "calc(100% - 24px)" }}><span>{g.nome} <span className="muted small">({g.notas.length} nota{g.notas.length === 1 ? "" : "s"})</span></span><span className="num chip">{reais(soma, true)}</span></span>}>
               <div className="table-wrap">
                 <table className="small">
-                  <thead><tr><th>Emitente</th><th className="so-largo">CNPJ</th><th>Data</th><th className="so-largo">Número</th><th className="r">Valor</th></tr></thead>
+                  <thead><tr><th>Emitente</th><th className="so-largo">{agrupar === "mes" ? "Tipo" : "CNPJ"}</th><th>Data</th><th className="so-largo">Número</th><th className="r">Valor</th></tr></thead>
                   <tbody>{g.notas.map((n, i) => (
-                    <tr key={i}>
-                      <td>{n.fornecedor}{n.pf && <span className="pf-tag"> (pessoa física)</span>}
-                        <div className="so-celular muted mono">{n.cnpj ? cnpjFmt(n.cnpj) : ""}{n.numero ? ` · nº ${n.numero}` : ""}</div></td>
-                      <td className="so-largo mono">{n.cnpj ? <a href={linkCnpj(n.cnpj)} target="_blank" rel="noreferrer">{cnpjFmt(n.cnpj)} ↗</a> : n.pf ? "Pessoa física" : "—"}</td>
-                      <td className="num" style={{ whiteSpace: "nowrap" }}>{dataBR(n.data)}</td>
-                      <td className="so-largo mono">{n.numero || "—"}</td>
-                      <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(n.valor, true)}</td>
-                    </tr>
+                    <Fragment key={i}>
+                      <tr>
+                        <td><button className="link nota-abrir" aria-expanded={aberta === n} onClick={() => abrir(n)}>{n.fornecedor}</button>{n.pf && <span className="pf-tag"> (pessoa física)</span>}
+                          <div className="so-celular muted mono">{n.cnpj ? cnpjFmt(n.cnpj) : ""}{n.numero ? ` · nº ${n.numero}` : ""}</div>
+                          {agrupar === "mes" && <div className="muted so-celular">{n.tipo}</div>}</td>
+                        <td className="so-largo">{agrupar === "mes" ? n.tipo : <span className="mono">{n.cnpj ? cnpjFmt(n.cnpj) : n.pf ? "Pessoa física" : "—"}</span>}</td>
+                        <td className="num" style={{ whiteSpace: "nowrap" }}>{dataBR(n.data)}</td>
+                        <td className="so-largo mono">{n.numero || "—"}</td>
+                        <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(n.valor, true)}</td>
+                      </tr>
+                      {detalhe(n, 5)}
+                    </Fragment>
                   ))}</tbody>
                 </table>
               </div>
             </Abrir>
           );
         })}
-        <OndeVer titulo="Conferir as notas no site oficial" links={[
-          { nome: `Prestação de contas de ${primeiro} na ALMG`, url: urlAlmg || "", explica: "a lista oficial, nota por nota, mês a mês. A Assembleia não publica a imagem das notas" },
+        <p className="muted small fonte-linha">Fonte: <a href="https://dadosabertos.almg.gov.br/" target="_blank" rel="noreferrer">API de dados abertos da ALMG ↗</a> (prestação de contas da verba indenizatória, nota por nota), consultada mês a mês para cada deputado.</p>
+        <OndeVer titulo="Para conferir no site oficial" links={[
+          { nome: `Prestação de contas de ${primeiro} na ALMG`, url: urlAlmg || "", explica: "a mesma lista no site oficial, para conferir. A Assembleia não publica a imagem das notas" },
           { nome: "Verba indenizatória de todos os deputados (ALMG)", url: "https://www.almg.gov.br/transparencia/prestacao-de-contas/deputados/verba-indenizatoria/" },
           { nome: "API de dados abertos da ALMG", url: "https://dadosabertos.almg.gov.br/", explica: "de onde vêm estes dados" },
         ]} />
@@ -203,6 +230,42 @@ function Gastos({ d, ano, colegas, primeiro }: { d: DeputadoEstadual; ano: strin
       </AvisosFim>
     </>
   );
+}
+
+/** Tudo o que a ALMG publica sobre uma nota, mostrado aqui mesmo, e as outras notas do mesmo fornecedor no ano */
+function NotaDetalhe({ n, ano, todas, procurar }: { n: NotaAlmg; ano: string; todas: NotaAlmg[]; procurar: (x: string) => void }) {
+  const mesma = (x: NotaAlmg) => (n.cnpj ? x.cnpj === n.cnpj : !n.pf && x.fornecedor === n.fornecedor);
+  const outras = n.pf ? [] : todas.filter((x) => x !== n && mesma(x));
+  const somaOutras = outras.reduce((a, x) => a + x.valor, 0);
+  return (
+    <div className="nota-detalhe" role="region" aria-label={`Nota de ${n.fornecedor}`}>
+      <div className="kv small" style={{ gridTemplateColumns: "auto 1fr" }}>
+        <strong>Emitente</strong><span style={{ textAlign: "left" }}>{n.fornecedor}{n.pf ? " (pessoa física: o CPF não é mostrado)" : ""}</span>
+        <strong>CNPJ</strong><span style={{ textAlign: "left" }} className="mono">{n.cnpj ? <>{cnpjFmt(n.cnpj)} · <a href={linkCnpj(n.cnpj)} target="_blank" rel="noreferrer">empresa no Portal da Transparência ↗</a></> : n.pf ? "Não se aplica" : "Não informado pela ALMG"}</span>
+        <strong>Tipo de despesa</strong><span style={{ textAlign: "left" }}>{n.tipo}</span>
+        <strong>Data da nota</strong><span style={{ textAlign: "left" }} className="num">{dataBR(n.data) || "Não informada"}</span>
+        <strong>Prestação de contas</strong><span style={{ textAlign: "left" }}>{MESES[n.mes - 1]} de {ano}</span>
+        <strong>Número da nota</strong><span style={{ textAlign: "left" }} className="mono">{n.numero || "Não informado"}</span>
+        <strong>Valor reembolsado</strong><span style={{ textAlign: "left" }} className="num"><strong>{reais(n.valor, true)}</strong></span>
+      </div>
+      {outras.length > 0 && <p className="small">Em {ano}, {outras.length} outra{outras.length > 1 ? "s" : ""} nota{outras.length > 1 ? "s" : ""} de {n.fornecedor}, somando <span className="num">{reais(somaOutras, true)}</span>. <button className="link" onClick={() => procurar(n.cnpj || n.fornecedor)}>Ver todas as notas deste fornecedor</button></p>}
+    </div>
+  );
+}
+
+/** Planilha (CSV) com as notas que estão na tela, para abrir no Excel ou no LibreOffice: separada por ponto e vírgula, valores com vírgula */
+function baixarNotas(notas: NotaAlmg[], nome: string) {
+  const cel = (x: string) => (/[";\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x);
+  const linhas = [["Mês", "Data da nota", "Tipo de despesa", "Emitente", "CNPJ", "Número da nota", "Valor reembolsado (R$)"].join(";"),
+    ...notas.slice().sort((a, b) => a.mes - b.mes || a.data.localeCompare(b.data)).map((n) => [
+      MESES[n.mes - 1], dataBR(n.data), n.tipo, n.fornecedor, n.cnpj ? cnpjFmt(n.cnpj) : n.pf ? "pessoa física" : "", n.numero || "",
+      n.valor.toFixed(2).replace(".", ","),
+    ].map((x) => cel(String(x))).join(";"))];
+  const url = URL.createObjectURL(new Blob(["\ufeff" + linhas.join("\r\n")], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = nome;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function AtuacaoAlmg({ d, ano, colegas, primeiro }: { d: DeputadoEstadual; ano: string; colegas: { projetos: number; requerimentos: number; aprovadas: number }[]; primeiro: string }) {
