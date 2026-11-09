@@ -38,6 +38,7 @@ class Fake:
     def __init__(self):
         self.chamadas = []
         self.fora: set[str] = set()
+        self.recusas_429 = 0  # quantos pedidos ao PNCP recebem HTTP 429 antes de responder
         self.compras = [
             compra(1, "Lei 14.133/2021, Art. 74, II", 80000),
             compra(2, "Lei 14.133/2021, Art. 74, I", 50000, objeto="Software exclusivo"),  # fornecedor exclusivo: não é artista
@@ -71,6 +72,9 @@ class Fake:
             return resp(MUNICIPIOS)
         if url == cultura.IBGE_POPULACAO:
             return resp(POPULACAO)
+        if url == cultura.PNCP_CONSULTA and self.recusas_429:
+            self.recusas_429 -= 1
+            raise RuntimeError(f"Não foi possível baixar {url}: 429 em {url}")
         if url == cultura.PNCP_CONSULTA:
             if params["dataInicial"] != "20260101":
                 return resp(None, 204)
@@ -105,6 +109,8 @@ def fake(monkeypatch):
     f = Fake()
     monkeypatch.setattr(cultura, "get", f.get)
     monkeypatch.setattr(cultura, "PRIMEIRO_MES", (2026, 1))
+    monkeypatch.setattr(cultura, "PAUSA_PNCP", 0)
+    monkeypatch.setattr(cultura, "ESPERA_429_PNCP", 0)
     util.AVISOS.clear()
     return f
 
@@ -187,6 +193,19 @@ def test_pncp_continua_de_onde_parou(fake, tmp_path, monkeypatch):
     antes = len(fake.chamadas)
     cultura.coletar_pncp(tmp_path, 5, HOJE)
     assert not [c for c in fake.chamadas[antes:] if "/compras/" in c], "resultado já lido não é pedido de novo"
+
+
+def test_pncp_espera_depois_de_429(fake, tmp_path, monkeypatch):
+    """O PNCP recusa pedidos seguidos (HTTP 429): a leitura espera e tenta de novo, como nas licitações."""
+    esperas = []
+    monkeypatch.setattr(cultura.time, "sleep", esperas.append)
+    monkeypatch.setattr(cultura, "PAUSA_PNCP", 4)
+    monkeypatch.setattr(cultura, "ESPERA_429_PNCP", 30)
+    fake.recusas_429 = 2
+    p = cultura.coletar_pncp(tmp_path, 5, HOJE)
+    assert p["completo"] and len(p["compras"]) == 2
+    assert 30 in esperas and 60 in esperas, "espera maior depois de cada 429 (o dobro na segunda)"
+    assert esperas.count(4) >= 3, "pausa antes de cada pedido ao PNCP"
 
 
 def test_pix_com_show_e_evento(tmp_path, fake):

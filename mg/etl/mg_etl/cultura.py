@@ -45,7 +45,7 @@ from pathlib import Path
 
 from sa_etl.util import avisar, com_copia, digits, get, norm_name, to_float, write_json
 
-from . import fontes
+from . import fontes, pncp
 
 log = logging.getLogger("mg_etl.cultura")
 
@@ -168,8 +168,24 @@ def _gravar_gz(f: Path, d) -> None:
 
 
 def _json_ou_nada(url: str, params: dict | None = None, timeout: int = 90):
-    """O PNCP responde 204 (sem corpo) quando não há nada; isso vira None."""
-    r = get(url, params=params, timeout=timeout)
+    """O PNCP responde 204 (sem corpo) quando não há nada; isso vira None.
+
+    O PNCP recusa pedidos seguidos (HTTP 429) com facilidade, e as licitações (pncp.py) leem a mesma API na mesma
+    execução. Por isso cada pedido ao PNCP espera PAUSA_PNCP segundos, e depois de um 429 a espera é maior, com as
+    mesmas medidas da sondagem feita para as licitações."""
+    do_pncp = "pncp.gov.br" in url
+    for tentativa in range(4):
+        if do_pncp:
+            time.sleep(PAUSA_PNCP)
+        try:
+            r = get(url, params=params, timeout=timeout, tries=1 if do_pncp else 4)
+            break
+        except RuntimeError as e:
+            if not do_pncp or tentativa == 3:
+                raise
+            espera = ESPERA_429_PNCP * 2 ** tentativa if "429" in str(e) else 10
+            log.info("PNCP: %s; nova tentativa em %ss", str(e)[:80], espera)
+            time.sleep(espera)
     if r.status_code == 204 or not r.content.strip():
         return None
     return r.json()
@@ -178,6 +194,8 @@ def _json_ou_nada(url: str, params: dict | None = None, timeout: int = 90):
 # ---------------------------------------------------------------- PNCP: contratação de artistas
 
 PNCP_CONSULTA = "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
+PAUSA_PNCP = pncp.PAUSA  # segundos entre pedidos ao PNCP (medida das licitações, sondagem de 08/11/2026)
+ESPERA_429_PNCP = pncp.ESPERA_429  # segundos depois de um HTTP 429 (o dobro a cada nova tentativa)
 PNCP_API = "https://pncp.gov.br/api/pncp/v1"
 PNCP_PAGINA = "https://pncp.gov.br/app/editais/{cnpj}/{ano}/{seq}"
 PNCP_FONTE = "https://pncp.gov.br/app/editais?q=&status=todos&ufs=MG&modalidades=9"

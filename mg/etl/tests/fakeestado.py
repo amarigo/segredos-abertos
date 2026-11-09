@@ -562,23 +562,15 @@ class FakeEstado:
                     "nome": "Itajubá", "regiao-intermediaria": {"nome": "Pouso Alegre"}}}]).encode(), "application/json"
             return 200, json.dumps([{"resultados": [{"series": [
                 {"localidade": {"id": "3132404"}, "serie": {"2025": "97000"}}]}]}]).encode(), "application/json"
-        if u.netloc == "pncp.gov.br":  # uma contratação de artista em Itajubá, em março de 2025
-            if u.path.endswith("/contratacoes/publicacao"):
-                if q.get("dataInicial") != "20250301" or q.get("pagina") != "1":
-                    return 204, b"", "application/json"
-                return 200, json.dumps({"data": [{
-                    "numeroControlePNCP": "18025940000109-1-000007/2025", "anoCompra": 2025, "sequencialCompra": 7,
-                    "objetoCompra": "Show artístico da Banda Simulada na Festa de Teste", "valorTotalHomologado": 45000,
-                    "dataPublicacaoPncp": "2025-03-10T09:00:00", "amparoLegal": {"nome": "Lei 14.133/2021, Art. 74, II"},
-                    "orgaoEntidade": {"cnpj": "18025940000109", "razaoSocial": "MUNICIPIO DE ITAJUBA"},
-                    "unidadeOrgao": {"ufSigla": "MG", "municipioNome": "Itajubá", "codigoIbge": "3132404"}}],
-                    "paginasRestantes": 0}).encode(), "application/json"
+        # Itens e resultados de uma compra (API do PNCP, usada por Shows e cultura). As compras vêm da simulação da API de
+        # consulta (self.pncp), a mesma das licitações: o show da festa de Itajubá (art. 74, II) é o que entra em Shows e cultura.
+        if u.netloc == "pncp.gov.br" and not u.path.startswith("/api/consulta/v1/"):
             if u.path.endswith("/itens"):
                 return 200, json.dumps([{"numeroItem": 1, "temResultado": True}]).encode(), "application/json"
             if u.path.endswith("/resultados"):
                 return 200, json.dumps([{"niFornecedor": "11222333000181", "tipoPessoa": "PJ",
                                          "nomeRazaoSocialFornecedor": "BANDA SIMULADA PRODUCOES LTDA",
-                                         "valorTotalHomologado": 45000}]).encode(), "application/json"
+                                         "valorTotalHomologado": 150000}]).encode(), "application/json"
             return 404, b"", "text/html"
         if u.netloc == "api.salic.cultura.gov.br":
             campo = u.path.rstrip("/").rsplit("/", 1)[1]
