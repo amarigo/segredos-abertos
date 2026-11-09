@@ -5,8 +5,8 @@ import {
   acharMencoes, apagarFonte, baseVazia, buscar, frases, idObjeto, juntar, lerExportada, novidades, sugestoes, vizinhanca,
   type Retrato,
 } from "../src/rede/modelo.ts";
-import { redeOficial, urlVotacao } from "../src/rede/oficial.ts";
-import type { Politico, VotacaoResumo } from "../src/data.ts";
+import { redeOficial, resolverPedido, urlVotacao } from "../src/rede/oficial.ts";
+import type { Politico, Resumo, VotacaoResumo } from "../src/data.ts";
 
 const EM = "2026-11-08T00:00:00Z";
 
@@ -129,4 +129,17 @@ test("arquivo importado com defeito é recusado", () => {
   const b = lerExportada(JSON.stringify(baseVazia()));
   assert.deepEqual(b.comparacoes, []);
   assert.equal(urlVotacao("sf-123"), "https://legis.senado.leg.br/dadosabertos/votacao?codigoSessaoVotacao=123");
+});
+
+test("link ?seguir=: por id, por nome com UF e todos os senadores de um estado", () => {
+  const p = (id: string, nome: string, uf: string, casa: "camara" | "senado", em_exercicio = true) => ({ id, nome, uf, casa, em_exercicio }) as Resumo;
+  const lista = [
+    p("dep-209787", "Nikolas Ferreira", "MG", "camara"), p("dep-1", "Erika Hilton", "SP", "camara"),
+    p("sen-1", "Carlos Viana", "MG", "senado"), p("sen-2", "Cleitinho", "MG", "senado"), p("sen-3", "Rodrigo Pacheco", "MG", "senado"),
+    p("sen-4", "Antigo Suplente", "MG", "senado", false), p("sen-5", "Outro", "SP", "senado"),
+    p("dep-2", "João Silva", "MG", "camara"), p("dep-3", "João Silva Souza", "MG", "camara"),
+  ];
+  const r = resolverPedido("Nikolas/MG, erika hilton/SP, senado/MG, dep-2, João/MG, Fulano/RJ", lista);
+  assert.deepEqual(r.ids, ["dep-209787", "dep-1", "sen-1", "sen-2", "sen-3", "dep-2"]);
+  assert.deepEqual(r.faltou, ["João/MG", "Fulano/RJ"]);
 });

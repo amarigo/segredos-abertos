@@ -9,11 +9,11 @@ import {
   type EmpresaResumo, type Meta, type Politico, type Resumo, type VotacaoResumo,
 } from "../data";
 import {
-  TIPOS, acharMencoes, apagarFonte, apagarLigacao, apagarObjeto, buscar, idObjeto, juntar, lerExportada,
+  TIPOS, acharMencoes, baseVazia, apagarFonte, apagarLigacao, apagarObjeto, buscar, idObjeto, juntar, lerExportada,
   ligacoesDe, nomeTipo, normalizar, novidades, sugestoes, vizinhanca, corTipo,
   type Base, type Comparacao, type Fonte, type LinhaComparacao, type Mencao, type NomeConhecido, type Objeto, type TipoObjeto,
 } from "../rede/modelo";
-import { redeOficial, type EmendasAno } from "../rede/oficial";
+import { redeOficial, resolverPedido, type EmendasAno } from "../rede/oficial";
 import { carregarBase, exportar, salvarBase } from "../rede/guardar";
 import { Grafo } from "../rede/Grafo";
 
@@ -56,38 +56,49 @@ export default function Rede() {
   }, [base]);
   const mudar = useCallback((f: (b: Base) => Base) => setBase((b) => (b ? f(b) : b)), []);
 
-  // Ao abrir: atualiza cada político seguido com os dados de hoje (e segue quem veio no link ?seguir=)
-  const atualizado = useRef(false);
-  const seguir = useCallback(async (id: string) => {
-    if (!votacoes || !meta) return;
+  // Lê um político e junta na base atual. Quem já era seguido guarda o "visto" (base das novidades).
+  const trazer = useCallback(async (id: string) => {
+    if (!votacoes || !meta) return false;
     try {
-      const b = await trazerPolitico(base!, id, votacoes, meta.anos);
-      setBase((atual) => (atual ? { ...juntar(atual, { objetos: Object.values(b.objetos), fontes: Object.values(b.fontes), ligacoes: Object.values(b.ligacoes) }), seguidos: { ...atual.seguidos, [id]: b.seguidos[id] } } : b));
-      setSel(idObjeto("politico", id));
-    } catch (e) { setAviso(`Não foi possível ler os dados de ${id}: ${(e as Error).message}`); }
-  }, [base, votacoes, meta]);
-  useEffect(() => {
-    if (!base || !votacoes || !meta || atualizado.current) return;
-    atualizado.current = true;
-    const novo = params.get("seguir");
-    const ids = [...new Set([...Object.keys(base.seguidos), ...(novo ? [novo] : [])])];
-    (async () => {
-      let b = base;
-      for (const id of ids) {
-        try { b = await trazerPolitico(b, id, votacoes, meta.anos); } catch { setAviso(`Não foi possível atualizar ${b.seguidos[id]?.atual.nome || id} agora. Os dados guardados continuam aqui.`); }
-      }
-      setBase(b);
-      if (novo) { setSel(idObjeto("politico", novo)); params.delete("seguir"); setParams(params, { replace: true }); }
-    })();
-  }, [base, votacoes, meta, params, setParams]);
+      const r = await trazerPolitico(baseVazia(), id, votacoes, meta.anos);
+      const novo = r.seguidos[id];
+      setBase((atual) => {
+        if (!atual) return atual;
+        const b = juntar(atual, { objetos: Object.values(r.objetos), fontes: Object.values(r.fontes), ligacoes: Object.values(r.ligacoes) });
+        const velho = atual.seguidos[id];
+        return { ...b, seguidos: { ...b.seguidos, [id]: velho ? { ...velho, atual: novo.atual } : novo } };
+      });
+      return true;
+    } catch { return false; }
+  }, [votacoes, meta]);
+  const seguir = useCallback(async (id: string) => {
+    if (await trazer(id)) setSel(idObjeto("politico", id));
+    else setAviso(`Não foi possível ler os dados de ${id} agora.`);
+  }, [trazer]);
 
-  // Link "Acompanhar" aberto com a página já carregada
+  // Ao abrir: atualiza cada político seguido com os dados de hoje.
+  // E segue quem veio no link ?seguir= (ids ou nomes com UF, separados por vírgula: veja resolverPedido)
+  const atualizado = useRef(false);
   const pedido = params.get("seguir");
   useEffect(() => {
-    if (!pedido || !atualizado.current || !base) return;
+    if (!base || !votacoes || !meta || !politicos || atualizado.current) return;
+    atualizado.current = true;
+    (async () => {
+      for (const id of Object.keys(base.seguidos)) {
+        if (!(await trazer(id))) setAviso(`Não foi possível atualizar ${base.seguidos[id]?.atual.nome || id} agora. Os dados guardados continuam aqui.`);
+      }
+    })();
+  }, [base, votacoes, meta, politicos, trazer]);
+  useEffect(() => {
+    if (!pedido || !base || !votacoes || !meta || !politicos) return;
     params.delete("seguir"); setParams(params, { replace: true });
-    if (!base.seguidos[pedido]) seguir(pedido);
-  }, [pedido, base, params, setParams, seguir]);
+    const { ids, faltou } = resolverPedido(pedido, politicos);
+    if (faltou.length) setAviso(`Não encontrei: ${faltou.join(", ")}. Procure pelo nome abaixo.`);
+    (async () => {
+      for (const id of ids) if (!base.seguidos[id] && !(await trazer(id))) setAviso(`Não foi possível ler os dados de ${id} agora.`);
+      if (ids.length) setSel(idObjeto("politico", ids[0]));
+    })();
+  }, [pedido, base, votacoes, meta, politicos, params, setParams, trazer]);
 
   if (!politicos || !base) return <Loading error={error} />;
   const nObj = Object.keys(base.objetos).length, nLig = Object.keys(base.ligacoes).length, nFon = Object.keys(base.fontes).length;
