@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Abrir, Barras, Colunas, Explain, Loading, OndeVer, useData } from "../components/ui";
-import { cnpjFmt, reais, reaisCurto, type CidadeResumo, type ContasEnte, type DinheiroCidade, type IncentivosMG } from "../data";
+import { anoContas, cnpjFmt, reais, reaisCurto, type CidadeResumo, type ContasEnte, type DinheiroCidade, type IncentivosMG } from "../data";
 import { norm } from "./Home";
 
 /* O dinheiro de Minas em 3 cliques:
@@ -60,37 +60,48 @@ function Contas({ c, quem, caminho }: { c: ContasEnte | null; quem: string; cami
   const [compSel, setComp] = useState(0);
   if (!c || !anos.length) return <div className="empty">As contas de {quem} não puderam ser baixadas do Tesouro Nacional nesta atualização. Veja no <a href="https://siconfi.tesouro.gov.br/" target="_blank" rel="noreferrer">SICONFI ↗</a>.</div>;
   const a = anos.find((x) => x.ano === anoSel) || anos[0];
-  const b = anos.find((x) => x.ano === compSel) || anos.find((x) => x.ano === a.ano - 1) || null;
-  const variacao = b ? pct(a.total_liquidado, b.total_liquidado) : null;
+  const b = compSel === -1 ? null : anos.find((x) => x.ano === compSel) || anos.find((x) => x.ano === a.ano - 1) || null;
+  // Ano em curso (parcial) contra o ano anterior: compara com o mesmo período do ano anterior, não com o ano inteiro
+  const mp = a.parcial && b && a.mesmo_periodo_anterior?.ano === b.ano ? a.mesmo_periodo_anterior : null;
+  const baseTotal = mp ? mp.total_liquidado : b?.total_liquidado || 0;
+  const rel = b ? (mp ? `em relação ao mesmo período de ${b.ano}` : `em relação a ${b.ano}`) : "";
+  const rotuloB = b ? (mp ? `no mesmo período de ${b.ano}` : `em ${b.ano}`) : "";
+  const variacao = b ? pct(a.total_liquidado, baseTotal) : null;
   const daArea = (codigo: string, ano: number) => anos.find((x) => x.ano === ano)?.funcoes.find((f) => f.codigo === codigo)?.liquidado || 0;
+  const baseArea = (codigo: string) => (mp ? mp.liquidado[codigo] || 0 : b ? daArea(codigo, b.ano) : 0);
+  const escolherAno = (rot: string) => { const n = parseInt(rot, 10); if (n) setAno(n); };
   return (
     <>
       <section>
         <h2>1. Quanto {quem} gastou por ano</h2>
-        <Colunas rotulo={`Gasto de ${quem} por ano`} partes={[{ nome: "Gasto", cor: "var(--s1)" }]}
-          itens={anos.slice().reverse().map((x) => ({ label: `${x.ano}`, valores: [x.total_liquidado] }))} />
-        <p className="muted small">"Gasto" aqui é o valor liquidado: o serviço foi feito ou a compra foi entregue. Os valores não descontam a inflação.</p>
+        <p className="muted small">Toque numa coluna para ver o ano.</p>
+        <Colunas rotulo={`Gasto de ${quem} por ano`} partes={[{ nome: "Gasto", cor: "var(--s1)" }]} ativo={anoContas(a, true)} onEscolher={escolherAno}
+          itens={anos.slice().reverse().map((x) => ({ label: anoContas(x, true), valores: [x.total_liquidado] }))} />
+        <p className="muted small">"Gasto" aqui é o valor liquidado: o serviço foi feito ou a compra foi entregue. Os valores não descontam a inflação.
+          {anos[0].parcial && <> {anos[0].ano} ainda não acabou: mostramos até {anos[0].ate_mes}, pelo relatório que {quem} entrega ao Tesouro a cada dois meses.</>}</p>
       </section>
       <section>
-        <h2>2. Em que gastou em {a.ano}</h2>
+        <h2>2. Em que gastou em {anoContas(a)}</h2>
         <div className="search">
           <label className="ano-sel"><span className="muted small">Ano</span>
-            <select id="ano-dinheiro" value={a.ano} onChange={(e) => setAno(Number(e.target.value))}>{anos.map((x) => <option key={x.ano} value={x.ano}>{x.ano}</option>)}</select></label>
+            <select id="ano-dinheiro" value={a.ano} onChange={(e) => setAno(Number(e.target.value))}>{anos.map((x) => <option key={x.ano} value={x.ano}>{anoContas(x)}</option>)}</select></label>
           <label className="ano-sel"><span className="muted small">Comparar com</span>
-            <select id="comparar-dinheiro" value={b?.ano || 0} onChange={(e) => setComp(Number(e.target.value))}>
-              <option value={0}>Não comparar</option>{anos.filter((x) => x.ano !== a.ano).map((x) => <option key={x.ano} value={x.ano}>{x.ano}</option>)}</select></label>
+            <select id="comparar-dinheiro" value={b?.ano || -1} onChange={(e) => setComp(Number(e.target.value))}>
+              <option value={-1}>Não comparar</option>{anos.filter((x) => x.ano !== a.ano).map((x) => <option key={x.ano} value={x.ano}>{x.ano}</option>)}</select></label>
         </div>
+        {a.parcial && b && !mp && <p className="muted small">Atenção: {a.ano} vai só até {a.ate_mes}; {b.ano} é o ano inteiro.</p>}
         <div className="grid">
-          <div className="card stat"><span className="label">Gasto em {a.ano}</span><span className="value">{reaisCurto(a.total_liquidado)}</span>
-            <span className="hint">{b && variacao != null ? `${pctTxt(variacao)} em relação a ${b.ano} (${reaisCurto(b.total_liquidado)})` : `Pago até o fim do ano: ${reaisCurto(a.total_pago)}`}</span></div>
+          <div className="card stat"><span className="label">Gasto em {anoContas(a)}</span><span className="value">{reaisCurto(a.total_liquidado)}</span>
+            <span className="hint">{b && variacao != null ? `${pctTxt(variacao)} ${rel} (${reaisCurto(baseTotal)})`
+              : a.total_pago != null ? `Pago até o fim do ano: ${reaisCurto(a.total_pago)}` : `Reservado no orçamento até ${a.ate_mes}: ${reaisCurto(a.total_empenhado)}`}</span></div>
           {a.funcoes.slice(0, 3).map((f) => (
             <div className="card stat" key={f.codigo}><span className="label">{f.funcao}</span><span className="value">{a.total_liquidado ? Math.round((f.liquidado / a.total_liquidado) * 100) : 0}%</span>
               <span className="hint">de cada R$ 100 gastos, R$ {a.total_liquidado ? Math.round((f.liquidado / a.total_liquidado) * 100) : 0} foram para {f.funcao.toLowerCase()}</span></div>
           ))}
         </div>
         <Barras itens={a.funcoes.map((f) => {
-          const p = b ? pct(f.liquidado, daArea(f.codigo, b.ano)) : null;
-          return { label: f.funcao, valor: f.liquidado, cor: "var(--s1)", nota: b ? (p == null ? `não aparecia em ${b.ano}` : `${pctTxt(p)} em relação a ${b.ano}`) : undefined };
+          const p = b ? pct(f.liquidado, baseArea(f.codigo)) : null;
+          return { label: f.funcao, valor: f.liquidado, cor: "var(--s1)", nota: b ? (p == null ? `não aparecia ${rotuloB}` : `${pctTxt(p)} ${rel}`) : undefined };
         })} />
       </section>
       <section>
@@ -102,19 +113,20 @@ function Contas({ c, quem, caminho }: { c: ContasEnte | null; quem: string; cami
               <Barras itens={f.principais.map((s) => ({ label: s.nome, valor: s.valor, cor: "var(--s3)" }))} />
             </>}
             <p className="small"><strong>{f.funcao}, ano a ano:</strong></p>
-            <Colunas rotulo={`${f.funcao} por ano`} partes={[{ nome: f.funcao, cor: "var(--s1)" }]}
-              itens={anos.slice().reverse().map((x) => ({ label: `${x.ano}`, valores: [daArea(f.codigo, x.ano)] }))} />
+            <Colunas rotulo={`${f.funcao} por ano`} partes={[{ nome: f.funcao, cor: "var(--s1)" }]} ativo={anoContas(a, true)} onEscolher={escolherAno}
+              itens={anos.slice().reverse().map((x) => ({ label: anoContas(x, true), valores: [daArea(f.codigo, x.ano)] }))} />
             <div className="kv small" style={{ maxWidth: 460 }}>
-              <span>Reservado no orçamento (empenhado)</span><span className="num">{reais(f.empenhado)}</span>
-              <span>Entregue (liquidado)</span><span className="num">{reais(f.liquidado)}</span>
-              <span>Pago até o fim do ano</span><span className="num">{reais(f.pago)}</span>
+              <span>Reservado no orçamento (empenhado){a.parcial ? ` até ${a.ate_mes}` : ""}</span><span className="num">{reais(f.empenhado)}</span>
+              <span>Entregue (liquidado){a.parcial ? ` até ${a.ate_mes}` : ""}</span><span className="num">{reais(f.liquidado)}</span>
+              {f.pago != null && <><span>Pago até o fim do ano</span><span className="num">{reais(f.pago)}</span></>}
             </div>
           </Abrir>
         ))}
         {caminho}
         <OndeVer links={[
           { nome: "Contas no SICONFI (Tesouro Nacional)", url: c.fonte, explica: `as contas que ${quem} entregou` },
-          { nome: "Dados brutos (API do Tesouro)", url: c.api, explica: "o arquivo de onde tiramos estes números" },
+          { nome: "Dados brutos (API do Tesouro)", url: c.api, explica: "o arquivo de onde tiramos estes números (anos fechados)" },
+          ...(anos[0].parcial && anos[0].api ? [{ nome: `Dados brutos de ${anos[0].ano} (RREO, API do Tesouro)`, url: anos[0].api, explica: `o relatório até ${anos[0].ate_mes}` }] : []),
         ]} />
       </section>
     </>

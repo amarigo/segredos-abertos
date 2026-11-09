@@ -510,9 +510,14 @@ def coletar_geral(anos: list[int], cache: Path, minutos: float = 40, hoje: dt.da
                     break
         dia -= dt.timedelta(days=1)
     tmp.unlink(missing_ok=True)
-    lidos = sorted(cache.glob(f"*-geral-v{VERSAO_GERAL}.json.gz"))
+    lidos = arquivos_gerais(cache)
     log.info("Pagamentos gerais: %d dias lidos agora, %d no total", novos, len(lidos))
     return lidos
+
+
+def arquivos_gerais(cache: Path) -> list[Path]:
+    """Os dias já baixados antes, sem pedir nada ao Portal."""
+    return sorted(cache.glob(f"*-geral-v{VERSAO_GERAL}.json.gz"))
 
 
 def resumir_geral(arquivos: list[Path], anos: list[int], hoje: dt.date | None = None) -> dict:

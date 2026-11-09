@@ -903,24 +903,40 @@ def coletar_renuncia(anos: list[int], cache: Path) -> dict | None:
 
 
 DIAS_RECENTES_POR_EXECUCAO = 20
+API_EM_DIA_DIAS = 40  # o workflow é semanal e relê os dois últimos meses: 40 dias dão folga para uma semana falhar
+
+
+def api_em_dia(api: dict | None, ano: int, hoje: dt.date | None = None) -> bool:
+    """A API do Portal (recursos_recebidos) já tem o ano atual até poucas semanas atrás?"""
+    c = ((api or {}).get("cobertura") or {}).get(ano) or {}
+    if not c.get("ate") or not c.get("dias"):
+        return False
+    return ((hoje or dt.date.today()) - dt.date.fromisoformat(c["ate"])).days <= API_EM_DIA_DIAS
 
 
 def coletar_incentivos(anos: list[int], cache: Path, minutos: float, max_dias: int | None = None) -> dict | None:
     """Pagamentos a empresas e entidades. Se falhar, o resto do site segue."""
     try:
-        arqs = pagamentos.coletar_geral(anos, cache / "pagamentos", minutos, max_dias=max_dias)
-        if max_dias is not None:
-            return None
-        geral = pagamentos.resumir_geral(arqs, anos)
         # A API do Portal (lida pelo workflow semanal, recursos_recebidos.py) tem o total de cada favorecido, mês a mês.
         # Desde 29/10/2026 os arquivos diários não baixam (HTTP 405): em cada ano fica a fonte que cobre mais dias.
         api = recursos_recebidos.resumir(cache, anos)
+        if api_em_dia(api, max(anos)):
+            # A API já cobre o ano atual: não tenta baixar os arquivos diários (cada tentativa recusada custa minutos
+            # e gerava avisos). Os dias já baixados antes continuam valendo para os anos que a API ainda não cobre.
+            if max_dias is not None:
+                return None
+            arqs = pagamentos.arquivos_gerais(cache / "pagamentos")
+            log.info("Pagamentos a empresas: a API cobre %s; arquivos diários não baixados nesta execução", max(anos))
+        else:
+            arqs = pagamentos.coletar_geral(anos, cache / "pagamentos", minutos, max_dias=max_dias)
+            if max_dias is not None:
+                return None
+        geral = pagamentos.resumir_geral(arqs, anos)
         geral = recursos_recebidos.juntar(geral, api, anos)
         for ano, c in sorted(geral["cobertura"].items()):
             log.info("Pagamentos gerais %s: %s de %s dias lidos (%s a %s, %s)", ano, c.get("dias"), c.get("dias_ano"),
                      c.get("de"), c.get("ate"), "API" if c.get("origem") == "api" else "arquivos diários")
-        atual = geral["cobertura"].get(max(anos)) or {}
-        if atual.get("origem") == "api" and atual.get("ate") and (dt.date.today() - dt.date.fromisoformat(atual["ate"])).days <= 40:
+        if api_em_dia(api, max(anos)):
             # a API cobre o ano atual: a falha dos arquivos diários não deixa o site incompleto
             util.AVISOS[:] = [x for x in util.AVISOS if not x.startswith("Pagamentos a empresas: o Portal da Transparência")]
         return geral

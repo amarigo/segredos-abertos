@@ -430,3 +430,25 @@ def test_leitura_antiga_da_api_sai_do_cache(tmp_path, monkeypatch):
     (lendo / "p000000.json.gz").write_bytes(b"x")
     r = renuncias.coletar(tmp_path, 2026)
     assert sorted(r["anos"]) == [2024, 2025] and not (lendo / "p000000.json.gz").exists()
+
+
+def test_api_em_dia_dispensa_os_arquivos_diarios(tmp_path, monkeypatch):
+    """Com a API do Portal em dia no ano atual, a coleta não tenta baixar os arquivos diários (recusados a robôs)."""
+    from sa_etl import build, recursos_recebidos
+
+    hoje = dt.date.today()
+    em_dia = {"anos": {hoje.year: {}}, "publicos": {hoje.year: {}},
+              "cobertura": {hoje.year: {"dias": 30, "ate": (hoje - dt.timedelta(days=10)).isoformat()}}}
+    assert build.api_em_dia(em_dia, hoje.year)
+    atrasada = {"cobertura": {hoje.year: {"dias": 30, "ate": (hoje - dt.timedelta(days=60)).isoformat()}}}
+    assert not build.api_em_dia(atrasada, hoje.year)
+    assert not build.api_em_dia(None, hoje.year)
+
+    monkeypatch.setattr(recursos_recebidos, "resumir", lambda cache, anos: em_dia)
+
+    def nao_baixar(*a, **k):
+        raise AssertionError("não devia tentar baixar os arquivos diários")
+
+    monkeypatch.setattr(pagamentos, "coletar_geral", nao_baixar)
+    assert build.coletar_incentivos([hoje.year], tmp_path, 1, max_dias=5) is None
+    assert build.coletar_incentivos([hoje.year], tmp_path, 1) is not None

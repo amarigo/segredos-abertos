@@ -113,7 +113,10 @@ export function OndeVer({ links, titulo = "Onde ver tudo nos sites oficiais" }: 
 
 /* Colunas por categoria (por ano, por exemplo), com uma ou mais partes empilhadas (diárias + passagens, pago + a pagar).
    Embaixo, uma abertura com a tabela de valores, para quem não enxerga o gráfico ou quer o número exato. */
-export function Colunas({ itens, partes, rotulo, fmt = (v: number) => reais(v, true) }: { itens: { label: string; valores: number[] }[]; partes: { nome: string; cor: string }[]; rotulo: string; fmt?: (v: number) => string }) {
+export function Colunas({ itens, partes, rotulo, fmt = (v: number) => reais(v, true), ativo, onEscolher }: {
+  itens: { label: string; valores: number[] }[]; partes: { nome: string; cor: string }[]; rotulo: string; fmt?: (v: number) => string;
+  /** coluna destacada (as outras ficam mais claras) e o clique numa coluna, para escolher o ano no gráfico */
+  ativo?: string; onEscolher?: (label: string) => void }) {
   const tip = useTip();
   if (!itens.length) return null;
   const W = 640, H = 200, padL = 56, padB = 24, padT = 8;
@@ -142,7 +145,11 @@ export function Colunas({ itens, partes, rotulo, fmt = (v: number) => reais(v, t
           let base = 0;
           const texto = `${it.label}: ${fmt(total(it.valores))}${partes.length > 1 ? ` (${partes.map((p, k) => `${p.nome.toLowerCase()} ${fmt(it.valores[k] || 0)}`).join(", ")})` : ""}`;
           return (
-            <g key={it.label} onMouseMove={(e) => tip.show(e, texto)} onMouseLeave={tip.hide}>
+            <g key={it.label} onMouseMove={(e) => tip.show(e, texto)} onMouseLeave={tip.hide}
+              className={onEscolher ? "col-escolher" : undefined} opacity={ativo && ativo !== it.label ? 0.45 : 1}
+              {...(onEscolher ? { role: "button", tabIndex: 0, "aria-label": `Escolher ${it.label}`, "aria-pressed": ativo === it.label,
+                onClick: () => onEscolher(it.label), onKeyDown: (e: { key: string; preventDefault: () => void }) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onEscolher(it.label); } } } : {})}>
+              {onEscolher && <rect x={x0 + i * bw} y={padT} width={bw} height={H - padT - padB} fill="transparent" />}
               {it.valores.map((v, k) => {
                 const r = <rect key={k} x={x} y={y(base + v)} width={Math.max(1, bw - 8)} height={Math.max(0, y(base) - y(base + v))} fill={partes[k]?.cor || "var(--s1)"} />;
                 base += v;

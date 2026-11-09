@@ -347,6 +347,30 @@ class FakeEstado:
                           "conta": "10 - Saúde", "valor": 7e8})
         return json.dumps({"items": itens}, ensure_ascii=False).encode()
 
+    def rreo2(self, ano: int, bim: int, cod: int) -> bytes:
+        """Anexo 02 do RREO, como o Tesouro devolve: funções e subfunções na coluna "conta", na ordem do relatório.
+        Publicado até o bimestre 4 em 2026 (agosto) e o ano inteiro antes."""
+        nome = "Minas Gerais" if cod == 31 else next((n for n, c in ENTES.items() if c == cod), None)
+        if not nome or ano > 2026 or (ano == 2026 and bim > 4):
+            return json.dumps({"items": []}).encode()
+        inst = "Governo do Estado de Minas Gerais" if cod == 31 else f"Prefeitura Municipal de {nome.title()} - MG"
+        fator = (1 + (ano - 2018) / 10) * (500 if cod == 31 else 1) * bim / 6
+        linhas = []
+        for k, (_cf, nf, subs) in enumerate(FUNCOES):
+            v = round(1_000_000 * (len(FUNCOES) - k) * fator, 2)
+            linhas.append((nf, v))
+            partes = [round(v / 2, 2)] * (len(subs) - 1)
+            linhas += [(ns, x) for (_cs, ns), x in zip(subs, partes + [round(v - sum(partes), 2)])]
+        total = sum(v for (n, v) in linhas if n in {f[1] for f in FUNCOES})
+        linhas = [("DESPESAS (EXCETO INTRA-ORÇAMENTÁRIAS) (I)", total)] + linhas + [("DESPESAS (INTRA-ORÇAMENTÁRIAS) (II)", 7e8)]
+        itens = []
+        for col, k in (("DOTAÇÃO ATUALIZADA (a)", 1.6), ("DESPESAS EMPENHADAS ATÉ O BIMESTRE (b)", 1.1),
+                       ("DESPESAS LIQUIDADAS ATÉ O BIMESTRE (d)", 1.0)):
+            itens += [{"exercicio": ano, "periodo": bim, "instituicao": inst, "cod_ibge": cod, "anexo": "RREO-Anexo 02",
+                       "rotulo": "Total das Despesas Exceto Intra-Orçamentárias", "coluna": col, "cod_conta": "RREO2TotalDespesas",
+                       "conta": n, "valor": round(v * k, 2)} for n, v in linhas]
+        return json.dumps({"items": itens}, ensure_ascii=False).encode()
+
     # ------------------------------------------------------------ CGU (arquivo do coletor nacional)
     # Códigos das emendas como no Portal: ano + autor + número
     EMENDA_PIX = "202541280005"      # emenda Pix para Itajubá, com plano de ação e gastos no Transferegov
@@ -568,6 +592,8 @@ class FakeEstado:
         if u.netloc == "apidatalake.tesouro.gov.br":
             if u.path.endswith("/entes"):
                 return 200, self.entes(), "application/json"
+            if u.path.endswith("/rreo"):
+                return 200, self.rreo2(int(q.get("an_exercicio", 0)), int(q.get("nr_periodo", 0)), int(q.get("id_ente", 0))), "application/json"
             if u.path.endswith("/dca"):
                 return 200, self.dca(int(q.get("an_exercicio", 0)), int(q.get("id_ente", 0))), "application/json"
         if u.netloc == "pncp.gov.br" and u.path.startswith("/api/consulta/v1/"):
