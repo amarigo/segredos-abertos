@@ -86,6 +86,8 @@ O ponto de entrada da coleta nacional é `etl/sa_etl/build.py`. A tabela complet
   `site/public/i18n/tradutor.js`, com dicionários em `site/public/i18n/en.json` e `es.json` (Eleição 2026:
   `eleicao2026/site/i18n/`). Dados oficiais (nomes, partidos, categorias) não são traduzidos. Código, comentários,
   commits e documentação do repositório são escritos em português, em linguagem simples.
+- Menus (abas principais e barra dos projetos), em todos os sites: todas as abas sempre à vista. Se não couberem numa
+  linha, quebram para a de baixo; nunca rolam de lado nem ficam cortadas. Conferido por `site/e2e/menu.ts`.
 - Componentes comuns do site em `site/src/components/` (`ui.tsx`: `Barras`, `GastoMensal`, `Espectro`, `VotoBarra`,
   `LinkNota`, `Explain`...; `Selo.tsx`: selo da verificação). Reaproveite antes de criar um componente só para uma página.
 - Visual: padrão de site público brasileiro (gov.br): faixa azul-escura no topo com fio verde e amarelo, azul gov.br

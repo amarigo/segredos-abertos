@@ -4,6 +4,7 @@
    - Caos: arquivos que não carregam, chegam cortados, com formato errado ou devagar nunca deixam a tela em branco. */
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { abasAVista } from "./menu";
 
 const dados = (rel: string) => JSON.parse(readFileSync(new URL(`../public/data/${rel}`, import.meta.url), "utf-8"));
 const meta = dados("meta.json");
@@ -683,4 +684,11 @@ test("formatação: legenda das partes sem palavra cortada e página sem rolagem
     const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(sobra, rota).toBeLessThanOrEqual(1);
   }
+});
+
+test("menu principal: todas as abas à vista, do celular pequeno ao monitor grande", async ({ page }) => {
+  await page.goto("./");
+  await expect(page.locator("nav.nav a").first()).toBeVisible();
+  await abasAVista(page, "nav.nav", "a");
+  await abasAVista(page, "nav.projetos .wrap", "a");
 });

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
+import { abasAVista } from "./menu";
 
 // Os números esperados vêm do arquivo oficial do TSE gerado no mesmo build, não de valores escritos à mão.
 const dados = (rel: string) => JSON.parse(readFileSync(new URL(`../dist/eleicao2026/${rel}`, import.meta.url), "utf-8"));
@@ -385,4 +386,10 @@ test("página principal liga à página dos eleitos", async ({ page }) => {
   await page.getByRole("link", { name: /Quem assume em 2027/ }).click();
   await expect(page).toHaveURL(/\/eleitos\/$/);
   await expect(page.locator("h1")).toHaveText("Quem assume em 2027");
+});
+
+test("menu das seções: todas as abas à vista, do celular pequeno ao monitor grande", async ({ page }) => {
+  await page.goto("./");
+  await expect(page.locator("nav.menu button").first()).toBeVisible();
+  await abasAVista(page, "nav.menu ul", "button");
 });

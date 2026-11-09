@@ -37,7 +37,8 @@ header.bar .wrap{display:flex;align-items:center;column-gap:18px;row-gap:0;min-h
 .brand{display:flex;align-items:center;gap:10px;font:700 18px var(--f-body);color:var(--ink);white-space:nowrap}
 .brand:hover{text-decoration:none}
 .brand .logo{width:28px;height:28px;border-radius:6px;background:var(--primary);display:grid;place-items:center;color:var(--on-primary);font:700 12px var(--f-mono)}
-nav.menu{display:flex;gap:2px;overflow-x:auto;flex:1 1 100%;min-width:0;scrollbar-width:none;padding-bottom:6px;margin-inline:-10px}
+/* Menu: todas as abas sempre à vista; se não couberem numa linha, passam para a de baixo (mesma regra do site) */
+nav.menu{display:flex;flex-wrap:wrap;gap:2px;flex:1 1 100%;min-width:0;padding-bottom:6px;margin-inline:-10px}
 .brand{padding-block:4px}
 nav.menu a{flex:none;color:var(--muted);font:500 14px var(--f-body);padding:8px 10px;border-radius:4px;text-transform:none}
 nav.menu a:hover{background:var(--hover);text-decoration:none;color:var(--ink)}
