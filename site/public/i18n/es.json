@@ -2274,5 +2274,16 @@
 "Valor reembolsado": "Monto reembolsado",
 "Para conferir no site oficial": "Para verificar en el sitio oficial",
 "Ver todas as notas deste fornecedor": "Ver todas las facturas de este proveedor",
-"Nenhuma nota com esses filtros.": "Ninguna factura con estos filtros."
+"Nenhuma nota com esses filtros.": "Ninguna factura con estos filtros.",
+"Notícia · fonte não oficial": "Noticia · fuente no oficial",
+"Quem fala:": "Quién lo dice:",
+"Publicado em": "Publicado en",
+"· texto de {*}": "· texto de {*}",
+"Ler a notícia original: {*} ↗": "Leer la noticia original: {*} ↗",
+"Ler a notícia original ↗": "Leer la noticia original ↗",
+"Em notícias ({0})": "En noticias ({0})",
+": como nenhum documento oficial é contra, procuramos quem fala contra na imprensa.": ": como ningún documento oficial está en contra, buscamos en la prensa quién habla en contra.",
+"Notícia não é documento oficial. A frase foi copiada da notícia sem mudar palavras e escolhida automaticamente; confira o contexto no link.": "Una noticia no es un documento oficial. La frase se copió de la noticia sin cambiar palabras y se eligió automáticamente; revise el contexto en el enlace.",
+"Também procuramos em notícias (em {0}/{1}/{2}) e não achamos ninguém falando contra esta proposta pelo número dela.": "También buscamos en noticias (el {0}/{1}/{2}) y no encontramos a nadie hablando en contra de esta propuesta por su número.",
+"{0} contra em notícias": "{0} en contra en noticias"
 }

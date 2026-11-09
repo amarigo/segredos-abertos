@@ -294,6 +294,16 @@ test("projetos em andamento: pauta, autor, próximo passo e link oficial", async
   await expect(deb.locator(".proj-lado.favor")).toContainText("reduz em 60% o risco de morte");
   await expect(deb.locator(".proj-lado.contra")).toContainText("Deputado Ficticio 03");
   await expect(deb.locator(".proj-lado.contra a[href^='https://www.camara.leg.br/']")).toBeVisible();
+  // Sem documento oficial contra: quem fala contra em notícias, marcado como fonte não oficial, com link da notícia
+  const pl250 = page.locator("article.proj", { hasText: "PL 250/2024" });
+  const deb250 = pl250.locator(".proj-debate");
+  await expect(deb250.locator("summary")).toContainText("2 contra em notícias");
+  await deb250.locator("summary").click();
+  const contra250 = deb250.locator(".proj-lado.contra");
+  await expect(contra250).toContainText("Ninguém registrou documento oficial contra");
+  await expect(contra250.locator(".proj-noticia").first()).toContainText("Notícia · fonte não oficial");
+  await expect(contra250.locator(".proj-noticia").first()).toContainText("Confederação Nacional de Municípios");
+  await expect(contra250.locator("a[href='https://www.jornal-a.com.br/politica/transporte-escolar-rural']")).toBeVisible();
   // Proposta que veio da Câmara: mostra o deputado que a apresentou, não só "Câmara dos Deputados"
   await expect(page.locator("article.proj", { hasText: "PL 250/2024" })).toContainText("Deputado Ficticio 05");
   await expect(page.locator("article.proj", { hasText: "PL 250/2024" })).toContainText("começou na Câmara");

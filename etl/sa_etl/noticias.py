@@ -80,11 +80,18 @@ _OUTRA = re.compile(r"\b(?:PL|PLP|PEC|PDL|MP|MPV|projeto de lei|proposta de emen
 
 # ---------------------------------------------------------------- frases contra
 
+# Palavras de oposição. Testado com dados reais em 09/11/2026: "risco", "ameaça" e "problema" sozinhos pegavam frases que
+# descrevem o problema que o projeto quer resolver ("o albino é ameaçado pelos riscos do câncer de pele"), e "crític"
+# pegava "minerais críticos". Por isso as palavras fortes são obrigatórias e as fracas só somam.
 _CONTRA = re.compile(
-    r"\bcr[íi]tic|\bse op[õo]e|\bop[õo]e-se|\bopo(?:sição|sicao)|\bcontr[áa]ri[oa]s?\b|\brejei[çct]|\bpreocupa|\balert|"
-    r"\briscos?\b|\bprejudic|\bpreju[íi]zo|\bretrocesso|\binconstitucional|\bamea[çc]|\bdesvirtu|\benfraquec|"
-    r"\bproblem[áa]|\bequ[íi]voc|\bdanos?\b|\bonera|\binseguran[çc]a|\bdesvio|\binvi[áa]vel|\bpreju[íi]z|"
-    r"\bdistor[çc]|\bimpacto negativo|\bcontra (?:o|a) (?:projeto|proposta|texto|PL|PEC|medida|mudan)", re.I)
+    r"\bcritic(?:a|am|ou|aram|ar|ando)\b|\bcr[íi]ticas?\b|\bcr[íi]ticos? (?:d[aoe]s?|ao|à)\b|\bse op[õo]e|\bop[õo]e-se|"
+    r"\bopuse|\bopo(?:sição|sicao)\b|\bcontr[áa]ri[oa]s?\b|\brejei[çct]|\bpreocupa|\balert|\bprejudic|\bretrocesso|"
+    r"\binconstitucional|\bdesvirtu|\benfraquec|\bequ[íi]voc|\bonera|\binseguran[çc]a jur|\binvi[áa]vel|\bdistor[çc]|"
+    r"\bimpacto negativo|\bcontra (?:o|a) (?:projeto|proposta|texto|PL|PEC|medida|mudan)", re.I)
+_FRACAS = re.compile(r"\briscos?\b|\bamea[çc]|\bproblem|\bdanos?\b|\bdesvio|\bpreju[íi]z", re.I)
+# A frase tem de falar da proposta (ou ser a fala de alguém, entre aspas), não de outro assunto da página
+_PROPOSTA = re.compile(r"\b(?:projeto|proposta|propos|texto|PLP?|PEC|PDL|MP|medida|mat[ée]ria|relat[óo]rio|substitutivo|"
+                       r"mudan[çc]a|altera[çc]|lei)\b|[“\"]", re.I)
 _QUEM_DIZ = re.compile(
     r"\bafirm|\bdiss(?:e|eram)\b|\bdiz(?:em)?\b|\bdeclar|\bavali|\bsegundo\b|\bde acordo com\b|\bcritic|\balert|"
     r"\bdefend|\bargument|\bressalt|\bapont|\bexplic|\bsustent|\bconsider|\bavisa|\bpara (?:o|a) [A-ZÁÉÍÓÚ]|"
@@ -98,7 +105,8 @@ _PAPEL = (r"(?:(?:o|a|os|as)\s+)?(?:(?:senador|senadora|deputad[oa]|ministr[oa]|
 _NOME = r"[A-ZÁÉÍÓÚÂÊÔÃÕÇ][\wÀ-ú.\-]+(?:\s+(?:d[aeo]s?\s+|e\s+)?[A-ZÁÉÍÓÚÂÊÔÃÕÇ][\wÀ-ú.\-]+){0,5}"
 _VERBO = r"(?:afirm(?:a|ou)|diss(?:e|eram)|diz(?:em)?|declar(?:a|ou)|avali(?:a|ou)|critic(?:a|ou)|alert(?:a|ou)|defend(?:e|eu)|argument(?:a|ou)|ressalt(?:a|ou)|apont(?:a|ou)|explic(?:a|ou)|sustent(?:a|ou)|consider(?:a|ou))"
 _QUEM = [
-    re.compile(rf"\b(?:[Ss]egundo|[Dd]e acordo com|[Pp]ara)\s+(?P<q>{_PAPEL}{_NOME})"),
+    re.compile(rf"\b(?:[Ss]egundo|[Dd]e acordo com)\s+(?P<q>{_PAPEL}{_NOME})"),
+    re.compile(rf"^Para\s+(?P<q>{_PAPEL}{_NOME}),"),  # "Para a ABSAE, ..." (no meio da frase, "para" quase nunca é quem fala)
     re.compile(rf"(?P<q>{_PAPEL}{_NOME}),?\s+{_VERBO}\b"),
     re.compile(rf"\b{_VERBO}\s+(?P<q>{_PAPEL}{_NOME})"),
 ]
@@ -120,11 +128,12 @@ def quem_fala(frase: str) -> str:
 
 
 def _nota_contra(f: str) -> float:
-    if not (60 <= len(f) <= 700):
+    if not (80 <= len(f) <= 700):
         return -1
-    n = 2 * len(_CONTRA.findall(f)) + 1.5 * min(2, len(_QUEM_DIZ.findall(f))) - 3 * len(_A_FAVOR.findall(f))
-    if not _CONTRA.search(f) or not _QUEM_DIZ.search(f):
+    if not _CONTRA.search(f) or not _QUEM_DIZ.search(f) or not _PROPOSTA.search(f):
         return -1
+    n = (2 * len(_CONTRA.findall(f)) + len(_FRACAS.findall(f)) + 1.5 * min(2, len(_QUEM_DIZ.findall(f)))
+         - 3 * len(_A_FAVOR.findall(f)))
     if re.search(r"[“\"]", f):
         n += 1  # citação entre aspas: é a fala de alguém, não do jornal
     return n
@@ -312,7 +321,7 @@ def buscar_gdelt(sigla: str, numero: str, ano: str) -> list[dict]:
     q = f"({' OR '.join(fs)})" if len(fs) > 1 else fs[0]
     r = get(GDELT, params={"query": f"{q} sourcelang:portuguese", "mode": "artlist", "format": "json",
                            "maxrecords": 50, "sort": "datedesc", "timespan": "3months"},
-            timeout=60, tries=2, headers={"User-Agent": UA})
+            timeout=60, tries=1, headers={"User-Agent": UA})
     try:
         arts = (r.json() or {}).get("articles") or []
     except ValueError:  # o GDELT responde texto quando a busca é curta demais
@@ -423,6 +432,7 @@ class Buscador:
         self.buscas = self.faltaram = self.achadas = 0
         self.fontes_ok: set[str] = set()
         self.fontes_falha: set[str] = set()
+        self.desligadas: set[str] = set()
 
     def _ler_cache(self, arq: Path, dias: int) -> dict | None:
         try:
@@ -448,6 +458,8 @@ class Buscador:
         achados: dict[str, dict] = {}
         ok = 0
         for nome, fn in (("gdelt", buscar_gdelt), ("google", buscar_google), ("bing", buscar_bing)):
+            if nome in self.desligadas:
+                continue
             if nome == "gdelt":
                 espera = ESPERA_GDELT - (time.monotonic() - self._ultimo_gdelt)
                 if espera > 0:
@@ -460,6 +472,10 @@ class Buscador:
                 ok += 1
             except Exception as e:  # noqa: BLE001 - uma busca fora do ar não impede a outra
                 self.fontes_falha.add(nome)
+                if nome == "gdelt":
+                    # Do GitHub Actions o GDELT quase sempre recusa (HTTP 429, limite dividido com quem usa o mesmo
+                    # endereço): depois da primeira recusa, não insistimos nesta coleta
+                    self.desligadas.add(nome)
                 log.info("Busca de notícias (%s) de %s %s/%s falhou: %s", nome, sigla, numero, ano, e)
         return list(achados.values()), ok
 

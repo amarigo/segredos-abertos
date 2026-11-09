@@ -217,3 +217,21 @@ def test_noticias_reconhece_a_proposta_e_quem_fala():
     assert n.quem_fala("Técnicos veem risco de desvio de recursos.") == ""
     # Frase a favor ("reduz o risco") não conta como contra
     assert n.trechos_contra(["O PL 4.881/2023 reduz o risco de apagão, afirmou o relator Beltrano em entrevista ontem."], "", p) == []
+
+
+def test_noticias_casos_reais_que_enganavam():
+    """Frases de notícias reais (coleta de teste de 09/11/2026) que o primeiro filtro pegava por engano."""
+    from sa_etl import noticias as n
+    p = n.padrao_proposta("PL", "1758", "2021")
+    # Descreve o problema que o projeto quer resolver, não é contra o projeto
+    assert n.trechos_contra(["O PL 1758/2021 trata do albinismo. De acordo com Pedrosa (PTC), o cotidiano do albino é marcado "
+                             "pela intolerância à luz solar e ameaçado pelos riscos da cegueira e do câncer de pele."], "", p) == []
+    # Chamada de outra notícia no meio da página ("minerais críticos")
+    assert n._nota_contra("Desenho do conselho de minerais críticos é 'interventor', diz jurista em entrevista sobre o setor") < 0
+    # "para o Pró-Amazônia Legal" não é quem fala; "segundo a ABSAE" é
+    f1 = ("A entidade manifestou preocupação com as alterações previstas para o Pró-Amazônia Legal, programa criado com o "
+          "objetivo de reduzir de forma permanente a Conta de Consumo de Combustível.")
+    f2 = "A proposta, segundo a ABSAE, enfraquece o caráter estrutural do Pró-Amazônia Legal."
+    assert n.quem_fala(f1) == "" and n.quem_fala(f2) == "ABSAE"
+    # Crítica de verdade continua valendo
+    assert n._nota_contra("Críticos da proposta apontam ainda que parte dos aeroclubes atua de forma irregular, oferecendo serviços.") > 0

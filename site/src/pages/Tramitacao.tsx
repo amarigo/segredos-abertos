@@ -78,7 +78,7 @@ function Noticia({ n, tudo }: { n: NoticiaContra; tudo: boolean }) {
       {n.quem && <p className="small">{"Quem fala: "}<b>{n.quem}</b></p>}
       <p className="small">{"Publicado em "}<b>{n.veiculo}</b>{n.data && `, ${dataBR(n.data)}`}
         {n.autor && <span className="muted">{` · texto de ${n.autor}`}</span>}</p>
-      {trechos.map((t, k) => <blockquote key={k} className="proj-trecho">“{t}”</blockquote>)}
+      {trechos.map((t, k) => <blockquote key={k} className="proj-trecho">{/^[“"]/.test(t) ? t : `“${t}”`}</blockquote>)}
       {u && <a className="small" href={u} target="_blank" rel="noreferrer">{n.titulo ? `Ler a notícia original: ${n.titulo} ↗` : "Ler a notícia original ↗"}</a>}
     </div>
   );
