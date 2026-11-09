@@ -62,6 +62,7 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
             r.erro(f"Votação {v['id']}: placar da Casa menor que o da bancada de MG")
     conferir_cidades(saida, r, minimos["mandatos"])
     conferir_estado(saida, r)
+    conferir_licitacoes(saida, r)
     return r
 
 
@@ -208,6 +209,39 @@ def _conferir_historias(f: Path, r: Resultado) -> None:
         p = e.get("plano")
         if p and not _perto(sum(g["valor"] for g in p["gastos"]), p["gasto"], len(p["gastos"])):
             r.erro(f"{onde}: emenda {e['codigo']}: os gastos da prefeitura não somam o total")
+
+
+def conferir_licitacoes(saida: Path, r: Resultado) -> None:
+    """Licitações (PNCP): totais somando por forma, nenhum valor negativo, links só para o PNCP e o Portal da
+    Transparência, nenhum CPF. Parte opcional: se o PNCP não respondeu, o site diz isso."""
+    idx_f = saida / "licitacoes" / "index.json"
+    if not idx_f.exists():
+        return
+    for local in (_ler(idx_f, r) or {}).get("locais") or []:
+        if not ID_SEGURO.match(str(local.get("id", ""))):
+            r.erro(f"Licitações: identificador inseguro {local.get('id')!r}")
+            continue
+        for a in local.get("anos") or []:
+            onde = f"Licitações de {local.get('nome')} {a.get('ano')}"
+            d = _ler(saida / "licitacoes" / f"{local['id']}-{a.get('ano')}.json", r)
+            if d is None:
+                continue
+            _sem_cpf(d, onde, r)
+            _cnpjs(d, onde, r)
+            t = d.get("total") or {}
+            if sum(f["n"] for f in d.get("por_forma") or []) != t.get("n"):
+                r.erro(f"{onde}: compras por forma (com e sem licitação) não somam o total")
+            if sum(x["n"] for x in d.get("por_andamento") or []) != t.get("n"):
+                r.erro(f"{onde}: compras por situação não somam o total")
+            if len(d.get("compras") or []) != d.get("n_lista") or d.get("n_lista", 0) > t.get("n", 0):
+                r.erro(f"{onde}: a lista de compras não bate com o total")
+            for c in d.get("compras") or []:
+                if min(c["estimado"], c["homologado"]) < 0 or any(x["valor"] < 0 for x in c["contratos"]):
+                    r.erro(f"{onde}: valor negativo ({c['id']})")
+                    break
+                if not c["url"].startswith("https://pncp.gov.br/") or any(not x["url"].startswith("https://pncp.gov.br/") for x in c["contratos"]):
+                    r.erro(f"{onde}: link fora do PNCP ({c['id']})")
+                    break
 
 
 def conferir_cultura(saida: Path, r: Resultado) -> None:

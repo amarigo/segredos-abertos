@@ -41,6 +41,7 @@ const Assembleia = pagina(() => import("./pages/Assembleia"));
 const DeputadoEstadualPage = pagina(() => import("./pages/DeputadoEstadual"));
 const GovernoPage = pagina(() => import("./pages/Governo"));
 const DinheiroMinas = pagina(() => import("./pages/DinheiroMinas"));
+const Licitacoes = pagina(() => import("./pages/Licitacoes"));
 const EmendasEstaduais = pagina(() => import("./pages/EmendasEstaduais"));
 const Cultura = pagina(() => import("./pages/Cultura"));
 const PainelAreas = pagina(() => import("./pages/PainelAreas"));
@@ -117,6 +118,7 @@ export default function App() {
             <NavLink to="/politicos">{MG ? "Federais" : "Políticos"}</NavLink>
             {MG && <NavLink to="/cidades">Cidades</NavLink>}
             {MG && <NavLink to="/emendas-estaduais">Emendas</NavLink>}
+            {MG && <NavLink to="/licitacoes">Licitações</NavLink>}
             {MG && <NavLink to="/cultura">Shows e cultura</NavLink>}
             {MG && <NavLink to="/painel">Painel por área</NavLink>}
             <NavLink to="/empresas">Empresas</NavLink>
@@ -128,7 +130,7 @@ export default function App() {
             <NavLink to="/sobre">Como funciona</NavLink>
           </nav>
           {/* A página de arrecadação e o painel por área têm os próprios anos; corrupção, julgamentos do STF e shows e cultura não dependem do ano escolhido: o seletor só confundiria */}
-          {pathname !== "/dinheiro" && !pathname.startsWith("/corrupcao") && pathname !== "/votacoes/tribunais" && pathname !== "/painel" && pathname !== "/cultura" && <AnoSeletor />}
+          {pathname !== "/dinheiro" && pathname !== "/licitacoes" && !pathname.startsWith("/corrupcao") && pathname !== "/votacoes/tribunais" && pathname !== "/painel" && pathname !== "/cultura" && <AnoSeletor />}
         </div>
       </header>
       <main className="wrap">
@@ -154,6 +156,7 @@ export default function App() {
           {MG && <Route path="/cidades" element={<Cidades />} />}
           {MG && <Route path="/cidade/:id" element={<CidadePage />} />}
           {MG && <Route path="/dinheiro" element={<DinheiroMinas />} />}
+          {MG && <Route path="/licitacoes" element={<Licitacoes />} />}
           {MG && <Route path="/governo" element={<GovernoPage />} />}
           {MG && <Route path="/assembleia" element={<Assembleia />} />}
           {MG && <Route path="/deputado-estadual/:id" element={<DeputadoEstadualPage />} />}

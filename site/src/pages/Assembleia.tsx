@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Abrir, Barras, Explain, Loading, OndeVer, useData } from "../components/ui";
 import { corPartido, reais, reaisCurto, type AlmgAno, type AlmgIndice } from "../data";
 import { norm } from "./Home";
-import { FotoPolitico } from "../components/Foto";
+import { FotoPolitico, RotuloRanking } from "../components/Foto";
 import { AvisosFim } from "../components/Selo";
 
 type Ordem = "verba" | "projetos" | "aprovadas" | "emendas_indicado" | "nome";
@@ -82,8 +82,9 @@ export default function Assembleia() {
         </select>
       </div>
       {ordem !== "nome" && lista.length > 1 && <Abrir aberto titulo={`Gráfico: ${ORDENS.find((o) => o.k === ordem)!.nome.toLowerCase()} em ${ano}`}>
-        <Barras fmt={dinheiro ? (v) => reais(v) : (v) => v.toLocaleString("pt-BR")}
-          itens={lista.slice(0, 15).map((d) => ({ label: <Link className="foto-mini" to={`/deputado-estadual/${d.id}`}><FotoPolitico url={d.foto} nome={d.nome} tamanho={24} decorativa />{d.nome}</Link>, nota: d.partido, valor: d.por_ano[ano]?.[ordem as Exclude<Ordem, "nome">] || 0, cor: corPartido(d.partido) }))} />
+        <div className="rank-lista"><Barras fmt={dinheiro ? (v) => reais(v) : (v) => v.toLocaleString("pt-BR")}
+          itens={lista.slice(0, 15).map((d, i) => ({ nome: d.nome, label: <RotuloRanking posicao={i + 1} to={`/deputado-estadual/${d.id}`} foto={d.foto} nome={d.nome} sub={d.partido} cor={corPartido(d.partido)} />,
+            valor: d.por_ano[ano]?.[ordem as Exclude<Ordem, "nome">] || 0, cor: corPartido(d.partido) }))} /></div>
         {porPartido.length > 1 && <Abrir titulo="Somado por partido">
           <Barras fmt={dinheiro ? (v) => reais(v) : (v) => v.toLocaleString("pt-BR")}
             itens={porPartido.map((p) => ({ label: p.partido, nota: `${p.n} deputado${p.n === 1 ? "" : "s"}`, valor: p.valor, cor: corPartido(p.partido) }))} />

@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Link } from "react-router-dom";
 import { Abrir, Barras, Loading, OndeVer, useAno, useData } from "../components/ui";
 import { atuacaoAtiva, corPartido, reaisCurto, taxaPresenca, type Resumo } from "../data";
 import { PessoaLinha, norm } from "./Home";
 import { AvisosFim } from "../components/Selo";
 import { MapaUF, Rosca, prepararFatias } from "../components/graficos";
-import { FotoPolitico } from "../components/Foto";
+import { RotuloRanking } from "../components/Foto";
 import { COR_LADO, LADOS, ladoPelosVotos } from "../partidos";
 
 type Ordem = "total" | "nome" | "posicao" | "presenca" | "autoria" | "relatadas" | "discursos";
@@ -105,8 +104,9 @@ export default function Politicos() {
         </select>
       </div>
       {lista.some((p) => t(p) > 0) && <Abrir aberto titulo={`Gráfico: quem mais gastou da cota em ${ano}`}>
-        <Barras itens={lista.slice().sort((a, b) => t(b) - t(a)).slice(0, 15).filter((p) => t(p) > 0).map((p) => ({
-          label: <Link className="foto-mini" to={`/p/${p.id}`}><FotoPolitico url={p.foto} nome={p.nome} tamanho={24} decorativa />{p.nome}</Link>, nota: `${p.partido}-${p.uf} · ${p.casa === "senado" ? "senador" : "deputado federal"}`, valor: t(p), cor: corPartido(p.partido) }))} />
+        <div className="rank-lista"><Barras itens={lista.slice().sort((a, b) => t(b) - t(a)).slice(0, 15).filter((p) => t(p) > 0).map((p, i) => ({ nome: p.nome,
+          label: <RotuloRanking posicao={i + 1} to={`/p/${p.id}`} foto={p.foto} nome={p.nome} sub={`${p.partido}-${p.uf} · ${p.casa === "senado" ? "senador" : "deputado federal"}`} cor={corPartido(p.partido)} />,
+          valor: t(p), cor: corPartido(p.partido) }))} /></div>
         <p className="muted small">Os 15 maiores gastos com os filtros escolhidos acima. Clique no nome para abrir cada gasto, nota por nota.</p>
       </Abrir>}
       <p className="muted small">{lista.length} resultado{lista.length === 1 ? "" : "s"}. A lista traz todos que tiveram mandato nesta legislatura, inclusive suplentes que já devolveram a vaga e quem se licenciou: os gastos e votos do período no cargo continuam contando.</p>

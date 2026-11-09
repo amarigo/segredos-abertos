@@ -32,7 +32,9 @@ def resumir(rows, cidades: dict[str, str], autores: dict[str, dict], uf: str = "
     """cidades: chave do município -> id; autores: nome do autor (chave) -> {nome, politico, partido}."""
     col = None
     acc: dict = defaultdict(lambda: {"anos": defaultdict(lambda: [0.0, 0]), "fav": defaultdict(lambda: {
-        "nome": "", "cnpj": "", "valor": 0.0, "autores": defaultdict(float), "anos": set()}), "aut": defaultdict(lambda: [0.0, 0])})
+        "nome": "", "cnpj": "", "valor": 0.0, "autores": defaultdict(float), "anos": set(), "por_ano": defaultdict(float),
+        "autores_ano": defaultdict(lambda: defaultdict(float))}),
+        "aut": defaultdict(lambda: [0.0, 0]), "aut_ano": defaultdict(lambda: defaultdict(lambda: [0.0, 0]))})
     for r in rows:
         if col is None:
             col = E.achar_colunas(list(r.keys()), E.REGRAS_FAV)
@@ -63,20 +65,40 @@ def resumir(rows, cidades: dict[str, str], autores: dict[str, dict], uf: str = "
         f["valor"] += v
         f["autores"][chave_aut] += v
         f["anos"].add(ano)
-        x = d["aut"][(chave_aut, a.get("politico") or "", a.get("partido") or "")]
-        x[0] += v
-        x[1] += 1
+        f["por_ano"][ano] += v
+        f["autores_ano"][ano][chave_aut] += v
+        k_aut = (chave_aut, a.get("politico") or "", a.get("partido") or "")
+        for x in (d["aut"][k_aut], d["aut_ano"][k_aut][ano]):
+            x[0] += v
+            x[1] += 1
+    def maiores(itens: dict, valor, n: int = 40) -> list:
+        """Os n maiores no total e os n maiores de cada ano: o filtro de ano da página não perde quem só
+        aparece entre os maiores num ano."""
+        fica = set(sorted(itens, key=lambda k: -valor(itens[k], None))[:n])
+        for ano in {a for x in itens.values() for a in _anos(x)}:
+            fica |= set(sorted((k for k in itens if valor(itens[k], ano)), key=lambda k: -valor(itens[k], ano))[:n])
+        return sorted(fica, key=lambda k: -valor(itens[k], None))
+
+    def _anos(x) -> set:
+        return set(x["por_ano"]) if isinstance(x, dict) else set()
+
     out = {}
     for cid, d in acc.items():
+        favs = d["fav"]
+        auts = {k: {"total": x, "por_ano": d["aut_ano"][k]} for k, x in d["aut"].items()}
         out[cid] = {
             "fonte": PAGINA,
             "por_ano": [{"ano": a, "valor": round(x[0], 2), "n": x[1]} for a, x in sorted(d["anos"].items(), reverse=True)],
             "favorecidos": [{"nome": f["nome"], "cnpj": f["cnpj"], "valor": round(f["valor"], 2),
                              "anos": sorted(f["anos"]), "url": PAGINA_FAVORECIDO.format(cnpj=f["cnpj"]) if f["cnpj"] else "",
-                             "autores": [{"nome": k, "valor": round(v, 2)} for k, v in sorted(f["autores"].items(), key=lambda kv: -kv[1])[:6]]}
-                            for f in sorted(d["fav"].values(), key=lambda f: -f["valor"])[:40]],
-            "autores": [{"nome": k[0], "politico": k[1] or None, "partido": k[2], "valor": round(x[0], 2), "n": x[1]}
-                        for k, x in sorted(d["aut"].items(), key=lambda kv: -kv[1][0])[:40]],
+                             "autores": [{"nome": k, "valor": round(v, 2)} for k, v in sorted(f["autores"].items(), key=lambda kv: -kv[1])[:6]],
+                             "por_ano": {str(a): {"valor": round(v, 2), "autores": [{"nome": k, "valor": round(x, 2)} for k, x in
+                                                                                   sorted(f["autores_ano"][a].items(), key=lambda kv: -kv[1])[:6]]}
+                                         for a, v in sorted(f["por_ano"].items(), reverse=True)}}
+                            for f in (favs[k] for k in maiores(favs, lambda f, a: f["valor"] if a is None else f["por_ano"].get(a, 0.0)))],
+            "autores": [{"nome": k[0], "politico": k[1] or None, "partido": k[2], "valor": round(x["total"][0], 2), "n": x["total"][1],
+                         "por_ano": {str(a): {"valor": round(y[0], 2), "n": y[1]} for a, y in sorted(x["por_ano"].items(), reverse=True)}}
+                        for k, x in ((k, auts[k]) for k in maiores(auts, lambda x, a: x["total"][0] if a is None else (x["por_ano"][a][0] if a in x["por_ano"] else 0.0)))],
         }
     return out
 

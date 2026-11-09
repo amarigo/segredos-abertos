@@ -4,7 +4,8 @@
    empresas, partidos).
 2. Histórico das cidades acompanhadas, com os arquivos do TSE.
 3. Estado: deputados estaduais (ALMG: verba, proposições), emendas estaduais, governador e vice (TSE), e o
-   dinheiro que chega às cidades (emendas federais e estaduais) e onde cada prefeitura gasta (SICONFI).
+   dinheiro que chega às cidades (emendas federais e estaduais), onde cada prefeitura gasta (SICONFI) e as
+   licitações e contratações diretas do estado e de cada cidade (PNCP).
    Cada fonte é independente: se uma falhar, as outras seguem e o meta.json avisa.
 4. Junta os avisos da coleta (fontes fora do ar, cópias antigas em uso) no meta.json, para o site mostrar.
 
@@ -22,7 +23,7 @@ from pathlib import Path
 
 from sa_etl import emendas as emendas_nac, util
 
-from . import almg, cidades, cultura, emendas_federais, emendas_mg, equipe, fontes, governo, recorte, siconfi
+from . import almg, cidades, cultura, emendas_federais, emendas_mg, equipe, fontes, governo, pncp, recorte, siconfi
 
 log = logging.getLogger("mg_etl.build")
 
@@ -52,7 +53,7 @@ def montar(nacional: Path, saida: Path, cache: Path, lista_cidades: list[dict] |
     avisos = list(meta.get("avisos") or [])
     avisos += [a for a in util.AVISOS if a not in avisos]
     meta.update({"recorte": "MG", "avisos": avisos, "cidades": [c["id"] for c in lista],
-                 "estado": {k: cont.get(k, 0) for k in ("deputados_estaduais", "emendas_estaduais", "governo", "equipe_governo")}})
+                 "estado": {k: cont.get(k, 0) for k in ("deputados_estaduais", "emendas_estaduais", "governo", "equipe_governo", "licitacoes")}})
     util.write_json(meta_f, meta)
     cont["cidades"] = len(lista)
     log.info("Minas Nossa: %s", cont)
@@ -151,6 +152,9 @@ def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[
     cult = _seguro("Shows e cultura", lambda: cultura.coletar(nacional, saida, cache, ids_mg))
     cont.update(cult or {})
     cont["historias_emendas"] = sum(len(v) for v in hist["cidades"].values()) if hist else 0
+    # Licitações e contratações diretas do estado e de cada cidade (PNCP), lidas aos poucos com limite de tempo
+    lic = _seguro("Licitações (PNCP)", lambda: pncp.coletar(saida, cache, lista_cidades))
+    cont["licitacoes"] = sum((lic or {}).values())
     return cont
 
 

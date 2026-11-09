@@ -214,7 +214,7 @@ jobs:
       - name: "Minas Nossa: montar os dados de MG"
         id: mg
         continue-on-error: true
-        timeout-minutes: 55  # inclui até 12 min de leitura aos poucos do PNCP e do SALIC (Shows e cultura)
+        timeout-minutes: 65  # inclui até 18 min de leitura do PNCP (licitações) e até 12 min do PNCP e do SALIC (Shows e cultura)
         working-directory: mg/etl
         env:
           PYTHONPATH: ../../etl
@@ -328,10 +328,23 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url }}
     steps:
       - uses: actions/configure-pages@v5
         with:
           enablement: true
+      # Às vezes o GitHub Pages fica parado em "syncing_files" e a publicação estoura o tempo (10 minutos), mesmo com
+      # tudo certo do nosso lado. Foi o que aconteceu em 08/11/2026 (execução 441): a coleta e a conferência passaram e
+      # a execução seguinte publicou o mesmo site (263 MB) em 38 segundos. Por isso, se a primeira tentativa falhar,
+      # espera 1 minuto e tenta de novo com o mesmo pacote. Só falha se as duas falharem.
       - id: deploy
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Publicação falhou; esperar antes de tentar de novo
+        if: steps.deploy.outcome == 'failure'
+        run: |
+          echo "::warning title=Publicação::A primeira tentativa de publicar no GitHub Pages falhou; tentando de novo."
+          sleep 60
+      - id: deploy2
+        if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v4
