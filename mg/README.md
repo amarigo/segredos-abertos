@@ -18,6 +18,10 @@ O recorte de Minas Gerais do Segredos Abertos, publicado em https://amarigo.gith
 - `etl/mg_etl/pncp.py`: licitações e contratações diretas do governo de Minas e de cada cidade, pela API do PNCP: cada compra
   com ou sem licitação (dispensa, inexigibilidade e o artigo da lei usado), valor, situação, contrato e fornecedor. Lida aos
   poucos (`MINUTOS` por execução); enquanto um ano não termina, o site avisa. Fornecedor pessoa física aparece sem nome e sem CPF.
+- `etl/mg_etl/cultura.py`: página "Shows e cultura". Contratação de artistas por prefeituras e pelo estado (API do PNCP,
+  só o amparo legal do art. 74, II da Lei 14.133, com quem recebeu), emendas Pix com show ou evento (dos arquivos do
+  Transferegov já gerados pelo coletor nacional, com o parlamentar que indicou), Lei Rouanet por região de MG (API do SALIC)
+  e população de cada cidade (IBGE). PNCP e SALIC são lidos aos poucos; o que falta continua na execução seguinte.
 - `etl/mg_etl/fontes.py`: funções comuns; `sem_cpf` apaga qualquer número com cara de CPF de textos livres (nome de fornecedor, motivo de viagem).
 - `etl/mg_etl/validar.py`: a conferência antes de publicar.
 - O site é o mesmo do nacional, montado com `npm run build:mg` (pasta `site/`).

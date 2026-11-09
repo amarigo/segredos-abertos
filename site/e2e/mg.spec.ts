@@ -32,6 +32,22 @@ function vigiar(page: Page) {
 }
 
 test.describe("jornada", () => {
+  test("shows e cultura: contratação de artista, cidade com população e sem CPF", async ({ page }) => {
+    const erros = vigiar(page);
+    const cult = dados("estado/cultura.json");
+    await page.goto("./#/cultura");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Shows e cultura");
+    const c = cult.contratos.cidades[0];
+    await expect(page.locator("main")).toContainText(c.nome);
+    await expect(page.locator("main")).toContainText(cult.contratos.artistas[0].nome);
+    await expect(page.locator("main")).toContainText(`${c.populacao.toLocaleString("pt-BR")} habitantes`);
+    await expect(page.locator("main")).toContainText(cult.rouanet.incentivadores.regioes[0].regiao);
+    await page.locator("#busca-cultura").fill(cult.contratos.artistas[0].nome.slice(0, 8));
+    await expect(page.locator("main table").last()).toContainText(cult.contratos.artistas[0].nome);
+    expect(await page.locator("main").innerText()).not.toMatch(CPF);
+    expect(erros).toEqual([]);
+  });
+
   test("início do Minas Nossa: só MG e atalho para as cidades", async ({ page }) => {
     const erros = vigiar(page);
     await page.goto("./");
@@ -50,7 +66,7 @@ test.describe("jornada", () => {
 
   test("todas as páginas do menu abrem sem erro", async ({ page }) => {
     const erros = vigiar(page);
-    for (const rota of ["dinheiro", "dinheiro?onde=itajuba", "politicos", "cidades", "empresas", "votacoes", "votacoes/ja-votadas", "votacoes?aba=almg", "partidos", "sobre", "governo", "assembleia", "emendas-estaduais",
+    for (const rota of ["dinheiro", "dinheiro?onde=itajuba", "politicos", "cidades", "empresas", "votacoes", "votacoes/ja-votadas", "votacoes?aba=almg", "partidos", "sobre", "governo", "assembleia", "emendas-estaduais", "cultura",
       "deputado-estadual/20003", "deputado-estadual/20003?aba=atuacao", "deputado-estadual/20003?aba=emendas",
       ...cidades.map((c) => `cidade/${c.id}`), ...cidades.map((c) => `cidade/${c.id}?aba=dinheiro`)]) {
       await page.goto(`./#/${rota}`);
@@ -125,7 +141,7 @@ test.describe("jornada", () => {
     test.skip(info.project.name !== "celular");
     vigiar(page);
     for (const rota of ["", "#/cidades", "#/cidade/itajuba", "#/cidade/paraisopolis", "#/votacoes", "#/votacoes/ja-votadas", `#/v/${vots[0].id}`, "#/governo",
-      "#/assembleia", "#/deputado-estadual/20003", "#/emendas-estaduais", "#/cidade/itajuba?aba=dinheiro"]) {
+      "#/assembleia", "#/deputado-estadual/20003", "#/emendas-estaduais", "#/cidade/itajuba?aba=dinheiro", "#/cultura"]) {
       await page.goto(`./${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();
       await page.waitForTimeout(300);
@@ -604,7 +620,7 @@ test.describe("caos no navegador", () => {
       return r.continue();
     });
     for (const rota of ["", "#/cidades", "#/cidade/itajuba", "#/cidade/paraisopolis", "#/votacoes", `#/v/${vots[0].id}`, "#/politicos",
-      "#/governo", "#/assembleia", "#/deputado-estadual/20003", "#/emendas-estaduais", "#/cidade/itajuba?aba=dinheiro"]) {
+      "#/governo", "#/assembleia", "#/deputado-estadual/20003", "#/emendas-estaduais", "#/cidade/itajuba?aba=dinheiro", "#/cultura"]) {
       await page.goto(`./${rota}`);
       await page.waitForTimeout(600);
       await expect(page.locator("header.top")).toBeVisible();

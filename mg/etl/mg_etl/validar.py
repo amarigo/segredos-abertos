@@ -167,6 +167,7 @@ def conferir_estado(saida: Path, r: Resultado) -> None:
         for p in ((gov.get("equipe") or {}).get("pessoas") or []):
             if any((p.get(k) or 0) < 0 for k in ("bruto", "liquido", "jetons")):
                 r.erro(f"Governo: salário negativo ({p['nome']})")
+    conferir_cultura(saida, r)
     for c in _ler(saida / "cidades.json", r) or []:
         if not ID_SEGURO.match(c["id"]):
             continue
@@ -241,6 +242,36 @@ def conferir_licitacoes(saida: Path, r: Resultado) -> None:
                 if not c["url"].startswith("https://pncp.gov.br/") or any(not x["url"].startswith("https://pncp.gov.br/") for x in c["contratos"]):
                     r.erro(f"{onde}: link fora do PNCP ({c['id']})")
                     break
+
+
+def conferir_cultura(saida: Path, r: Resultado) -> None:
+    """Shows e cultura: nenhum CPF (artista contratado como pessoa física aparece só pelo nome), somas que batem e
+    links só para as fontes oficiais."""
+    f = saida / "estado" / "cultura.json"
+    if not f.exists():
+        return
+    d = _ler(f, r) or {}
+    _sem_cpf(d, "Shows e cultura", r)
+    _cnpjs(d, "Shows e cultura", r)
+    c = d.get("contratos") or {}
+    if c and not _perto(sum(x["valor"] for x in c.get("por_ano") or []), c.get("total", 0), len(c.get("por_ano") or [])):
+        r.erro("Shows e cultura: contratações de artistas por ano não somam o total")
+    if c and not _perto(sum(x["valor"] for x in c.get("cidades") or []), c.get("total", 0), len(c.get("cidades") or [])):
+        r.erro("Shows e cultura: contratações de artistas por cidade não somam o total")
+    for ano in c.get("anos") or []:
+        lista = _ler(saida / "estado" / "cultura" / f"contratos-{ano}.json", r) or {}
+        _sem_cpf(lista, f"Shows e cultura {ano}", r)
+        for x in lista.get("lista") or []:
+            if x.get("url") and not x["url"].startswith("https://pncp.gov.br/"):
+                r.erro(f"Shows e cultura {ano}: link fora do PNCP")
+    p = d.get("pix") or {}
+    if p and not _perto(sum(x["valor"] for x in p.get("parlamentares") or []), p.get("total", 0), len(p.get("parlamentares") or [])):
+        r.erro("Shows e cultura: emendas Pix por parlamentar não somam o total")
+    ro = d.get("rouanet") or {}
+    for k in ("incentivadores", "projetos"):
+        x = ro.get(k) or {}
+        if x and not _perto(sum(g["valor"] for g in x.get("regioes") or []), x.get("total", 0), len(x.get("regioes") or [])):
+            r.erro(f"Shows e cultura: Lei Rouanet ({k}) por região não soma o total")
 
 
 def conferir_cidades(saida: Path, r: Resultado, min_mandatos: int) -> None:

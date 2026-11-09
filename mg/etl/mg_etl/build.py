@@ -23,7 +23,7 @@ from pathlib import Path
 
 from sa_etl import emendas as emendas_nac, util
 
-from . import almg, cidades, emendas_federais, emendas_mg, equipe, fontes, governo, pncp, recorte, siconfi
+from . import almg, cidades, cultura, emendas_federais, emendas_mg, equipe, fontes, governo, pncp, recorte, siconfi
 
 log = logging.getLogger("mg_etl.build")
 
@@ -148,6 +148,9 @@ def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[
                 "transferegov": hist["transferegov"], "emendas": lista_h})
         n_dinheiro += 1
     cont["cidades_dinheiro"] = n_dinheiro
+    # Shows e cultura: contratação de artistas (PNCP), emendas Pix com show ou evento, Lei Rouanet (SALIC) e população (IBGE)
+    cult = _seguro("Shows e cultura", lambda: cultura.coletar(nacional, saida, cache, ids_mg))
+    cont.update(cult or {})
     cont["historias_emendas"] = sum(len(v) for v in hist["cidades"].values()) if hist else 0
     # Licitações e contratações diretas do estado e de cada cidade (PNCP), lidas aos poucos com limite de tempo
     lic = _seguro("Licitações (PNCP)", lambda: pncp.coletar(saida, cache, lista_cidades))
