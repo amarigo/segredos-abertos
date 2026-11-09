@@ -202,7 +202,7 @@ function cartao(x){
     <div class="info">
       <p class="nome"><b>${esc(x.nm)}</b> ${selo}</p>
       <p class="small">${esc(x.p)}${x.fed?` · ${esc(x.fed)}`:""} · ${NAMES[x.uf]} · <span class="num">${fmt(x.v)}</span> votos${x.pv?` (${esc(x.pv)}%)`:""} · ${esc(x.st)}</p>
-      <p class="small muted">${esc(x.nc)}${x.oc?` · ${esc(x.oc)}`:""}</p>
+      <p class="small muted">${esc(x.nc)}${x.oc?` · ${esc(x.oc).replace(/\//g,"/<wbr>")}`:""}</p>
       ${x.col?`<p class="small muted">Coligação: ${esc(x.col)} (${esc(x.comp)})</p>`:""}
       ${vs?`<p class="small muted">${quem}: ${vs}</p>`:""}
       ${x.dvt?`<p class="small aviso">Situação dos votos no TSE: ${esc(x.dvt)}</p>`:""}
