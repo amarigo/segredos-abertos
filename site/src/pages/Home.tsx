@@ -103,6 +103,7 @@ export default function Home() {
             <Link to="/governo" className="card cidade-card"><strong>Governo do estado</strong><span className="small muted">Governador e vice eleitos, quem está no cargo hoje, salários e viagens do governador e dos secretários.</span></Link>
             <Link to="/assembleia" className="card cidade-card"><strong>Deputados estaduais</strong><span className="small muted">{meta.estado?.deputados_estaduais ? `${meta.estado.deputados_estaduais} deputados: ` : ""}gastos da verba indenizatória nota por nota, projetos apresentados e aprovados.</span></Link>
             <Link to="/emendas-estaduais" className="card cidade-card"><strong>Emendas estaduais</strong><span className="small muted">Quanto cada deputado estadual indicou do orçamento de Minas, para quais cidades e quem recebeu.</span></Link>
+            <Link to="/painel" className="card cidade-card"><strong>Painel por área</strong><span className="small muted">Saúde, educação, cultura, esporte: quanto as emendas estaduais mandaram para cada área, onde e em quê. Junte áreas e filtre por cidade.</span></Link>
             <Link to="/politicos" className="card cidade-card"><strong>Deputados federais e senadores</strong><span className="small muted">Os {meta.contagens.politicos} que representam Minas em Brasília: cota parlamentar, empresas e votos.</span></Link>
           </div>
         </section>

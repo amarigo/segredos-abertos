@@ -91,7 +91,9 @@ def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[
     # Todos que tiveram mandato na legislatura, não só quem está no cargo hoje: quem saiu no meio também gastou
     deps, linhas, completa = _seguro("ALMG (deputados da legislatura)", lambda: almg.deputados(cache), ([], [], False))
     mapa_dep = {fontes.chave_nome(n): d["id"] for d in deps for n in [d["nome"], *d.get("outros_nomes", [])]}
-    em = _seguro("Emendas estaduais (ALMG)", lambda: emendas_mg.coletar(cache, mapa_dep, mapa_cidades))
+    # Nomes oficiais dos municípios de Minas (API do Tesouro), para achar lugares fora de Minas no arquivo de emendas
+    mun_mg = _seguro("Municípios de MG (SICONFI)", lambda: siconfi.municipios("MG", cache), {})
+    em = _seguro("Emendas estaduais (ALMG)", lambda: emendas_mg.coletar(cache, mapa_dep, mapa_cidades, mun_mg))
     if deps:
         feitos = _seguro("Deputados estaduais (ALMG)",
                          lambda: almg.coletar(saida, cache, deps, em, linhas=linhas, completa=completa), [])
@@ -126,6 +128,9 @@ def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[
     # None = a fonte falhou (o site diz isso); {} = a fonte respondeu e a cidade não recebeu nada
     fed = _seguro("Emendas federais nas cidades", lambda: emendas_federais.coletar(zip_nac, nacional, mapa_cidades, ids_mg))
     vazio_fed = {"fonte": emendas_federais.PAGINA, "por_ano": [], "favorecidos": [], "autores": []}
+    # A história de cada emenda (Portal da Transparência + Transferegov): um arquivo por cidade, aberto sob demanda
+    hist = _seguro("Histórias das emendas federais",
+                   lambda: emendas_federais.coletar_historias(zip_nac, nacional, mapa_cidades, ids_mg))
     n_dinheiro = 0
     for c in lista_cidades:
         contas = _seguro(f"Contas de {c['nome']} (SICONFI)", lambda c=c: siconfi.contas(c["nome"], c["uf"], cache))
@@ -134,9 +139,16 @@ def montar_estado(nacional: Path, saida: Path, cache: Path, lista_cidades: list[
             "estaduais": {"fonte": emendas_mg.PAGINA, "lista": em["por_cidade"].get(c["id"], [])} if em else None,
             "federais": (fed.get(c["id"]) or vazio_fed) if fed is not None else None,
             "contas": contas,
+            "historias": {"n": len(hist["cidades"].get(c["id"], [])), "anos": hist["anos"]} if hist else None,
         })
+        if hist:
+            lista_h = hist["cidades"].get(c["id"], [])
+            util.write_json(saida / "cidades" / "emendas" / f"{c['id']}.json", {
+                "id": c["id"], "nome": c["nome"], "anos": hist["anos"], "fonte": emendas_federais.PAGINA,
+                "transferegov": hist["transferegov"], "emendas": lista_h})
         n_dinheiro += 1
     cont["cidades_dinheiro"] = n_dinheiro
+    cont["historias_emendas"] = sum(len(v) for v in hist["cidades"].values()) if hist else 0
     # Licitações e contratações diretas do estado e de cada cidade (PNCP), lidas aos poucos com limite de tempo
     lic = _seguro("Licitações (PNCP)", lambda: pncp.coletar(saida, cache, lista_cidades))
     cont["licitacoes"] = sum((lic or {}).values())

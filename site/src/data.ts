@@ -1,4 +1,5 @@
 import type { DocPagamento } from "./components/DocsEmendas";
+import type { PlanoPix } from "./components/DestinoPix";
 // Tipos e funções para ler os arquivos JSON gerados pelo coletor (etl/).
 export type Casa = "camara" | "senado";
 export type Grupo = "pessoal" | "escritorio" | "servicos";
@@ -341,7 +342,9 @@ export interface EmendasEstado {
     empenhado?: number; reprovadas?: number; n_autores?: number; n_beneficiarios?: number;
     beneficiarios?: (SomaEmenda & { municipio: string; tipo: string })[];
     /** órgão do estado que executa, forma de execução, área e tipo de despesa */
-    orgaos?: SomaEmenda[]; tipos?: SomaEmenda[]; areas?: SomaEmenda[]; grupos?: SomaEmenda[] }>;
+    orgaos?: SomaEmenda[]; tipos?: SomaEmenda[]; areas?: SomaEmenda[]; grupos?: SomaEmenda[];
+    /** lugares do arquivo que não são municípios de Minas (outro estado ou nome fora da lista oficial do Tesouro) */
+    fora_de_mg?: { municipio: string; uf: string; n: number; indicado: number; beneficiarios: string[] }[] }>;
 }
 /** Todas as indicações aprovadas de um ano (estado/emendas/<ano>.json). Os textos ficam uma vez só em "textos";
     cada linha guarda a posição deles, na ordem de "campos". */
@@ -401,6 +404,21 @@ export interface DinheiroCidade {
     favorecidos: { nome: string; cnpj: string; valor: number; anos: number[]; url: string; autores: { nome: string; valor: number }[] }[];
     autores: { nome: string; politico: string | null; partido: string; valor: number; n: number }[] } | null;
   contas: ContasEnte | null;
+  /** Quantas emendas federais da cidade têm a história contada (cidades/emendas/{id}.json); null se a fonte falhou */
+  historias?: { n: number; anos: number[] } | null;
+}
+/** A história de uma emenda federal que chegou à cidade (cidades/emendas/{id}.json, mg/etl/mg_etl/emendas_federais.py) */
+export interface HistoriaEmenda {
+  codigo: string; ano: number; tipo: string; tipo_nome: string; autor: string; politico: string | null; partido: string;
+  local: string; funcao: string; subfuncao: string; acoes: string[]; na_cidade: boolean;
+  empenhado: number; liquidado: number; pago: number;
+  recebido: { mes: string; nome: string; cnpj: string; valor: number }[]; recebido_aqui: number;
+  plano: PlanoPix | null; url: string;
+}
+export interface HistoriasCidade {
+  id: string; nome: string; anos: number[]; fonte: string;
+  transferegov: { fonte: string; consulta: string; atualizado: string; completo: boolean; anos: number[] } | null;
+  emendas: HistoriaEmenda[];
 }
 /** Contas entregues ao Tesouro (SICONFI): despesas por área, ano a ano. Prefeituras (cidades/dinheiro) e o estado (estado/contas.json). */
 export interface ContasEnte { cod_ibge: number; fonte: string; api: string; anos: { ano: number; instituicao: string; total_empenhado: number; total_liquidado: number; total_pago: number;
