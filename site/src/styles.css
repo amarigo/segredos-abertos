@@ -871,3 +871,9 @@ tr.linha-aberta > td { background: var(--tint); }
   .rank-foto .avatar { width: 40px !important; height: 40px !important; }
   .rank-nome { font-size: .98rem; }
 }
+
+/* Nota da verba indenizatória aberta na própria página (deputado estadual) */
+button.nota-abrir { text-align: left; font-weight: 700; }
+tr.nota-aberta > td { background: var(--tint); }
+.nota-detalhe { padding: 6px 2px; }
+.nota-detalhe .kv { margin-bottom: 6px; }

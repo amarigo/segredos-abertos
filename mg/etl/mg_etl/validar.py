@@ -185,6 +185,28 @@ def conferir_estado(saida: Path, r: Resultado) -> None:
                 r.erro(f"{onde}: link de favorecido fora do Portal da Transparência")
             if not x.get("cnpj") and x.get("nome") != "Pessoa física":
                 r.erro(f"{onde}: favorecido sem CNPJ com nome (pessoa física não aparece com nome)")
+        _conferir_historias(saida / "cidades" / "emendas" / f"{c['id']}.json", r)
+
+
+def _conferir_historias(f: Path, r: Resultado) -> None:
+    """A ficha de cada emenda federal da cidade: somas, links oficiais e nenhum CPF."""
+    if not f.exists():
+        return
+    d = _ler(f, r) or {}
+    onde = f"Emendas federais de {d.get('nome', f.stem)}"
+    _sem_cpf(d, onde, r)
+    _cnpjs(d, onde, r)
+    for e in d.get("emendas") or []:
+        if not e.get("url", "").startswith("https://portaldatransparencia.gov.br/emendas/detalhe?codigoEmenda="):
+            r.erro(f"{onde}: emenda {e.get('codigo')} sem o link do Portal da Transparência")
+        if not _perto(sum(x["valor"] for x in e["recebido"]), e["recebido_aqui"], len(e["recebido"])):
+            r.erro(f"{onde}: emenda {e['codigo']}: o recebido mês a mês não soma o total")
+        for x in e["recebido"]:
+            if not x.get("cnpj") and x.get("nome") != "Pessoa física":
+                r.erro(f"{onde}: emenda {e['codigo']}: quem recebeu sem CNPJ aparece com nome")
+        p = e.get("plano")
+        if p and not _perto(sum(g["valor"] for g in p["gastos"]), p["gasto"], len(p["gastos"])):
+            r.erro(f"{onde}: emenda {e['codigo']}: os gastos da prefeitura não somam o total")
 
 
 def conferir_cidades(saida: Path, r: Resultado, min_mandatos: int) -> None:
