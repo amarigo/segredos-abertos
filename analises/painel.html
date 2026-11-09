@@ -10,7 +10,7 @@
   O mesmo arquivo serve para o GitHub Pages (/analises/) e para o painel publicado no Claude.
 -->
 <style>
-/* Layout: faixa azul gov.br no topo, abas que rolam de lado, cartões de gráfico em grade de 1 a 2 colunas */
+/* Layout: faixa azul gov.br no topo, abas que quebram a linha, cartões de gráfico em grade de 1 a 2 colunas */
 :root {
   --bg: #f8f8f8; --surface: #ffffff; --ink: #1b2533; --ink-2: #333f4f; --muted: #5f6a7a; --line: #dcdfe5;
   --navy: #071d41; --hot: #1351b4; --accent: #1351b4; --amarelo: #ffcd07; --grid: #e8ebf0; --tint: #edf5ff;
@@ -51,7 +51,10 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 .marca p { margin: 0; color: #c9d4e8; font-size: .95rem; }
 .atualizado { font-size: .85rem; color: #c9d4e8; margin: 6px 0 0; }
 nav.abas { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--navy); border-bottom: 1px solid #ffffff22; }
-nav.abas .dentro { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: thin; padding-block: 14px 0; }
+/* Abas: todas sempre à vista; se não couberem numa linha, passam para a de baixo (mesma regra do site). No celular
+   o menu ocupa várias linhas, então deixa de ficar preso no topo, para não cobrir os gráficos. */
+nav.abas .dentro { display: flex; flex-wrap: wrap; gap: 2px; padding-block: 10px 0; }
+@media (max-width: 600px) { nav.abas { position: static; } nav.abas a { padding: 8px 10px 9px; font-size: .86rem; } }
 nav.abas a { color: #dfe7f5; text-decoration: none; padding: 9px 12px 11px; white-space: nowrap; font-weight: 600; font-size: .92rem; border-bottom: 3px solid transparent; }
 nav.abas a[aria-current="page"] { color: #fff; border-bottom-color: var(--amarelo); }
 nav.abas a:hover { color: #fff; }

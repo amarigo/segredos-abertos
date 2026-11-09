@@ -4,6 +4,7 @@
    - Caos: arquivo da cidade que não carrega, cortado ou com formato errado nunca deixa a tela em branco. */
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { abasAVista } from "./menu";
 
 const dados = (rel: string) => JSON.parse(readFileSync(new URL(`../public-mg/data/${rel}`, import.meta.url), "utf-8"));
 const meta = dados("meta.json");
@@ -628,4 +629,11 @@ test.describe("caos no navegador", () => {
     }
     expect(erros).toEqual([]);
   });
+});
+
+test("menu principal: todas as abas à vista, do celular pequeno ao monitor grande", async ({ page }) => {
+  await page.goto("./");
+  await expect(page.locator("nav.nav a").first()).toBeVisible();
+  await abasAVista(page, "nav.nav", "a");
+  await abasAVista(page, "nav.projetos .wrap", "a");
 });

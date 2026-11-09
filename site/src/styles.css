@@ -92,7 +92,8 @@ strong, b { font-weight: 700; }
 
 /* Barra dos projetos (Brasil, Minas Nossa, Eleição 2026) */
 .projetos { background: var(--navy-2); color: #b7c3d9; font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; font-weight: 600; }
-.projetos .wrap { display: flex; align-items: center; gap: 4px 16px; padding-block: 7px; overflow-x: auto; white-space: nowrap; }
+/* Barra dos projetos: mesma regra do menu principal (tudo à vista, quebra a linha em vez de rolar de lado) */
+.projetos .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 0 16px; padding-block: 3px; white-space: nowrap; }
 .projetos .wrap > * { flex-shrink: 0; }
 .projetos a { color: #e3e9f4; text-decoration: none; padding: 4px 2px; }
 .projetos a:hover { color: #fff; text-decoration: underline; }
@@ -112,13 +113,16 @@ strong, b { font-weight: 700; }
 .brand { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; font-family: var(--display); font-weight: 900; font-size: 1.3rem; line-height: 1; }
 .brand img { width: 30px; height: 30px; }
 .brand > span > span { color: var(--hot-vivo) !important; }
-.nav { display: flex; gap: 4px; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
-.nav::-webkit-scrollbar { display: none; }
-/* No computador o menu quebra a linha: rolando de lado, "Como funciona" ficava escondido em telas de 1366px */
-@media (min-width: 760px) { .nav { flex-wrap: wrap; overflow-x: visible; } }
+/* Regra dos menus principais (vale para todos os sites): todas as abas sempre à vista. Se não couberem numa linha,
+   passam para a de baixo; nunca rolam de lado nem ficam cortadas. Rolando de lado, "Como funciona" e "Minha rede"
+   sumiam no computador, e ninguém via que havia mais abas. Uma aba nova entra sem mexer aqui.
+   Conferido pelo teste "menu principal: todas as abas à vista" (e2e). */
+.nav { display: flex; flex-wrap: wrap; gap: 4px; max-width: 100%; }
 .nav a { white-space: nowrap; color: #e3e9f4; text-decoration: none; padding: 7px 14px; border-radius: 999px; font-weight: 600; font-size: .92rem; border: 1px solid transparent; }
 .nav a:hover { border-color: rgba(255,255,255,.35); color: #fff; }
 .nav a.active { background: #fff; color: var(--navy); }
+/* Celular: pílulas mais compactas, para o menu inteiro caber em poucas linhas */
+@media (max-width: 699px) { .nav { gap: 2px; } .nav a { padding: 8px 10px; font-size: .86rem; } }
 
 main { padding-block: 32px 72px; display: grid; gap: 48px; }
 section { display: grid; gap: 16px; min-width: 0; }
@@ -593,7 +597,7 @@ details > summary { padding-block: 10px; }
 
 /* Menu e abas que rolam para o lado no celular: a borda direita some aos poucos, para mostrar que há mais */
 @media (max-width: 699px) {
-  .nav, .tabs { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); padding-right: 32px; }
+  .tabs { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); padding-right: 32px; }
 }
 
 /* Aba e botão escolhidos bem visíveis no modo escuro (azul-escuro sumia no fundo azul) */
