@@ -24,7 +24,8 @@ A API responde HTTP 429 (muitas requisições) com facilidade: na sondagem, com 
 - cidades: uma consulta por modalidade cobrindo o ano inteiro (poucas páginas); anos anteriores e o atual;
 - estado: centenas de compras por dia em MG (de todas as esferas; a API não filtra por esfera). Só o ano atual,
   mês a mês e modalidade por modalidade, aos poucos, com limite de tempo por execução (MINUTOS), continuando de onde
-  parou na execução seguinte. O mês atual vale um dia; os anteriores, VALIDADE_MES_ESTADO dias.
+  parou na execução seguinte. O mês atual vale VALIDADE_MES_ATUAL_ESTADO dias; os anteriores, VALIDADE_MES_ESTADO.
+  A primeira leitura completa do ano leva algumas execuções; até lá o site avisa que a leitura está em andamento.
 Depois de 3 falhas seguidas o PNCP é dado como fora do ar e a execução usa só o cache.
 """
 from __future__ import annotations
@@ -50,8 +51,9 @@ DOC_API = "https://pncp.gov.br/api/consulta/swagger-ui/index.html"
 TAMANHO = 50          # o máximo que a consulta aceita (500 dá HTTP 400 "Tamanho de página inválido")
 PAUSA = 4.0           # segundos entre pedidos: com 1 s, HTTP 429 quase o tempo todo (sondagem de 08/11/2026)
 ESPERA_429 = 30       # segundos de espera depois de um HTTP 429
-MINUTOS = 12          # limite de tempo por execução para a leitura do PNCP
-VALIDADE_RECENTE = 1  # dias: o ano de hoje nas cidades; o mês de hoje no estado
+MINUTOS = 18          # limite de tempo por execução para a leitura do PNCP (na sondagem, ~7 páginas por minuto)
+VALIDADE_RECENTE = 1  # dias: o ano de hoje nas cidades
+VALIDADE_MES_ATUAL_ESTADO = 3  # dias: o mês de hoje no estado (umas 100 páginas por leitura)
 VALIDADE_ANTIGO = 15  # dias: anos anteriores nas cidades
 VALIDADE_MES_ESTADO = 30  # dias: meses anteriores no estado (cada mês do estado tem centenas de páginas)
 VALIDADE_CONTRATOS_ESTADO = 7  # dias: contratos do ano de hoje dos órgãos do estado (são muitos órgãos)
@@ -325,12 +327,12 @@ def resumir(local: dict, ano: int, compras: list[dict], contratos: list[dict], h
             o = orgaos[c["cnpj"] or c["orgao"]]
             o.update(nome=c["orgao"], cnpj=c["cnpj"])
             o["n"] += 1
-            o["valor"] += valor
+            o["valor"] += c["homologado"]  # o estimado de uma ata de registro de preço é um teto, não gasto
             if fm != "licitacao" and c.get("amparo"):
                 a = amparos[c["amparo"]]
                 a.update(nome=c["amparo"], descricao=c["amparo_descricao"], forma=fm)
                 a["n"] += 1
-                a["valor"] += valor
+                a["valor"] += c["homologado"]
         lista.append({
             "id": c["id"], "data": c["data"], "orgao": c["orgao"], "unidade": c["unidade"] if c["unidade"] != c["orgao"] else "",
             "forma": fm, "modalidade": c["modalidade_nome"], "amparo": c["amparo"], "amparo_descricao": c["amparo_descricao"],
@@ -396,7 +398,7 @@ def coletar(saida: Path, cache: Path, cidades: list[dict], anos: list[int] | Non
         locais.append(({"id": c["id"], "nome": c["nome"]}, f"c{ibge}", {"uf": c["uf"], "codigoMunicipioIbge": str(ibge)},
                        pedacos, filtro, VALIDADE_RECENTE))
     # 2. Estado: todas as compras de MG, só as dos órgãos do estado (esfera estadual); só o ano atual
-    pedacos = [(a, f"{a}{m:02d}", _faixa_mes(a, m, hoje), VALIDADE_RECENTE if (a, m) == (hoje.year, hoje.month) else VALIDADE_MES_ESTADO)
+    pedacos = [(a, f"{a}{m:02d}", _faixa_mes(a, m, hoje), VALIDADE_MES_ATUAL_ESTADO if (a, m) == (hoje.year, hoje.month) else VALIDADE_MES_ESTADO)
                for a, m in _meses(hoje.year, hoje)]
     locais.append((ESTADO, "mg-estado", {"uf": "MG"}, pedacos, esfera("E"), VALIDADE_CONTRATOS_ESTADO))
 

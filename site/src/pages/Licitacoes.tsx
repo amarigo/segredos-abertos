@@ -67,7 +67,7 @@ function Ano({ id, ano, nome }: { id: string; ano: number; nome: string }) {
   const t = d.total;
   const sem = d.por_forma.filter((f) => f.forma === "dispensa" || f.forma === "inexigibilidade");
   const nSem = sem.reduce((a, f) => a + f.n, 0);
-  const valorDe = (f: { homologado: number; estimado: number }) => f.homologado || f.estimado;
+  const valorDe = (f: { homologado: number }) => f.homologado;
   const vTotal = d.por_forma.reduce((a, f) => a + valorDe(f), 0);
   const vSem = sem.reduce((a, f) => a + valorDe(f), 0);
   const fonte = (
@@ -85,15 +85,15 @@ function Ano({ id, ano, nome }: { id: string; ano: number; nome: string }) {
           <div className="grid">
             <div className="card stat"><span className="label">Compras publicadas</span><span className="value">{numero(t.n)}</span>
               <span className="hint">{numero(t.contratos)} contrato{t.contratos === 1 ? "" : "s"} assinado{t.contratos === 1 ? "" : "s"}</span></div>
-            <div className="card stat"><span className="label">Valor (homologado ou estimado)</span><span className="value">{reaisCurto(vTotal)}</span>
-              <span className="hint">Sem as compras revogadas ou anuladas</span></div>
+            <div className="card stat"><span className="label">Valor homologado</span><span className="value">{reaisCurto(vTotal)}</span>
+              <span className="hint">Estimado: {reaisCurto(t.estimado)}. Sem as compras revogadas ou anuladas</span></div>
             <div className="card stat"><span className="label">Sem licitação</span><span className="value">{t.n ? `${Math.round((nSem / t.n) * 100)}%` : "—"}</span>
               <span className="hint">{numero(nSem)} compra{nSem === 1 ? "" : "s"} por dispensa ou inexigibilidade, {reaisCurto(vSem)}</span></div>
           </div>
-          <Explain>"Homologado" é o valor final, depois da disputa ou da escolha do fornecedor. Quando a compra ainda não terminou, usamos o valor estimado pelo órgão.</Explain>
+          <Explain>"Homologado" é o valor final, depois da disputa ou da escolha do fornecedor. Muitas compras ainda não têm resultado publicado; delas só existe o valor estimado. O estimado de um registro de preços é um teto: o órgão pode comprar menos, ou nada. Por isso os totais usam o homologado.</Explain>
           <h3>Com licitação ou sem</h3>
           <Barras rosca={{ titulo: `Compras ${de(nome)} em ${ano}, com e sem licitação` }}
-            itens={d.por_forma.map((f) => ({ label: f.rotulo, valor: valorDe(f), cor: COR_FORMA[f.forma], nota: `${numero(f.n)} compra${f.n === 1 ? "" : "s"}` }))} />
+            itens={d.por_forma.map((f) => ({ label: f.rotulo, valor: valorDe(f), cor: COR_FORMA[f.forma], nota: `${numero(f.n)} compra${f.n === 1 ? "" : "s"} · estimado ${reaisCurto(f.estimado)}` }))} />
           <h3>Em que pé estão</h3>
           <p className="dinheiro-total small">{d.por_andamento.map((a) => <span key={a.andamento}><strong>{a.andamento}:</strong> {numero(a.n)}</span>)}</p>
         </>}
@@ -105,7 +105,7 @@ function Ano({ id, ano, nome }: { id: string; ano: number; nome: string }) {
           <Explain>Na dispensa e na inexigibilidade o órgão escolhe o fornecedor sem disputa. Ele tem de dizer o artigo da lei que permite isso. Estes são os motivos mais usados {por(nome)} em {ano}.</Explain>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Motivo legal</th><th className="r">Compras</th><th className="r">Valor</th></tr></thead>
+              <thead><tr><th>Motivo legal</th><th className="r">Compras</th><th className="r">Homologado</th></tr></thead>
               <tbody>
                 {d.amparos.map((a) => (
                   <tr key={a.nome}>
@@ -182,7 +182,7 @@ function Lista({ d, nome }: { d: LicitacoesLocal; nome: string }) {
   return (
     <section>
       <h2>Cada compra</h2>
-      <Explain>Da maior para a menor. Procure pelo que foi comprado ("asfalto", "show", "merenda") ou pelo nome do fornecedor. Cada linha leva à página oficial da compra no PNCP, com o edital, os itens e os documentos.</Explain>
+      <Explain>Da maior para a menor (pelo homologado, ou pelo estimado quando ainda não há resultado). Procure pelo que foi comprado ("asfalto", "show", "merenda") ou pelo nome do fornecedor. Cada linha leva à página oficial da compra no PNCP, com o edital, os itens e os documentos.</Explain>
       {d.n_lista < d.total.n && <p className="small muted">Mostrando as {numero(d.n_lista)} maiores compras, de {numero(d.total.n)}. Os totais acima contam todas.</p>}
       <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
         <input type="search" placeholder="Procurar compra ou fornecedor" aria-label="Procurar compra ou fornecedor" value={busca} onChange={(e) => { setBusca(e.target.value); setN(30); }} />
@@ -197,7 +197,7 @@ function Lista({ d, nome }: { d: LicitacoesLocal; nome: string }) {
       {!lista.length ? <div className="empty">Nenhuma compra {de(nome)} com esse filtro.</div> : (
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Para quê</th><th className="so-largo">Quem recebeu</th><th className="r">Valor</th></tr></thead>
+            <thead><tr><th>Para quê</th><th className="so-largo">Quem recebeu</th><th className="r">Homologado</th></tr></thead>
             <tbody>{lista.slice(0, n).map((c) => <Linha key={c.id} c={c} />)}</tbody>
           </table>
         </div>
@@ -221,8 +221,8 @@ function Linha({ c }: { c: CompraPncp }) {
         <div className="small so-celular" style={{ marginTop: 4 }}><strong>Quem recebeu:</strong> <Recebeu c={c} /></div>
       </td>
       <td className="small so-largo"><Recebeu c={c} /></td>
-      <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(c.valor)}
-        {c.homologado > 0 && c.estimado > 0 && c.homologado !== c.estimado && <div className="small muted">estimado {reais(c.estimado)}</div>}</td>
+      <td className="r num" style={{ whiteSpace: "nowrap" }}>{c.homologado > 0 ? reais(c.homologado) : <span className="muted">sem resultado</span>}
+        {c.estimado > 0 && c.homologado !== c.estimado && <div className="small muted">estimado {reais(c.estimado)}</div>}</td>
     </tr>
   );
 }
