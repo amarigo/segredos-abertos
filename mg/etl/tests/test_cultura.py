@@ -284,3 +284,20 @@ def test_conferencia_aceita_e_barra_cpf(fake, tmp_path):
     r = Resultado()
     conferir_cultura(saida, r)
     assert r.erros
+
+
+def test_cpf_no_texto_some_antes_de_gravar():
+    d = cultura._limpar({"objeto": f"Show contratado, processo {CPF}", "cnpj": "123", "lista": [{"nome": f"X {CPF}"}]})
+    assert CPF not in json.dumps(d) and d["cnpj"] == ""
+
+
+def test_parte_que_nao_passa_na_conferencia_fica_de_fora_sem_travar(tmp_path, monkeypatch):
+    """Se uma parte não bater (soma errada), só ela sai do arquivo; o resto é publicado e o site avisa."""
+    util.AVISOS.clear()
+    resumo = {"atualizado": "2026-02-10", "populacao": None,
+              "contratos": {"total": 100.0, "por_ano": [{"ano": 2026, "valor": 50.0, "n": 1}], "cidades": [], "anos": []},
+              "pix": {"total": 10.0, "parlamentares": [{"nome": "A", "valor": 10.0}]}, "rouanet": None}
+    cultura.gravar(tmp_path, resumo, {})
+    d = json.loads((tmp_path / "estado" / "cultura.json").read_text(encoding="utf-8"))
+    assert d["contratos"] is None and d["pix"]["total"] == 10.0
+    assert any("contratações de artistas" in a for a in util.AVISOS)

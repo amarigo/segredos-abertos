@@ -652,6 +652,59 @@ def resumir_rouanet(inc: list[dict], proj: list[dict], cid: Cidades) -> dict:
 # ---------------------------------------------------------------- montagem
 
 
+# O mesmo padrão da conferência do Minas Nossa (validar.CPF_EM_TEXTO): qualquer número assim some dos textos
+CPF_EM_TEXTO = re.compile(r"(?<!\d)(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})(?!\d)")
+
+
+def _limpar(x):
+    """Tira de qualquer texto um número com cara de CPF (os textos vêm das prefeituras e podem trazer CPF ou telefone)
+    e deixa vazio um campo "cnpj" que não tenha 14 dígitos."""
+    if isinstance(x, dict):
+        return {k: ("" if k == "cnpj" and not (isinstance(v, str) and re.fullmatch(r"\d{14}", v)) and v not in (None,)
+                    else _limpar(v)) for k, v in x.items()}
+    if isinstance(x, list):
+        return [_limpar(v) for v in x]
+    if isinstance(x, str) and CPF_EM_TEXTO.search(x):
+        return re.sub(r"\s{2,}", " ", CPF_EM_TEXTO.sub("", x)).strip()
+    return x
+
+
+def gravar(saida: Path, resumo: dict, contratos_ano: dict[int, list]) -> None:
+    """Confere cada parte com a mesma conferência da publicação antes de gravar. A parte que não passar fica de fora
+    (e o site diz que ela não pôde ser publicada), em vez de impedir a publicação do Minas Nossa inteiro."""
+    import tempfile
+
+    from .validar import Resultado, conferir_cultura  # aqui dentro: validar não depende deste módulo
+
+    def erros(parte: str) -> list[str]:
+        with tempfile.TemporaryDirectory() as tmp:
+            t = Path(tmp)
+            if parte == "contratos":
+                for ano, lista in contratos_ano.items():
+                    write_json(t / "estado" / "cultura" / f"contratos-{ano}.json", {"ano": ano, "fonte": PNCP_FONTE, "lista": lista})
+            write_json(t / "estado" / "cultura.json", {k: (v if k == parte or k in ("atualizado", "populacao") else None)
+                                                       for k, v in resumo.items()})
+            r = Resultado()
+            conferir_cultura(t, r)
+            return r.erros
+
+    nomes = {"populacao": "população do IBGE", "contratos": "contratações de artistas", "pix": "emendas Pix",
+             "rouanet": "Lei Rouanet"}
+    for parte in ("populacao", "contratos", "pix", "rouanet"):
+        if resumo.get(parte) is None:
+            continue
+        e = erros(parte)
+        if e:
+            for x in e[:20]:
+                log.warning("Shows e cultura (%s) não passou na conferência: %s", parte, x)
+            avisar(f"Shows e cultura: os dados de {nomes[parte]} não passaram na conferência e ficaram fora desta publicação")
+            resumo[parte] = None
+    if resumo.get("contratos"):
+        for ano, lista in contratos_ano.items():
+            write_json(saida / "estado" / "cultura" / f"contratos-{ano}.json", {"ano": ano, "fonte": PNCP_FONTE, "lista": lista})
+    write_json(saida / "estado" / "cultura.json", resumo)
+
+
 def coletar(nacional: Path, saida: Path, cache: Path, ids_mg: set[str], minutos_pncp: float = 8, minutos_salic: float = 4,
             hoje: dt.date | None = None) -> dict:
     """Grava estado/cultura.json (resumo) e estado/cultura/contratos-{ano}.json (cada contratação, por ano).
@@ -689,17 +742,17 @@ def coletar(nacional: Path, saida: Path, cache: Path, ids_mg: set[str], minutos_
         avisar("Shows e cultura: a leitura da Lei Rouanet continua na próxima atualização; os números são da última leitura completa",
                tentar_de_novo=False)
 
+    contratos_ano: dict[int, list] = {}
     if pncp:
-        for ano in sorted({x["ano"] for x in pncp["lista"]}):
-            write_json(saida / "estado" / "cultura" / f"contratos-{ano}.json",
-                       {"ano": ano, "fonte": PNCP_FONTE, "lista": [x for x in pncp["lista"] if x["ano"] == ano]})
-        pncp["anos"] = sorted({x["ano"] for x in pncp["lista"]})
+        for x in pncp["lista"]:
+            contratos_ano.setdefault(x["ano"], []).append(x)
+        pncp["anos"] = sorted(contratos_ano)
         pncp["maiores"] = sorted(pncp.pop("lista"), key=lambda x: -x["valor"])[:30]
     resumo = {
         "atualizado": hoje.isoformat(),
         "populacao": {"fonte": IBGE_PAGINA, "api": IBGE_POPULACAO, "ano": ano_pop, "cidades": len(pop)} if pop else None,
         "contratos": pncp, "pix": pix, "rouanet": rouanet,
     }
-    write_json(saida / "estado" / "cultura.json", resumo)
+    gravar(saida, _limpar(resumo), {a: _limpar(lst) for a, lst in contratos_ano.items()})
     return {"contratos_artistas": (pncp or {}).get("n", 0), "pix_eventos": (pix or {}).get("n", 0),
             "rouanet_projetos": ((rouanet or {}).get("projetos") or {}).get("n", 0)}
