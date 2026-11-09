@@ -28,6 +28,7 @@ import requests
 from sa_etl.cnpj import cnpj_matriz
 
 import fakegov_financas  # noqa: E402  (mesma pasta dos testes)
+import fakegov_noticias  # noqa: E402
 import fakegov_tramitacao  # noqa: E402
 import fakegov_transferegov  # noqa: E402
 import fakegov_tribunais  # noqa: E402
@@ -284,6 +285,9 @@ class FakeGov:
         tra = fakegov_tramitacao.rota(u.netloc, path, q)  # projetos em andamento
         if tra is not None:
             return tra
+        noti = fakegov_noticias.rota(u.netloc, path, q)  # busca de notícias e páginas dos jornais
+        if noti is not None:
+            return noti
         trib = fakegov_tribunais.rota(u.netloc, path, q)  # votos dos ministros do STF
         if trib is not None:
             return trib

@@ -453,7 +453,13 @@ export interface AutorProjeto { nome: string; partido: string; uf: string; id: s
 /** Um documento oficial com argumentos (justificação do autor, parecer do relator ou voto em separado) e os trechos
  * copiados dele, sem mudar palavras. */
 export interface ArgumentoProjeto { quem?: string; papel: string; casa?: string; data?: string; url: string; conclusao?: string; trechos: string[] }
-export interface DebateProjeto { favor: ArgumentoProjeto[]; contra: ArgumentoProjeto[]; documentos: number }
+/** Quem fala contra numa notícia (não é documento oficial): só quando nenhum documento oficial é contra. Os trechos são
+ * copiados da notícia sem mudar palavras; "quem" é o nome como aparece no trecho (etl/sa_etl/noticias.py). */
+export interface NoticiaContra { veiculo: string; titulo?: string; autor?: string; data?: string; url: string; quem?: string; trechos: string[] }
+export interface DebateProjeto {
+  favor: ArgumentoProjeto[]; contra: ArgumentoProjeto[]; documentos: number;
+  noticias_contra?: NoticiaContra[]; noticias_buscadas_em?: string;
+}
 export interface PautaProjeto { data: string; onde: string; url: string; urgencia: boolean; regime: string; relator: string; parecer?: string; terminativo?: boolean }
 export type GrupoProjeto = "pauta" | "mpv" | "nova" | "andamento";
 export interface Projeto {

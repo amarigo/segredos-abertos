@@ -474,6 +474,17 @@ def _conferir_tramitacao(saida: Path, r: Resultado) -> None:
         for a in (deb.get("favor") or []) + (deb.get("contra") or []):
             if not str(a.get("url") or "").startswith(DOCS_OFICIAIS):
                 r.erro(f"Argumento sem documento oficial em {i.get('id')}: {a.get('url')!r}")
+        # Contra em notícia: link https para a notícia original, veículo e frase copiada; nunca site oficial
+        # (documento oficial entra como argumento acima) e nunca no lugar de um documento oficial contra
+        nots = deb.get("noticias_contra") or []
+        if nots and deb.get("contra"):
+            r.erro(f"Notícia contra mostrada em {i.get('id')}, que já tem documento oficial contra")
+        for n in nots:
+            u = str(n.get("url") or "")
+            if not u.startswith("https://") and not u.startswith("http://") or u.startswith(DOCS_OFICIAIS):
+                r.erro(f"Notícia contra sem link para a publicação original em {i.get('id')}: {u!r}")
+            if not n.get("veiculo") or not n.get("trechos"):
+                r.erro(f"Notícia contra sem veículo ou sem trecho copiado em {i.get('id')}: {u!r}")
     for ev in d.get("agenda", []):
         fora = [x for x in ev.get("itens", []) if x not in ids]
         if fora:

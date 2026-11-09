@@ -2,13 +2,16 @@ name: Sonda notícias (temporária)
 on:
   push:
     branches: [claude/project-thread-i1fto7]
-    paths: [".github/sonda/**", ".github/workflows/sonda-noticias.yml"]
+    paths: [".github/sonda/**", ".github/workflows/sonda-noticias.yml", "etl/sa_etl/noticias.py"]
 permissions:
   contents: read
 jobs:
   sonda:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-      - run: pip install requests && python .github/sonda/sonda.py
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r etl/requirements.txt && python .github/sonda/sonda.py
