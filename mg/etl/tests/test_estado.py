@@ -138,6 +138,40 @@ def test_emendas_estaduais_detalhe_de_cada_indicacao():
         assert all(lista["deputados"][n] in deps.values() for n in lista["deputados"])
 
 
+def test_emendas_estaduais_lugar_fora_de_minas_e_nome_oficial_da_cidade():
+    """'Brasília' não é cidade de Minas: com a coluna Estado, aparece como Brasília (Distrito Federal) e entra na
+    conferência. Cidade de Minas ganha o nome oficial do Tesouro ('UBÁ' vira 'Ubá')."""
+    fake = FakeEstado()
+    rows = emendas_mg.linhas(fontes.decodificar(fake.emendas_csv()))
+    mg = {"UBA": "Ubá", "ITAJUBA": "Itajubá", "PARAISOPOLIS": "Paraisópolis", "BELOHORIZONTE": "Belo Horizonte",
+          "POUSOALEGRE": "Pouso Alegre"}
+    fora = emendas_mg.nomear_locais(rows, mg)
+    # grafia antiga do mesmo município: "Brasópolis" no arquivo, "Brazópolis" na lista oficial
+    gr = [{"ano": 2025, "municipio": m, "uf": "MINAS GERAIS", "beneficiario": "Fundo Municipal de Saude", "aprovada": True,
+           "indicado": 1.0} for m in ("BRASÓPOLIS", "SÃO THOMÉ DAS LETRAS", "DONA EUSÉBIA")]
+    ofic = {"BRAZOPOLIS": "Brazópolis", "SAOTOMEDASLETRAS": "São Tomé das Letras", "DONAEUZEBIA": "Dona Euzébia"}
+    assert not emendas_mg.nomear_locais(gr, ofic)
+    assert [r["local"] for r in gr] == ["Brazópolis", "São Tomé das Letras", "Dona Euzébia"]
+    uba = [r for r in rows if r["municipio"] == "UBÁ"]
+    assert uba and all(r["local"] == "Ubá" for r in uba)
+    assert uba[0]["beneficiario"] == "Hospital Sao Vicente de Paulo de Ubá"
+    bsb = [r for r in rows if r["municipio"] == "BRASÍLIA"]
+    assert bsb and all(r["local"] == "Brasília (Distrito Federal)" for r in bsb)
+    for ano, lst in fora.items():
+        assert any(x["municipio"] == "Brasília" and x["uf"] == "Distrito Federal" and x["n"] == 1 for x in lst)
+        assert not any(x["municipio"] in ("Pouso Alegre", "Ubá", "Itajubá") for x in lst), "cidade de Minas não é apontada"
+    deps = {fontes.chave_nome(d["nome"]): str(d["id"]) for d in fake.deputados}
+    r = emendas_mg.resumir(rows, deps, MAPA_CIDADES, fora)
+    for ano, e in r["estado"].items():
+        nomes = {m["nome"] for m in e["municipios"]}
+        assert "Brasília (Distrito Federal)" in nomes and "Brasília" not in nomes and "Ubá" in nomes
+        assert e["fora_de_mg"] == fora[ano]
+    # sem a lista oficial (API fora do ar), nada muda de nome e nada é apontado como fora de Minas sem o Estado
+    rows2 = emendas_mg.linhas(fontes.decodificar(fake.emendas_csv()))
+    fora2 = emendas_mg.nomear_locais(rows2, {})
+    assert all(x["uf"] for lst in fora2.values() for x in lst)
+
+
 def test_proposicoes_contam_so_o_primeiro_autor_e_projetos_que_viraram_lei():
     fake = FakeEstado()
     ids = {str(d["id"]) for d in fake.deputados}
@@ -168,8 +202,8 @@ def test_notas_da_verba_sem_cpf():
 def test_contas_da_prefeitura_sem_contar_duas_vezes(estado, tmp_path):
     c = siconfi.contas("Itajubá", "MG", tmp_path, hoje=HOJE)
     assert c["cod_ibge"] == 3132404, "a Itajubá de MG, não a de mesmo nome em SP"
-    a = c["anos"][0]
-    assert a["ano"] == 2025 and [x["ano"] for x in c["anos"]] == list(range(2025, 2017, -1))
+    a = c["anos"][1]  # o primeiro é 2026, parcial (teste abaixo)
+    assert a["ano"] == 2025 and [x["ano"] for x in c["anos"][1:]] == list(range(2025, 2017, -1))
     saude = next(f for f in a["funcoes"] if f["funcao"] == "Saúde")
     assert saude["liquidado"] == pytest.approx(4_000_000 * 1.7), "intraorçamentárias e restos a pagar ficam de fora"
     assert a["total_liquidado"] == pytest.approx(sum(f["liquidado"] for f in a["funcoes"]))
@@ -179,6 +213,33 @@ def test_contas_da_prefeitura_sem_contar_duas_vezes(estado, tmp_path):
     siconfi._ENTES.clear()
     siconfi.contas("Itajubá", "MG", tmp_path, hoje=HOJE)
     assert not any("/dca" in u for u in estado.chamadas[n:])
+
+
+def test_contas_do_ano_em_curso_pelo_rreo(estado, tmp_path):
+    """2026 ainda não tem DCA: vem do RREO até o último bimestre entregue, comparado ao mesmo bimestre de 2025."""
+    c = siconfi.contas("Itajubá", "MG", tmp_path, hoje=HOJE)
+    a = c["anos"][0]
+    assert a["ano"] == 2026 and a["parcial"] and a["bimestre"] == 4 and a["ate_mes"] == "agosto"
+    assert [x["ano"] for x in c["anos"][1:]] == list(range(2025, 2017, -1)), "os anos fechados continuam vindo da DCA"
+    saude = next(f for f in a["funcoes"] if f["funcao"] == "Saúde")
+    assert saude["codigo"] == "10" and saude["pago"] is None, "o RREO não tem o pago por função"
+    assert saude["liquidado"] == pytest.approx(4_000_000 * 1.8 * 4 / 6), "intraorçamentárias ficam de fora"
+    assert saude["empenhado"] == pytest.approx(saude["liquidado"] * 1.1)
+    assert a["total_liquidado"] == pytest.approx(sum(f["liquidado"] for f in a["funcoes"]))
+    assert [p["nome"] for p in saude["principais"]] == ["Atenção Básica", "Assistência Hospitalar e Ambulatorial"]
+    ant = a["mesmo_periodo_anterior"]
+    assert ant["ano"] == 2025 and ant["liquidado"]["10"] == pytest.approx(4_000_000 * 1.7 * 4 / 6)
+    assert "nr_periodo=4" in a["api"] and "co_esfera=M" in a["api"]
+    e = siconfi.contas_estado(tmp_path, hoje=HOJE)
+    assert e["anos"][0]["parcial"] and "co_esfera=E" in e["anos"][0]["api"]
+
+
+def test_rreo_que_nao_soma_fica_de_fora():
+    linhas = [{"cod_conta": "RREO2TotalDespesas", "coluna": "DESPESAS LIQUIDADAS ATÉ O BIMESTRE (d)", "conta": n, "valor": v}
+              for n, v in (("DESPESAS (EXCETO INTRA-ORÇAMENTÁRIAS) (I)", 100.0), ("Saúde", 60.0), ("Educação", 10.0))]
+    assert siconfi.resumir_rreo2(linhas) is None, "faltam 30: melhor não mostrar o ano do que mostrar errado"
+    linhas[0]["valor"] = 70.0
+    assert siconfi.resumir_rreo2(linhas)["total_liquidado"] == 70.0
 
 
 def test_emendas_federais_na_cidade(tmp_path):
@@ -192,6 +253,56 @@ def test_emendas_federais_na_cidade(tmp_path):
     assert pf and pf[0]["nome"] == "Pessoa física" and pf[0]["url"] == ""
     assert all(f["url"].startswith("https://portaldatransparencia.gov.br/pessoa-juridica/") for f in ita["favorecidos"] if f["cnpj"])
     assert "paraisopolis" not in r
+    # cada quem mandou e cada quem recebeu traz o valor de cada ano, para o filtro de ano da página
+    for ano in ita["por_ano"]:
+        a = str(ano["ano"])
+        assert sum(x["por_ano"].get(a, {}).get("valor", 0) for x in ita["autores"]) == pytest.approx(ano["valor"])
+        assert sum(x["por_ano"].get(a, {}).get("valor", 0) for x in ita["favorecidos"]) == pytest.approx(ano["valor"])
+    for x in ita["autores"] + ita["favorecidos"]:
+        assert sum(y["valor"] for y in x["por_ano"].values()) == pytest.approx(x["valor"])
+
+
+def test_historia_de_cada_emenda(nac, tmp_path):
+    """Cada emenda que chegou a Itajubá: quem indicou, para quê, quanto foi pago e quando chegou, e nas emendas Pix o
+    plano de ação e em que a prefeitura gastou (Transferegov)."""
+    fake = FakeEstado()
+    z = fake.emendas_federais_zip(tmp_path / "EmendasParlamentares.zip")
+    fake.destino_pix(nac)
+    h = emendas_federais.historias(z, nac, MAPA_CIDADES, {}, anos=[2025])
+    assert h["transferegov"]["anos"] == [2025]
+    ita = {e["codigo"]: e for e in h["cidades"]["itajuba"]}
+    assert "202400010001" not in ita, "só os anos que o site mostra"
+    assert "202500010004" not in ita, "a Itajubá de SP fica de fora"
+    pix = ita[FakeEstado.EMENDA_PIX]
+    assert pix["tipo"] == "pix" and pix["na_cidade"] and pix["pago"] == pytest.approx(500_000)
+    assert pix["recebido"] == [{"mes": "2025-04", "nome": "Municipio de Itajuba", "cnpj": FakeEstado.CNPJ_ITAJUBA, "valor": 500_000.0}]
+    p = pix["plano"]
+    assert "Festa do Peão" in p["objeto"] and p["gasto"] == pytest.approx(380_000)
+    assert [g["descricao"] for g in p["gastos"]] == ["Show artístico na Festa do Peão", "Palco e som do Carnaval"]
+    assert p["executores"][0]["metas"][0]["nome"] == "Shows artísticos"
+    assert pix["url"] == f"https://portaldatransparencia.gov.br/emendas/detalhe?codigoEmenda={FakeEstado.EMENDA_PIX}&ano=2025"
+    # emenda para o estado (MINAS GERAIS (UF)) paga a uma entidade de Itajubá: entra pela cidade de quem recebeu
+    saude = ita[FakeEstado.EMENDA_SAUDE]
+    assert not saude["na_cidade"] and saude["plano"] is None
+    assert saude["empenhado"] == pytest.approx(150_000) and saude["pago"] == pytest.approx(150_000), "duas linhas da mesma emenda"
+    assert len(saude["acoes"]) == 2 and saude["funcao"] == "Saude"
+    assert [r["mes"] for r in saude["recebido"]] == ["2025-03", "2025-07"] and saude["recebido_aqui"] == pytest.approx(150_000)
+    sem = ita[FakeEstado.EMENDA_SEM_PAGAR]
+    assert sem["pago"] == 0 and sem["recebido"] == [] and sem["plano"] is None and sem["empenhado"] == pytest.approx(200_000)
+    pf = ita["202500010003"]["recebido"][0]
+    assert pf["nome"] == "Pessoa física" and pf["cnpj"] == ""
+    texto = json.dumps(h, ensure_ascii=False)
+    assert not any(c in texto for c in CPF_FORMATOS) and "***" not in texto, "CPF nunca aparece, nem mascarado"
+
+
+def test_historias_sem_transferegov(nac, tmp_path):
+    """Sem a leitura do Transferegov, a ficha mostra só o Portal da Transparência (e o site diz isso)."""
+    import shutil
+    z = FakeEstado().emendas_federais_zip(tmp_path / "EmendasParlamentares.zip")
+    shutil.rmtree(nac / "emendas" / "destino", ignore_errors=True)
+    h = emendas_federais.historias(z, nac, MAPA_CIDADES, {}, anos=[2025])
+    assert h["transferegov"] is None
+    assert all(e["plano"] is None for e in h["cidades"]["itajuba"])
 
 
 def test_governador_e_vice_da_chapa(estado, tmp_path):
@@ -241,8 +352,9 @@ def _json(saida, rel):
     return json.loads((saida / rel).read_text(encoding="utf-8"))
 
 
-def test_montagem_completa(estado, nacional, tmp_path):
-    saida, cont = _montar(nacional, tmp_path)
+def test_montagem_completa(estado, nac, tmp_path):
+    FakeEstado().destino_pix(nac)  # o coletor nacional já leu o Transferegov
+    saida, cont = _montar(nac, tmp_path)
     assert cont["deputados_estaduais"] == N_DEPUTADOS and cont["governo"] == 2 and cont["equipe_governo"] == 3
     idx = _json(saida, "almg/deputados.json")
     assert len(idx["deputados"]) == N_DEPUTADOS and len(list((saida / "almg" / "d").glob("*.json"))) == N_DEPUTADOS
@@ -261,6 +373,11 @@ def test_montagem_completa(estado, nacional, tmp_path):
     assert gov["eleicoes"][0]["eleicao"] == 2022 and gov["equipe"]["pessoas"]
     ita = _json(saida, "cidades/dinheiro/itajuba.json")
     assert ita["contas"]["anos"] and ita["federais"]["por_ano"] and ita["estaduais"]["lista"]
+    hist = _json(saida, "cidades/emendas/itajuba.json")
+    assert hist["emendas"] and ita["historias"]["n"] == len(hist["emendas"]) == cont["historias_emendas"]
+    assert hist["transferegov"]["fonte"].startswith("https://api-publica.transferegov.gestao.gov.br/")
+    assert next(e for e in hist["emendas"] if e["codigo"] == FakeEstado.EMENDA_PIX)["plano"]["gastos"]
+    assert _json(saida, "cidades/emendas/paraisopolis.json")["emendas"] == []
     par = _json(saida, "cidades/dinheiro/paraisopolis.json")
     assert par["federais"] == {"fonte": emendas_federais.PAGINA, "por_ano": [], "favorecidos": [], "autores": []}, \
         "a fonte respondeu e a cidade não recebeu nada: lista vazia, não 'fonte fora do ar'"

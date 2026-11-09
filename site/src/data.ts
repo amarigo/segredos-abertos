@@ -1,4 +1,5 @@
 import type { DocPagamento } from "./components/DocsEmendas";
+import type { PlanoPix } from "./components/DestinoPix";
 // Tipos e funções para ler os arquivos JSON gerados pelo coletor (etl/).
 export type Casa = "camara" | "senado";
 export type Grupo = "pessoal" | "escritorio" | "servicos";
@@ -341,7 +342,9 @@ export interface EmendasEstado {
     empenhado?: number; reprovadas?: number; n_autores?: number; n_beneficiarios?: number;
     beneficiarios?: (SomaEmenda & { municipio: string; tipo: string })[];
     /** órgão do estado que executa, forma de execução, área e tipo de despesa */
-    orgaos?: SomaEmenda[]; tipos?: SomaEmenda[]; areas?: SomaEmenda[]; grupos?: SomaEmenda[] }>;
+    orgaos?: SomaEmenda[]; tipos?: SomaEmenda[]; areas?: SomaEmenda[]; grupos?: SomaEmenda[];
+    /** lugares do arquivo que não são municípios de Minas (outro estado ou nome fora da lista oficial do Tesouro) */
+    fora_de_mg?: { municipio: string; uf: string; n: number; indicado: number; beneficiarios: string[] }[] }>;
 }
 /** Todas as indicações aprovadas de um ano (estado/emendas/<ano>.json). Os textos ficam uma vez só em "textos";
     cada linha guarda a posição deles, na ordem de "campos". */
@@ -398,13 +401,38 @@ export interface DinheiroCidade {
   id: string; nome: string;
   estaduais: { fonte: string; lista: EmendaEstadualCidade[] | null } | null;
   federais: { fonte: string; por_ano: { ano: number; valor: number; n: number }[];
-    favorecidos: { nome: string; cnpj: string; valor: number; anos: number[]; url: string; autores: { nome: string; valor: number }[] }[];
-    autores: { nome: string; politico: string | null; partido: string; valor: number; n: number }[] } | null;
+    favorecidos: { nome: string; cnpj: string; valor: number; anos: number[]; url: string; autores: { nome: string; valor: number }[];
+      /** o valor e os autores de cada ano (ausente nos arquivos antigos) */
+      por_ano?: Record<string, { valor: number; autores: { nome: string; valor: number }[] }> }[];
+    autores: { nome: string; politico: string | null; partido: string; valor: number; n: number; por_ano?: Record<string, { valor: number; n: number }> }[] } | null;
   contas: ContasEnte | null;
+  /** Quantas emendas federais da cidade têm a história contada (cidades/emendas/{id}.json); null se a fonte falhou */
+  historias?: { n: number; anos: number[] } | null;
+}
+/** A história de uma emenda federal que chegou à cidade (cidades/emendas/{id}.json, mg/etl/mg_etl/emendas_federais.py) */
+export interface HistoriaEmenda {
+  codigo: string; ano: number; tipo: string; tipo_nome: string; autor: string; politico: string | null; partido: string;
+  local: string; funcao: string; subfuncao: string; acoes: string[]; na_cidade: boolean;
+  empenhado: number; liquidado: number; pago: number;
+  recebido: { mes: string; nome: string; cnpj: string; valor: number }[]; recebido_aqui: number;
+  plano: PlanoPix | null; url: string;
+}
+export interface HistoriasCidade {
+  id: string; nome: string; anos: number[]; fonte: string;
+  transferegov: { fonte: string; consulta: string; atualizado: string; completo: boolean; anos: number[] } | null;
+  emendas: HistoriaEmenda[];
 }
 /** Contas entregues ao Tesouro (SICONFI): despesas por área, ano a ano. Prefeituras (cidades/dinheiro) e o estado (estado/contas.json). */
-export interface ContasEnte { cod_ibge: number; fonte: string; api: string; anos: { ano: number; instituicao: string; total_empenhado: number; total_liquidado: number; total_pago: number;
-    funcoes: { codigo: string; funcao: string; empenhado: number; liquidado: number; pago: number; principais: { nome: string; valor: number }[] }[] }[] }
+export interface ContasEnte { cod_ibge: number; fonte: string; api: string; anos: ContasAno[] }
+/** Um ano das contas. O ano em curso vem do RREO (a cada dois meses): parcial, até o mês do bimestre, sem o "pago"
+ *  por área, e com o mesmo período do ano anterior para comparar. */
+export interface ContasAno { ano: number; instituicao: string; total_empenhado: number; total_liquidado: number; total_pago: number | null;
+  parcial?: boolean; bimestre?: number; ate_mes?: string; api?: string;
+  mesmo_periodo_anterior?: { ano: number; total_liquidado: number; liquidado: Record<string, number> } | null;
+  funcoes: { codigo: string; funcao: string; empenhado: number; liquidado: number; pago: number | null; principais: { nome: string; valor: number }[] }[] }
+/** "2026 (até agosto)" no ano parcial; só o ano nos outros */
+export const anoContas = (a: Pick<ContasAno, "ano" | "parcial" | "ate_mes">, curto = false) =>
+  a.parcial && a.ate_mes ? `${a.ano} (até ${curto ? a.ate_mes.slice(0, 3) + "." : a.ate_mes})` : `${a.ano}`;
 /** Renúncia fiscal federal das empresas com sede em MG (estado/incentivos.json) */
 export interface IncentivosMG { fonte: string; anos: { ano: number; parcial: boolean; total_brasil: number; total: number; n: number;
   por_municipio: [string, number, number][]; por_setor: { setor: string; valor: number; n: number }[];
@@ -497,3 +525,21 @@ export interface Tribunais {
   fontes: Record<string, { nome: string; pagina: string; servicos: string[] }>;
   classes: Record<string, string>; ministros: MinistroResumo[]; julgamentos: Julgamento[];
 }
+
+/* Licitações e contratações diretas (licitacoes/<lugar>-<ano>.json, gerado por mg/etl/mg_etl/pncp.py a partir do PNCP) */
+export type FormaCompra = "licitacao" | "dispensa" | "inexigibilidade" | "outro";
+export interface ContratoPncp { fornecedor: string; cnpj: string; valor: number; assinatura: string; fim: string; tipo: string; url: string }
+export interface CompraPncp { id: string; data: string; orgao: string; unidade: string; forma: FormaCompra; modalidade: string; amparo: string;
+  amparo_descricao: string; objeto: string; processo: string; estimado: number; homologado: number; valor: number; situacao: string;
+  andamento: string; url: string; contratos: ContratoPncp[] }
+export interface LicitacoesLocal {
+  id: string; nome: string; ano: number; atualizado: string; fonte: string; api: string; completo: boolean; faltam: string[];
+  total: { n: number; estimado: number; homologado: number; contratado: number; contratos: number; valor_contratos: number };
+  por_forma: { forma: FormaCompra; rotulo: string; n: number; estimado: number; homologado: number; contratado: number }[];
+  por_andamento: { andamento: string; n: number }[];
+  orgaos: { nome: string; cnpj: string; n: number; valor: number }[];
+  fornecedores: { nome: string; cnpj: string; n: number; valor: number }[];
+  amparos: { nome: string; descricao: string; forma: FormaCompra; n: number; valor: number }[];
+  n_lista: number; compras: CompraPncp[];
+}
+export interface LicitacoesIndice { fonte: string; api: string; atualizado: string; locais: { id: string; nome: string; anos: { ano: number; n: number; completo: boolean }[] }[] }

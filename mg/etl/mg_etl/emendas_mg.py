@@ -42,6 +42,7 @@ REGRAS = {
     "uo_nome": [["unidade", "orcamentaria", "descricao"]],
     "funcao": [["funcao", "descricao"]],
     "municipio": [["municipio"]],
+    "uf": [["estado"]],
     "tipo_beneficiario": [["tipo", "beneficiario"]],
     "beneficiario": [["nome", "beneficiario"]],
     "descricao": [["descricao", "indicacao"]],
@@ -73,7 +74,7 @@ def achar_colunas(cab: list[str]) -> dict[str, str | None]:
         out[campo] = None
         for r in regras:
             cands = [c for c, w in ws.items() if all(p in w for p in r)]
-            if campo == "status":  # "Status" sozinho, não "Status da Indicação"
+            if campo in ("status", "uf"):  # "Status" e "Estado" sozinhos, não "Status da Indicação"
                 cands = [c for c in cands if len(ws[c]) == 1] or cands
             if cands:
                 out[campo] = min(cands, key=lambda c: len(ws[c]))
@@ -134,7 +135,7 @@ def linhas(texto: str) -> list[dict]:
             vistos.add(chave)
         out.append({
             "ano": int(ano), "numero": g(r, "numero"), "autor": g(r, "autor"),
-            "municipio": g(r, "municipio"), "beneficiario": fontes.sem_cpf(fontes.bonito(limpo(g(r, "beneficiario")))),
+            "municipio": g(r, "municipio"), "uf": limpo(g(r, "uf")), "beneficiario": fontes.sem_cpf(fontes.bonito(limpo(g(r, "beneficiario")))),
             "tipo_beneficiario": fontes.bonito(limpo(g(r, "tipo_beneficiario"))),
             "descricao": fontes.sem_cpf(limpo(g(r, "descricao")))[:220], "area": fontes.bonito(limpo(g(r, "funcao"))),
             "orgao": limpo(g(r, "uo")), "orgao_nome": fontes.bonito(limpo(g(r, "uo_nome"))) or limpo(g(r, "uo")),
@@ -158,6 +159,66 @@ def chave_cidade(nome: str) -> str:
 
 def _top(d: dict, n: int) -> list:
     return sorted(d.items(), key=lambda kv: -kv[1][0])[:n]
+
+
+A_DEFINIR = re.compile(r"DEFINI")
+UF_MG = {"MG", "MINAS GERAIS"}
+
+
+def grafia(chave: str) -> str:
+    """Chave de cidade sem as diferenças de grafia antiga: TH->T, Z->S, Y->I, PH->F e letras dobradas."""
+    c = chave.replace("TH", "T").replace("PH", "F").replace("Z", "S").replace("Y", "I")
+    return re.sub(r"(.)\1+", r"\1", c)
+
+
+def nomear_locais(rows: list[dict], mg: dict[str, str]) -> dict:
+    """Põe em cada indicação o nome do lugar como aparece no site ("local").
+
+    mg: chave sem acento -> nome oficial dos 853 municípios de Minas (API do Tesouro). Com ela:
+    - município de Minas ganha o nome oficial, com acento e maiúsculas certas ("UBÁ" vira "Ubá");
+    - quando a coluna Estado do arquivo diz outro estado, o nome leva a UF: "Brasília (Distrito Federal)";
+    - nome que não é município de Minas nem traz outro estado fica como veio, e entra na conferência.
+    Devolve a conferência por ano: {ano: [{municipio, uf, n, indicado, beneficiarios}]}, para o site e o log."""
+    fora: dict = defaultdict(lambda: defaultdict(lambda: {"n": 0, "indicado": 0.0, "ben": defaultdict(float)}))
+    # Grafia antiga ou variante do mesmo município ("Brasópolis"/"Brazópolis", "São Thomé"/"São Tomé",
+    # "Dona Eusébia"/"Dona Euzébia"): só vale quando a grafia leva a um único município de Minas
+    por_grafia: dict = defaultdict(list)
+    for kk in mg:
+        por_grafia[grafia(kk)].append(kk)
+    for r in rows:
+        bruto = r["municipio"]
+        k = chave_cidade(bruto)
+        uf = norm_name(r.get("uf") or "").strip()
+        if mg and k not in mg and len(por_grafia.get(grafia(k), [])) == 1 and (not uf or uf in UF_MG):
+            k = por_grafia[grafia(k)][0]
+        nome = fontes.bonito(bruto) or "Sem município"
+        if not k or A_DEFINIR.search(norm_name(bruto)):
+            r["local"] = "A ser definido pelo órgão" if k else nome
+            continue
+        if mg and k in mg and (not uf or uf in UF_MG):
+            r["local"] = mg[k]
+            # "Hospital Sao Vicente de Paulo de UBA": o nome da cidade dentro do nome de quem recebe também
+            if " " not in mg[k]:
+                r["beneficiario"] = re.sub(rf"\b{re.escape(mg[k].upper())}\b|\b{re.escape(norm_name(mg[k]))}\b", mg[k],
+                                           r["beneficiario"])
+            continue
+        fora_mg = bool(uf) and uf not in UF_MG
+        r["local"] = f"{nome} ({fontes.bonito(r['uf'])})" if fora_mg else nome
+        if mg or fora_mg:
+            f = fora[r["ano"]][(nome, fontes.bonito(r.get("uf") or ""))]
+            if r["aprovada"]:
+                f["n"] += 1; f["indicado"] += r["indicado"]; f["ben"][r["beneficiario"]] += r["indicado"]
+    out = {}
+    for ano, d in fora.items():
+        lst = [{"municipio": m, "uf": uf, "n": v["n"], "indicado": round(v["indicado"], 2),
+                "beneficiarios": [b for b, _ in sorted(v["ben"].items(), key=lambda kv: -kv[1])[:5]]}
+               for (m, uf), v in d.items() if v["n"]]
+        if lst:
+            out[ano] = sorted(lst, key=lambda x: -x["indicado"])
+            log.warning("Emendas ALMG %s: lugares que não são municípios de Minas: %s", ano,
+                        "; ".join(f"{x['municipio']} [{x['uf'] or 'sem estado'}] {x['n']} indicações, R$ {x['indicado']:,.0f}, "
+                                  f"ex.: {', '.join(x['beneficiarios'][:3])}" for x in out[ano][:15]))
+    return out
 
 
 CAMPOS_LISTA = ("numero", "autor", "municipio", "beneficiario", "tipo_beneficiario", "tipo_indicacao", "orgao_nome", "acao",
@@ -197,7 +258,7 @@ def lista_do_ano(rows: list[dict], deputados: dict[str, str]) -> dict:
     linhas_out = []
     autores: dict[str, str | None] = {}
     for r in sorted(rows, key=lambda r: (-r["indicado"], r["numero"])):
-        x = dict(r, autor=fontes.bonito(r["autor"]), municipio=fontes.bonito(r["municipio"]) or "Sem município")
+        x = dict(r, autor=fontes.bonito(r["autor"]), municipio=r.get("local") or fontes.bonito(r["municipio"]) or "Sem município")
         autores[x["autor"]] = deputados.get(fontes.chave_nome(r["autor"]))
         linhas_out.append([round(x[k], 2) if k in NUMEROS else (x[k] if k == "numero" else t(x[k] or "")) for k in CAMPOS_LISTA])
     return {"campos": list(CAMPOS_LISTA), "textos": textos, "linhas": linhas_out,
@@ -205,7 +266,7 @@ def lista_do_ano(rows: list[dict], deputados: dict[str, str]) -> dict:
             "indicado": round(sum(r["indicado"] for r in rows), 2), "pago": round(sum(r["pago"] for r in rows), 2), "n": len(rows)}
 
 
-def resumir(rows: list[dict], deputados: dict[str, str], cidades: dict[str, str]) -> dict:
+def resumir(rows: list[dict], deputados: dict[str, str], cidades: dict[str, str], fora: dict | None = None) -> dict:
     """deputados: nome-chave -> id; cidades: chave do município -> id da cidade acompanhada.
 
     Devolve {"por_deputado": {id: {ano: {...}}}, "por_cidade": {id: [...]}, "estado": {ano: {...}}, "listas": {ano: {...}}}.
@@ -225,7 +286,7 @@ def resumir(rows: list[dict], deputados: dict[str, str], cidades: dict[str, str]
             continue
         por_ano[r["ano"]].append(r)
         dep = deputados.get(fontes.chave_nome(r["autor"]))
-        mun = fontes.bonito(r["municipio"]) or "Sem município"
+        mun = r.get("local") or fontes.bonito(r["municipio"]) or "Sem município"
         e = estado[r["ano"]]
         e["indicado"] += r["indicado"]; e["pago"] += r["pago"]; e["empenhado"] += r["empenhado"]; e["n"] += 1
         _mais(e["mun"][mun], r)
@@ -268,6 +329,8 @@ def resumir(rows: list[dict], deputados: dict[str, str], cidades: dict[str, str]
         out_estado[ano] = {
             "indicado": round(e["indicado"], 2), "pago": round(e["pago"], 2), "empenhado": round(e["empenhado"], 2), "n": e["n"],
             "reprovadas": e["reprovadas"],
+            # lugares do arquivo que não são municípios de Minas (outro estado, ou nome fora da lista oficial)
+            "fora_de_mg": (fora or {}).get(ano, []),
             "municipios": _ranking(e["mun"], 30),
             "n_municipios": len(e["mun"]),
             "autores": _ranking(e["autor"], 150, lambda k, v: {"deputado": deputados.get(fontes.chave_nome(k))}),
@@ -290,7 +353,7 @@ def resumir(rows: list[dict], deputados: dict[str, str], cidades: dict[str, str]
             "sem_deputado": {a: dict(x) for a, x in sem_deputado.items()}}
 
 
-def coletar(cache: Path, deputados: dict[str, str], cidades: dict[str, str]) -> dict | None:
+def coletar(cache: Path, deputados: dict[str, str], cidades: dict[str, str], mg: dict[str, str] | None = None) -> dict | None:
     """Baixa (cópia de até 20 horas) e resume. None se não houver arquivo nem cópia: as páginas ficam sem emendas."""
     global ARQUIVO_USADO
     ARQUIVO_USADO = achar_arquivo()
@@ -298,7 +361,8 @@ def coletar(cache: Path, deputados: dict[str, str], cidades: dict[str, str]) -> 
     if texto is None:
         return None
     try:
-        return resumir(linhas(texto), deputados, cidades)
+        rows = linhas(texto)
+        return resumir(rows, deputados, cidades, nomear_locais(rows, mg or {}))
     except ValueError as e:
         log.warning("Emendas ALMG: %s", e)
         fontes.avisar("Emendas estaduais (ALMG): o arquivo veio num formato diferente; essa parte ficou sem atualização")

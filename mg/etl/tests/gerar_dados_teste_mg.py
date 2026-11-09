@@ -36,7 +36,11 @@ def main(nacional: Path, saida: Path) -> None:
     with tempfile.TemporaryDirectory() as cache:
         nac = Path(cache) / "nacional"
         fake.emendas_federais_zip(emendas_nac.zip_no_cache(nac))
-        build.montar(nacional, saida, Path(cache), lista, cache_nacional=nac)
+        # cópia dos dados nacionais com o plano de ação da emenda Pix de Itajubá (sem mexer nos dados do site nacional)
+        import shutil
+        copia = shutil.copytree(nacional, Path(cache) / "dados-nacionais")
+        fake.destino_pix(copia)
+        build.montar(copia, saida, Path(cache), lista, cache_nacional=nac)
     r = validar(saida, minimos={"camara": 1, "senado": 1, "votacoes": 1, "mandatos": 1})
     assert r.ok, r.erros
     print(f"Dados de teste do Minas Nossa em {saida}")

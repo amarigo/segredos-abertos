@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { linkSeguro } from "../data";
 
 /** Quem publicou a foto, pelo endereço dela (para o crédito embaixo da foto no perfil) */
@@ -52,5 +53,22 @@ export function FotoPerfil({ url, nome }: { url?: string | null; nome: string })
       <FotoPolitico url={url} nome={nome} tamanho={112} />
       {f && endereco(url) && <figcaption className="small muted">Foto: <a href={f.url} target="_blank" rel="noreferrer" title={`Foto oficial publicada por: ${f.nome}`}>{f.curto}</a></figcaption>}
     </figure>
+  );
+}
+
+/** Rótulo de uma linha de ranking com foto: posição, foto grande, nome em destaque e partido (ou outra linha) embaixo.
+ *  Usado nos gráficos de "quem mais gastou" das listas de políticos. */
+export function RotuloRanking({ posicao, to, foto, nome, sub, cor }: {
+  posicao: number; to: string; foto?: string | null; nome: string; sub?: string; cor?: string;
+}) {
+  return (
+    <span className="rank-foto">
+      <span className="rank-n" aria-hidden="true">{posicao}</span>
+      <FotoPolitico url={foto} nome={nome} tamanho={52} decorativa />
+      <span className="rank-txt">
+        <Link className="rank-nome" to={to}>{nome}</Link>
+        {sub && <span className="rank-sub"><i style={{ background: cor || "var(--muted)" }} />{sub}</span>}
+      </span>
+    </span>
   );
 }

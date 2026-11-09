@@ -14,6 +14,7 @@ const almgIdx = dados("almg/deputados.json");
 const dep = dados("almg/d/20003.json");
 const gov = dados("estado/governo.json");
 const dinheiroIta = dados("cidades/dinheiro/itajuba.json");
+const historiasIta = dados("cidades/emendas/itajuba.json");
 const emEst = dados("estado/emendas.json");
 const contasMG = dados("estado/contas.json").contas;
 const emps = dados("empresas.json");
@@ -178,13 +179,33 @@ test.describe("jornada", () => {
     await expect(page.locator("main")).toContainText(brl(v.total));
     await expect(page.locator("main")).toContainText("Pessoa física");
     await expect(page.getByRole("link", { name: /Prestação de contas de/ })).toHaveAttribute("href", /verba-indenizatoria\/detalhe\.html\?id=20003/);
-    // notas agrupadas por tipo, como na ALMG: abrir o grupo mostra cada nota com o número
+    // as notas ficam no nosso site: nenhuma nota manda para a ALMG, o link oficial fica só no fim, para conferir
+    await expect(page.getByRole("link", { name: /ver na ALMG/ })).toHaveCount(0);
+    // lista completa mês a mês, como a prestação de contas da ALMG: o mês mais novo vem aberto
+    const ultimoMes = Math.max(...v.notas.map((n: { mes: number }) => n.mes));
+    const notasMes = v.notas.filter((n: { mes: number }) => n.mes === ultimoMes);
+    await expect(page.locator("#todas-as-notas details.abrir[open] tbody tr")).toHaveCount(notasMes.length);
+    // clicar numa nota mostra todos os dados dela aqui mesmo
+    const nota = notasMes.find((n: { cnpj: string }) => n.cnpj) || notasMes[0];
+    await page.locator("#todas-as-notas details.abrir[open] button.nota-abrir", { hasText: nota.fornecedor }).first().click();
+    const det = page.locator("#todas-as-notas .nota-detalhe");
+    await expect(det).toBeVisible();
+    await expect(det).toContainText(nota.tipo);
+    await expect(det).toContainText(new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(nota.valor).replace(/\s/g, " "));
+    if (nota.numero) await expect(det).toContainText(nota.numero);
+    // planilha com todas as notas do ano
+    const [arq] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: /Baixar todas as notas/ }).click()]);
+    const csv = (await import("node:fs")).readFileSync(await arq.path(), "utf-8");
+    expect(csv.trim().split("\n").length).toBe(v.notas.length + 1);
+    // por tipo de despesa: abrir o grupo mostra cada nota com o número
+    await page.getByRole("button", { name: "Por tipo de despesa" }).click();
     const tipo = v.tipos[0];
     const notasTipo = v.notas.filter((n: { tipo: string }) => n.tipo === tipo.tipo);
-    await page.locator("details.abrir summary", { hasText: tipo.tipo }).click();
-    await expect(page.locator("details.abrir[open] tbody tr")).toHaveCount(notasTipo.length);
+    const grupo = page.locator("#todas-as-notas details.abrir", { has: page.locator("summary", { hasText: tipo.tipo }) });
+    if (!(await grupo.getAttribute("open") !== null)) await grupo.locator("summary").click();
+    await expect(grupo.locator("tbody tr:not(.nota-aberta)")).toHaveCount(notasTipo.length);
     const comNumero = notasTipo.find((n: { numero?: string }) => n.numero);
-    if (comNumero) await expect(page.locator("details.abrir[open] tbody")).toContainText(comNumero.numero);
+    if (comNumero) await expect(grupo.locator("tbody")).toContainText(comNumero.numero);
     // filtro por tipo: só as notas daquele tipo nas maiores despesas
     await page.locator("#filtro-tipo-nota").selectOption(tipo.tipo);
     await expect(page.locator("main")).toContainText(`${notasTipo.length} nota`);
@@ -225,7 +246,14 @@ test.describe("jornada", () => {
     await page.goto("./#/dinheiro");
     const [a, b] = contasMG.anos;
     await expect(page.locator("main")).toContainText(`Gasto em ${a.ano}`);
-    await expect(page.locator("main")).toContainText(`em relação a ${b.ano}`);
+    // o ano em curso (parcial, do RREO) é comparado com o mesmo período do ano anterior, não com o ano inteiro
+    await expect(page.locator("main")).toContainText(a.parcial ? `até ${a.ate_mes}` : `em relação a ${b.ano}`);
+    if (a.parcial) {
+      await expect(page.locator("main")).toContainText(`em relação ao mesmo período de ${b.ano}`);
+      await page.getByRole("button", { name: `Escolher ${b.ano}` }).first().click();  // a coluna do gráfico escolhe o ano
+      await expect(page.locator("#ano-dinheiro")).toHaveValue(String(b.ano));
+      await expect(page.locator("main")).toContainText(`Gasto em ${b.ano}`);
+    }
     const f = a.funcoes[0];
     await page.locator("details.abrir summary", { hasText: f.funcao }).first().click();
     await expect(page.locator("details.abrir[open]").first()).toContainText(f.principais[0].nome);
@@ -260,13 +288,54 @@ test.describe("jornada", () => {
     const main = page.locator("main");
     await expect(main).toContainText(`Gasto em ${dinheiroIta.contas.anos[0].ano}`);
     await expect(main).toContainText(brl(dinheiroIta.federais.por_ano[0].valor));
+    // emendas federais: começa no ano mais recente; "Todos os anos" soma tudo e a coluna do gráfico escolhe o ano
+    const anosFed = dinheiroIta.federais.por_ano.map((x: { ano: number }) => x.ano);
+    await expect(main).toContainText(`Quem mandou em ${Math.max(...anosFed)}`);
+    await page.locator("#ano-federais").selectOption("todos");
+    await expect(main).toContainText("Quem mandou em todos os anos");
     await expect(main).toContainText("Pessoa física");
+    await page.getByRole("button", { name: `Escolher ${Math.min(...anosFed)}` }).first().click();
+    await expect(page.locator("#ano-federais")).toHaveValue(String(Math.min(...anosFed)));
+    await page.locator("#ano-estaduais").selectOption("todos");
+    await expect(main).toContainText("Indicado em todos os anos");
     await expect(main.getByRole("link", { name: /SICONFI/ })).toBeVisible();
     await expect(main.getByRole("link", { name: /Portal da Transparência \(CGU\)/ })).toBeVisible();
     await expect(main).toContainText(dinheiroIta.estaduais.lista[0].beneficiario);
     for (const a of await main.locator("a[href^='http']").evaluateAll((as) => as.map((x) => (x as HTMLAnchorElement).href))) {
       expect(a).toMatch(/^https:\/\/(siconfi\.tesouro|apidatalake\.tesouro|portaldatransparencia|www\.almg|dados\.mg|www\.transparencia\.mg|dadosabertos\.tse|[a-z.]+\.mg\.(gov|leg)\.br)/);
     }
+    expect(erros).toEqual([]);
+  });
+
+  test("história de cada emenda: se o dinheiro chegou, o plano e em que a prefeitura gastou", async ({ page }) => {
+    const erros = vigiar(page);
+    const pix = historiasIta.emendas.find((e: { plano: unknown }) => e.plano);
+    await page.goto("./#/cidade/itajuba?aba=dinheiro");
+    const main = page.locator("main");
+    await main.getByRole("button", { name: new RegExp(`Abrir as ${dinheiroIta.historias.n} emendas`) }).click();
+    await expect(main.locator(".hist-ficha")).toHaveCount(historiasIta.emendas.filter((e: { ano: number }) => e.ano === historiasIta.anos.at(-1)).length);
+    // a busca acha a emenda pelo que a prefeitura pagou com o dinheiro
+    await main.getByLabel("Procurar nas emendas").fill("festa do peao");
+    await expect(main.locator(".hist-ficha")).toHaveCount(1);
+    const ficha = main.locator(`#emenda-${pix.codigo}`);
+    await ficha.locator("summary").click();
+    await expect(ficha).toContainText("Dinheiro chegou");
+    await expect(ficha).toContainText(pix.plano.gastos[0].descricao);
+    await expect(ficha).toContainText(pix.plano.gastos[0].recebedor);
+    await expect(ficha).toContainText(brl(pix.recebido[0].valor));
+    await expect(ficha.getByRole("link", { name: /Plano de ação no Transferegov/ })).toBeVisible();
+    for (const a of await ficha.locator("a[href^='http']").evaluateAll((as) => as.map((x) => (x as HTMLAnchorElement).href))) {
+      expect(a).toMatch(/^https:\/\/(portaldatransparencia\.gov\.br|especiais\.transferegov\.sistema\.gov\.br)\//);
+    }
+    expect(await ficha.innerText()).not.toMatch(CPF);
+    // filtro pela situação: a emenda ainda não paga
+    await main.getByLabel("Procurar nas emendas").fill("");
+    await main.getByRole("button", { name: /Dinheiro ainda não chegou/ }).click();
+    await expect(main.locator(".hist-ficha").first()).toContainText("Dinheiro não chegou");
+    // link direto de uma emenda abre a ficha dela
+    await page.goto(`./#/cidade/itajuba?aba=dinheiro&emenda=${pix.codigo}`);
+    await expect(page.locator(`#emenda-${pix.codigo}`)).toHaveAttribute("open", "");
+    await expect(page.locator(`#emenda-${pix.codigo}`)).toContainText(pix.plano.objeto);
     expect(erros).toEqual([]);
   });
 
@@ -310,7 +379,60 @@ test.describe("jornada", () => {
   });
 });
 
+test.describe("painel por área", () => {
+  test("as áreas somam o total do ano; juntar áreas soma as duas; a cidade filtra", async ({ page }) => {
+    const erros = vigiar(page);
+    const ano = Object.keys(emEst.anos).sort().pop()!;
+    const areas: { nome: string; indicado: number; n: number }[] = emEst.anos[ano].areas;
+    await page.goto("./#/painel");
+    await expect(page.locator("main h1")).toContainText("Painel das emendas por área");
+    for (const a of areas) await expect(page.locator(".painel-area", { hasText: a.nome })).toContainText(brl(a.indicado));
+    const [a1, a2] = areas;
+    await page.locator(".painel-area", { hasText: a1.nome }).click();
+    await expect(page.locator(".painel-area", { hasText: a1.nome })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".painel-resumo")).toContainText(a1.nome);
+    await expect(page.locator(".kpi").first()).toContainText(`${a1.n} indicaç`);
+    if (a2) {
+      await page.locator(".painel-area", { hasText: a2.nome }).click();
+      await expect(page.locator(".kpi").first()).toContainText(`${a1.n + a2.n} indicaç`);
+      await expect(page).toHaveURL(/area=.*area=/);
+    }
+    // cidade na tabela filtra tudo
+    await page.locator(".painel-matriz button.link").first().click();
+    await expect(page.locator("#painel-cidade")).not.toHaveValue("");
+    expect(await page.locator("main").innerText()).not.toMatch(CPF);
+    expect(erros).toEqual([]);
+  });
+
+  test("vários anos de uma vez somam os anos escolhidos", async ({ page }) => {
+    const erros = vigiar(page);
+    const anos = Object.keys(emEst.anos).sort();
+    await page.goto(`./#/painel?${anos.map((a) => `ano=${a}`).join("&")}`);
+    const n = anos.reduce((s, a) => s + emEst.anos[a].n, 0);
+    await expect(page.locator(".kpi").first()).toContainText(`${n.toLocaleString("pt-BR")} indicaç`);
+    expect(erros).toEqual([]);
+  });
+});
+
 test.describe("segurança", () => {
+  test("licitações: cidade e estado, com e sem licitação, quem recebeu e sem CPF", async ({ page }) => {
+    const erros = vigiar(page);
+    const lic = dados("licitacoes/itajuba-2025.json");
+    await page.goto("./#/cidade/itajuba?aba=licitacoes");
+    await page.getByLabel("Ano:").selectOption("2025");
+    await expect(page.getByText("Compras publicadas", { exact: true })).toBeVisible();
+    await expect(page.locator(".stat").first()).toContainText(String(lic.total.n));
+    await expect(page.getByText("Por que não houve licitação")).toBeVisible();
+    await expect(page.getByRole("link", { name: /Asfalto para ruas do centro/ })).toHaveAttribute("href", /^https:\/\/pncp\.gov\.br\/app\/editais\//);
+    await page.getByLabel("Com ou sem licitação").selectOption("inexigibilidade");
+    await expect(page.locator("tbody tr").filter({ hasText: "Show da festa" })).toContainText("Pessoa física");
+    expect(await page.locator("main").innerText()).not.toMatch(CPF);
+    await page.goto("./#/licitacoes");
+    await expect(page.getByRole("tab", { name: "Governo de Minas" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("heading", { name: /^Compras do governo de Minas em \d{4}$/ })).toBeVisible();
+    expect(erros).toEqual([]);
+  });
+
   test("nenhum CPF nas páginas do estado (os arquivos de teste trazem CPF de propósito)", async ({ page }) => {
     vigiar(page);
     for (const rota of ["#/deputado-estadual/20003", "#/governo", "#/cidade/itajuba?aba=dinheiro", "#/emendas-estaduais"]) {

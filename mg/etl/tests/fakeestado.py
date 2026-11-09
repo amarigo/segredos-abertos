@@ -46,6 +46,8 @@ FUNCOES = [("10", "Saúde", [("301", "Atenção Básica"), ("302", "Assistência
            ("04", "Administração", [("122", "Administração Geral")]),
            ("01", "Legislativa", [("031", "Ação Legislativa")])]
 ENTES = {"ITAJUBÁ": 3132404, "PARAISÓPOLIS": 3147303}
+# Outros municípios de Minas na lista de entes do Tesouro (sem contas simuladas)
+OUTROS_MG = {"Belo Horizonte": 3106200, "Pouso Alegre": 3152501, "Ubá": 3169901}
 
 
 def _reais(v: float) -> str:
@@ -282,6 +284,14 @@ class FakeEstado:
                            "Valor Indicado": "R$300.000,00", "Valor Empenhado no Ano": "R$300.000,00",
                            "Valor Pago Atualizado": "R$0,00", "Status": "Empenhado", "Tipo de autoria": "Bloco/Bancada"})
             num += 1
+            # cidade de nome curto, que o arquivo escreve em maiúsculas, e entidade de outro estado
+            for mun, uf, ben in (("UBÁ", "MINAS GERAIS", "HOSPITAL SAO VICENTE DE PAULO DE UBA"),
+                                 ("BRASÍLIA", "DISTRITO FEDERAL", "ASSOCIACAO NACIONAL DE APOIO")):
+                linhas.append({"Ano da Indicação": ano, "Número da Indicação": num, "Status da Indicação": "APROVADO",
+                               "Tipo de Indicação": "CELEBRAÇÃO DE CONVÊNIO", "Autor": self.deputados[1]["nome"].upper(),
+                               "Município ": mun, "Estado": uf, "Nome Beneficiário": ben, "Valor Indicado": "R$40.000,00",
+                               "Valor Pago Atualizado": "R$40.000,00", "Status": "Pago Total", "Função Descrição": "SAÚDE"})
+                num += 1
             # autor que não está no arquivo de deputados (nome escrito de outro jeito)
             linhas.append({"Ano da Indicação": ano, "Número da Indicação": num, "Status da Indicação": "APROVADO", "Autor": "EX DEPUTADO ANTIGO",
                            "Município ": "PARAISÓPOLIS", "Nome Beneficiário": "ASSOCIACAO DE MORADORES", "Valor Indicado": "R$50.000,00",
@@ -311,6 +321,7 @@ class FakeEstado:
     def entes(self) -> bytes:
         itens = [{"cod_ibge": c, "ente": n.title().replace("Itajubá", "Itajubá"), "uf": "MG", "esfera": "M", "exercicio": 2026}
                  for n, c in ENTES.items()]
+        itens += [{"cod_ibge": c, "ente": n, "uf": "MG", "esfera": "M"} for n, c in OUTROS_MG.items()]
         itens.append({"cod_ibge": 31, "ente": "Minas Gerais", "uf": "MG", "esfera": "E"})
         itens.append({"cod_ibge": 3532405, "ente": "Itajubá", "uf": "SP", "esfera": "M"})  # mesmo nome, outro estado
         return json.dumps({"items": itens, "hasMore": False}, ensure_ascii=False).encode()
@@ -336,27 +347,210 @@ class FakeEstado:
                           "conta": "10 - Saúde", "valor": 7e8})
         return json.dumps({"items": itens}, ensure_ascii=False).encode()
 
+    def rreo2(self, ano: int, bim: int, cod: int) -> bytes:
+        """Anexo 02 do RREO, como o Tesouro devolve: funções e subfunções na coluna "conta", na ordem do relatório.
+        Publicado até o bimestre 4 em 2026 (agosto) e o ano inteiro antes."""
+        nome = "Minas Gerais" if cod == 31 else next((n for n, c in ENTES.items() if c == cod), None)
+        if not nome or ano > 2026 or (ano == 2026 and bim > 4):
+            return json.dumps({"items": []}).encode()
+        inst = "Governo do Estado de Minas Gerais" if cod == 31 else f"Prefeitura Municipal de {nome.title()} - MG"
+        fator = (1 + (ano - 2018) / 10) * (500 if cod == 31 else 1) * bim / 6
+        linhas = []
+        for k, (_cf, nf, subs) in enumerate(FUNCOES):
+            v = round(1_000_000 * (len(FUNCOES) - k) * fator, 2)
+            linhas.append((nf, v))
+            partes = [round(v / 2, 2)] * (len(subs) - 1)
+            linhas += [(ns, x) for (_cs, ns), x in zip(subs, partes + [round(v - sum(partes), 2)])]
+        total = sum(v for (n, v) in linhas if n in {f[1] for f in FUNCOES})
+        linhas = [("DESPESAS (EXCETO INTRA-ORÇAMENTÁRIAS) (I)", total)] + linhas + [("DESPESAS (INTRA-ORÇAMENTÁRIAS) (II)", 7e8)]
+        itens = []
+        for col, k in (("DOTAÇÃO ATUALIZADA (a)", 1.6), ("DESPESAS EMPENHADAS ATÉ O BIMESTRE (b)", 1.1),
+                       ("DESPESAS LIQUIDADAS ATÉ O BIMESTRE (d)", 1.0)):
+            itens += [{"exercicio": ano, "periodo": bim, "instituicao": inst, "cod_ibge": cod, "anexo": "RREO-Anexo 02",
+                       "rotulo": "Total das Despesas Exceto Intra-Orçamentárias", "coluna": col, "cod_conta": "RREO2TotalDespesas",
+                       "conta": n, "valor": round(v * k, 2)} for n, v in linhas]
+        return json.dumps({"items": itens}, ensure_ascii=False).encode()
+
     # ------------------------------------------------------------ CGU (arquivo do coletor nacional)
+    # Códigos das emendas como no Portal: ano + autor + número
+    EMENDA_PIX = "202541280005"      # emenda Pix para Itajubá, com plano de ação e gastos no Transferegov
+    EMENDA_SAUDE = "202512340002"    # emenda com finalidade definida, paga à Santa Casa de Itajubá
+    EMENDA_SEM_PAGAR = "202541280006"  # emenda Pix para Itajubá ainda não paga
+    CNPJ_ITAJUBA = "18025940000109"
+
     def emendas_federais_zip(self, destino: Path) -> Path:
         cab = ["Código da Emenda", "Código do Autor da Emenda", "Nome do Autor da Emenda", "Número da emenda", "Tipo de Emenda",
                "Ano/Mês", "Código do Favorecido", "Favorecido", "Natureza Jurídica", "Tipo Favorecido", "UF Favorecido",
                "Município Favorecido", "Valor Recebido"]
         fav = [
-            ["1", "1", "FULANO FEDERAL", "1", "Individual", "202405", "18.025.940/0001-09", "MUNICIPIO DE ITAJUBA", "Município",
+            ["202400010001", "1", "FULANO FEDERAL", "1", "Individual", "202405", "18.025.940/0001-09", "MUNICIPIO DE ITAJUBA", "Município",
              "Pessoa Jurídica", "MG", "ITAJUBÁ", "300.000,00"],
-            ["2", "2", "CICLANO SENADOR", "2", "Individual", "202503", "21.035.900/0001-50", "SANTA CASA DE MISERICORDIA DE ITAJUBA",
-             "Entidade", "Pessoa Jurídica", "MG", "ITAJUBA", "150.000,00"],
-            ["3", "1", "FULANO FEDERAL", "3", "Individual", "202503", f"***.{CPF_EMITENTE[3:6]}.{CPF_EMITENTE[6:9]}-**",
+            [self.EMENDA_SAUDE, "2", "CICLANO SENADOR", "2", "Individual", "202503", "21.035.900/0001-50", "SANTA CASA DE MISERICORDIA DE ITAJUBA",
+             "Entidade", "Pessoa Jurídica", "MG", "ITAJUBA", "100.000,00"],
+            [self.EMENDA_SAUDE, "2", "CICLANO SENADOR", "2", "Individual", "202507", "21.035.900/0001-50", "SANTA CASA DE MISERICORDIA DE ITAJUBA",
+             "Entidade", "Pessoa Jurídica", "MG", "ITAJUBA", "50.000,00"],
+            ["202500010003", "1", "FULANO FEDERAL", "3", "Individual", "202503", f"***.{CPF_EMITENTE[3:6]}.{CPF_EMITENTE[6:9]}-**",
              "MARIA DE TAL", "", "Pessoa Física", "MG", "ITAJUBÁ", "1.000,00"],
-            ["4", "1", "FULANO FEDERAL", "4", "Individual", "202503", "46.395.000/0001-39", "MUNICIPIO DE ITAJUBA", "Município",
+            ["202500010004", "1", "FULANO FEDERAL", "4", "Individual", "202503", "46.395.000/0001-39", "MUNICIPIO DE ITAJUBA", "Município",
              "Pessoa Jurídica", "SP", "ITAJUBÁ", "77.000,00"],  # cidade de mesmo nome em outro estado
+            [self.EMENDA_PIX, "4128", "FULANO FEDERAL", "5", "Individual - Transferências Especiais", "202504", "18.025.940/0001-09",
+             "MUNICIPIO DE ITAJUBA", "Município", "Pessoa Jurídica", "MG", "ITAJUBA", "500.000,00"],
+        ]
+        principal_cab = ["Código da Emenda", "Ano da Emenda", "Tipo de Emenda", "Código do Autor da Emenda", "Nome do Autor da Emenda",
+                         "Número da emenda", "Localidade de aplicação do recurso", "Código Município IBGE", "Município", "Código UF IBGE",
+                         "UF", "Nome Função", "Nome Subfunção", "Nome Ação", "Valor Empenhado", "Valor Liquidado", "Valor Pago",
+                         "Valor Restos A Pagar Pagos"]
+        principal = [
+            ["202400010001", "2024", "Emenda Individual - Transferências com Finalidade Definida", "1", "FULANO FEDERAL", "1",
+             "ITAJUBA - MG", "3132404", "ITAJUBÁ", "31", "MINAS GERAIS", "SAUDE", "ATENCAO BASICA", "", "300.000,00", "300.000,00",
+             "300.000,00", "0,00"],
+            # a mesma emenda em duas linhas (duas ações do Orçamento): os valores se somam
+            [self.EMENDA_SAUDE, "2025", "Emenda Individual - Transferências com Finalidade Definida", "1234", "CICLANO SENADOR", "2",
+             "MINAS GERAIS (UF)", "", "", "31", "MINAS GERAIS", "SAUDE", "ASSISTENCIA HOSPITALAR E AMBULATORIAL",
+             "INCREMENTO TEMPORARIO AO CUSTEIO DOS SERVICOS DE ATENCAO ESPECIALIZADA", "120.000,00", "100.000,00", "100.000,00", "0,00"],
+            [self.EMENDA_SAUDE, "2025", "Emenda Individual - Transferências com Finalidade Definida", "1234", "CICLANO SENADOR", "2",
+             "MINAS GERAIS (UF)", "", "", "31", "MINAS GERAIS", "SAUDE", "ASSISTENCIA HOSPITALAR E AMBULATORIAL",
+             "ESTRUTURACAO DE UNIDADES DE ATENCAO ESPECIALIZADA", "30.000,00", "0,00", "0,00", "50.000,00"],
+            ["202500010003", "2025", "Emenda Individual - Transferências com Finalidade Definida", "1", "FULANO FEDERAL", "3",
+             "ITAJUBA - MG", "3132404", "ITAJUBÁ", "31", "MINAS GERAIS", "ASSISTENCIA SOCIAL", "", "", "1.000,00", "1.000,00",
+             "1.000,00", "0,00"],
+            ["202500010004", "2025", "Emenda Individual - Transferências com Finalidade Definida", "1", "FULANO FEDERAL", "4",
+             "ITAJUBA - SP", "3523503", "ITAJUBÁ", "35", "SAO PAULO", "URBANISMO", "", "", "77.000,00", "77.000,00", "77.000,00", "0,00"],
+            [self.EMENDA_PIX, "2025", "Emenda Individual - Transferências Especiais", "4128", "FULANO FEDERAL", "5",
+             "ITAJUBA - MG", "3132404", "ITAJUBÁ", "31", "MINAS GERAIS", "ENCARGOS ESPECIAIS", "TRANSFERENCIAS", "",
+             "500.000,00", "500.000,00", "500.000,00", "0,00"],
+            [self.EMENDA_SEM_PAGAR, "2025", "Emenda Individual - Transferências Especiais", "4128", "FULANO FEDERAL", "6",
+             "ITAJUBA - MG", "3132404", "ITAJUBÁ", "31", "MINAS GERAIS", "ENCARGOS ESPECIAIS", "TRANSFERENCIAS", "",
+             "200.000,00", "0,00", "0,00", "0,00"],
         ]
         destino.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(destino, "w") as z:
             z.writestr("EmendasParlamentares_PorFavorecido.csv", _csv(cab, [dict(zip(cab, f)) for f in fav], sep=";").encode("latin-1"))
-            z.writestr("EmendasParlamentares.csv", "Código da Emenda;Ano da Emenda\r\n1;2024\r\n".encode("latin-1"))
-        self.esperado["federais_itajuba"] = 451_000.0
+            z.writestr("EmendasParlamentares.csv",
+                       _csv(principal_cab, [dict(zip(principal_cab, f)) for f in principal], sep=";").encode("latin-1"))
+        self.esperado["federais_itajuba"] = 951_000.0
         return destino
+
+    # ------------------------------------------------------------ PNCP (licitações e contratos)
+    def _pncp(self) -> None:
+        """Compras e contratos no formato da API de consulta do PNCP (conferido na sondagem de 08/11/2026)."""
+        def compra(cnpj, razao, esfera, ibge, municipio, seq, mod, data, objeto, est, hom, sit=1, amparo=None):
+            nomes = {6: "Pregão - Eletrônico", 8: "Dispensa", 9: "Inexigibilidade", 4: "Concorrência - Eletrônica", 12: "Credenciamento"}
+            return {"valorTotalHomologado": hom, "orgaoEntidade": {"cnpj": cnpj, "razaoSocial": razao, "poderId": "E", "esferaId": esfera},
+                    "anoCompra": int(data[:4]), "sequencialCompra": seq, "numeroCompra": str(seq), "processo": f"{seq}/{data[:4]}",
+                    "objetoCompra": objeto, "dataPublicacaoPncp": f"{data}T10:00:00", "srp": False,
+                    "unidadeOrgao": {"ufNome": "Minas Gerais", "ufSigla": "MG", "municipioNome": municipio, "codigoIbge": str(ibge),
+                                     "codigoUnidade": "1", "nomeUnidade": razao},
+                    "amparoLegal": amparo or {"codigo": 1, "nome": "Lei 14.133/2021, Art. 28, I", "descricao": "Pregão"},
+                    "numeroControlePNCP": f"{cnpj}-1-{seq:06d}/{data[:4]}", "valorTotalEstimado": est, "modalidadeId": mod,
+                    "modalidadeNome": nomes.get(mod, "Outra"), "situacaoCompraId": sit,
+                    "situacaoCompraNome": {1: "Divulgada no PNCP", 2: "Revogada", 3: "Anulada", 4: "Suspensa"}[sit]}
+        ita, par = ENTES["ITAJUBÁ"], ENTES["PARAISÓPOLIS"]
+        pref, cam, unifei, see = "18025940000109", "00993308000185", "21040001000130", "18715599000105"
+        dispensa = {"codigo": 19, "nome": "Lei 14.133/2021, Art. 75, II",
+                    "descricao": "Dispensa de Licitação: para contratação que envolva valores inferiores a R$ 50.000,00"}
+        inex = {"codigo": 24, "nome": "Lei 14.133/2021, Art. 74, II",
+                "descricao": "Inexigibilidade: contratação de profissional do setor artístico"}
+        self.compras_pncp = [
+            compra(pref, "MUNICIPIO DE ITAJUBA", "M", ita, "Itajubá", 1, 6, "2025-03-10", "Asfalto para ruas do centro", 900000.0, 800000.0),
+            compra(pref, "MUNICIPIO DE ITAJUBA", "M", ita, "Itajubá", 2, 8, "2025-03-12",
+                   f"Medicamento para mandado judicial de FULANO CPF {CPF_EMITENTE[:3]}.{CPF_EMITENTE[3:6]}.{CPF_EMITENTE[6:9]}-{CPF_EMITENTE[9:]}",
+                   10000.0, 9000.0, amparo=dispensa),
+            compra(pref, "MUNICIPIO DE ITAJUBA", "M", ita, "Itajubá", 3, 9, "2025-07-01", "Show da festa da cidade", 150000.0, 150000.0, amparo=inex),
+            compra(pref, "MUNICIPIO DE ITAJUBA", "M", ita, "Itajubá", 4, 6, "2025-08-01", "Compra cancelada de veículos", 300000.0, None, sit=2),
+            compra(cam, "ITAJUBA CAMARA MUNICIPAL", "M", ita, "Itajubá", 1, 8, "2026-02-03", "Papel e material de escritório", 5000.0, None, amparo=dispensa),
+            # código do IBGE que devolve outra cidade (aconteceu na sondagem: um código errado trouxe Paraopeba)
+            compra("18116160000166", "MUNICIPIO DE PARAOPEBA", "M", par, "Paraopeba", 1, 8, "2025-02-04", "Compra de outra cidade", 100.0, 100.0, amparo=dispensa),
+            compra(unifei, "UNIVERSIDADE FEDERAL DE ITAJUBA", "F", ita, "Itajubá", 9, 8, "2025-03-15", "Compra da universidade federal", 7000.0, 7000.0, amparo=dispensa),
+            compra(see, "MINAS GERAIS SECRETARIA DE ESTADO DA EDUCACAO", "E", ita, "Itajubá", 5, 8, "2026-03-20", "Merenda escolar", 4000.0, 4000.0, amparo=dispensa),
+            compra(see, "MINAS GERAIS SECRETARIA DE ESTADO DA EDUCACAO", "E", 3106200, "Belo Horizonte", 6, 4, "2026-05-05", "Reforma de escolas", 2000000.0, 1800000.0),
+        ]
+        # Muitas compras do estado num mês, para passar de uma página (50 linhas)
+        self.compras_pncp += [compra(see, "MINAS GERAIS SECRETARIA DE ESTADO DA EDUCACAO", "E", 3106200, "Belo Horizonte", 100 + i, 6,
+                                     "2026-04-15", f"Material escolar lote {i}", 1000.0, 1000.0) for i in range(60)]
+
+        def contrato(orgao, compra_seq, ano, seq, tipo, ni, nome, valor, fim):
+            return {"numeroControlePncpCompra": f"{orgao}-1-{compra_seq:06d}/{ano}", "orgaoEntidade": {"cnpj": orgao, "esferaId": "M"},
+                    "anoContrato": ano, "sequencialContrato": seq, "tipoPessoa": tipo, "niFornecedor": ni, "nomeRazaoSocialFornecedor": nome,
+                    "objetoContrato": "Contrato", "valorInicial": valor, "valorGlobal": valor, "dataAssinatura": f"{ano}-04-01",
+                    "dataVigenciaInicio": f"{ano}-04-01", "dataVigenciaFim": fim, "tipoContrato": {"id": 1, "nome": "Contrato (termo inicial)"},
+                    "numeroControlePNCP": f"{orgao}-2-{seq:06d}/{ano}"}
+        self.contratos_pncp = [
+            contrato(pref, 1, 2025, 1, "PJ", "11222333000181", "ASFALTOS MINAS LTDA", 800000.0, "2027-04-01"),
+            contrato(pref, 3, 2025, 2, "PF", CPF_EMITENTE, f"CANTOR FULANO {CPF_EMITENTE}", 150000.0, "2025-07-02"),
+            contrato(see, 6, 2026, 3, "PJ", "44555666000199", "CONSTRUTORA ESCOLAR LTDA", 1800000.0, "2027-05-05"),
+        ]
+        self.esperado["licitacoes_itajuba_2025"] = 4  # sem a universidade federal e sem a escola estadual
+
+    def pncp(self, caminho: str, q: dict) -> tuple[int, bytes, str]:
+        if not hasattr(self, "compras_pncp"):
+            self._pncp()
+        di, df = q.get("dataInicial", ""), q.get("dataFinal", "")
+        no_periodo = lambda d: di <= d.replace("-", "")[:8] <= df  # noqa: E731
+        if caminho.endswith("/contratacoes/publicacao"):
+            ls = [x for x in self.compras_pncp if str(x["modalidadeId"]) == q.get("codigoModalidadeContratacao")
+                  and x["unidadeOrgao"]["ufSigla"] == q.get("uf") and no_periodo(x["dataPublicacaoPncp"])
+                  and (not q.get("codigoMunicipioIbge") or x["unidadeOrgao"]["codigoIbge"] == q["codigoMunicipioIbge"])]
+        elif caminho.endswith("/contratos"):
+            ls = [x for x in self.contratos_pncp if x["orgaoEntidade"]["cnpj"] == q.get("cnpjOrgao") and no_periodo(x["dataAssinatura"])]
+        else:
+            return 404, b"", "text/html"
+        if int(q.get("tamanhoPagina", 50)) > 50:
+            return 400, json.dumps({"message": "Tamanho de página inválido"}).encode(), "application/json"
+        if not ls:
+            return 204, b"", "application/json"  # como o PNCP: nada no período é HTTP 204, sem corpo
+        pag, tam = int(q.get("pagina", 1)), int(q.get("tamanhoPagina", 50))
+        total_pag = (len(ls) + tam - 1) // tam
+        corpo = {"data": ls[(pag - 1) * tam: pag * tam], "totalRegistros": len(ls), "totalPaginas": total_pag,
+                 "numeroPagina": pag, "paginasRestantes": max(0, total_pag - pag), "empty": False}
+        return 200, json.dumps(corpo, ensure_ascii=False).encode(), "application/json"
+
+    def destino_pix(self, nacional: Path, ano: int = 2025) -> None:
+        """Acrescenta aos dados nacionais o plano de ação da emenda Pix de Itajubá, no mesmo formato que o coletor nacional
+        grava a partir da API do Transferegov (sa_etl/transferegov.py: resumir + gravar)."""
+        from sa_etl import transferegov as T
+        pid, eid, rid = 9001, 9002, 9003
+        t = {
+            "beneficiarios": {"linhas": [{"id_beneficiario": 77, "uf_beneficiario": "MG", "nome_beneficiario": "MUNICIPIO DE ITAJUBA",
+                                          "cnpj_beneficiario": self.CNPJ_ITAJUBA}], "completo_em": f"{ano}-11-01"},
+            "planos": {ano: {"completo_em": f"{ano}-11-01", "linhas": [{
+                "id_plano_acao": pid, "codigo_plano_acao": f"09032{ano}-000777", "situacao_plano_acao": "CIENTE",
+                "nome_parlamentar_emenda_plano_acao": "FULANO FEDERAL",
+                "codigo_emenda_parlamentar_formatado_plano_acao": f"{self.EMENDA_PIX}-Fulano Federal",
+                "ano_emenda_parlamentar_plano_acao": ano, "valor_custeio_plano_acao": 500000.0, "valor_investimento_plano_acao": 0.0,
+                "id_beneficiario": 77, "nome_objeto": "Eventos", "detalhamento_objeto": "Realização da Festa do Peão e do Carnaval de rua",
+                "codigo_descricao_areas_politicas_publicas_plano_acao": "13 - Cultura", "motivo_impedimento_plano_acao": None}]}},
+            "executores": {"completo_em": f"{ano}-11-01", "linhas": [{
+                "id_executor": eid, "id_plano_acao": pid, "cnpj_executor": self.CNPJ_ITAJUBA, "nome_executor": "MUNICIPIO DE ITAJUBA",
+                "objeto_executor": "Festa do Peão de Itajubá", "vl_custeio_executor": 500000.0, "vl_investimento_executor": 0.0}]},
+            "metas": {"completo_em": f"{ano}-11-01", "linhas": [{
+                "id_executor": eid, "id_meta": 1, "sequencial_meta": 1, "nome_meta": "Shows artísticos", "desc_meta": "Contratação de 3 shows",
+                "un_medida_meta": "unidade", "qt_unidade_meta": 3, "vl_custeio_emenda_especial_meta": 500000.0,
+                "vl_investimento_emenda_especial_meta": 0.0}]},
+            "relatorios": {"completo_em": f"{ano}-11-01", "linhas": [{
+                "id_relatorio_gestao_novo": rid, "id_plano_acao": pid, "id_executor": eid, "data_relatorio_gestao_novo": f"{ano}-10-30",
+                "valor_executado_relatorio_gestao_novo": 380000.0}]},
+            "gastos": {"lidos": {str(rid): f"{ano}-11-01"}, "por_relatorio": {str(rid): [
+                {"id_relatorio_gestao_dl": 1, "id_relatorio_gestao_novo": rid, "tx_descricao_relatorio_gestao_dl": "Show artístico na Festa do Peão",
+                 "tp_doc_recebedor_relatorio_gestao_dl": "CNPJ", "tx_identificacao_recebedor_mascarado_relatorio_gestao_dl": "11.222.333/0001-81",
+                 "tx_nome_recebedor_relatorio_gestao_dl": "PRODUTORA DE SHOWS LTDA", "vl_pagamento_relatorio_gestao_dl": 300000.0,
+                 "dt_pagamento_relatorio_gestao_dl": f"{ano}-06-15", "tx_natureza_relatorio_gestao_dl": "CUSTEIO"},
+                {"id_relatorio_gestao_dl": 2, "id_relatorio_gestao_novo": rid, "tx_descricao_relatorio_gestao_dl": "Palco e som do Carnaval",
+                 "tp_doc_recebedor_relatorio_gestao_dl": "CPF", "tx_identificacao_recebedor_mascarado_relatorio_gestao_dl": "***.456.789-**",
+                 "tx_nome_recebedor_relatorio_gestao_dl": "FULANO DO SOM", "vl_pagamento_relatorio_gestao_dl": 80000.0,
+                 "dt_pagamento_relatorio_gestao_dl": f"{ano}-02-20", "tx_natureza_relatorio_gestao_dl": "CUSTEIO"}]}},
+            "falta": [],
+        }
+        res = T.resumir(t, [ano])
+        pasta = nacional / "emendas" / "destino"
+        idx_f = pasta / f"{ano}.json"
+        antigo = json.loads(idx_f.read_text(encoding="utf-8")) if idx_f.exists() else None
+        T.gravar(nacional, res, t)
+        if antigo:  # junta com o que o coletor nacional já tinha gravado
+            novo = json.loads(idx_f.read_text(encoding="utf-8"))
+            antigo["beneficiarios"] = [b for b in antigo["beneficiarios"] if b["cnpj"] != self.CNPJ_ITAJUBA] + novo["beneficiarios"]
+            antigo["emendas"] = {**antigo.get("emendas", {}), **novo["emendas"]}
+            idx_f.write_text(json.dumps(antigo, ensure_ascii=False), encoding="utf-8")
 
     # ------------------------------------------------------------ roteador
     def _rota(self, url: str, params: dict) -> tuple[int, bytes, str]:
@@ -398,8 +592,12 @@ class FakeEstado:
         if u.netloc == "apidatalake.tesouro.gov.br":
             if u.path.endswith("/entes"):
                 return 200, self.entes(), "application/json"
+            if u.path.endswith("/rreo"):
+                return 200, self.rreo2(int(q.get("an_exercicio", 0)), int(q.get("nr_periodo", 0)), int(q.get("id_ente", 0))), "application/json"
             if u.path.endswith("/dca"):
                 return 200, self.dca(int(q.get("an_exercicio", 0)), int(q.get("id_ente", 0))), "application/json"
+        if u.netloc == "pncp.gov.br" and u.path.startswith("/api/consulta/v1/"):
+            return self.pncp(u.path, q)
         return 404, b"", "text/html"
 
     def responder(self, method: str, url: str, params=None) -> requests.Response:
