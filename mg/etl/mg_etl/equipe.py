@@ -5,6 +5,7 @@ Fontes (Dados MG, o portal de dados abertos do governo de Minas, https://dados.m
   remuneração bruta, descontos, líquido e jetons das estatais). Usamos o mês mais recente.
 - "viagens" (SCDP, o sistema de viagens do estado): cada trecho de viagem com diárias e passagens, o cargo de quem
   viajou, o destino e o motivo. Juntamos os arquivos de dimensão (pessoa, cargo, cidade, documento).
+  O site mostra as viagens num calendário do ano e as cidades num mapa de Minas (pontos do IBGE, mapa_mg.py).
 
 Os arquivos são grandes (o de salários tem mais de 200 MB). Não guardamos o arquivo inteiro: lemos linha a linha,
 guardamos só o resumo das pessoas que interessam e, se o site do governo falhar, usamos o último resumo.
@@ -26,7 +27,7 @@ from pathlib import Path
 
 from sa_etl.util import get, norm_name
 
-from . import fontes
+from . import fontes, mapa_mg
 
 log = logging.getLogger("mg_etl.equipe")
 
@@ -173,13 +174,20 @@ def resumir_viagens(funcoes, favorecidos, cidades, documentos, trechos, hoje: dt
     pessoas_ids = {t.get("id_favorecido") for t in sel}
     nomes = {r["id_favorecido"]: fontes.sem_cpf(fontes.bonito(r.get("nome_anonimizado") or ""))
              for r in favorecidos if r.get("id_favorecido") in pessoas_ids}
-    cid = {r.get("id_cidade"): fontes.bonito(r.get("nome") or "") for r in cidades}
+    cid = {r.get("id_cidade"): cidade_uf(r) for r in cidades}
     docs_ids = {t.get("id_documento_viagem") for t in sel}
     motivos = {r["id_documento_viagem"]: fontes.sem_cpf(r.get("motivo") or "")[:200]
                for r in documentos if r.get("id_documento_viagem") in docs_ids}
     acc: dict = defaultdict(lambda: {"nome": "", "cargos": Counter(), "anos": defaultdict(lambda: {"viagens": set(), "diarias": 0.0,
                                                                                                     "passagens": 0.0}),
-                                     "destinos": Counter(), "viagens": {}})
+                                     "destinos": Counter(), "viagens": {}, "ufs": {}})
+    # A cidade de partida de cada viagem é a origem do primeiro trecho; ela não conta como cidade visitada
+    # (senão a volta para casa, quase sempre Belo Horizonte, apareceria como destino de toda viagem).
+    origem: dict[str, tuple[int, str]] = {}
+    for t in sel:
+        doc, ordem = t.get("id_documento_viagem"), _int(t.get("ordem_trecho"))
+        if doc not in origem or ordem < origem[doc][0]:
+            origem[doc] = (ordem, t.get("id_cidade_origem") or "")
     for t in sel:
         nome = nomes.get(t.get("id_favorecido"))
         if not nome:
@@ -198,11 +206,14 @@ def resumir_viagens(funcoes, favorecidos, cidades, documentos, trechos, hoje: dt
         a["viagens"].add(doc)
         a["diarias"] += d
         a["passagens"] += ps
-        destino = cid.get(t.get("id_cidade_destino"), "")
-        if destino and (d or ps):
-            p["destinos"][destino] += 1
+        id_dest = t.get("id_cidade_destino")
+        destino, uf = cid.get(id_dest, ("", ""))
+        if destino and uf:
+            p["ufs"][destino] = uf
         v = p["viagens"].setdefault(doc, {"inicio": data, "fim": "", "destinos": [], "valor": 0.0, "diarias": 0.0, "passagens": 0.0,
-                                          "motivo": motivos.get(doc, "")})
+                                          "motivo": motivos.get(doc, ""), "_casa": ""})
+        if id_dest == origem.get(doc, (0, ""))[1]:
+            v["_casa"], destino = destino, ""  # volta para a cidade de partida
         v["inicio"] = min(v["inicio"], data) if v["inicio"] else data
         v["fim"] = max(v["fim"], (t.get("dt_fim_trecho") or "")[:10])
         if destino and destino not in v["destinos"]:
@@ -212,6 +223,11 @@ def resumir_viagens(funcoes, favorecidos, cidades, documentos, trechos, hoje: dt
         v["passagens"] += ps
     out = {}
     for k, p in acc.items():
+        for v in p["viagens"].values():
+            casa = v.pop("_casa")
+            if not v["destinos"] and casa:  # viagem sem outro destino registrado: fica a cidade que o SCDP traz
+                v["destinos"].append(casa)
+            p["destinos"].update(v["destinos"])  # cada cidade conta uma vez por viagem
         anos = [{"ano": a, "viagens": len(x["viagens"]), "diarias": round(x["diarias"], 2), "passagens": round(x["passagens"], 2)}
                 for a, x in sorted(p["anos"].items(), reverse=True) if a >= hoje.year - 3]
         # Todas as viagens dos anos mostrados (o site abre a lista por ano); "ultimas" é o resumo que vai no governo.json
@@ -220,8 +236,30 @@ def resumir_viagens(funcoes, favorecidos, cidades, documentos, trechos, hoje: dt
                  if v["inicio"][:4].isdigit() and int(v["inicio"][:4]) >= hoje.year - 3]
         out[k] = {"nome": p["nome"], "cargo": p["cargos"].most_common(1)[0][0] if p["cargos"] else "", "anos": anos,
                   "destinos": [{"nome": n, "vezes": c} for n, c in p["destinos"].most_common(6)],
-                  "ultimas": todas[:12], "todas": todas}
+                  "ultimas": todas[:12], "todas": todas, "ufs": p["ufs"]}
     return out
+
+
+def _int(s) -> int:
+    try:
+        return int(float(s))
+    except (TypeError, ValueError):
+        return 0
+
+
+UF = r"(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)"
+
+
+def cidade_uf(r: dict) -> tuple[str, str]:
+    """Linha do dm_cidade -> (nome bonito, UF ou ""). A UF vem de uma coluna própria, se o arquivo tiver, ou do fim
+    do nome ("ITAJUBA - MG", "ITAJUBA/MG"). Sem UF, o mapa procura o nome entre as cidades de Minas."""
+    nome = (r.get("nome") or "").strip()
+    uf = next((str(v).strip().upper() for c, v in r.items() if c and c.strip().lower() in ("uf", "sg_uf", "sigla_uf", "nm_uf_sigla")
+               and v and len(str(v).strip()) == 2), "")
+    m = re.fullmatch(r"(.+?)\s*(?:[-/]\s*|\(\s*)" + UF + r"\s*\)?", nome, flags=re.I)
+    if m:
+        nome, uf = m.group(1), uf or m.group(2).upper()
+    return fontes.bonito(nome), uf
 
 
 def viagens(cache: Path, hoje: dt.date | None = None) -> dict | None:
@@ -251,10 +289,26 @@ def viagens(cache: Path, hoje: dt.date | None = None) -> dict | None:
         return None
 
 
+def lugares(viagens_: list[dict], ufs: dict[str, str], mapa: dict | None) -> dict[str, list | None]:
+    """Cada cidade visitada -> [x, y, nome oficial] no mapa de Minas, ou None (fora de Minas ou não achada).
+
+    Com a UF no arquivo do SCDP, só cidades de MG vão para o mapa. Sem ela, vale o nome: uma cidade de outro estado
+    com o mesmo nome de uma cidade mineira cairia em Minas, por isso a UF, quando existe, sempre manda."""
+    cidades = (mapa or {}).get("cidades") or {}
+    out: dict[str, list | None] = {}
+    for v in viagens_:
+        for nome in v.get("destinos") or []:
+            if nome not in out:
+                uf = ufs.get(nome, "")
+                out[nome] = cidades.get(fontes.chave_nome(nome)) if uf in ("", "MG") else None
+    return out
+
+
 def coletar(cache: Path, hoje: dt.date | None = None) -> dict:
     """Junta salário e viagens de cada pessoa da equipe (pelo nome)."""
     sal = salarios(cache)
     via = viagens(cache, hoje)
+    mapa = mapa_mg.coletar(cache) if via else None
     pessoas = []
     detalhe: dict[str, dict] = {}
     for p in (sal or {}).get("pessoas", []):
@@ -265,9 +319,11 @@ def coletar(cache: Path, hoje: dt.date | None = None) -> dict:
             # abre "ver todas as viagens": assim o governo.json continua pequeno.
             v = dict(v)
             todas = v.pop("todas", None) or v.get("ultimas") or []
+            ufs = v.pop("ufs", None) or {}
             vid = id_pessoa(p["nome"], detalhe)
             v["id"], v["n_todas"] = vid, len(todas)
-            detalhe[vid] = {"nome": p["nome"], "cargo": p["cargo"], "viagens": todas, "fonte": PAGINA_VIAGENS, "portal": PORTAL_VIAGENS}
+            detalhe[vid] = {"nome": p["nome"], "cargo": p["cargo"], "viagens": todas, "fonte": PAGINA_VIAGENS, "portal": PORTAL_VIAGENS,
+                            "lugares": lugares(todas, ufs, mapa)}
         pessoas.append({**p, "viagens": v})
     # quem viajou como secretário mas não está mais no cargo no mês do salário fica de fora: a lista é de quem está lá hoje
     return {
@@ -276,6 +332,8 @@ def coletar(cache: Path, hoje: dt.date | None = None) -> dict:
                    "portal_viagens": PORTAL_VIAGENS},
         "tem_salarios": sal is not None, "tem_viagens": via is not None,
         "viagens_detalhe": detalhe,
+        # só o contorno do estado vai para o site; os pontos das cidades já estão em "lugares" de cada pessoa
+        "mapa": {k: mapa[k] for k in ("vb", "contorno", "fonte")} if mapa else None,
     }
 
 

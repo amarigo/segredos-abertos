@@ -186,7 +186,8 @@ class FakeEstado:
                       {"id_favorecido": "3", "nome_anonimizado": "ASSESSOR QUALQUER"}]
         elif nome == "dm_cidade":
             cols, linhas = ["id_cidade", "nome"], [{"id_cidade": "1", "nome": "BELO HORIZONTE"}, {"id_cidade": "2", "nome": "BRASILIA"},
-                                                   {"id_cidade": "3", "nome": "ITAJUBA"}]
+                                                   {"id_cidade": "3", "nome": "ITAJUBA - MG"},
+                                                   {"id_cidade": "4", "nome": "SAO PAULO/SP"}]
         elif nome == "dm_documento_viagem":
             cols = ["id_documento_viagem", "nr_documento", "dt_viagem_inicio", "dt_viagem_fim", "motivo"]
             linhas = [{"id_documento_viagem": str(k), "motivo": f"Reunião de trabalho {k}, contato 35999998888"} for k in range(1, 6)]
@@ -199,17 +200,39 @@ class FakeEstado:
                                                     (3, "2", "12605", "2", "2025-09-18", "665.00", "853.48"),
                                                     (4, "3", "12280", "2", "2025-09-18", "300.00", "853.48"),  # assessor: fora
                                                     (5, "2", "12605", "1", "2026-01-15", "0.00", "0.00")):
+                # a viagem a Itajubá dura três dias (2 a 4 de maio)
+                volta = "2026-05-04" if doc == 2 else dia
+                # trecho de volta da mesma viagem vem antes no arquivo: a ordem do trecho é que diz qual é a ida
+                linhas.append({"id_favorecido": fav, "id_funcao_scdp": fun, "id_cidade_origem": dest, "id_cidade_destino": "1",
+                               "id_documento_viagem": str(doc), "ordem_trecho": "2", "dt_inicio_trecho": volta, "dt_fim_trecho": volta,
+                               "qt_diaria": "0.00", "vr_diaria": "0.00", "vr_passagem": "0.00"})
                 linhas.append({"id_favorecido": fav, "id_funcao_scdp": fun, "id_cidade_origem": "1", "id_cidade_destino": dest,
                                "id_documento_viagem": str(doc), "ordem_trecho": "1", "dt_inicio_trecho": dia, "dt_fim_trecho": dia,
                                "qt_diaria": "1.00", "vr_diaria": d, "vr_passagem": ps})
-                # trecho de volta da mesma viagem
-                linhas.append({"id_favorecido": fav, "id_funcao_scdp": fun, "id_cidade_origem": dest, "id_cidade_destino": "1",
-                               "id_documento_viagem": str(doc), "ordem_trecho": "2", "dt_inicio_trecho": dia, "dt_fim_trecho": dia,
-                               "qt_diaria": "0.00", "vr_diaria": "0.00", "vr_passagem": "0.00"})
         else:
             return b""
         import gzip as _gz
         return _gz.compress(_csv(cols, linhas, sep=";").encode("utf-8"))
+
+    # Minas como um quadrado de 853 cidades (29 x 30, a última linha incompleta), entre as longitudes -51 e -40 e as
+    # latitudes -23 e -14. As duas primeiras são Belo Horizonte e Itajubá, com os códigos reais do IBGE.
+    CIDADES_IBGE = [(3106200, "Belo Horizonte"), (3132404, "Itajubá")] + [(3100000 + i, f"Cidade {i}") for i in range(2, 853)]
+
+    def ibge(self, caminho: str, q: dict) -> bytes:
+        if caminho == "/api/v1/localidades/estados/31/municipios":
+            return json.dumps([{"id": c, "nome": n} for c, n in self.CIDADES_IBGE], ensure_ascii=False).encode()
+        if caminho == "/api/v3/malhas/estados/31" and q.get("formato") == "application/vnd.geo+json":
+            def quadrado(x0, y0, lado):
+                return {"type": "Polygon", "coordinates": [[[x0, y0], [x0 + lado, y0], [x0 + lado, y0 + lado], [x0, y0 + lado], [x0, y0]]]}
+            if q.get("intrarregiao") == "municipio":
+                feats = [{"type": "Feature", "properties": {"codarea": str(c)},
+                          "geometry": quadrado(-51 + (i % 29) * 11 / 29, -23 + (i // 29) * 9 / 30, 0.3)}
+                         for i, (c, _) in enumerate(self.CIDADES_IBGE)]
+            else:
+                feats = [{"type": "Feature", "properties": {"codarea": "31"}, "geometry": {
+                    "type": "Polygon", "coordinates": [[[-51, -23], [-40, -23], [-40, -14], [-51, -14], [-51, -23]]]}}]
+            return json.dumps({"type": "FeatureCollection", "features": feats}).encode()
+        return b""
 
     def proposicoes_csv(self, ano: int) -> bytes:
         """Deputado i apresenta i % 5 projetos por ano; o 1º de cada um vira lei. Também requerimentos aprovados
@@ -589,6 +612,9 @@ class FakeEstado:
                 nome = u.path.rsplit("/", 1)[-1][: -len(".csv.gz")]
                 corpo = self.scdp(nome)
                 return (200, corpo, "application/gzip") if corpo else (404, b"", "text/html")
+        if u.netloc == "servicodados.ibge.gov.br":
+            corpo = self.ibge(u.path, q)
+            return (200, corpo, "application/json") if corpo else (404, b"", "text/html")
         if u.netloc == "apidatalake.tesouro.gov.br":
             if u.path.endswith("/entes"):
                 return 200, self.entes(), "application/json"

@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import { Abrir, Barras, Colunas, Explain, Loading, OndeVer, useData } from "../components/ui";
 import { Fragment, useState } from "react";
 import { FotoPerfil } from "../components/Foto";
-import { corPartido, dataBR, linkSeguro, numero, partidoComHoje, reais, type EquipeGoverno, type Governo, type PessoaEquipe, type ViagensDetalhe } from "../data";
+import { ViagensAno } from "../components/ViagensAno";
+import { corPartido, dataBR, linkSeguro, numero, partidoComHoje, reais, type EquipeGoverno, type Governo, type MapaMG, type PessoaEquipe, type ViagensDetalhe } from "../data";
 
 /** Governo de Minas: quem foi eleito governador e vice, e onde achar salários, viagens e pagamentos do governo */
 export default function GovernoPage() {
@@ -96,8 +97,8 @@ function Equipe({ e }: { e?: EquipeGoverno | null }) {
   return (
     <section>
       <h2>Quem está no governo hoje</h2>
-      <Explain>Pela folha de pagamento de {mesAno(e.mes_salarios)}: o governador e os secretários de estado, quanto cada um recebeu no mês e quanto o estado gastou com as viagens de cada um (diárias e passagens). "Bruto" é o salário antes dos descontos; "líquido" é o que cai na conta. "Jetons" é o que recebem por participar do conselho de empresas do estado, como Cemig e Copasa. Clique em cada ano para abrir a lista de viagens, uma por uma.</Explain>
-      {gov.map((p) => <PessoaDetalhe key={p.nome} p={p} destaque />)}
+      <Explain>Pela folha de pagamento de {mesAno(e.mes_salarios)}: o governador e os secretários de estado, quanto cada um recebeu no mês e quanto o estado gastou com as viagens de cada um (diárias e passagens). "Bruto" é o salário antes dos descontos; "líquido" é o que cai na conta. "Jetons" é o que recebem por participar do conselho de empresas do estado, como Cemig e Copasa. O calendário mostra cada dia em viagem a serviço e o mapa, as cidades visitadas. Clique em cada ano para abrir a lista de viagens, uma por uma.</Explain>
+      {gov.map((p) => <PessoaDetalhe key={p.nome} p={p} mapa={e.mapa} destaque />)}
       {(porSalario.length > 1 || porViagem.length > 1) && <div className="grid grid-2">
         {porSalario.length > 1 && <div>
           <h3>Quanto cada um recebeu em {mesAno(e.mes_salarios)}</h3>
@@ -135,7 +136,7 @@ function Equipe({ e }: { e?: EquipeGoverno | null }) {
                     <td className="r num so-largo" style={{ whiteSpace: "nowrap" }}>{reais(p.liquido)}</td>
                     <td className="r num" style={{ whiteSpace: "nowrap" }}>{v ? <>{reais(v.diarias + v.passagens)}<div className="small muted">{v.viagens} viage{v.viagens === 1 ? "m" : "ns"} em {v.ano}</div></> : <span className="muted">—</span>}</td>
                   </tr>
-                  {aberta === p.nome && <tr className="linha-aberta"><td colSpan={4}><PessoaDetalhe p={p} /></td></tr>}
+                  {aberta === p.nome && <tr className="linha-aberta"><td colSpan={4}><PessoaDetalhe p={p} mapa={e.mapa} /></td></tr>}
                 </Fragment>
               );
             })}</tbody>
@@ -153,7 +154,7 @@ function Equipe({ e }: { e?: EquipeGoverno | null }) {
 }
 
 /** Tudo de uma pessoa da equipe: salário aberto, viagens por ano (gráfico) e a lista de viagens de cada ano */
-function PessoaDetalhe({ p, destaque = false }: { p: PessoaEquipe; destaque?: boolean }) {
+function PessoaDetalhe({ p, mapa, destaque = false }: { p: PessoaEquipe; mapa?: MapaMG | null; destaque?: boolean }) {
   const v = p.viagens;
   const corpo = (
     <>
@@ -174,6 +175,10 @@ function PessoaDetalhe({ p, destaque = false }: { p: PessoaEquipe; destaque?: bo
         <Colunas rotulo={`Gasto com viagens de ${p.nome} por ano`} partes={[{ nome: "Diárias", cor: "var(--s2)" }, { nome: "Passagens", cor: "var(--s1)" }]}
           itens={v.anos.slice().reverse().map((a) => ({ label: `${a.ano}`, valores: [a.diarias, a.passagens] }))} />
         {v.destinos.length > 0 && <p className="small muted">Destinos mais comuns: {v.destinos.map((d) => `${d.nome} (${d.vezes}×)`).join(", ")}.</p>}
+        {v.id && <>
+          <h4 style={{ margin: "14px 0 4px" }}>Os dias de viagem no ano e as cidades visitadas</h4>
+          {destaque ? <ViagensAno v={v} mapa={mapa} /> : <Abrir titulo="Ver o calendário e o mapa das viagens"><ViagensAno v={v} mapa={mapa} /></Abrir>}
+        </>}
         {v.anos.map((a) => (
           <Abrir key={a.ano} titulo={<>As {a.viagens} viage{a.viagens === 1 ? "m" : "ns"} de {a.ano} · <span className="num">{reais(a.diarias + a.passagens)}</span></>}>
             <ListaViagens v={v} ano={a.ano} />

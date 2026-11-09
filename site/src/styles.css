@@ -854,6 +854,29 @@ tr.linha-aberta > td { background: var(--tint); }
 .filtros-emendas label { display: grid; gap: 4px; min-width: 0; }
 .filtros-emendas select, .filtros-emendas input { width: 100%; font: inherit; padding: 10px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); min-width: 0; }
 
+/* Viagens a serviço: calendário do ano ao lado do mapa de Minas (components/ViagensAno.tsx) */
+.viagens-anos { display: flex; gap: 6px; flex-wrap: wrap; }
+.viagens-anos button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 4px 14px; font: inherit; cursor: pointer; }
+.viagens-anos button.ativo { background: var(--hot); border-color: var(--hot); color: #fff; font-weight: 700; }
+.viagens-grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+
+@media (max-width: 820px) { .viagens-grade { grid-template-columns: 1fr; } .mapa-viagens { order: -1; } }
+.calendario { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 10px 12px; }
+.cal-nome { font-weight: 700; font-size: .85rem; margin-bottom: 2px; }
+.cal-dias { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-sem { font-size: .62rem; color: var(--muted); text-align: center; }
+.cal-dia { font-size: .68rem; line-height: 1; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 3px; background: var(--grid); color: var(--muted); border: 0; padding: 0; font-family: inherit; }
+.cal-dia.futuro { background: transparent; outline: 1px dashed var(--line); outline-offset: -1px; }
+.cal-dia.com-viagem { background: var(--s2); color: #fff; font-weight: 700; cursor: pointer; }
+.cal-dia.com-viagem.sel { outline: 3px solid var(--gold); outline-offset: -1px; }
+.mapa-viagens svg { width: 100%; height: auto; max-height: 480px; display: block; }
+.mapa-viagens .mapa-mg { fill: var(--tint); stroke: var(--hot); stroke-width: 1.2; stroke-linejoin: round; }
+.mapa-viagens .ponto { fill: var(--s2); fill-opacity: .75; stroke: var(--surface); stroke-width: 1.2; cursor: pointer; outline: none; }
+.mapa-viagens .ponto:hover, .mapa-viagens .ponto:focus-visible, .mapa-viagens .ponto.ativo { fill-opacity: 1; stroke: var(--ink); stroke-width: 2; }
+.mapa-viagens .ponto.apagado { fill-opacity: .2; }
+.lista-cidades { list-style: none; padding: 0; margin: 8px 0 0; columns: 2; column-gap: 16px; }
+.lista-cidades li { break-inside: avoid; margin: 2px 0; }
+.lista-cidades button.ativo { font-weight: 700; text-decoration: underline; }
 /* Ranking com foto (deputados estaduais, políticos): foto grande, nome legível, partido com a cor ao lado */
 .rank-lista .bars { gap: 14px; }
 .rank-lista .bar-row { align-items: center; padding-bottom: 2px; }
