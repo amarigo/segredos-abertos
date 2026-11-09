@@ -29,3 +29,11 @@ test("Minha rede: seguir um político, ligar uma fonte e perguntar", async ({ pa
   await page.reload();
   await expect(page.locator(".rede-seguido")).toHaveCount(1);
 });
+
+test("Minha rede: um link segue vários de uma vez (nome com UF e todos os senadores de um estado)", async ({ page }) => {
+  await page.goto("./#/rede?seguir=" + encodeURIComponent("Deputado Ficticio 01/MG,senado/RJ,Ninguém/AC"));
+  await expect(page.locator(".rede-seguido")).toHaveCount(4);
+  await expect(page.getByText("Não encontrei: Ninguém/AC")).toBeVisible();
+  await page.reload();
+  await expect(page.locator(".rede-seguido")).toHaveCount(4);
+});

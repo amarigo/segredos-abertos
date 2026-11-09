@@ -1,8 +1,8 @@
 /* Monta a rede de um político com os dados oficiais que o site já coletou (arquivos JSON de data/).
  * Cada ligação aponta para a fonte oficial de onde o número saiu: página do parlamentar, arquivo da cota,
  * votação na API da Câmara ou do Senado, Portal da Transparência (emendas) e base CNPJ da Receita (sócios). */
-import type { Politico, VotacaoResumo } from "../data.ts";
-import { idObjeto, type Fonte, type Ligacao, type Objeto, type Retrato } from "./modelo.ts";
+import type { Politico, Resumo, VotacaoResumo } from "../data.ts";
+import { idObjeto, normalizar, type Fonte, type Ligacao, type Objeto, type Retrato } from "./modelo.ts";
 
 /** Autor de emendas no arquivo emendas/{ano}.json */
 export interface AutorEmenda { nome: string; politico?: string | null; pago: number; pix_emendas?: [string, string, number][]; areas?: [string, number][] }
@@ -108,4 +108,31 @@ export function redeOficial(p: Politico, votacoes: VotacaoResumo[], emendas: Eme
     situacao: p.em_exercicio === false ? p.situacao || "fora do exercício" : "",
   };
   return { objetos, fontes, ligacoes, retrato };
+}
+
+/** Lê o pedido do link "?seguir=" (vários itens separados por vírgula) e devolve os ids dos políticos.
+ *  Cada item pode ser: o id do site ("dep-209787"); um nome com a UF ("Nikolas Ferreira/MG"); ou uma Casa com a UF
+ *  ("senado/MG", "camara/SP"), que segue todos dessa Casa e estado que estão no mandato hoje.
+ *  Um nome que bate com mais de uma pessoa fica de fora (vai em "faltou"): melhor não seguir a pessoa errada. */
+export function resolverPedido(pedido: string, politicos: Resumo[]): { ids: string[]; faltou: string[] } {
+  const ids: string[] = [], faltou: string[] = [];
+  const porId = new Set(politicos.map((p) => p.id));
+  for (const item of pedido.split(",").map((x) => x.trim()).filter(Boolean)) {
+    if (porId.has(item)) { ids.push(item); continue; }
+    const [texto, uf] = item.split("/").map((x) => x.trim());
+    const n = normalizar(texto);
+    const daUf = politicos.filter((p) => !uf || p.uf.toUpperCase() === uf.toUpperCase());
+    if (n === "senado" || n === "camara") {
+      const casa = daUf.filter((p) => p.casa === n && p.em_exercicio !== false);
+      if (casa.length && uf) ids.push(...casa.map((p) => p.id)); else faltou.push(item);
+      continue;
+    }
+    const nomes = (p: Resumo) => [p.nome, ...(p.outros_nomes || [])].map(normalizar);
+    const exato = daUf.filter((p) => nomes(p).includes(n));
+    const parecido = exato.length ? exato : daUf.filter((p) => nomes(p).some((x) => ` ${x} `.includes(` ${n} `)));
+    const ativos = parecido.filter((p) => p.em_exercicio !== false);
+    const achados = ativos.length ? ativos : parecido;
+    if (achados.length === 1) ids.push(achados[0].id); else faltou.push(item);
+  }
+  return { ids: [...new Set(ids)], faltou };
 }
