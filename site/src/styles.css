@@ -652,7 +652,16 @@ details > summary { padding-block: 10px; }
 .compo-leg b { text-align: right; color: var(--ink); }
 .pct-linha { color: var(--muted); font-weight: 600; margin-left: 6px; font-size: .85em; }
 .apagado { opacity: .4; }
-.bar-row { transition: opacity .2s; }
+.bar-row { transition: opacity .2s, background-color .2s; }
+/* Lista ligada à barra das partes (useRealce em graficos.tsx): a linha do pedaço escolhido ganha fundo e a cor dele */
+[data-fatia] { cursor: pointer; }
+.bar-row[data-fatia] { padding: 4px 8px 6px 12px; margin: 0 -8px 0 -12px; border-radius: 6px; }
+.bar-row.realce { background: var(--tint); box-shadow: inset 4px 0 0 var(--cor-fatia, var(--hot)); }
+tr.realce > td { background: var(--tint); }
+tr.realce > td:first-child { box-shadow: inset 4px 0 0 var(--cor-fatia, var(--hot)); }
+tr.apagado { opacity: .4; }
+tr[data-fatia] { transition: opacity .2s; }
+.pov-grupo.realce { background: var(--tint); }
 
 .variacao { display: inline-flex; align-items: baseline; gap: 3px; font-size: .8rem; font-weight: 700; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .variacao.sobe span[aria-hidden] { color: var(--s2); }

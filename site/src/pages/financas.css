@@ -48,6 +48,8 @@
 .fin-mais { margin-top: 6px; }
 .fin-tabela td.r, .fin-tabela th.r { text-align: right; }
 .fin-tabela .fin-destaque td { background: var(--fy-bg); }
+.fin-pct { white-space: nowrap; }
+.fin-cor { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: 1px; }
 .fin-sobe { color: var(--fr); font-weight: 600; }
 .fin-desce { color: var(--fg); font-weight: 600; }
 .fin-acao td { background: var(--bg); font-size: .9rem; }
