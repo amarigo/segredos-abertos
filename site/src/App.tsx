@@ -43,6 +43,7 @@ const GovernoPage = pagina(() => import("./pages/Governo"));
 const DinheiroMinas = pagina(() => import("./pages/DinheiroMinas"));
 const Licitacoes = pagina(() => import("./pages/Licitacoes"));
 const EmendasEstaduais = pagina(() => import("./pages/EmendasEstaduais"));
+const Cultura = pagina(() => import("./pages/Cultura"));
 const PainelAreas = pagina(() => import("./pages/PainelAreas"));
 const Corrupcao = pagina(() => import("./pages/Corrupcao"));
 const CasoCorrupcao = pagina(() => import("./pages/CasoCorrupcao"));
@@ -118,6 +119,7 @@ export default function App() {
             {MG && <NavLink to="/cidades">Cidades</NavLink>}
             {MG && <NavLink to="/emendas-estaduais">Emendas</NavLink>}
             {MG && <NavLink to="/licitacoes">Licitações</NavLink>}
+            {MG && <NavLink to="/cultura">Shows e cultura</NavLink>}
             {MG && <NavLink to="/painel">Painel por área</NavLink>}
             <NavLink to="/empresas">Empresas</NavLink>
             <NavLink to="/votacoes">Votações</NavLink>
@@ -127,8 +129,8 @@ export default function App() {
             {!MG && <NavLink to="/corrupcao">Corrupção</NavLink>}
             <NavLink to="/sobre">Como funciona</NavLink>
           </nav>
-          {/* A página de arrecadação e o painel por área têm os próprios anos; corrupção e julgamentos do STF não dependem de ano: o seletor só confundiria */}
-          {pathname !== "/dinheiro" && pathname !== "/licitacoes" && !pathname.startsWith("/corrupcao") && pathname !== "/votacoes/tribunais" && pathname !== "/painel" && <AnoSeletor />}
+          {/* A página de arrecadação e o painel por área têm os próprios anos; corrupção, julgamentos do STF e shows e cultura não dependem do ano escolhido: o seletor só confundiria */}
+          {pathname !== "/dinheiro" && pathname !== "/licitacoes" && !pathname.startsWith("/corrupcao") && pathname !== "/votacoes/tribunais" && pathname !== "/painel" && pathname !== "/cultura" && <AnoSeletor />}
         </div>
       </header>
       <main className="wrap">
@@ -159,6 +161,7 @@ export default function App() {
           {MG && <Route path="/assembleia" element={<Assembleia />} />}
           {MG && <Route path="/deputado-estadual/:id" element={<DeputadoEstadualPage />} />}
           {MG && <Route path="/emendas-estaduais" element={<EmendasEstaduais />} />}
+          {MG && <Route path="/cultura" element={<Cultura />} />}
           {MG && <Route path="/painel" element={<PainelAreas />} />}
           <Route path="/sobre" element={<Sobre />} />
           {!MG && <Route path="/verificacao" element={<VerificacaoPage />} />}
