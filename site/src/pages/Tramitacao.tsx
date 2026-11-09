@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Explain, Loading, useData } from "../components/ui";
-import { TEMAS, autorSigla, casaNome, dataBR, dataHoraBR, linkSeguro, type ArgumentoProjeto, type GrupoProjeto, type Projeto, type Tramitacao, type TramitacaoAlmg } from "../data";
+import { TEMAS, autorSigla, casaNome, dataBR, dataHoraBR, linkSeguro, type ArgumentoProjeto, type GrupoProjeto, type NoticiaContra, type Projeto, type Tramitacao, type TramitacaoAlmg } from "../data";
 import { norm } from "./Home";
 import { MG } from "../recorte";
 import { VotacoesAbas } from "./Votacoes";
@@ -68,29 +68,59 @@ function Argumento({ a, tudo }: { a: ArgumentoProjeto; tudo: boolean }) {
   );
 }
 
-/** O que dizem a favor e contra, só com trechos copiados de documentos oficiais (o coletor explica em debate.py). */
+/** Quem fala contra numa notícia: veículo, data, quem fala (como está no trecho) e o link da publicação original. */
+function Noticia({ n, tudo }: { n: NoticiaContra; tudo: boolean }) {
+  const u = linkSeguro(n.url);
+  const trechos = tudo ? n.trechos : n.trechos.slice(0, 1);
+  return (
+    <div className="proj-arg proj-noticia">
+      <p className="small"><span className="status nao-oficial">Notícia · fonte não oficial</span></p>
+      {n.quem && <p className="small">{"Quem fala: "}<b>{n.quem}</b></p>}
+      <p className="small">{"Publicado em "}<b>{n.veiculo}</b>{n.data && `, ${dataBR(n.data)}`}
+        {n.autor && <span className="muted">{` · texto de ${n.autor}`}</span>}</p>
+      {trechos.map((t, k) => <blockquote key={k} className="proj-trecho">{/^[“"]/.test(t) ? t : `“${t}”`}</blockquote>)}
+      {u && <a className="small" href={u} target="_blank" rel="noreferrer">{n.titulo ? `Ler a notícia original: ${n.titulo} ↗` : "Ler a notícia original ↗"}</a>}
+    </div>
+  );
+}
+
+/** O que dizem a favor e contra: trechos copiados de documentos oficiais (o coletor explica em debate.py). Quando
+ * nenhum documento oficial é contra, o lado contra mostra quem fala contra em notícias, marcado como fonte não oficial. */
 export function Debate({ p }: { p: Projeto }) {
   const [tudo, setTudo] = useState(false);
   const d = p.debate;
   if (!d) return null;
-  const temMais = [...d.favor, ...d.contra].some((a) => a.trechos.length > 1) || d.favor.length > 2 || d.contra.length > 2;
-  const lado = (titulo: string, cls: string, xs: ArgumentoProjeto[], vazio: string) => (
+  const nots = d.contra.length ? [] : d.noticias_contra || [];
+  const temMais = [...d.favor, ...d.contra, ...nots].some((a) => a.trechos.length > 1) || d.favor.length > 2 || d.contra.length > 2 || nots.length > 2;
+  const lado = (titulo: string, cls: string, xs: ArgumentoProjeto[], vazio: string, extra?: ReactNode) => (
     <div className={`proj-lado ${cls}`}>
       <h4>{titulo} <span className="muted small">({xs.length})</span></h4>
       {xs.length === 0
         ? <p className="small muted">{vazio}</p>
         : (tudo ? xs : xs.slice(0, 2)).map((a, k) => <Argumento key={k} a={a} tudo={tudo} />)}
+      {extra}
     </div>
   );
+  // Sem documento oficial contra: o que achamos em notícias (ou o aviso de que procuramos e não achamos)
+  const emNoticias = !d.contra.length && d.noticias_buscadas_em ? (
+    nots.length > 0 ? (
+      <>
+        <p className="small"><b>{`Em notícias (${nots.length})`}</b>{": como nenhum documento oficial é contra, procuramos quem fala contra na imprensa."}</p>
+        {(tudo ? nots : nots.slice(0, 2)).map((n, k) => <Noticia key={k} n={n} tudo={tudo} />)}
+        <p className="small muted">Notícia não é documento oficial. A frase foi copiada da notícia sem mudar palavras e escolhida automaticamente; confira o contexto no link.</p>
+      </>
+    ) : <p className="small muted">{`Também procuramos em notícias (em ${dataBR(d.noticias_buscadas_em)}) e não achamos ninguém falando contra esta proposta pelo número dela.`}</p>
+  ) : null;
   return (
     <details className="proj-debate recolhe">
       <summary>
         <h4 className="proj-debate-tit">O que dizem a favor e contra</h4>
-        <span className="recolhe-dica small"><span className="proj-conta favor">{`${d.favor.length} a favor`}</span> · <span className="proj-conta contra">{`${d.contra.length} contra`}</span></span>
+        <span className="recolhe-dica small"><span className="proj-conta favor">{`${d.favor.length} a favor`}</span> · <span className="proj-conta contra">{`${d.contra.length} contra`}</span>
+          {nots.length > 0 && <> · <span className="proj-conta contra">{`${nots.length} contra em notícias`}</span></>}</span>
       </summary>
       <div className="proj-lados">
         {lado("A favor", "favor", d.favor, "Ainda não há documento oficial a favor nesta proposta (justificação do autor ou parecer pela aprovação).")}
-        {lado("Contra", "contra", d.contra, "Ninguém registrou documento oficial contra até agora (parecer pela rejeição ou voto em separado). Pode haver quem discorde sem ter posto isso por escrito.")}
+        {lado("Contra", "contra", d.contra, "Ninguém registrou documento oficial contra até agora (parecer pela rejeição ou voto em separado). Pode haver quem discorde sem ter posto isso por escrito.", emNoticias)}
       </div>
       {temMais && <button className="link small" onClick={() => setTudo(!tudo)}>{tudo ? "Mostrar menos" : "Ver todos os trechos"}</button>}
       <p className="small muted">Frases copiadas dos documentos oficiais, sem mudar palavras: a justificação de quem propôs, o parecer dos relatores e os votos em separado. Escolhemos as frases que falam do efeito e do motivo; o documento completo está no link.</p>

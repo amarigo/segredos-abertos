@@ -26,7 +26,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from . import debate
+from . import debate, noticias
 from .temas import temas_de
 from .util import avisar, get_json, id_seguro, norm_name, url_segura, write_json
 
@@ -871,6 +871,32 @@ def argumentos(itens: list[dict], cache: Path) -> None:
              com, len(itens), leitor.novos, leitor.faltaram)
 
 
+def contra_em_noticias(itens: list[dict], cache: Path, minutos: float, hoje: dt.date) -> None:
+    """Proposta na pauta sem nenhum documento oficial contra: procura quem fala contra em notícias (noticias.py).
+    Uma de cada vez (a API do GDELT pede um pedido a cada 5 segundos), as que vão a voto primeiro."""
+    if minutos <= 0:
+        return
+    b = noticias.Buscador(cache, minutos, hoje)
+    alvo = [i for i in itens if "pauta" in i.get("grupos", []) and not (i.get("debate") or {}).get("contra")]
+    alvo.sort(key=lambda i: i["pauta"][0]["data"] if i.get("pauta") else "")
+    for it in alvo:
+        try:
+            r = b.contra(it)
+        except Exception as e:  # noqa: BLE001 - notícia é complemento: nunca derruba a coleta
+            log.info("Notícias contra %s: %s", it.get("id"), e)
+            r = None
+        # Sem nenhum documento oficial lido (pode ser só um site fora do ar hoje), o cartão só ganha a seção se houver
+        # notícia: "procuramos e não achamos" ao lado de "nenhum documento oficial" seria enganoso
+        if r is None or (not it.get("debate") and not r["noticias"]):
+            continue
+        deb = it.setdefault("debate", {"favor": [], "contra": [], "documentos": 0})
+        deb["noticias_contra"] = r["noticias"]
+        deb["noticias_buscadas_em"] = r["buscado_em"]
+    log.info("Contra em notícias: %d propostas sem documento oficial contra; %d buscas novas, %d notícias com trecho "
+             "contra, %d ficaram para a próxima (buscas que responderam: %s; que falharam: %s)", len(alvo), b.buscas,
+             b.achadas, b.faltaram, ", ".join(sorted(b.fontes_ok)) or "nenhuma", ", ".join(sorted(b.fontes_falha)) or "nenhuma")
+
+
 def _com_reserva(nome: str, cache: Path, fn):
     """Se a API falhar, usa a última coleta boa (e avisa no site)."""
     arq = cache / f"tramitacao-{nome}.json"
@@ -889,7 +915,8 @@ def _com_reserva(nome: str, cache: Path, fn):
         return [[], []], "faltando"
 
 
-def coletar(saida: Path, cache: Path, politicos: list[dict], hoje: dt.date | None = None) -> dict:
+def coletar(saida: Path, cache: Path, politicos: list[dict], hoje: dt.date | None = None,
+            minutos_noticias: float = 10) -> dict:
     hoje = hoje or dt.date.today()
     deputados = {p["id"]: p for p in politicos if p.get("casa") == "camara"}
     senadores = {norm_name(p["nome"]): p["id"] for p in politicos if p.get("casa") == "senado"}
@@ -897,6 +924,7 @@ def coletar(saida: Path, cache: Path, politicos: list[dict], hoje: dt.date | Non
     (is_, as_), ss = _com_reserva("senado", cache, lambda: senado(hoje, politicos))
     itens = [completar(dict(i)) for i in ic + is_]
     argumentos(itens, cache)
+    contra_em_noticias(itens, cache, minutos_noticias, hoje)
     ordem = {"pauta": 0, "mpv": 1, "nova": 2}
     # Primeiro o que está na pauta (pela data), depois as MPs e as novas (as mais recentes primeiro)
     itens.sort(key=lambda i: (min(ordem[g] for g in i["grupos"]),

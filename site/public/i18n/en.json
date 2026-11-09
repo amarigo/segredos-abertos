@@ -2274,5 +2274,16 @@
 "Valor reembolsado": "Amount reimbursed",
 "Para conferir no site oficial": "To check on the official website",
 "Ver todas as notas deste fornecedor": "See all invoices from this supplier",
-"Nenhuma nota com esses filtros.": "No invoices with these filters."
+"Nenhuma nota com esses filtros.": "No invoices with these filters.",
+"Notícia · fonte não oficial": "News · unofficial source",
+"Quem fala:": "Who says it:",
+"Publicado em": "Published in",
+"· texto de {*}": "· by {*}",
+"Ler a notícia original: {*} ↗": "Read the original article: {*} ↗",
+"Ler a notícia original ↗": "Read the original article ↗",
+"Em notícias ({0})": "In the news ({0})",
+": como nenhum documento oficial é contra, procuramos quem fala contra na imprensa.": ": since no official document is against it, we looked for people speaking against it in the press.",
+"Notícia não é documento oficial. A frase foi copiada da notícia sem mudar palavras e escolhida automaticamente; confira o contexto no link.": "A news article is not an official document. The sentence was copied word for word from the article and picked automatically; check the context in the link.",
+"Também procuramos em notícias (em {0}/{1}/{2}) e não achamos ninguém falando contra esta proposta pelo número dela.": "We also searched the news (on {0}/{1}/{2}) and found no one speaking against this bill by its number.",
+"{0} contra em notícias": "{0} against in the news"
 }

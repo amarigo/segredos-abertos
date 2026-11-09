@@ -545,6 +545,9 @@ details > summary { cursor: pointer; font-weight: 700; }
 .proj-arg p { margin: 0; }
 .proj-trecho { margin: 0; font-size: .92rem; line-height: 1.5; color: var(--ink-2); font-style: italic; }
 .proj-debate button.link { justify-self: start; }
+/* Contra em notícia: separado dos documentos oficiais e marcado como fonte não oficial */
+.proj-noticia { border-top: 1px dashed var(--line); padding-top: 8px; }
+.status.nao-oficial { background: var(--flag-y-bg); color: var(--flag-y); }
 @media (max-width: 699px) { .proj-lados { grid-template-columns: 1fr; } }
 /* Como uma proposta vira lei: desenho e texto lado a lado */
 .caminho { display: grid; gap: 10px; }

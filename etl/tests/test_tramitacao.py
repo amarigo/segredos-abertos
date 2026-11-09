@@ -170,3 +170,68 @@ def test_autor_que_veio_do_senado_e_presidente():
                          {}, {"RODRIGO PACHECO": "sen-1"})
     assert a[0] == {"nome": "Rodrigo Pacheco", "partido": "", "uf": "", "id": "sen-1", "cargo": "Senador(a)"}
     assert a[1]["nome"] == "Presidente da República"
+
+
+def test_sem_documento_oficial_contra_procura_em_noticias(coleta):
+    """PL 250/2024 está na pauta e nenhum documento oficial é contra: o contra vem de notícia, com veículo, link e a
+    frase copiada sem mudança. Notícia que não cita o número, que fala de outro projeto ou que recusa robô fica de fora."""
+    from fakegov_noticias import A, E
+    coleta.usar(FakeGov())
+    saida = coleta.rodar(com_emendas=False, com_incentivos=False)
+    por = {i["nome"]: i for i in coleta.ler(saida, "tramitacao.json")["itens"]}
+    deb = por["PL 250/2024"]["debate"]
+    assert deb["contra"] == [] and deb["noticias_buscadas_em"]
+    assert [n["url"] for n in deb["noticias_contra"]] == [A, E]  # a mais nova primeiro; E veio do Google, decodificado
+    n, e = deb["noticias_contra"]
+    assert e["veiculo"] == "Jornal E" and e["quem"] == "Deputada Sicrana Silva" and e["autor"] == "João Colunista"
+    assert e["trechos"][0].startswith("“O texto é um retrocesso")
+    assert n["url"] == A and n["veiculo"] == "Jornal A" and n["autor"] == "Maria Repórter" and n["data"] == "2026-10-30"
+    assert n["titulo"] == "Prefeitos criticam PL 250/2024 do transporte escolar"
+    assert n["quem"] == "Confederação Nacional de Municípios"
+    assert n["trechos"] == ["Segundo a Confederação Nacional de Municípios, o texto cria uma despesa sem fonte e pode "
+                            "prejudicar o orçamento das prefeituras pequenas."]
+    # Com documento oficial contra, não procuramos em notícias
+    assert "noticias_contra" not in por["PL 101/2025"]["debate"]
+    assert coleta.validar(saida).ok
+
+
+def test_busca_de_noticias_fora_do_ar_nao_diz_que_nao_achou(coleta):
+    gov = coleta.usar(FakeGov())
+    gov.falhar("api.gdeltproject.org", "500")
+    gov.falhar("www.bing.com", "500")
+    gov.falhar("news.google.com", "429")
+    saida = coleta.rodar(com_emendas=False, com_incentivos=False)
+    por = {i["nome"]: i for i in coleta.ler(saida, "tramitacao.json")["itens"]}
+    assert "noticias_buscadas_em" not in por["PL 250/2024"]["debate"]
+    assert coleta.validar(saida).ok
+
+
+def test_noticias_reconhece_a_proposta_e_quem_fala():
+    from sa_etl import noticias as n
+    p = n.padrao_proposta("PL", "4881", "2023")
+    for t in ("o PL 4.881/2023 prevê", "PL nº 4881/2023", "Projeto de Lei 4.881, de 2023", "PL 4881/23"):
+        assert p.search(t), t
+    assert not p.search("PL 4881/2022") and not p.search("PLP 14881/2023")
+    assert n.quem_fala("Segundo a ABSAE, a proposta enfraquece o programa.") == "ABSAE"
+    assert n.quem_fala("O senador Fulano de Tal afirmou que o texto é um retrocesso.") == "Senador Fulano de Tal"
+    assert n.quem_fala("Técnicos veem risco de desvio de recursos.") == ""
+    # Frase a favor ("reduz o risco") não conta como contra
+    assert n.trechos_contra(["O PL 4.881/2023 reduz o risco de apagão, afirmou o relator Beltrano em entrevista ontem."], "", p) == []
+
+
+def test_noticias_casos_reais_que_enganavam():
+    """Frases de notícias reais (coleta de teste de 09/11/2026) que o primeiro filtro pegava por engano."""
+    from sa_etl import noticias as n
+    p = n.padrao_proposta("PL", "1758", "2021")
+    # Descreve o problema que o projeto quer resolver, não é contra o projeto
+    assert n.trechos_contra(["O PL 1758/2021 trata do albinismo. De acordo com Pedrosa (PTC), o cotidiano do albino é marcado "
+                             "pela intolerância à luz solar e ameaçado pelos riscos da cegueira e do câncer de pele."], "", p) == []
+    # Chamada de outra notícia no meio da página ("minerais críticos")
+    assert n._nota_contra("Desenho do conselho de minerais críticos é 'interventor', diz jurista em entrevista sobre o setor") < 0
+    # "para o Pró-Amazônia Legal" não é quem fala; "segundo a ABSAE" é
+    f1 = ("A entidade manifestou preocupação com as alterações previstas para o Pró-Amazônia Legal, programa criado com o "
+          "objetivo de reduzir de forma permanente a Conta de Consumo de Combustível.")
+    f2 = "A proposta, segundo a ABSAE, enfraquece o caráter estrutural do Pró-Amazônia Legal."
+    assert n.quem_fala(f1) == "" and n.quem_fala(f2) == "ABSAE"
+    # Crítica de verdade continua valendo
+    assert n._nota_contra("Críticos da proposta apontam ainda que parte dos aeroclubes atua de forma irregular, oferecendo serviços.") > 0
