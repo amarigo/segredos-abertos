@@ -13,13 +13,9 @@ def g(u, t=40):
         r = S.get(u, timeout=t); print("GET", r.status_code, round(time.time() - t0, 1), "s", u, flush=True); return r.json()
     except Exception as e:
         print("ERRO", round(time.time() - t0, 1), "s", u, e, flush=True); return None
-IB = "https://servicodados.ibge.gov.br/api/v3/agregados"
-for t in (5436, 5429):
-    m = g(f"{IB}/{t}/metadados")
-    if m:
-        print("== tabela", t, m.get("nome"), "|", m.get("periodicidade"), "|", m.get("nivelTerritorial", {}).get("Administrativo"), flush=True)
-        for v in m.get("variaveis", [])[:8]: print("   var", v["id"], v["nome"], v.get("unidade"), flush=True)
-        for c in m.get("classificacoes", []): print("   class", c["id"], c["nome"], [(x["id"], x["nome"]) for x in c.get("categorias", [])][:8], flush=True)
+for u in (gabinetes.URL_POP, gabinetes.URL_REND):
+    d = g(u, 60)
+    print(json.dumps(d[:3] if isinstance(d, list) else d, ensure_ascii=False), flush=True)
 BASE = "https://amarigo.github.io/segredos-abertos/data"
 pols = g(BASE + "/politicos.json", 120)
 def det(p):

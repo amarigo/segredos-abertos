@@ -233,6 +233,7 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
 
     # ---------------- julgamentos do STF (aba de votações)
     _conferir_tribunais(saida, r)
+    _conferir_gabinetes(saida, pols, r)
 
     # ---------------- privacidade e links (em todos os arquivos)
     for f in sorted(saida.rglob("*.json")):
@@ -513,6 +514,36 @@ def _conferir_tribunais(saida: Path, r: Resultado) -> None:
             r.erro(f"Julgamento do STF com mais de 11 votos: {j.get('id')} ({len(votos)})")
         if sum((j.get("placar") or {}).values()) != len(votos):
             r.erro(f"Placar do julgamento do STF não bate com os votos: {j.get('id')}")
+
+
+def _conferir_gabinetes(saida: Path, pols: list[dict], r: Resultado) -> None:
+    """A verba de cada estado é a soma da verba dos deputados dele em politicos.json; população e cadeiras positivas;
+    fontes com link https."""
+    f = saida / "gabinetes.json"
+    if not f.exists():
+        r.alerta("Sem a comparação justa dos gabinetes (gabinetes.json)")
+        return
+    d = _ler(f, r) or {}
+    for k, u in (d.get("fontes") or {}).items():
+        if not str(u).startswith("https://"):
+            r.erro(f"Gabinetes: fonte sem link https ({k})")
+    for ano, b in (d.get("anos") or {}).items():
+        soma = Counter()
+        for p in pols:
+            if p["casa"] == "camara":
+                soma[p["uf"]] += ((p.get("por_ano") or {}).get(ano) or {}).get("verba_gabinete") or 0
+        vistos = set()
+        for u in b.get("ufs") or []:
+            vistos.add(u["uf"])
+            if abs((u.get("verba") or 0) - soma[u["uf"]]) > 1:
+                r.erro(f"Gabinetes {ano} {u['uf']}: verba do estado ({u.get('verba')}) diferente da soma dos deputados ({soma[u['uf']]:.2f})")
+            if u.get("teto") and u["verba"] > u["teto"] + 1:
+                r.erro(f"Gabinetes {ano} {u['uf']}: verba gasta maior que o teto")
+            if u.get("populacao") is not None and u["populacao"] <= 0:
+                r.erro(f"Gabinetes {ano} {u['uf']}: população inválida")
+        for uf, v in soma.items():
+            if v and uf not in vistos:
+                r.erro(f"Gabinetes {ano}: estado {uf} com verba e fora da comparação")
 
 
 def _conferir_financas(saida: Path, r: Resultado) -> None:

@@ -553,3 +553,15 @@ export interface LicitacoesLocal {
   n_lista: number; compras: CompraPncp[];
 }
 export interface LicitacoesIndice { fonte: string; api: string; atualizado: string; locais: { id: string; nome: string; anos: { ano: number; n: number; completo: boolean }[] }[] }
+
+/* Comparação justa da verba de gabinete entre os estados (gabinetes.json, etl/sa_etl/gabinetes.py) */
+export interface GabineteUf {
+  uf: string; populacao: number | null; rendimento: number | null; cadeiras: number; verba: number; teto: number;
+  deputados_no_ano: number; secretarios_hoje: number | null; senadores: number; equipe_senado: number | null; senadores_com_equipe: number;
+}
+export interface Gabinetes {
+  atualizado: string; ano_populacao: string; trimestre_rendimento: string;
+  regras: null | { teto_mensal: number; max_secretarios: number; salario_min: number | null; salario_max: number | null; cota_por_uf: Record<string, number>; fonte: string };
+  anos: Record<string, { meses: number | null; ufs: GabineteUf[] }>;
+  fontes: Record<string, string>;
+}

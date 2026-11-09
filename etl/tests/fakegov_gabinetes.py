@@ -25,10 +25,13 @@ def _json(x) -> tuple[int, bytes, str]:
     return 200, json.dumps(x, ensure_ascii=False).encode(), "application/json"
 
 
-def _agregado(var: str, valor_de) -> list:
-    return [{"id": var, "resultados": [{"series": [
-        {"localidade": {"id": cod, "nome": nome}, "serie": {per: str(valor_de(cod))}}
-        for cod, (_, nome, *_r) in UFS.items() for per in [("2025" if var == "9324" else "202602")]]}]}]
+def _sidra(var: str, nome_var: str, periodo: str, nome_per: str, valor_de) -> list:
+    cab = {"NC": "Nível Territorial (Código)", "D1C": "Unidade da Federação (Código)", "D1N": "Unidade da Federação",
+           "D2C": "Variável (Código)", "D2N": "Variável", "D3C": f"{nome_per} (Código)", "D3N": nome_per, "V": "Valor"}
+    linhas = [{"NC": "3", "D1C": cod, "D1N": nome, "D2C": var, "D2N": nome_var, "D3C": periodo, "D3N": periodo, "V": str(valor_de(cod))}
+              for cod, (_, nome, *_r) in UFS.items()]
+    linhas.append({**linhas[0], "D1C": "99", "D1N": "Sem estado", "V": "..."})  # valor com sinal: fica de fora
+    return [cab] + linhas
 
 
 def pagina_regras() -> str:
@@ -54,14 +57,10 @@ def pagina_deputado(dep_id: int, ano: int) -> str:
 
 
 def rota(netloc: str, path: str, q: dict, deputados: list[dict]) -> tuple[int, bytes, str] | None:
-    if netloc == "servicodados.ibge.gov.br":
-        if path == "/api/v1/localidades/estados":
-            return _json([{"id": int(c), "sigla": s, "nome": n} for c, (s, n, *_r) in UFS.items()])
-        if path.endswith("/6579/periodos/-1/variaveis/9324"):
-            return _json(_agregado("9324", lambda c: UFS[c][2]))
-        if path.endswith("/5436/periodos/-1/variaveis/5932"):
-            return _json(_agregado("5932", lambda c: UFS[c][3]))
-        return 404, b"", "application/json"
+    if netloc == "apisidra.ibge.gov.br" and path == "/values/t/6579/n3/all/v/9324/p/last":
+        return _json(_sidra("9324", "População residente estimada", "2025", "Ano", lambda c: UFS[c][2]))
+    if netloc == "apisidra.ibge.gov.br" and path == "/values/t/5436/n3/all/v/5932/p/last":
+        return _json(_sidra("5932", "Rendimento médio mensal real", "202602", "Trimestre", lambda c: UFS[c][3]))
     if netloc == "www.camara.leg.br" and path == "/transparencia/gastos-parlamentares":
         return 200, pagina_regras().encode(), "text/html"
     if netloc == "dadosabertos.camara.leg.br" and path == "/arquivos/funcionarios/json/funcionarios.json":

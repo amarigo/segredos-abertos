@@ -11,8 +11,7 @@ Comparar só o valor gasto por cada deputado engana por três motivos:
    assessor atende.
 
 Fontes (API primeiro):
-- População e rendimento: API de agregados do IBGE (servicodados.ibge.gov.br/api/v3/agregados), e a API de
-  localidades para ligar o código de cada estado à sigla.
+- População e rendimento: API SIDRA do IBGE (apisidra.ibge.gov.br).
 - Verba de gabinete e o teto de cada deputado: página oficial do deputado (recursos.py; a API da Câmara não traz a
   verba de gabinete).
 - Secretários parlamentares de cada deputado hoje: arquivo de funcionários dos dados abertos da Câmara (a API v2 não
@@ -38,15 +37,20 @@ from .util import avisar, com_copia, get, get_json, to_float, write_json
 
 log = logging.getLogger("sa_etl.gabinetes")
 
-IBGE = "https://servicodados.ibge.gov.br/api/v3/agregados"
-URL_UFS = "https://servicodados.ibge.gov.br/api/v1/localidades/estados"
+# API SIDRA do IBGE (a mesma da inflação, em financas.py). A outra API do IBGE (servicodados) não aceita conexão a
+# partir do GitHub Actions, onde a coleta roda.
+SIDRA = "https://apisidra.ibge.gov.br/values"
 # Estimativa de população residente, por estado (tabela 6579, variável 9324), último ano publicado
-URL_POP = IBGE + "/6579/periodos/-1/variaveis/9324?localidades=N3[all]"
+URL_POP = SIDRA + "/t/6579/n3/all/v/9324/p/last"
 PAGINA_POP = "https://sidra.ibge.gov.br/tabela/6579"
 # PNAD Contínua trimestral: rendimento médio mensal real das pessoas ocupadas, habitualmente recebido em todos os
 # trabalhos (tabela 5436, variável 5932), por estado, último trimestre publicado
-URL_REND = IBGE + "/5436/periodos/-1/variaveis/5932?localidades=N3[all]"
+URL_REND = SIDRA + "/t/5436/n3/all/v/5932/p/last"
 PAGINA_REND = "https://sidra.ibge.gov.br/tabela/5436"
+# Código de cada estado no IBGE (padrão nacional, não muda): liga a resposta do SIDRA à sigla usada no site
+COD_UF = {"11": "RO", "12": "AC", "13": "AM", "14": "RR", "15": "PA", "16": "AP", "17": "TO", "21": "MA", "22": "PI",
+          "23": "CE", "24": "RN", "25": "PB", "26": "PE", "27": "AL", "28": "SE", "29": "BA", "31": "MG", "32": "ES",
+          "33": "RJ", "35": "SP", "41": "PR", "42": "SC", "43": "RS", "50": "MS", "51": "MT", "52": "GO", "53": "DF"}
 URL_REGRAS = "https://www.camara.leg.br/transparencia/gastos-parlamentares"
 URL_FUNC = fin_pessoal.URL_CAMARA
 URL_SENADO = "https://www12.senado.leg.br/transparencia/sen/"
@@ -56,28 +60,28 @@ NUM = r"([\d.]+,\d{2})"
 
 # ---------------------------------------------------------------- leitura das fontes
 
-def ufs_ibge(d: list) -> dict[str, dict]:
-    """Código do IBGE -> {"sigla", "nome"} (API de localidades)."""
-    return {str(x["id"]): {"sigla": x["sigla"], "nome": x["nome"]} for x in d or [] if x.get("id") and x.get("sigla")}
-
-
-def serie_ibge(d: list, ufs: dict[str, dict]) -> tuple[str, dict[str, float]]:
-    """Resposta da API de agregados -> (período, {sigla: valor}). Valores com sigla ('-', '...') ficam de fora."""
+def serie_sidra(d: list) -> tuple[str, dict[str, float], dict[str, str]]:
+    """Resposta da API SIDRA (primeira linha = nomes das colunas) -> (período, {sigla: valor}, {nome do estado: sigla}).
+    Valores com sinal no lugar do número ('-', '...', 'X') ficam de fora."""
+    if not isinstance(d, list) or len(d) < 2:
+        raise ValueError("SIDRA: resposta sem linhas")
+    cab = d[0]
+    col_uf = next(k for k, v in cab.items() if k.endswith("C") and str(v).startswith("Unidade da Federação"))
+    col_per = next(k for k, v in cab.items() if k.endswith("C") and re.match(r"(Ano|Trimestre|Mês)", str(v)))
     out: dict[str, float] = {}
+    nomes: dict[str, str] = {}
     periodo = ""
-    for var in d or []:
-        for r in var.get("resultados") or []:
-            for s in r.get("series") or []:
-                cod = str((s.get("localidade") or {}).get("id") or "")
-                for per, v in (s.get("serie") or {}).items():
-                    try:
-                        valor = float(v)
-                    except (TypeError, ValueError):
-                        continue
-                    if cod in ufs and valor > 0:
-                        out[ufs[cod]["sigla"]] = valor
-                        periodo = max(periodo, str(per))
-    return periodo, out
+    for x in d[1:]:
+        sigla = COD_UF.get(str(x.get(col_uf)))
+        try:
+            valor = float(x.get("V"))
+        except (TypeError, ValueError):
+            continue
+        if sigla and valor > 0:
+            out[sigla] = valor
+            nomes[str(x.get(col_uf[:-1] + "N") or "")] = sigla
+            periodo = max(periodo, str(x.get(col_per)))
+    return periodo, out, nomes
 
 
 def _texto(h: str) -> str:
@@ -170,16 +174,15 @@ def coletar(saida: Path, cache: Path, anos: list[int]) -> dict | None:
     pasta = cache / "gabinetes"
     politicos = json.loads((saida / "politicos.json").read_text(encoding="utf-8"))
     try:
-        ufs = ufs_ibge(com_copia(pasta / "ufs.json", lambda: get_json(URL_UFS, timeout=60), "Estados (IBGE)", max_horas=24 * 30))
-        ano_pop, pop = serie_ibge(com_copia(pasta / "populacao.json", lambda: get_json(URL_POP, timeout=120),
-                                            "População dos estados (IBGE)", max_horas=24 * 7), ufs)
+        ano_pop, pop, nomes = serie_sidra(com_copia(pasta / "populacao.json", lambda: get_json(URL_POP, timeout=120),
+                                                    "População dos estados (IBGE)", max_horas=24 * 7))
     except Exception as e:  # noqa: BLE001
         log.warning("Gabinetes: IBGE fora do ar e sem cópia (%s)", e)
         avisar("Comparação dos gabinetes: o IBGE não respondeu; a página ficou de fora desta atualização")
         return None
     try:
-        tri_rend, rend = serie_ibge(com_copia(pasta / "rendimento.json", lambda: get_json(URL_REND, timeout=120),
-                                              "Rendimento médio por estado (IBGE)", max_horas=24 * 7), ufs)
+        tri_rend, rend, _ = serie_sidra(com_copia(pasta / "rendimento.json", lambda: get_json(URL_REND, timeout=120),
+                                                  "Rendimento médio por estado (IBGE)", max_horas=24 * 7))
     except Exception as e:  # noqa: BLE001
         log.warning("Gabinetes: rendimento do IBGE indisponível (%s)", e)
         tri_rend, rend = "", {}
@@ -194,7 +197,6 @@ def coletar(saida: Path, cache: Path, anos: list[int]) -> dict | None:
         log.warning("Gabinetes: arquivo de funcionários da Câmara indisponível (%s)", e)
         secretarios = None
     try:
-        nomes = {u["nome"]: u["sigla"] for u in ufs.values()}
         regras = regras_camara(get(URL_REGRAS, timeout=60, headers={"Accept": "text/html"}).text, nomes)
     except Exception as e:  # noqa: BLE001
         log.warning("Gabinetes: página de gastos parlamentares da Câmara indisponível (%s)", e)
@@ -208,7 +210,7 @@ def coletar(saida: Path, cache: Path, anos: list[int]) -> dict | None:
     d = {
         "atualizado": dt.datetime.now(dt.timezone(dt.timedelta(hours=-3))).isoformat(timespec="minutes"),
         "ano_populacao": ano_pop, "trimestre_rendimento": tri_rend, "regras": regras, "anos": por_ano,
-        "fontes": {"populacao": PAGINA_POP, "rendimento": PAGINA_REND, "api_ibge": "https://servicodados.ibge.gov.br/api/docs/agregados?versao=3",
+        "fontes": {"populacao": PAGINA_POP, "rendimento": PAGINA_REND, "api_ibge": "https://apisidra.ibge.gov.br/",
                    "regras": URL_REGRAS, "secretarios": URL_FUNC, "constituicao": CONSTITUICAO, "senado": URL_SENADO},
     }
     write_json(saida / "gabinetes.json", d)
