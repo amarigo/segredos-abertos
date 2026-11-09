@@ -146,6 +146,12 @@ def test_emendas_estaduais_lugar_fora_de_minas_e_nome_oficial_da_cidade():
     mg = {"UBA": "Ubá", "ITAJUBA": "Itajubá", "PARAISOPOLIS": "Paraisópolis", "BELOHORIZONTE": "Belo Horizonte",
           "POUSOALEGRE": "Pouso Alegre"}
     fora = emendas_mg.nomear_locais(rows, mg)
+    # grafia antiga do mesmo município: "Brasópolis" no arquivo, "Brazópolis" na lista oficial
+    gr = [{"ano": 2025, "municipio": m, "uf": "MINAS GERAIS", "beneficiario": "Fundo Municipal de Saude", "aprovada": True,
+           "indicado": 1.0} for m in ("BRASÓPOLIS", "SÃO THOMÉ DAS LETRAS", "DONA EUSÉBIA")]
+    ofic = {"BRAZOPOLIS": "Brazópolis", "SAOTOMEDASLETRAS": "São Tomé das Letras", "DONAEUZEBIA": "Dona Euzébia"}
+    assert not emendas_mg.nomear_locais(gr, ofic)
+    assert [r["local"] for r in gr] == ["Brazópolis", "São Tomé das Letras", "Dona Euzébia"]
     uba = [r for r in rows if r["municipio"] == "UBÁ"]
     assert uba and all(r["local"] == "Ubá" for r in uba)
     assert uba[0]["beneficiario"] == "Hospital Sao Vicente de Paulo de Ubá"
