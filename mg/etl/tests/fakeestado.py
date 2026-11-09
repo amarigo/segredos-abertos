@@ -220,7 +220,12 @@ class FakeEstado:
 
     def ibge(self, caminho: str, q: dict) -> bytes:
         if caminho == "/api/v1/localidades/estados/31/municipios":
-            return json.dumps([{"id": c, "nome": n} for c, n in self.CIDADES_IBGE], ensure_ascii=False).encode()
+            # Itajubá com a região (Shows e cultura soma por região intermediária); o mapa das viagens só usa id e nome
+            regiao = {3132404: {"regiao-imediata": {"nome": "Itajubá", "regiao-intermediaria": {"nome": "Pouso Alegre"}}}}
+            return json.dumps([{"id": c, "nome": n, **regiao.get(c, {})} for c, n in self.CIDADES_IBGE], ensure_ascii=False).encode()
+        if caminho.startswith("/api/v3/agregados/6579/"):  # população estimada (Shows e cultura)
+            return json.dumps([{"resultados": [{"series": [
+                {"localidade": {"id": "3132404"}, "serie": {"2025": "97000"}}]}]}]).encode()
         if caminho == "/api/v3/malhas/estados/31" and q.get("formato") == "application/vnd.geo+json":
             def quadrado(x0, y0, lado):
                 return {"type": "Polygon", "coordinates": [[[x0, y0], [x0 + lado, y0], [x0 + lado, y0 + lado], [x0, y0 + lado], [x0, y0]]]}
@@ -579,12 +584,6 @@ class FakeEstado:
     def _rota(self, url: str, params: dict) -> tuple[int, bytes, str]:
         u = urlparse(url)
         q = {**{k: v[0] for k, v in parse_qs(u.query).items()}, **{k: str(v) for k, v in (params or {}).items()}}
-        if u.netloc == "servicodados.ibge.gov.br":  # cidades e população (Shows e cultura)
-            if "/localidades/" in u.path:
-                return 200, json.dumps([{"id": 3132404, "nome": "Itajubá", "regiao-imediata": {
-                    "nome": "Itajubá", "regiao-intermediaria": {"nome": "Pouso Alegre"}}}]).encode(), "application/json"
-            return 200, json.dumps([{"resultados": [{"series": [
-                {"localidade": {"id": "3132404"}, "serie": {"2025": "97000"}}]}]}]).encode(), "application/json"
         # Itens e resultados de uma compra (API do PNCP, usada por Shows e cultura). As compras vêm da simulação da API de
         # consulta (self.pncp), a mesma das licitações: o show da festa de Itajubá (art. 74, II) é o que entra em Shows e cultura.
         if u.netloc == "pncp.gov.br" and not u.path.startswith("/api/consulta/v1/"):
