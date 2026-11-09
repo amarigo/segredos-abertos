@@ -662,3 +662,25 @@ test.describe("verificação independente", () => {
     await expect(page.locator(".selo")).toHaveCount(0);
   });
 });
+
+// Legenda do gráfico "Da esquerda à direita" quebrava os nomes letra a letra ("Esque/rda") e a página passava da
+// tela em celulares de 320px. Confere que nenhuma palavra da legenda quebra no meio e que não há rolagem de lado.
+test("formatação: legenda das partes sem palavra cortada e página sem rolagem de lado", async ({ page }) => {
+  for (const rota of ["#/politicos", "#/empresas", "#/partidos"]) {
+    await page.goto(rota);
+    await expect(page.locator(".compo-leg").first()).toBeVisible();
+    const cortadas = await page.$$eval(".compo-nome", (els) => els.flatMap((el) => {
+      const n = el.firstChild; if (!n || !n.textContent) return [];
+      const out: string[] = []; const re = /[^\s-]{3,}/g; let m;
+      while ((m = re.exec(n.textContent))) {
+        const r = document.createRange(); r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length);
+        const rs = [...r.getClientRects()].filter((x) => x.width > 0.5);
+        if (rs.length > 1 && Math.abs(rs[0].top - rs[rs.length - 1].top) > 2) out.push(m[0]);
+      }
+      return out;
+    }));
+    expect(cortadas, rota).toEqual([]);
+    const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(sobra, rota).toBeLessThanOrEqual(1);
+  }
+});

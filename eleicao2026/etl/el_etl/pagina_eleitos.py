@@ -30,15 +30,16 @@ CSS_PAGINA = """
 .l3{background:color-mix(in oklab,var(--dir) 55%,var(--centro))} .l4{background:var(--dir)}
 .ls{background:repeating-linear-gradient(45deg,var(--line) 0 6px,transparent 6px 12px)}
 .legend .sw{vertical-align:middle}
-.cards-el{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(22rem,1fr));gap:.8rem}
-@media (max-width:560px){.cards-el{grid-template-columns:1fr}}
+.cards-el{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,22rem),1fr));gap:.8rem}
+@media (max-width:560px){.cards-el{grid-template-columns:minmax(0,1fr)}}
 .el{display:flex;gap:.9rem;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:.9rem;background:var(--panel)}
 .el .foto{flex:none;position:relative;width:4rem;height:5.3rem;border-radius:8px;overflow:hidden;background:var(--soft);display:flex;align-items:center;justify-content:center}
 .el .foto img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .el .foto b{font-size:1.2rem;color:var(--muted)}
-.el .info{display:flex;flex-direction:column;gap:.2rem;min-width:0}
+.el .info{display:flex;flex-direction:column;gap:.2rem;min-width:0;flex:1 1 auto;overflow-wrap:break-word}
 .el .nome{font-size:1.1rem}
 .el .links{display:flex;flex-wrap:wrap;gap:.2rem .9rem;margin-top:.2rem}
+@media (max-width:380px){.el{gap:.7rem;padding:.75rem}.el .foto{width:3rem;height:4rem}}
 .tag.re{background:var(--soft);color:var(--br-ink)}
 .tag.nv{background:#E3F5E1;color:#0E5A16}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tag.nv{background:#173A1C;color:#9BE3A5}}
