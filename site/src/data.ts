@@ -515,3 +515,21 @@ export interface Tribunais {
   fontes: Record<string, { nome: string; pagina: string; servicos: string[] }>;
   classes: Record<string, string>; ministros: MinistroResumo[]; julgamentos: Julgamento[];
 }
+
+/* Licitações e contratações diretas (licitacoes/<lugar>-<ano>.json, gerado por mg/etl/mg_etl/pncp.py a partir do PNCP) */
+export type FormaCompra = "licitacao" | "dispensa" | "inexigibilidade" | "outro";
+export interface ContratoPncp { fornecedor: string; cnpj: string; valor: number; assinatura: string; fim: string; tipo: string; url: string }
+export interface CompraPncp { id: string; data: string; orgao: string; unidade: string; forma: FormaCompra; modalidade: string; amparo: string;
+  amparo_descricao: string; objeto: string; processo: string; estimado: number; homologado: number; valor: number; situacao: string;
+  andamento: string; url: string; contratos: ContratoPncp[] }
+export interface LicitacoesLocal {
+  id: string; nome: string; ano: number; atualizado: string; fonte: string; api: string; completo: boolean; faltam: string[];
+  total: { n: number; estimado: number; homologado: number; contratado: number; contratos: number; valor_contratos: number };
+  por_forma: { forma: FormaCompra; rotulo: string; n: number; estimado: number; homologado: number; contratado: number }[];
+  por_andamento: { andamento: string; n: number }[];
+  orgaos: { nome: string; cnpj: string; n: number; valor: number }[];
+  fornecedores: { nome: string; cnpj: string; n: number; valor: number }[];
+  amparos: { nome: string; descricao: string; forma: FormaCompra; n: number; valor: number }[];
+  n_lista: number; compras: CompraPncp[];
+}
+export interface LicitacoesIndice { fonte: string; api: string; atualizado: string; locais: { id: string; nome: string; anos: { ano: number; n: number; completo: boolean }[] }[] }
