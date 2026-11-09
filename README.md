@@ -42,6 +42,23 @@ clique em **Run workflow** e confirme com o branch `main`. Em cerca de 30 a 60 m
 | Funcionários da Câmara e do Senado por vínculo | [Arquivo de funcionários da Câmara](https://dadosabertos.camara.leg.br/arquivos/funcionarios/json/funcionarios.json) e [API de servidores do Senado](https://adm.senado.gov.br/adm-dadosabertos/api/v1/servidores/servidores) |
 | Inflação (IPCA) para comparar anos | [API do SIDRA, IBGE](https://sidra.ibge.gov.br/tabela/1737) |
 
+## Minha rede (/rede)
+
+Ferramenta pessoal para acompanhar políticos como uma rede. Ao seguir um político, a rede dele se monta com os dados
+oficiais do próprio site: empresas pagas com a cota e seus sócios, votações recentes, projetos votados, partido e
+destino das emendas Pix. Cada ligação guarda a fonte oficial (com link) e, quando há, o trecho de origem.
+
+- **Fontes próprias:** a pessoa cola um texto (notícia, documento, transcrição) ou abre um arquivo .txt, .md ou .html.
+  O app encontra os políticos e empresas citados e transforma as frases marcadas em afirmações ligadas a quem elas citam.
+- **Conexões que você ainda não fez:** objetos sem ligação direta, mas com ligações em comum.
+- **Perguntar:** busca nas fontes e nas ligações, com resposta em trechos e o link de cada um.
+- **Comparar:** indicadores de vários políticos lado a lado; a comparação guardada mostra depois o que mudou.
+- **Novidades:** ao abrir a página, mostra o que mudou em cada político seguido desde a última visita (gastos, votos,
+  empresas novas, partido, emendas).
+
+A base fica só no navegador (IndexedDB), com exportar e importar em JSON; nada é enviado. Código em `site/src/rede/` e
+`site/src/pages/Rede.tsx`; testes em `site/tests/rede.test.ts` e `site/e2e/rede.spec.ts`.
+
 ## Painel de status (/status/)
 
 [amarigo.github.io/segredos-abertos/status/](https://amarigo.github.io/segredos-abertos/status/) mostra se a coleta diária

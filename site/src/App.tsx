@@ -22,6 +22,7 @@ function pagina<T extends ComponentType>(carregar: () => Promise<{ default: T }>
 }
 
 const Politicos = pagina(() => import("./pages/Politicos"));
+const Rede = pagina(() => import("./pages/Rede"));
 const PoliticoPage = pagina(() => import("./pages/Politico"));
 const Empresas = pagina(() => import("./pages/Empresas"));
 const EmpresaPage = pagina(() => import("./pages/Empresa"));
@@ -121,6 +122,7 @@ export default function App() {
             {!MG && <NavLink to="/emendas">Emendas</NavLink>}
             {!MG && <NavLink to="/incentivos">Incentivos</NavLink>}
             {!MG && <NavLink to="/corrupcao">Corrupção</NavLink>}
+            <NavLink to="/rede">Minha rede</NavLink>
             <NavLink to="/sobre">Como funciona</NavLink>
           </nav>
           {/* A página de arrecadação tem os próprios anos (do Tesouro); corrupção e julgamentos do STF não dependem de ano: o seletor só confundiria */}
@@ -154,6 +156,7 @@ export default function App() {
           {MG && <Route path="/assembleia" element={<Assembleia />} />}
           {MG && <Route path="/deputado-estadual/:id" element={<DeputadoEstadualPage />} />}
           {MG && <Route path="/emendas-estaduais" element={<EmendasEstaduais />} />}
+          <Route path="/rede" element={<Rede />} />
           <Route path="/sobre" element={<Sobre />} />
           {!MG && <Route path="/verificacao" element={<VerificacaoPage />} />}
           <Route path="*" element={<div className="empty">Página não encontrada. <Link to="/">Voltar ao início</Link></div>} />
