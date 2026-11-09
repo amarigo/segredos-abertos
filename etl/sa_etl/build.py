@@ -12,7 +12,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import (autorias, recursos_recebidos, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
+from . import (agenda, autorias, recursos_recebidos, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
                renuncias, senado, temas)
 from .categorias import GRUPOS, tema_de
 from . import util
@@ -40,6 +40,12 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
     despesas = camara.despesas(anos, ids_c, cache) + senado.despesas(anos, ids_s, cache)
     vc, votos_c = camara.votacoes(anos, ids_c, cache)
     vs, votos_s = senado.votacoes(anos, ids_s, cache / "senado-votacoes")
+    try:  # presença dia a dia na Câmara, para o calendário; se falhar, o resto do site segue
+        presenca = agenda.presenca_camara(anos, ids_c, cache)
+    except Exception:  # noqa: BLE001
+        log.exception("Presença na Câmara: erro")
+        util.avisar("Presença na Câmara: o calendário dia a dia dos deputados não foi atualizado")
+        presenca = {}
 
     por_cnpj = Counter()
     for d in despesas:
@@ -62,7 +68,7 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
         log.warning("Não foi possível conferir os links das notas: %s", e)
     return {"politicos": politicos, "despesas": despesas, "votacoes": vc + vs,
             "votos": votos_c + votos_s, "empresas": emps,
-            "empresas_socias": socias, "recursos": rec, "autorias": aut,
+            "empresas_socias": socias, "recursos": rec, "autorias": aut, "presenca": presenca,
             "fora_da_lista": util.resumo_fora_da_lista()}
 
 
@@ -257,6 +263,7 @@ def montar(dados: dict, saida: Path, anos: list[int], anos_notas: list[int] | No
     for v in votacoes:
         v["temas"] = temas.temas_da_votacao(v)
     votacao_por_id = {v["id"]: v for v in votacoes}
+    presenca = dados.get("presenca") or {}
     rec_todos = salario_senadores(politicos, dados.get("recursos") or {})
     autorias_todas = dados.get("autorias") or {}
     resumo = []
@@ -299,6 +306,12 @@ def montar(dados: dict, saida: Path, anos: list[int], anos_notas: list[int] | No
                                "valor": x["valor"], "url": x["url"], "detalhe": x.get("detalhe", "")}
                               for x in sorted(fo, key=lambda x: x["data"])][:50]}
             detalhe[str(ano)] = {**det, "recursos": r or None, **extra}
+            # Calendário dia a dia (p/agenda/), carregado só quando a pessoa abre a aba
+            cal = agenda.montar_ano(p["casa"], ano, presenca.get(p["id"], []), votos_por_politico.get(p["id"], []),
+                                    votacao_por_id, ds, emps)
+            if cal:
+                write_json(saida / "p" / "agenda" / f"{p['id']}-{ano}.json", cal)
+                detalhe[str(ano)]["agenda"] = cal["resumo"]
         meus_votos = sorted(
             ({"votacao": v["votacao"], "voto": v["voto"],
               "partido": maioria_partido.get((v["votacao"], v["partido"]), "")}

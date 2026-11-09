@@ -73,7 +73,7 @@ DIAS_HISTORICO = 90
 CONFIANCA = 0.95
 AMOSTRAS = {  # quantos itens por checagem, por dia
     "cota_camara_mes": 40, "cota_camara_empresa": 40, "cota_senado_ano": 30,
-    "votos_camara": 12, "votos_senado": 8, "empresas_receita": 25, "emendas_autor": 15,
+    "votos_camara": 12, "votos_senado": 8, "empresas_receita": 25, "emendas_autor": 15, "presenca_camara": 30,
 }
 
 SECOES = {
@@ -83,6 +83,7 @@ SECOES = {
     "emendas": "Emendas parlamentares",
     "financas": "Arrecadação e gastos do governo",
     "incentivos": "Dinheiro público para empresas",
+    "agenda": "Presença dia a dia",
 }
 # Seções que ainda não têm uma segunda fonte oficial para conferir, e por quê
 SEM_SEGUNDA_FONTE = {
@@ -548,6 +549,43 @@ def votos_senado(saida: Path, vots: list[dict], rng: random.Random, prazo: Prazo
 
 # ---------------------------------------------------------------- empresas
 
+def presenca_camara(saida: Path, rng: random.Random, prazo: Prazo, buscar: Callable = get_json) -> Checagem:
+    """Presença no calendário dia a dia: o site lê os arquivos anuais de eventos da Câmara; a API mostra a lista de
+    presença de cada evento (/eventos/{id}/deputados). Sorteamos deputados e um evento de cada um."""
+    c = Checagem(
+        "presenca_camara", "agenda", "Presença de cada deputado nos eventos",
+        "Sorteamos deputados e, para cada um, um evento em que o calendário do site mostra presença registrada. "
+        "Conferimos se o deputado está na lista de presença daquele evento na API oficial da Câmara (o site lê os "
+        "arquivos anuais de eventos; a API é outra publicação da Câmara).",
+        "https://dadosabertos.camara.leg.br/swagger/api.html#/Eventos/deputadosEvento")
+    arqs = sorted((saida / "p" / "agenda").glob("dep-*.json"))
+    for f in rng.sample(arqs, min(AMOSTRAS["presenca_camara"], len(arqs))):
+        if prazo.acabou():
+            c.falhou("tempo da verificação acabou")
+            break
+        a = _ler(f) or {}
+        evs = [(dia, e) for dia, x in sorted((a.get("dias") or {}).items()) for e in x.get("e") or []]
+        if not evs:
+            continue
+        dia, e = rng.choice(evs)
+        pid = f.stem.rsplit("-", 1)[0]
+        url = f"{API_CAMARA}/eventos/{e[6]}/deputados"
+        try:
+            r = buscar(url, timeout=60)
+            if not isinstance(r, dict) or not isinstance(r.get("dados"), list):
+                raise ValueError("resposta inesperada")
+        except Exception as ex:  # noqa: BLE001
+            c.falhou(f"{pid} em {dia}: API da Câmara não respondeu ({str(ex)[:100]})")
+            continue
+        presentes = {f"dep-{x.get('id')}" for x in r["dados"]}
+        ok = pid in presentes
+        c.bateu(ok, {"o_que": f"Presença em {e[1]}{' ' + e[2] if e[2] else ''} ({dia})", "politico": pid,
+                     "site": "presente", "oficial": "presente" if ok else "não está na lista de presença", "fonte": url})
+    if not arqs:
+        c.motivo = "o site ainda não tem o calendário dia a dia"
+    return c
+
+
 def _nome(s: str) -> str:
     return re.sub(r"[^A-Z0-9]+", " ", norm_name(s or "").upper()).strip()
 
@@ -766,6 +804,7 @@ def verificar(saida: Path, anterior: dict | None = None, minutos: float = 20, se
     rodar("emendas_autor", lambda: emendas_autor(saida, random.Random(rng.random()), prazo,
                                                  chave_portal() if chave is None else chave, buscar))
     rodar("financas_juros", lambda: financas_juros(saida))
+    rodar("presenca_camara", lambda: presenca_camara(saida, random.Random(rng.random()), prazo, buscar))
 
     hist = {sid: (s.get("historico") or []) for sid, s in ((anterior or {}).get("secoes") or {}).items()}
     out = {
@@ -787,7 +826,8 @@ def verificar(saida: Path, anterior: dict | None = None, minutos: float = 20, se
 
 
 SECAO_DE = {"cota_camara": "cota", "cota_camara_pagina": "cota", "cota_senado_ano": "cota", "votos_camara": "votacoes", "votos_senado": "votacoes",
-            "empresas_receita": "empresas", "emendas_autor": "emendas", "financas_juros": "financas"}
+            "empresas_receita": "empresas", "emendas_autor": "emendas", "financas_juros": "financas",
+            "presenca_camara": "agenda"}
 
 
 def _baixar_anterior(url: str) -> dict | None:

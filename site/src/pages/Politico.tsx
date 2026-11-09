@@ -10,6 +10,7 @@ import {
 } from "../data";
 import { AvisosFim, EmRevisao } from "../components/Selo";
 import { FotoPerfil } from "../components/Foto";
+import { AgendaPolitico } from "../components/Agenda";
 import { norm } from "./Home";
 
 export default function PoliticoPage() {
@@ -17,8 +18,10 @@ export default function PoliticoPage() {
   const { data: p, error } = useData<Politico>(`p/${id}.json`);
   const { data: meta } = useData<Meta>("meta.json");
   const [params, setParams] = useSearchParams();
-  const aba = params.get("aba") === "votos" ? "votos" : params.get("aba") === "atuacao" ? "atuacao" : "gastos";
-  const setAba = (a: "gastos" | "atuacao" | "votos") => setParams(a !== "gastos" ? { aba: a } : {}, { replace: true });
+  const pedida = params.get("aba");
+  const aba = pedida === "votos" || pedida === "atuacao" || pedida === "agenda" ? pedida : "gastos";
+  const setAba = (a: "gastos" | "atuacao" | "votos" | "agenda") => setParams(a !== "gastos" ? { aba: a } : {}, { replace: true });
+  const { ano } = useAno();
   if (!p) return <Loading error={error} />;
   return (
     <>
@@ -45,10 +48,12 @@ export default function PoliticoPage() {
       </section>
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={aba === "gastos"} onClick={() => setAba("gastos")}>Gastos e equipe</button>
+        <button role="tab" aria-selected={aba === "agenda"} onClick={() => setAba("agenda")}>Dia a dia</button>
         <button role="tab" aria-selected={aba === "atuacao"} onClick={() => setAba("atuacao")}>Atuação</button>
         <button role="tab" aria-selected={aba === "votos"} onClick={() => setAba("votos")}>Votos</button>
       </div>
-      {aba === "gastos" ? <Gastos p={p} meta={meta} /> : aba === "atuacao" ? <AtuacaoPolitico p={p} /> : <Votos p={p} />}
+      {aba === "gastos" ? <Gastos p={p} meta={meta} /> : aba === "atuacao" ? <AtuacaoPolitico p={p} />
+        : aba === "agenda" ? <AgendaPolitico p={p} ano={ano} /> : <Votos p={p} />}
       <AvisosFim secao="cota">
         {aba === "gastos" && <NotasCota p={p} />}
         <EmRevisao campo="politico" valor={p.id} />
