@@ -16,6 +16,7 @@ import {
 import { redeOficial, resolverPedido, type EmendasAno } from "../rede/oficial";
 import { carregarBase, exportar, salvarBase } from "../rede/guardar";
 import { Grafo } from "../rede/Grafo";
+import { Circulo, EmComum, LadoALado, MapaPolitico, Ranking } from "../rede/Visoes";
 
 type Aba = "novidades" | "rede" | "fontes" | "buscar" | "comparar";
 const ABAS: [Aba, string][] = [["novidades", "Seguidos e novidades"], ["rede", "Rede"], ["fontes", "Fontes"], ["buscar", "Perguntar"], ["comparar", "Comparar"]];
@@ -136,7 +137,7 @@ export default function Rede() {
       </div>
 
       {aba === "novidades" && <Novidades base={base} mudar={mudar} politicos={politicos} votacoes={votacoes || []} meta={meta} seguir={seguir} irPara={irPara} />}
-      {aba === "rede" && <AbaRede base={base} mudar={mudar} sel={sel} setSel={setSel} />}
+      {aba === "rede" && <AbaRede base={base} mudar={mudar} sel={sel} setSel={setSel} politicos={politicos} />}
       {aba === "fontes" && <Fontes base={base} mudar={mudar} politicos={politicos} empresas={empresas || []} irPara={irPara} />}
       {aba === "buscar" && <Perguntar base={base} irPara={irPara} />}
       {aba === "comparar" && <Comparar base={base} mudar={mudar} politicos={politicos} meta={meta} />}
@@ -260,7 +261,65 @@ function Sugestoes({ base, mudar, irPara }: { base: Base; mudar: (f: (b: Base) =
 
 /* ---------- Rede (grafo e painel do objeto) ---------- */
 
-function AbaRede({ base, mudar, sel, setSel }: { base: Base; mudar: (f: (b: Base) => Base) => void; sel?: string; setSel: (id?: string) => void }) {
+type Visao = "mapa" | "lado" | "ranking" | "comum" | "circulo" | "grafo";
+const VISOES: [Visao, string][] = [["mapa", "Mapa do político"], ["lado", "Lado a lado"], ["ranking", "Ranking"], ["comum", "Em comum"], ["circulo", "Círculo"], ["grafo", "Grafo livre"]];
+
+function AbaRede({ base, mudar, sel, setSel, politicos }: { base: Base; mudar: (f: (b: Base) => Base) => void; sel?: string; setSel: (id?: string) => void; politicos: Resumo[] }) {
+  const [visao, setVisao] = useState<Visao>(() => { try { return (localStorage.getItem("rede-visao") as Visao) || "mapa"; } catch { return "mapa"; } });
+  const escolher = (v: Visao) => { setVisao(v); try { localStorage.setItem("rede-visao", v); } catch { /* sem armazenamento */ } };
+  const seguidos = Object.keys(base.seguidos);
+  const selPol = sel?.startsWith("politico:") ? seguidos.find((s) => idObjeto("politico", s) === sel) : undefined;
+  const [foco, setFoco] = useState<string | undefined>(selPol || seguidos[0]);
+  useEffect(() => { if (selPol) setFoco(selPol); }, [selPol]);
+  const fotoPorId = useMemo(() => new Map(politicos.map((p) => [p.id, p.foto])), [politicos]);
+  const fotos = (id: string) => fotoPorId.get(id);
+  const [aberto, setAberto] = useState<string | undefined>();
+  const focar = (s: string) => { setFoco(s); escolher("mapa"); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const atual = foco && base.seguidos[foco] ? foco : seguidos[0];
+  if (visao !== "grafo" && !seguidos.length) return (
+    <section>
+      <Visoes visao={visao} escolher={escolher} />
+      <div className="empty">Siga um político na aba "Seguidos e novidades" para montar o mapa dele.</div>
+    </section>
+  );
+  return (
+    <section>
+      <Visoes visao={visao} escolher={escolher} />
+      {visao === "mapa" && seguidos.length > 1 && (
+        <div className="rede-trocar" role="group" aria-label="Escolha o político do mapa">
+          {seguidos.map((s) => (
+            <button key={s} aria-pressed={s === atual} onClick={() => setFoco(s)}>
+              <FotoPolitico url={fotos(s)} nome={base.seguidos[s].atual.nome} tamanho={30} decorativa />{base.seguidos[s].atual.nome}
+            </button>
+          ))}
+        </div>
+      )}
+      {visao === "mapa" && atual && <MapaPolitico base={base} siteId={atual} fotos={fotos} onAbrir={setAberto} />}
+      {visao === "lado" && <LadoALado base={base} fotos={fotos} onAbrir={setAberto} onFocar={focar} />}
+      {visao === "ranking" && <Ranking base={base} fotos={fotos} onFocar={focar} />}
+      {visao === "comum" && <EmComum base={base} fotos={fotos} onAbrir={setAberto} onFocar={focar} />}
+      {visao === "circulo" && <Circulo base={base} fotos={fotos} onAbrir={setAberto} onFocar={focar} />}
+      {visao === "grafo" && <GrafoLivre base={base} mudar={mudar} sel={sel} setSel={setSel} />}
+      {aberto && base.objetos[aberto] && visao !== "grafo" && (
+        <div className="rede-gaveta" role="dialog" aria-modal="false" aria-label={`Ficha de ${base.objetos[aberto].nome}`}>
+          <button className="fechar" onClick={() => setAberto(undefined)} aria-label="Fechar a ficha">×</button>
+          <Painel base={base} mudar={mudar} id={aberto} setSel={setAberto}
+            centralizar={() => { setSel(aberto); escolher("grafo"); setAberto(undefined); }} />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Visoes({ visao, escolher }: { visao: Visao; escolher: (v: Visao) => void }) {
+  return (
+    <div className="rede-visoes" role="tablist" aria-label="Jeito de ver a rede">
+      {VISOES.map(([k, nome]) => <button key={k} role="tab" aria-selected={visao === k} onClick={() => escolher(k)}>{nome}</button>)}
+    </div>
+  );
+}
+
+function GrafoLivre({ base, mudar, sel, setSel }: { base: Base; mudar: (f: (b: Base) => Base) => void; sel?: string; setSel: (id?: string) => void }) {
   const [centro, setCentro] = useState<string | undefined>(sel);
   const [passos, setPassos] = useState(1);
   // Votações ligam muita coisa e escondem o resto: começam escondidas (um clique mostra)
@@ -324,7 +383,7 @@ function Painel({ base, mudar, id, setSel, centralizar }: { base: Base; mudar: (
       <span className="chip" style={{ color: corTipo(o.tipo), borderColor: "currentColor" }}>{nomeTipo(o.tipo)}</span>
       <h2>{o.nome}</h2>
       <div className="rede-acoes">
-        <button className="btn alt" onClick={centralizar}>Pôr no centro</button>
+        <button className="btn alt" onClick={centralizar}>Ver no grafo</button>
         {o.ref && <Link to={o.ref}>Abrir a página no site</Link>}
       </div>
       <label className="small">Suas anotações

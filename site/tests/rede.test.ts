@@ -6,6 +6,7 @@ import {
   type Retrato,
 } from "../src/rede/modelo.ts";
 import { redeOficial, resolverPedido, urlVotacao } from "../src/rede/oficial.ts";
+import { dossie, emComum, ranking } from "../src/rede/visoes.ts";
 import type { Politico, Resumo, VotacaoResumo } from "../src/data.ts";
 
 const EM = "2026-11-08T00:00:00Z";
@@ -142,4 +143,24 @@ test("link ?seguir=: por id, por nome com UF e todos os senadores de um estado",
   const r = resolverPedido("Nikolas/MG, erika hilton/SP, senado/MG, dep-2, João/MG, Fulano/RJ", lista);
   assert.deepEqual(r.ids, ["dep-209787", "dep-1", "sen-1", "sen-2", "sen-3", "dep-2"]);
   assert.deepEqual(r.faltou, ["João/MG", "Fulano/RJ"]);
+});
+
+test("visões: mapa do político, em comum e ranking", () => {
+  const p2 = { ...politico(), id: "dep-2", nome: "Beltrano", partido: "PY", votos: [] };
+  let b = juntar(juntar(baseVazia(), redeOficial(politico(), votacoes, [], EM)), redeOficial(p2, votacoes, [], EM));
+  const r1 = redeOficial(politico(), votacoes, [], EM).retrato, r2 = redeOficial(p2, votacoes, [], EM).retrato;
+  b = { ...b, seguidos: { "dep-1": { id: "dep-1", desde: EM, atual: r1, visto: r1 }, "dep-2": { id: "dep-2", desde: EM, atual: { ...r2, cota: 300 }, visto: r2 } } };
+  const d = dossie(b, "dep-1")!;
+  assert.equal(d.partido?.nome, "PX");
+  assert.equal(d.empresas[0].nome, "Gráfica Boa");
+  assert.equal(d.empresas[0].valor, 80);
+  assert.deepEqual(d.empresas[0].socios.map((s) => s.nome), ["JOAO DA SILVA"]);
+  assert.deepEqual(d.votos.map((v) => v.detalhe), ["Sim", "Não"]);
+  assert.deepEqual(d.projetos.map((p) => p.nome), ["PL 1/2026"]);
+  const c = emComum(b, ["dep-1", "dep-2"]);
+  assert.equal(c.length, 1);
+  // A empresa e o dono contam; partido, Casa e projeto votado não
+  assert.deepEqual(c[0].itens.map((i) => i.tipo).sort(), ["empresa", "pessoa"]);
+  assert.deepEqual(ranking(b, "cota").map((x) => x.siteId), ["dep-2", "dep-1"]);
+  assert.equal(dossie(b, "nao-existe"), null);
 });

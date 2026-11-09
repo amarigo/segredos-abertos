@@ -48,6 +48,10 @@ Ferramenta pessoal para acompanhar políticos como uma rede. Ao seguir um polít
 oficiais do próprio site: empresas pagas com a cota e seus sócios, votações recentes, projetos votados, partido e
 destino das emendas Pix. Cada ligação guarda a fonte oficial (com link) e, quando há, o trecho de origem.
 
+- **Visões:** mapa do político (foto no centro e blocos: quem recebeu da cota e seus donos, emendas Pix, últimos
+  votos), lado a lado (uma coluna por político, com destaque dourado no que se repete), ranking em barras com fotos,
+  em comum (os políticos como estações e, nas linhas, as empresas, donos e lugares que dividem), círculo e grafo livre.
+  Clicar em qualquer item abre a ficha com a fonte de cada ligação.
 - **Fontes próprias:** a pessoa cola um texto (notícia, documento, transcrição) ou abre um arquivo .txt, .md ou .html.
   O app encontra os políticos e empresas citados e transforma as frases marcadas em afirmações ligadas a quem elas citam.
 - **Conexões que você ainda não fez:** objetos sem ligação direta, mas com ligações em comum.
