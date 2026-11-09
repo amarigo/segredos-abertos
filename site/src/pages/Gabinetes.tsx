@@ -156,7 +156,11 @@ export default function GabinetesPage() {
         <h2>E no Senado?</h2>
         <Explain>No Senado não há um valor em reais por gabinete: o limite é de cargos, pagos pela folha do próprio Senado. Por isso comparamos pessoas. Cada estado tem 3 senadores, seja qual for a população.</Explain>
         <h3 className="graf-titulo">Habitantes para cada pessoa da equipe dos senadores do estado</h3>
-        <Barras itens={senado.map((x) => ({ nome: x.uf, label: NOME_UF[x.uf] || x.uf, nota: `${numero(Math.round(x.pessoas))} pessoas por senador, em média`, valor: x.v }))} formato={(v) => numero(Math.round(v))} />
+        {senado.length > 1 && <p>Em <strong>{NOME_UF[senado[0].uf] || senado[0].uf}</strong>, cada pessoa da equipe dos senadores atende {numero(Math.round(senado[0].v))} habitantes; em <strong>{NOME_UF[senado[senado.length - 1].uf] || senado[senado.length - 1].uf}</strong>, {numero(Math.round(senado[senado.length - 1].v))}.</p>}
+        <Barras itens={senado.slice(0, 5).map((x) => ({ nome: x.uf, label: NOME_UF[x.uf] || x.uf, nota: `${numero(Math.round(x.pessoas))} pessoas por senador, em média`, valor: x.v }))} formato={(v) => numero(Math.round(v))} />
+        {senado.length > 5 && <Abrir titulo={`Ver os ${senado.length} estados`}>
+          <Barras max={senado[0].v} itens={senado.slice(5).map((x) => ({ nome: x.uf, label: NOME_UF[x.uf] || x.uf, nota: `${numero(Math.round(x.pessoas))} pessoas por senador, em média`, valor: x.v }))} formato={(v) => numero(Math.round(v))} />
+        </Abrir>}
         <p className="small muted">Equipe de cada senador {periodo} pela <a href="https://adm.senado.gov.br/adm-dadosabertos/swagger-ui/index.html" target="_blank" rel="noreferrer">API administrativa do Senado ↗</a>, gabinete e escritório no estado.</p>
       </>}
 
@@ -165,7 +169,7 @@ export default function GabinetesPage() {
           <li><strong>Verba gasta</strong>: a soma do que cada deputado do estado gastou da verba de gabinete {periodo}, como a página oficial de cada um mostra. Quem ocupou a vaga só parte do ano (suplente, licenciado) também conta, então a soma é a do estado, não só de quem está no cargo hoje.</li>
           <li><strong>Do teto</strong>: a verba gasta dividida pela soma do que cada deputado podia gastar no tempo em que ficou no cargo.</li>
           <li><strong>Por cadeira, por mês</strong>: a verba gasta dividida pelo número de cadeiras do estado e pelos {meses} meses do período.</li>
-          <li><strong>Em salários do estado</strong>: o valor por cadeira e por mês dividido pelo rendimento médio mensal de quem trabalha no estado (PNAD Contínua do IBGE, todos os trabalhos). O IBGE não publica um índice de custo de vida por estado: o IPCA mede só quanto os preços subiram, e só em 16 regiões. O rendimento médio é o número oficial mais próximo do custo de contratar alguém em cada estado.</li>
+          <li><strong>Em salários do estado</strong>: o valor por cadeira e por mês dividido pelo rendimento médio mensal de quem trabalha no estado (PNAD Contínua do IBGE, no trabalho principal). O IBGE não publica um índice de custo de vida por estado: o IPCA mede só quanto os preços subiram, e só em 16 regiões. O rendimento médio é o número oficial mais próximo do custo de contratar alguém em cada estado.</li>
           <li><strong>Por habitante</strong>: a verba gasta da bancada inteira dividida pela população estimada pelo IBGE.</li>
           <li><strong>Assessores hoje</strong>: secretários parlamentares lotados nos gabinetes dos deputados do estado, pelo arquivo de funcionários da Câmara. É a foto de hoje, não a média do ano.</li>
         </ul>

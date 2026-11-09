@@ -5,7 +5,7 @@ Comparar só o valor gasto por cada deputado engana por três motivos:
    quanto do teto cada um usa e quantos meses ficou no cargo. Por isso mostramos o percentual do teto usado.
 2. O mesmo salário vale mais onde a vida é mais barata. O IBGE não publica um índice oficial de custo de vida por
    estado (o IPCA mede só a variação de preços, e só em 16 capitais e regiões). Usamos o rendimento médio do trabalho
-   em cada estado (PNAD Contínua): a verba de um mês dividida por ele diz quantos "salários típicos do estado" ela paga.
+   no trabalho principal em cada estado (PNAD Contínua): a verba de um mês dividida por ele diz quantos "salários típicos do estado" ela paga.
 3. Os estados têm de 8 a 70 deputados (Constituição, art. 45) e sempre 3 senadores. Por isso somamos a bancada
    inteira de cada estado e dividimos pela população: quanto custa a equipe por habitante e quantos habitantes cada
    assessor atende.
@@ -43,8 +43,9 @@ SIDRA = "https://apisidra.ibge.gov.br/values"
 # Estimativa de população residente, por estado (tabela 6579, variável 9324), último ano publicado
 URL_POP = SIDRA + "/t/6579/n3/all/v/9324/p/last"
 PAGINA_POP = "https://sidra.ibge.gov.br/tabela/6579"
-# PNAD Contínua trimestral: rendimento médio mensal real das pessoas ocupadas, habitualmente recebido em todos os
-# trabalhos (tabela 5436, variável 5932), por estado, último trimestre publicado
+# PNAD Contínua trimestral: rendimento médio mensal real das pessoas ocupadas, habitualmente recebido no trabalho
+# principal (tabela 5436, variável 5932), por estado, último trimestre publicado. A tabela também abre por sexo:
+# serie_sidra() fica só com a linha "Total".
 URL_REND = SIDRA + "/t/5436/n3/all/v/5932/p/last"
 PAGINA_REND = "https://sidra.ibge.gov.br/tabela/5436"
 # Código de cada estado no IBGE (padrão nacional, não muda): liga a resposta do SIDRA à sigla usada no site
@@ -71,7 +72,11 @@ def serie_sidra(d: list) -> tuple[str, dict[str, float], dict[str, str]]:
     out: dict[str, float] = {}
     nomes: dict[str, str] = {}
     periodo = ""
+    # outras divisões da tabela (sexo, por exemplo): só a linha do total
+    classes = [k for k, v in cab.items() if re.fullmatch(r"D[4-9]N", k)]
     for x in d[1:]:
+        if any(str(x.get(k)) != "Total" for k in classes):
+            continue
         sigla = COD_UF.get(str(x.get(col_uf)))
         try:
             valor = float(x.get("V"))
