@@ -195,6 +195,42 @@ class FakeGov:
                                   "codigoMateria": 160000 + cod, "votos": vv})
                 self.vot_senado[(ano, mes)] = itens
 
+        # ---------- presença em eventos da Câmara (calendário dia a dia), com um gerador à parte para não mudar o resto
+        r4 = random.Random(seed + 4)
+        self.restaurante = _cnpj(r4)  # restaurante em Recife: refeição do deputado num dia de sessão em Brasília
+        self.receita[self.restaurante] = {**self._empresa(self.restaurante, "RESTAURANTE FICTICIO DO RECIFE LTDA",
+                                                          [pessoa("DONA DO RESTAURANTE", "***400000**")], {"cep": "50000000"}),
+                                          "cnae_fiscal_descricao": "Restaurantes e similares", "municipio": "RECIFE", "uf": "PE"}
+        self.eventos: dict[int, dict[str, list[list]]] = {}
+        for ano in self.anos:
+            evs, pres, orgs = [], [], []
+            plen = [v for v in self.vot_camara[ano]["votacoes"] if v[2] == "PLEN"]
+            for j, v in enumerate(plen):
+                eid = ano * 1000 + j
+                tipo = "Semipresencial" if j % 5 == 0 else "Presencial"
+                evs.append([eid, f"{v[1]}T14:00:00", "Encerrada", f"Sessão Deliberativa Extraordinária {tipo} (AM nº 123/2020)",
+                            "Sessão Deliberativa", "", "Plenário da Câmara dos Deputados"])
+                orgs.append([eid, "PLEN"])
+                pres += [[eid, f"{v[1]}T14:00:00", x[2]] for x in self.vot_camara[ano]["votos"] if x[0] == v[0]]
+            for mes in range(1, 13):
+                eid = ano * 1000 + 500 + mes
+                evs.append([eid, f"{ano}-{mes:02d}-15T10:00:00", "Encerrada (Final)", "Reunião sobre saúde\nConvidados: fulano",
+                            "Reunião Deliberativa", "", "Anexo II, Plenário 01"])
+                orgs.append([eid, "CSAUDE"])
+                pres += [[eid, f"{ano}-{mes:02d}-15T10:00:00", d["id"]] for d in self.deputados[::2]]
+            evs.append([ano * 1000 + 900, f"{ano}-04-08T09:00:00", "Encerrada", "Visita ao aterro sanitário", "Visita Técnica",
+                        "Aterro sanitário em Manaus-AM", ""])
+            pres += [[ano * 1000 + 900, f"{ano}-04-08T09:00:00", d["id"]] for d in self.deputados[1:2]]
+            evs.append([ano * 1000 + 901, f"{ano}-04-09T09:00:00", "Cancelada", "Reunião cancelada", "Audiência Pública", "",
+                        "Anexo II, Plenário 02"])
+            pres += [[ano * 1000 + 901, f"{ano}-04-09T09:00:00", d["id"]] for d in self.deputados[:1]]
+            self.eventos[ano] = {"eventos": evs, "eventosPresencaDeputados": pres, "eventosOrgaos": orgs}
+            for d0, (k, v) in ((d0, kv) for d0 in self.deputados[:1] for kv in ((1, "86.50"), (0, "40.00"))):  # dia de sessão presencial (para conferir) e semipresencial (não)
+                dia = plen[k][1]
+                self.cota[ano].append([d0["nome"], d0["id"], d0["id"] + 50000, d0["siglaUf"], d0["siglaPartido"],
+                                       "FORNECIMENTO DE ALIMENTAÇÃO DO PARLAMENTAR", "Restaurante Ficticio", self.restaurante,
+                                       f"{dia}T00:00:00", v, int(dia[5:7]), ano, "", f"9{k}", f"9{k}", 13])
+
     # ------------------------------------------------------------------ helpers
     @staticmethod
     def _empresa(c, nome, qsa, end):
@@ -337,6 +373,13 @@ class FakeGov:
         m = re.match(r"^/arquivos/(\w+)/csv/\w+-(\d{4})\.csv$", path)
         if u.netloc == "dadosabertos.camara.leg.br" and m:
             tipo, ano = m.group(1), int(m.group(2))
+            if tipo in ("eventos", "eventosPresencaDeputados", "eventosOrgaos"):
+                if ano not in self.eventos:
+                    return 404, b"", "text/html"
+                cab = {"eventos": ["id", "dataHoraInicio", "situacao", "descricao", "descricaoTipo", "localExterno", "localCamara.nome"],
+                       "eventosPresencaDeputados": ["idEvento", "dataHoraInicio", "idDeputado"],
+                       "eventosOrgaos": ["idEvento", "siglaOrgao"]}[tipo]
+                return 200, _csv(cab, self.eventos[ano][tipo]).encode(), "text/csv"
             if ano not in self.vot_camara:
                 return 404, b"", "text/html"
             d = self.vot_camara[ano]

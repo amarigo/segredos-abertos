@@ -76,6 +76,50 @@ test.describe("jornada", () => {
     expect(erros).toEqual([]);
   });
 
+  test("dia a dia: calendário, ponto para conferir com links e o dia aberto com presença e notas", async ({ page }) => {
+    const erros = vigiar(page);
+    // o FakeGov põe uma refeição em Recife num dia de sessão presencial em Brasília do primeiro deputado
+    const p = pols.find((x) => x.casa === "camara" && dados(`p/${x.id}.json`).anos[ANO]?.agenda?.conferir)!;
+    const ag = dados(`p/agenda/${p.id}-${ANO}.json`);
+    const c = ag.conferir[0];
+    await page.goto(`./#/p/${p.id}`);
+    await page.getByRole("tab", { name: "Dia a dia" }).click();
+    await expect(page).toHaveURL(/aba=agenda/);
+    await expect(page.locator(".agenda .card").nth(0)).toContainText(String(ag.resumo.dias_presenca));
+    await page.locator(".ag-filtros").getByRole("tab", { name: /Para conferir/ }).click();
+    await expect(page.locator(".ag-linha")).toHaveCount(ag.resumo.conferir);
+    await page.locator(".ag-linha").first().click();
+    await expect(page).toHaveURL(new RegExp(`dia=${c.data}`));
+    const ponto = page.locator(".ag-ponto").first();
+    await expect(ponto).toContainText(`${c.cidade} (${c.uf})`);
+    await expect(ponto).toContainText(sp(brl(c.valor, true)));
+    await expect(ponto.getByRole("link", { name: /lista de presença/ }).first()).toHaveAttribute("href", `https://dadosabertos.camara.leg.br/api/v2/eventos/${c.eventos[0]}/deputados`);
+    await expect(page.locator(".ag-eventos li").first()).toContainText("Brasília");
+    await expect(page.locator(".ag-notas tbody tr", { hasText: c.fornecedor })).toContainText(`${c.cidade} (${c.uf})`);
+    // busca por cidade acha o dia; o calendário pinta o dia de vermelho
+    await page.locator(".ag-filtros").getByRole("tab", { name: /Todos os dias/ }).click();
+    await page.getByLabel("Buscar nos dias do ano").fill(c.cidade.toLowerCase());
+    await expect(page.locator(".ag-linha", { hasText: "Conferir" }).first()).toBeVisible();
+    await expect(page.locator(`.calendario .cal-dia.ag-conferir`).first()).toBeVisible();
+    // endereço com o dia abre direto no dia (dá para mandar o link)
+    await page.goto(`./#/p/${p.id}?aba=agenda&dia=${c.data}`);
+    await expect(page.locator(".ag-painel h3")).toBeVisible();
+    await expect(page.locator(".ag-ponto")).toHaveCount(ag.conferir.filter((x: { data: string }) => x.data === c.data).length);
+    expect(erros).toEqual([]);
+  });
+
+  test("dia a dia do senador: votos do dia e nenhum ponto para conferir", async ({ page }) => {
+    const erros = vigiar(page);
+    const s = pols.find((x) => x.casa === "senado" && dados(`p/${x.id}.json`).anos[ANO]?.agenda)!;
+    const ag = dados(`p/agenda/${s.id}-${ANO}.json`);
+    const dia = Object.keys(ag.dias).find((k) => ag.dias[k].v)!;
+    await page.goto(`./#/p/${s.id}?aba=agenda&dia=${dia}`);
+    await expect(page.locator(".ag-filtros").getByRole("tab", { name: /Para conferir/ })).toHaveCount(0);
+    await expect(page.locator(".ag-votos li").first()).toBeVisible();
+    await expect(page.locator(".agenda")).toContainText("No Senado não apontamos pontos para conferir");
+    expect(erros).toEqual([]);
+  });
+
   test("quem saiu do cargo no meio do mandato aparece, também pelo nome antigo", async ({ page }) => {
     // Caso da deputada Dayany Bittencourt (antes "Dayany do Capitão"): suplente que devolveu a vaga ao titular
     const erros = vigiar(page);
@@ -257,7 +301,7 @@ test.describe("jornada", () => {
   test("sem rolagem lateral no celular", async ({ page }, info) => {
     test.skip(info.project.name !== "celular");
     vigiar(page);
-    for (const rota of ["", `#/p/${pols[0].id}`, "#/votacoes", "#/votacoes/ja-votadas", "#/votacoes?aba=nova", "#/empresas", "#/incentivos", "#/dinheiro", "#/corrupcao", "#/corrupcao/mensalao", "#/corrupcao/banco-master"]) {
+    for (const rota of ["", `#/p/${pols[0].id}`, `#/p/${pols[0].id}?aba=agenda`, "#/votacoes", "#/votacoes/ja-votadas", "#/votacoes?aba=nova", "#/empresas", "#/incentivos", "#/dinheiro", "#/corrupcao", "#/corrupcao/mensalao", "#/corrupcao/banco-master"]) {
       await page.goto(`./${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();
       const largura = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

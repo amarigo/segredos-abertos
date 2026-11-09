@@ -88,6 +88,12 @@ class Oficial:
         self.fora_do_ar: set[str] = set()
         self.voto_trocado: str | None = None
         self.senado_total_diferente = 0.0
+        self.presenca_faltando = False
+        self.presentes: dict[int, set[int]] = defaultdict(set)  # evento -> deputados com presença no calendário do site
+        for f in (s / "p" / "agenda").glob("dep-*.json"):
+            for x in _ler(f)["dias"].values():
+                for e in x.get("e") or []:
+                    self.presentes[e[6]].add(int(f.stem.split("-")[1]))
         self.mes: dict[tuple[str, int, int], list[dict]] = defaultdict(list)
         por_cnpj = defaultdict(float)
         for f in (s / "e").glob("*.json"):
@@ -122,6 +128,9 @@ class Oficial:
             if self.voto_trocado and dados:
                 dados[0]["tipoVoto"] = self.voto_trocado
             return {"dados": dados, "links": []}
+        if m := re.search(r"/eventos/(\d+)/deputados$", url):
+            ids = sorted(self.presentes.get(int(m.group(1)), set()))
+            return {"dados": [{"id": i} for i in (ids[1:] if self.presenca_faltando else ids)], "links": []}
         if url.endswith("/votacao"):
             out = []
             for f in (self.s / "v").glob("sf-*.json"):
@@ -164,11 +173,11 @@ def _checagem(v: dict, cid: str) -> dict:
 def test_tudo_batendo_fica_conferido(saida):
     v = _rodar(saida, Oficial(saida))
     for cid in ("cota_camara_mes", "cota_camara_empresa", "cota_senado_ano", "votos_camara", "placar_camara",
-                "votos_senado", "placar_senado_ata", "empresas_receita", "emendas_autor"):
+                "votos_senado", "placar_senado_ata", "empresas_receita", "emendas_autor", "presenca_camara"):
         c = _checagem(v, cid)
         assert c["status"] == "conferido", (cid, c)
         assert c["conferidos"] > 0 and c["divergentes"] == 0
-    assert v["secoes"]["votacoes"]["status"] == "conferido"
+    assert v["secoes"]["votacoes"]["status"] == "conferido" and v["secoes"]["agenda"]["status"] == "conferido"
     assert v["secoes"]["incentivos"]["status"] == "sem_segunda_fonte"
     # a cota tem uma checagem que não roda sem as páginas oficiais (coleta sem recursos): fica "em parte", não "conferido"
     assert v["secoes"]["cota"]["status"] == "parcial"
@@ -350,3 +359,12 @@ def test_o_que_a_api_da_camara_nao_lista():
     assert not nao_esta_na_api({"politico": "dep-1", "data": "2025-09-02", "fonte_lista": True})  # SIGEPA: está na API
     assert not nao_esta_na_api({"politico": "dep-1", "data": "2025-09-02"})
     assert not nao_esta_na_api({"politico": "sen-1", "data": ""})  # só Câmara
+
+
+def test_presenca_que_nao_esta_na_api_aparece_como_diferenca(saida):
+    """O calendário diz que o deputado registrou presença; a lista de presença do evento na API não tem o nome."""
+    of = Oficial(saida)
+    of.presenca_faltando = True  # a API "esquece" o primeiro deputado de cada evento
+    c = _checagem(_rodar(saida, of), "presenca_camara")
+    assert c["conferidos"] > 0 and c["divergentes"] >= 1 and c["status"] == "divergente"
+    assert all(d["fonte"].endswith("/deputados") and d["oficial"] == "não está na lista de presença" for d in c["divergencias"])

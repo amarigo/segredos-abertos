@@ -87,6 +87,19 @@ export interface AnoDetalhe extends AnoResumo {
   /** Notas que a fonte publica mas que o total oficial não soma (por exemplo, Senado sem tipo de despesa); fora do total */
   fora_do_total_oficial?: { motivo: string; valor: number; n: number; notas: { data: string; fornecedor: string; doc: string; valor: number; url: string; detalhe?: string }[] };
   recursos: Recursos | null;
+  /** Resumo do calendário dia a dia (p/agenda/{id}-{ano}.json); ausente quando não há */
+  agenda?: ResumoAgenda;
+}
+export interface ResumoAgenda { dias_presenca: number; dias_gastos: number; conferir: number; conferir_cercado?: number }
+/** Calendário dia a dia de um parlamentar num ano (etl/sa_etl/agenda.py).
+ *  e: eventos com presença [hora, tipo, comissão, título, local, em Brasília (1/0), id do evento na Câmara];
+ *  v: votos nominais do dia [votação, voto]; lugares: CNPJ -> [cidade, UF, atividade] (Receita Federal). */
+export interface AgendaAno {
+  ano: number; casa: Casa;
+  dias: Record<string, { e?: [string, string, string, string, string, number, number][]; v?: [string, string][] }>;
+  lugares: Record<string, [string, string, string]>;
+  conferir: { data: string; fornecedor: string; doc: string; valor: number; url: string; categoria: string; cidade: string; uf: string; eventos: number[]; cercado?: boolean }[];
+  resumo: ResumoAgenda; fontes: { presenca: string; arquivos?: string };
 }
 export interface Fornecedor { doc: string; tipo: string; nome: string; valor: number; n: number; ficha: boolean; socios: string[] }
 export interface Nota { data: string; categoria: string; fornecedor: string; doc: string; valor: number; url: string; link?: string; detalhe?: string }
