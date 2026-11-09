@@ -32,6 +32,7 @@ export default function PoliticoPage() {
             {p.posicao != null && <span className="chip">{p.rotulo}</span>}
             {p.campo && <span className="chip">{p.campo}</span>}
             <a className="chip" href={linkSeguro(p.fonte)} target="_blank" rel="noreferrer">Página oficial ↗</a>
+            <Link className="chip" to={`/rede?seguir=${encodeURIComponent(p.id)}`}>Acompanhar na Minha rede</Link>
           </div>
           {p.em_exercicio === false && <p className="small muted" role="note">
             <strong className="fora-cargo">Fora do cargo hoje</strong>
