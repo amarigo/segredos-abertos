@@ -874,3 +874,9 @@ tr.linha-aberta > td { background: var(--tint); }
 .lista-cidades { list-style: none; padding: 0; margin: 8px 0 0; columns: 2; column-gap: 16px; }
 .lista-cidades li { break-inside: avoid; margin: 2px 0; }
 .lista-cidades button.ativo { font-weight: 700; text-decoration: underline; }
+
+/* Nota da verba indenizatória aberta na própria página (deputado estadual) */
+button.nota-abrir { text-align: left; font-weight: 700; }
+tr.nota-aberta > td { background: var(--tint); }
+.nota-detalhe { padding: 6px 2px; }
+.nota-detalhe .kv { margin-bottom: 6px; }

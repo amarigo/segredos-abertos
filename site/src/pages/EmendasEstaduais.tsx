@@ -74,6 +74,10 @@ export default function EmendasEstaduais() {
       <section>
         <h2>Cidades que mais receberam indicações</h2>
         <Barras rosca={{ titulo: `Emendas estaduais indicadas em ${ano}, por cidade`, total: a.indicado }} itens={a.municipios.map((m) => ({ nome: m.nome, label: filtro(m.nome, { cidade: m.nome }, m.nome), nota: nota(m), valor: m.indicado, cor: "var(--s1)" }))} />
+        {!!a.fora_de_mg?.length && <div className="small">
+          <p><strong>Fora de Minas:</strong> o arquivo da Assembleia traz {a.fora_de_mg.reduce((s, x) => s + x.n, 0).toLocaleString("pt-BR")} indicaç{a.fora_de_mg.reduce((s, x) => s + x.n, 0) === 1 ? "ão" : "ões"} de {ano} em lugares que não estão na lista oficial dos municípios de Minas (Tesouro Nacional). Aparecem com o estado ao lado do nome quando o arquivo informa o estado.</p>
+          <ul>{a.fora_de_mg.slice(0, 8).map((x) => <li key={x.municipio + x.uf}>{filtro(x.uf ? `${x.municipio} (${x.uf})` : x.municipio, { cidade: x.uf ? `${x.municipio} (${x.uf})` : x.municipio }, x.municipio)}: {x.n} indicaç{x.n === 1 ? "ão" : "ões"}, <span className="num">{reais(x.indicado)}</span>{x.beneficiarios.length ? <span className="muted">. Por exemplo: {x.beneficiarios.slice(0, 3).join(", ")}</span> : null}</li>)}</ul>
+        </div>}
         <p className="small">Veja também a aba Dinheiro das <Link to="/cidades">cidades acompanhadas</Link>, com cada indicação.</p>
       </section>
       {!!a.orgaos?.length && <section>
@@ -91,6 +95,7 @@ export default function EmendasEstaduais() {
             <p className="muted small">Investimento é obra e equipamento, que fica; despesa corrente é custeio do dia a dia, como remédio, salário e manutenção.</p>
             <Barras itens={a.grupos.map((t) => ({ label: t.nome, nota: nota(t), valor: t.indicado, cor: "var(--c6)" }))} /></div>}
           {!!a.areas?.length && <div className="card"><h3>Área</h3>
+            <p className="small"><Link to={`/painel?ano=${ano}`}>Abrir o painel por área ›</Link> junte áreas, cruze com cidade e veja em quê o dinheiro foi usado.</p>
             <Barras itens={a.areas.slice(0, 12).map((t) => ({ label: t.nome, nota: nota(t), valor: t.indicado, cor: "var(--s1)" }))} /></div>}
         </div>
       </section>}
