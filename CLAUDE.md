@@ -95,6 +95,10 @@ O ponto de entrada da coleta nacional é `etl/sa_etl/build.py`. A tabela complet
   validada das séries (`--s1`...`--c8`) e as cores de voto (`--sim`, `--nao`). Os gráficos do site são componentes
   próprios em SVG (`ui.tsx`); o painel de análises usa Apache ECharts (`analises/painel.html`, ajudantes `barras`,
   `linhas`, `rosca`, `desenhar`). Para mudar o painel, siga a skill `.claude/skills/painel-analises/`.
+- Skills do agente (`.claude/skills/`): toda skill passa pelo SkillSpector da NVIDIA antes de entrar e a cada push
+  (workflow [`skills-seguranca.yml`](.github/workflows/skills-seguranca.yml)). Como instalar uma skill nova e os achados
+  aceitos em [`.claude/skillspector/README.md`](.claude/skillspector/README.md). Fichas de visual de marcas, só para
+  consulta, em `.claude/referencias/design-md/`.
 
 ## Comandos
 
