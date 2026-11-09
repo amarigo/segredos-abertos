@@ -550,8 +550,10 @@ class Buscador:
             tr = trechos_contra(pag.get("paragrafos", []), pag.get("titulo") or "", padrao)
             if not tr or any(tr == n["trechos"] for n in noticias):
                 continue
+            veiculo = cand.get("veiculo") or pag.get("veiculo") or ""
+            titulo = re.sub(rf"\s*[-|–]\s*{re.escape(veiculo)}\s*$", "", pag.get("titulo") or cand.get("titulo") or "") if veiculo else (pag.get("titulo") or cand.get("titulo") or "")
             noticias.append({k: v for k, v in {
-                "veiculo": cand.get("veiculo") or pag.get("veiculo") or "", "titulo": pag.get("titulo") or cand.get("titulo") or "",
+                "veiculo": veiculo, "titulo": titulo,
                 "autor": pag.get("autor") or "", "data": pag.get("data") or cand.get("data") or "",
                 "url": pag.get("url") or url, "quem": next((q for q in map(quem_fala, tr) if q), ""),
                 "trechos": tr}.items() if v or k == "trechos"})
