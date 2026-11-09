@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { DinheiroCidade } from "./CidadeDinheiro";
+import { LicitacoesLugar } from "./Licitacoes";
 import { Explain, Loading, useData } from "../components/ui";
 import { AvisosFim } from "../components/Selo";
 import {
@@ -14,7 +15,7 @@ export default function CidadePage() {
   const { data: c, error } = useData<Cidade>(/^[a-z0-9-]+$/.test(id) ? `cidades/${id}.json` : null);
   const [foco, setFoco] = useState("");
   const [params, setParams] = useSearchParams();
-  const aba = params.get("aba") === "dinheiro" ? "dinheiro" : "politica";
+  const aba = params.get("aba") === "dinheiro" ? "dinheiro" : params.get("aba") === "licitacoes" ? "licitacoes" : "politica";
   const partidos = useMemo(() => {
     const s = new Set<string>();
     c?.executivo.forEach((m) => s.add(m.prefeito.partido_hoje));
@@ -43,9 +44,10 @@ export default function CidadePage() {
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={aba === "politica"} onClick={() => setParams({}, { replace: true })}>Quem governa</button>
         <button role="tab" aria-selected={aba === "dinheiro"} onClick={() => setParams({ aba: "dinheiro" }, { replace: true })}>Dinheiro</button>
+        <button role="tab" aria-selected={aba === "licitacoes"} onClick={() => setParams({ aba: "licitacoes" }, { replace: true })}>Licitações</button>
       </div>
 
-      {aba === "dinheiro" ? <DinheiroCidade id={c.id} nome={c.nome} /> : <>
+      {aba === "dinheiro" ? <DinheiroCidade id={c.id} nome={c.nome} /> : aba === "licitacoes" ? <LicitacoesLugar id={c.id} nome={c.nome} /> : <>
       {atual && (
         <section>
           <h2>De quem cobrar hoje</h2>

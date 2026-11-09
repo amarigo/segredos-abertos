@@ -370,6 +370,30 @@ class FakeEstado:
                           "conta": "10 - Saúde", "valor": 7e8})
         return json.dumps({"items": itens}, ensure_ascii=False).encode()
 
+    def rreo2(self, ano: int, bim: int, cod: int) -> bytes:
+        """Anexo 02 do RREO, como o Tesouro devolve: funções e subfunções na coluna "conta", na ordem do relatório.
+        Publicado até o bimestre 4 em 2026 (agosto) e o ano inteiro antes."""
+        nome = "Minas Gerais" if cod == 31 else next((n for n, c in ENTES.items() if c == cod), None)
+        if not nome or ano > 2026 or (ano == 2026 and bim > 4):
+            return json.dumps({"items": []}).encode()
+        inst = "Governo do Estado de Minas Gerais" if cod == 31 else f"Prefeitura Municipal de {nome.title()} - MG"
+        fator = (1 + (ano - 2018) / 10) * (500 if cod == 31 else 1) * bim / 6
+        linhas = []
+        for k, (_cf, nf, subs) in enumerate(FUNCOES):
+            v = round(1_000_000 * (len(FUNCOES) - k) * fator, 2)
+            linhas.append((nf, v))
+            partes = [round(v / 2, 2)] * (len(subs) - 1)
+            linhas += [(ns, x) for (_cs, ns), x in zip(subs, partes + [round(v - sum(partes), 2)])]
+        total = sum(v for (n, v) in linhas if n in {f[1] for f in FUNCOES})
+        linhas = [("DESPESAS (EXCETO INTRA-ORÇAMENTÁRIAS) (I)", total)] + linhas + [("DESPESAS (INTRA-ORÇAMENTÁRIAS) (II)", 7e8)]
+        itens = []
+        for col, k in (("DOTAÇÃO ATUALIZADA (a)", 1.6), ("DESPESAS EMPENHADAS ATÉ O BIMESTRE (b)", 1.1),
+                       ("DESPESAS LIQUIDADAS ATÉ O BIMESTRE (d)", 1.0)):
+            itens += [{"exercicio": ano, "periodo": bim, "instituicao": inst, "cod_ibge": cod, "anexo": "RREO-Anexo 02",
+                       "rotulo": "Total das Despesas Exceto Intra-Orçamentárias", "coluna": col, "cod_conta": "RREO2TotalDespesas",
+                       "conta": n, "valor": round(v * k, 2)} for n, v in linhas]
+        return json.dumps({"items": itens}, ensure_ascii=False).encode()
+
     # ------------------------------------------------------------ CGU (arquivo do coletor nacional)
     # Códigos das emendas como no Portal: ano + autor + número
     EMENDA_PIX = "202541280005"      # emenda Pix para Itajubá, com plano de ação e gastos no Transferegov
@@ -429,6 +453,80 @@ class FakeEstado:
                        _csv(principal_cab, [dict(zip(principal_cab, f)) for f in principal], sep=";").encode("latin-1"))
         self.esperado["federais_itajuba"] = 951_000.0
         return destino
+
+    # ------------------------------------------------------------ PNCP (licitações e contratos)
+    def _pncp(self) -> None:
+        """Compras e contratos no formato da API de consulta do PNCP (conferido na sondagem de 08/11/2026)."""
+        def compra(cnpj, razao, esfera, ibge, municipio, seq, mod, data, objeto, est, hom, sit=1, amparo=None):
+            nomes = {6: "Pregão - Eletrônico", 8: "Dispensa", 9: "Inexigibilidade", 4: "Concorrência - Eletrônica", 12: "Credenciamento"}
+            return {"valorTotalHomologado": hom, "orgaoEntidade": {"cnpj": cnpj, "razaoSocial": razao, "poderId": "E", "esferaId": esfera},
+                    "anoCompra": int(data[:4]), "sequencialCompra": seq, "numeroCompra": str(seq), "processo": f"{seq}/{data[:4]}",
+                    "objetoCompra": objeto, "dataPublicacaoPncp": f"{data}T10:00:00", "srp": False,
+                    "unidadeOrgao": {"ufNome": "Minas Gerais", "ufSigla": "MG", "municipioNome": municipio, "codigoIbge": str(ibge),
+                                     "codigoUnidade": "1", "nomeUnidade": razao},
+                    "amparoLegal": amparo or {"codigo": 1, "nome": "Lei 14.133/2021, Art. 28, I", "descricao": "Pregão"},
+                    "numeroControlePNCP": f"{cnpj}-1-{seq:06d}/{data[:4]}", "valorTotalEstimado": est, "modalidadeId": mod,
+                    "modalidadeNome": nomes.get(mod, "Outra"), "situacaoCompraId": sit,
+                    "situacaoCompraNome": {1: "Divulgada no PNCP", 2: "Revogada", 3: "Anulada", 4: "Suspensa"}[sit]}
+        ita, par = ENTES["ITAJUBÁ"], ENTES["PARAISÓPOLIS"]
+        pref, cam, unifei, see = "18025940000109", "00993308000185", "21040001000130", "18715599000105"
+        dispensa = {"codigo": 19, "nome": "Lei 14.133/2021, Art. 75, II",
+                    "descricao": "Dispensa de Licitação: para contratação que envolva valores inferiores a R$ 50.000,00"}
+        inex = {"codigo": 24, "nome": "Lei 14.133/2021, Art. 74, II",
+                "descricao": "Inexigibilidade: contratação de profissional do setor artístico"}
+        self.compras_pncp = [
+            compra(pref, "MUNICIPIO DE ITAJUBA", "M", ita, "Itajubá", 1, 6, "2025-03-10", "Asfalto para ruas do centro", 900000.0, 800000.0),
+            compra(pref, "MUNICIPIO DE ITAJUBA", "M", ita, "Itajubá", 2, 8, "2025-03-12",
+                   f"Medicamento para mandado judicial de FULANO CPF {CPF_EMITENTE[:3]}.{CPF_EMITENTE[3:6]}.{CPF_EMITENTE[6:9]}-{CPF_EMITENTE[9:]}",
+                   10000.0, 9000.0, amparo=dispensa),
+            compra(pref, "MUNICIPIO DE ITAJUBA", "M", ita, "Itajubá", 3, 9, "2025-07-01", "Show da festa da cidade", 150000.0, 150000.0, amparo=inex),
+            compra(pref, "MUNICIPIO DE ITAJUBA", "M", ita, "Itajubá", 4, 6, "2025-08-01", "Compra cancelada de veículos", 300000.0, None, sit=2),
+            compra(cam, "ITAJUBA CAMARA MUNICIPAL", "M", ita, "Itajubá", 1, 8, "2026-02-03", "Papel e material de escritório", 5000.0, None, amparo=dispensa),
+            # código do IBGE que devolve outra cidade (aconteceu na sondagem: um código errado trouxe Paraopeba)
+            compra("18116160000166", "MUNICIPIO DE PARAOPEBA", "M", par, "Paraopeba", 1, 8, "2025-02-04", "Compra de outra cidade", 100.0, 100.0, amparo=dispensa),
+            compra(unifei, "UNIVERSIDADE FEDERAL DE ITAJUBA", "F", ita, "Itajubá", 9, 8, "2025-03-15", "Compra da universidade federal", 7000.0, 7000.0, amparo=dispensa),
+            compra(see, "MINAS GERAIS SECRETARIA DE ESTADO DA EDUCACAO", "E", ita, "Itajubá", 5, 8, "2026-03-20", "Merenda escolar", 4000.0, 4000.0, amparo=dispensa),
+            compra(see, "MINAS GERAIS SECRETARIA DE ESTADO DA EDUCACAO", "E", 3106200, "Belo Horizonte", 6, 4, "2026-05-05", "Reforma de escolas", 2000000.0, 1800000.0),
+        ]
+        # Muitas compras do estado num mês, para passar de uma página (50 linhas)
+        self.compras_pncp += [compra(see, "MINAS GERAIS SECRETARIA DE ESTADO DA EDUCACAO", "E", 3106200, "Belo Horizonte", 100 + i, 6,
+                                     "2026-04-15", f"Material escolar lote {i}", 1000.0, 1000.0) for i in range(60)]
+
+        def contrato(orgao, compra_seq, ano, seq, tipo, ni, nome, valor, fim):
+            return {"numeroControlePncpCompra": f"{orgao}-1-{compra_seq:06d}/{ano}", "orgaoEntidade": {"cnpj": orgao, "esferaId": "M"},
+                    "anoContrato": ano, "sequencialContrato": seq, "tipoPessoa": tipo, "niFornecedor": ni, "nomeRazaoSocialFornecedor": nome,
+                    "objetoContrato": "Contrato", "valorInicial": valor, "valorGlobal": valor, "dataAssinatura": f"{ano}-04-01",
+                    "dataVigenciaInicio": f"{ano}-04-01", "dataVigenciaFim": fim, "tipoContrato": {"id": 1, "nome": "Contrato (termo inicial)"},
+                    "numeroControlePNCP": f"{orgao}-2-{seq:06d}/{ano}"}
+        self.contratos_pncp = [
+            contrato(pref, 1, 2025, 1, "PJ", "11222333000181", "ASFALTOS MINAS LTDA", 800000.0, "2027-04-01"),
+            contrato(pref, 3, 2025, 2, "PF", CPF_EMITENTE, f"CANTOR FULANO {CPF_EMITENTE}", 150000.0, "2025-07-02"),
+            contrato(see, 6, 2026, 3, "PJ", "44555666000199", "CONSTRUTORA ESCOLAR LTDA", 1800000.0, "2027-05-05"),
+        ]
+        self.esperado["licitacoes_itajuba_2025"] = 4  # sem a universidade federal e sem a escola estadual
+
+    def pncp(self, caminho: str, q: dict) -> tuple[int, bytes, str]:
+        if not hasattr(self, "compras_pncp"):
+            self._pncp()
+        di, df = q.get("dataInicial", ""), q.get("dataFinal", "")
+        no_periodo = lambda d: di <= d.replace("-", "")[:8] <= df  # noqa: E731
+        if caminho.endswith("/contratacoes/publicacao"):
+            ls = [x for x in self.compras_pncp if str(x["modalidadeId"]) == q.get("codigoModalidadeContratacao")
+                  and x["unidadeOrgao"]["ufSigla"] == q.get("uf") and no_periodo(x["dataPublicacaoPncp"])
+                  and (not q.get("codigoMunicipioIbge") or x["unidadeOrgao"]["codigoIbge"] == q["codigoMunicipioIbge"])]
+        elif caminho.endswith("/contratos"):
+            ls = [x for x in self.contratos_pncp if x["orgaoEntidade"]["cnpj"] == q.get("cnpjOrgao") and no_periodo(x["dataAssinatura"])]
+        else:
+            return 404, b"", "text/html"
+        if int(q.get("tamanhoPagina", 50)) > 50:
+            return 400, json.dumps({"message": "Tamanho de página inválido"}).encode(), "application/json"
+        if not ls:
+            return 204, b"", "application/json"  # como o PNCP: nada no período é HTTP 204, sem corpo
+        pag, tam = int(q.get("pagina", 1)), int(q.get("tamanhoPagina", 50))
+        total_pag = (len(ls) + tam - 1) // tam
+        corpo = {"data": ls[(pag - 1) * tam: pag * tam], "totalRegistros": len(ls), "totalPaginas": total_pag,
+                 "numeroPagina": pag, "paginasRestantes": max(0, total_pag - pag), "empty": False}
+        return 200, json.dumps(corpo, ensure_ascii=False).encode(), "application/json"
 
     def destino_pix(self, nacional: Path, ano: int = 2025) -> None:
         """Acrescenta aos dados nacionais o plano de ação da emenda Pix de Itajubá, no mesmo formato que o coletor nacional
@@ -520,8 +618,12 @@ class FakeEstado:
         if u.netloc == "apidatalake.tesouro.gov.br":
             if u.path.endswith("/entes"):
                 return 200, self.entes(), "application/json"
+            if u.path.endswith("/rreo"):
+                return 200, self.rreo2(int(q.get("an_exercicio", 0)), int(q.get("nr_periodo", 0)), int(q.get("id_ente", 0))), "application/json"
             if u.path.endswith("/dca"):
                 return 200, self.dca(int(q.get("an_exercicio", 0)), int(q.get("id_ente", 0))), "application/json"
+        if u.netloc == "pncp.gov.br" and u.path.startswith("/api/consulta/v1/"):
+            return self.pncp(u.path, q)
         return 404, b"", "text/html"
 
     def responder(self, method: str, url: str, params=None) -> requests.Response:

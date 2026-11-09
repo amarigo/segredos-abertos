@@ -165,6 +165,12 @@ A_DEFINIR = re.compile(r"DEFINI")
 UF_MG = {"MG", "MINAS GERAIS"}
 
 
+def grafia(chave: str) -> str:
+    """Chave de cidade sem as diferenças de grafia antiga: TH->T, Z->S, Y->I, PH->F e letras dobradas."""
+    c = chave.replace("TH", "T").replace("PH", "F").replace("Z", "S").replace("Y", "I")
+    return re.sub(r"(.)\1+", r"\1", c)
+
+
 def nomear_locais(rows: list[dict], mg: dict[str, str]) -> dict:
     """Põe em cada indicação o nome do lugar como aparece no site ("local").
 
@@ -174,10 +180,17 @@ def nomear_locais(rows: list[dict], mg: dict[str, str]) -> dict:
     - nome que não é município de Minas nem traz outro estado fica como veio, e entra na conferência.
     Devolve a conferência por ano: {ano: [{municipio, uf, n, indicado, beneficiarios}]}, para o site e o log."""
     fora: dict = defaultdict(lambda: defaultdict(lambda: {"n": 0, "indicado": 0.0, "ben": defaultdict(float)}))
+    # Grafia antiga ou variante do mesmo município ("Brasópolis"/"Brazópolis", "São Thomé"/"São Tomé",
+    # "Dona Eusébia"/"Dona Euzébia"): só vale quando a grafia leva a um único município de Minas
+    por_grafia: dict = defaultdict(list)
+    for kk in mg:
+        por_grafia[grafia(kk)].append(kk)
     for r in rows:
         bruto = r["municipio"]
         k = chave_cidade(bruto)
         uf = norm_name(r.get("uf") or "").strip()
+        if mg and k not in mg and len(por_grafia.get(grafia(k), [])) == 1 and (not uf or uf in UF_MG):
+            k = por_grafia[grafia(k)][0]
         nome = fontes.bonito(bruto) or "Sem município"
         if not k or A_DEFINIR.search(norm_name(bruto)):
             r["local"] = "A ser definido pelo órgão" if k else nome

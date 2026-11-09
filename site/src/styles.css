@@ -770,6 +770,9 @@ details.abrir[open] > summary { border-bottom: 1px solid var(--line); margin-bot
 .onde-ver li { font-size: .9rem; }
 .colunas .legend { margin-bottom: 6px; }
 .colunas g { cursor: default; }
+.colunas g.col-escolher { cursor: pointer; }
+.colunas g.col-escolher:focus-visible { outline: 2px solid var(--gold); }
+.colunas g.col-escolher:hover rect { filter: brightness(1.08); }
 .grid-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 24px; }
 tr.linha-aberta > td { background: var(--tint); }
 .pessoa-detalhe { padding: 4px 0 8px; }
@@ -874,6 +877,23 @@ tr.linha-aberta > td { background: var(--tint); }
 .lista-cidades { list-style: none; padding: 0; margin: 8px 0 0; columns: 2; column-gap: 16px; }
 .lista-cidades li { break-inside: avoid; margin: 2px 0; }
 .lista-cidades button.ativo { font-weight: 700; text-decoration: underline; }
+/* Ranking com foto (deputados estaduais, políticos): foto grande, nome legível, partido com a cor ao lado */
+.rank-lista .bars { gap: 14px; }
+.rank-lista .bar-row { align-items: center; padding-bottom: 2px; }
+.rank-lista .bar-row > .num { font-size: 1.05rem; font-weight: 700; }
+.rank-lista .bar-row .track { height: 12px; }
+.rank-foto { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.rank-n { font-weight: 800; color: var(--muted); min-width: 1.6em; text-align: right; font-variant-numeric: tabular-nums; }
+.rank-foto .avatar { border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); }
+.rank-txt { display: grid; gap: 2px; min-width: 0; }
+.rank-nome { font-weight: 700; font-size: 1.05rem; line-height: 1.25; overflow-wrap: anywhere; }
+.rank-sub { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--muted); font-weight: 600; }
+.rank-sub i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+@media (max-width: 520px) {
+  .rank-foto { gap: 8px; }
+  .rank-foto .avatar { width: 40px !important; height: 40px !important; }
+  .rank-nome { font-size: .98rem; }
+}
 
 /* Nota da verba indenizatória aberta na própria página (deputado estadual) */
 button.nota-abrir { text-align: left; font-weight: 700; }

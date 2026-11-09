@@ -275,7 +275,14 @@ test.describe("jornada", () => {
     await page.goto("./#/dinheiro");
     const [a, b] = contasMG.anos;
     await expect(page.locator("main")).toContainText(`Gasto em ${a.ano}`);
-    await expect(page.locator("main")).toContainText(`em relação a ${b.ano}`);
+    // o ano em curso (parcial, do RREO) é comparado com o mesmo período do ano anterior, não com o ano inteiro
+    await expect(page.locator("main")).toContainText(a.parcial ? `até ${a.ate_mes}` : `em relação a ${b.ano}`);
+    if (a.parcial) {
+      await expect(page.locator("main")).toContainText(`em relação ao mesmo período de ${b.ano}`);
+      await page.getByRole("button", { name: `Escolher ${b.ano}` }).first().click();  // a coluna do gráfico escolhe o ano
+      await expect(page.locator("#ano-dinheiro")).toHaveValue(String(b.ano));
+      await expect(page.locator("main")).toContainText(`Gasto em ${b.ano}`);
+    }
     const f = a.funcoes[0];
     await page.locator("details.abrir summary", { hasText: f.funcao }).first().click();
     await expect(page.locator("details.abrir[open]").first()).toContainText(f.principais[0].nome);
@@ -310,7 +317,16 @@ test.describe("jornada", () => {
     const main = page.locator("main");
     await expect(main).toContainText(`Gasto em ${dinheiroIta.contas.anos[0].ano}`);
     await expect(main).toContainText(brl(dinheiroIta.federais.por_ano[0].valor));
+    // emendas federais: começa no ano mais recente; "Todos os anos" soma tudo e a coluna do gráfico escolhe o ano
+    const anosFed = dinheiroIta.federais.por_ano.map((x: { ano: number }) => x.ano);
+    await expect(main).toContainText(`Quem mandou em ${Math.max(...anosFed)}`);
+    await page.locator("#ano-federais").selectOption("todos");
+    await expect(main).toContainText("Quem mandou em todos os anos");
     await expect(main).toContainText("Pessoa física");
+    await page.getByRole("button", { name: `Escolher ${Math.min(...anosFed)}` }).first().click();
+    await expect(page.locator("#ano-federais")).toHaveValue(String(Math.min(...anosFed)));
+    await page.locator("#ano-estaduais").selectOption("todos");
+    await expect(main).toContainText("Indicado em todos os anos");
     await expect(main.getByRole("link", { name: /SICONFI/ })).toBeVisible();
     await expect(main.getByRole("link", { name: /Portal da Transparência \(CGU\)/ })).toBeVisible();
     await expect(main).toContainText(dinheiroIta.estaduais.lista[0].beneficiario);
@@ -428,6 +444,24 @@ test.describe("painel por área", () => {
 });
 
 test.describe("segurança", () => {
+  test("licitações: cidade e estado, com e sem licitação, quem recebeu e sem CPF", async ({ page }) => {
+    const erros = vigiar(page);
+    const lic = dados("licitacoes/itajuba-2025.json");
+    await page.goto("./#/cidade/itajuba?aba=licitacoes");
+    await page.getByLabel("Ano:").selectOption("2025");
+    await expect(page.getByText("Compras publicadas", { exact: true })).toBeVisible();
+    await expect(page.locator(".stat").first()).toContainText(String(lic.total.n));
+    await expect(page.getByText("Por que não houve licitação")).toBeVisible();
+    await expect(page.getByRole("link", { name: /Asfalto para ruas do centro/ })).toHaveAttribute("href", /^https:\/\/pncp\.gov\.br\/app\/editais\//);
+    await page.getByLabel("Com ou sem licitação").selectOption("inexigibilidade");
+    await expect(page.locator("tbody tr").filter({ hasText: "Show da festa" })).toContainText("Pessoa física");
+    expect(await page.locator("main").innerText()).not.toMatch(CPF);
+    await page.goto("./#/licitacoes");
+    await expect(page.getByRole("tab", { name: "Governo de Minas" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("heading", { name: /^Compras do governo de Minas em \d{4}$/ })).toBeVisible();
+    expect(erros).toEqual([]);
+  });
+
   test("nenhum CPF nas páginas do estado (os arquivos de teste trazem CPF de propósito)", async ({ page }) => {
     vigiar(page);
     for (const rota of ["#/deputado-estadual/20003", "#/governo", "#/cidade/itajuba?aba=dinheiro", "#/emendas-estaduais"]) {
