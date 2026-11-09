@@ -1,0 +1,256 @@
+# SkillSpector baseline — findings listed here are suppressed on future scans.
+# Edit 'reason' fields and add glob 'rules' as needed. See docs/SUPPRESSION.md.
+version: 2
+scanner_version: 2.12.0
+rules: []
+fingerprints:
+- hash: sha256:a95c0975593222207c93d3732ba3f3480ea7516c7d97b946c6042692e225a11d
+  rule_id: LP3
+  file: SKILL.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:c575fcde0e6c8368e014a4bb6485e8f1576a8ce6bb13332c0b2368fbecc5e072
+  rule_id: RP1
+  file: reference/doctor.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:8bae1ec2d628ee705c2ac1f99b75b0841568f29b854dc626e9cf21423e6c0704
+  rule_id: RP1
+  file: reference/hooks.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:c63c062226a04baa400f02735f2eb6ce15aa668ebd443371464725b7940f1117
+  rule_id: AS1
+  file: reference/hooks.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:27f1d66f05394e6a3f4d0f490cb0a32e76bbbfc925cb68f182cae3b02cef38de
+  rule_id: AS1
+  file: reference/hooks.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:66ca12957dfb37977023ae88f176e10aefab690d5ba20abd63cc5355171737c2
+  rule_id: AR2
+  file: agents/impeccable_finish_reviewer.toml
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:1c698e778de1c2d8db2402357d65bc95c953f55403d715c4d3989681f4514825
+  rule_id: AR2
+  file: reference/critique.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:b60819452e6355223acae9adef806e7ca6c2825291c3e20817924638c9a6eba0
+  rule_id: AR2
+  file: reference/degraded/finish-reviewer.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:3f4df02eeaab51c22258d4b9aacfe7852ec8bb11ffac2f7d2ed2d4f2d8324899
+  rule_id: AR2
+  file: reference/new-work.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:367a1fb0e2a5cc408b664c6921ef81730bae9e84a12399923085a5752329286d
+  rule_id: E1
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:ad09dd6407ac5c04f4990ed4111e2adb3b3e98479993634304de6a0ee4d76090
+  rule_id: E1
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:756f6f8fe08cf8cad136abd30301663dd1a1d03a09e4eafe93469fbcef9645f5
+  rule_id: EA2
+  file: agents/impeccable_finish_reviewer.toml
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:95d574a3f59374485b107115b0c4a7185d9630c48ac105198a5fa42b3bcab2ef
+  rule_id: EA2
+  file: agents/impeccable_finish_reviewer.toml
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:0ef0145c6ea71dccb87da80ef38e045fef914fd1406da7b9b3d9f872fa22a510
+  rule_id: EA2
+  file: agents/impeccable_finish_reviewer.toml
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:7041e248429e81b9433a4e810608f35bc5ae5180e37fda9034752e666b5162c8
+  rule_id: EA2
+  file: agents/impeccable_finish_reviewer.toml
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:0531b944a09e2fd72ef0170b6f8524edd0b6cb8bd151a33be39d03e367c6b81a
+  rule_id: EA2
+  file: reference/audit.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:f0bc5238de87f1aaa0b8d21480456bd954ae8d7af1a29f53dce184b2d508dab1
+  rule_id: EA2
+  file: reference/audit.native.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:10d35e29b911b0cf856f544279b6d7d08ce52aafe3be00abe7f748e27bb9a55e
+  rule_id: EA2
+  file: reference/critique.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:a2996e1214ce42c8bd44d7bfc0c5b0210d317e6a68ea4e9c35f0bdee02ff58c3
+  rule_id: EA2
+  file: reference/degraded/finish-reviewer.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:b8c03c65bd37834e3a72908383df869c7f7c9541e13fa5df908e0979615f3242
+  rule_id: EA2
+  file: reference/degraded/finish-reviewer.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:c9461f1c20330e1f7e1aa8de8f0d4d821cd7bfdd6174dc5d731d1b36a5c6dd09
+  rule_id: EA2
+  file: reference/degraded/finish-reviewer.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:fec5c5579b90c27aced5af3bc382f891095cf722ddcd285e615f738b8df7d19d
+  rule_id: EA2
+  file: reference/degraded/finish-reviewer.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:f66f1134d573251779056974421991c9f8f643707c3ccf07ed77f605dad4f015
+  rule_id: EA2
+  file: reference/delight.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:e2b6c0e946b101d655eca774d5008411f1bd98d03098c54b2d6c154fe975632f
+  rule_id: EA2
+  file: reference/document.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:ebf032d1969ba9315dae68822ff87b91db7c00389881968b03a33140f5cfa443
+  rule_id: EA2
+  file: reference/init.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:9cdd7c36d54e5a374ad27f4bd233056a381ae85658c60b6bbb51a19b2cec096d
+  rule_id: EA2
+  file: reference/live.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:e438e5474c0804c2c20da5efeaa07ebc30b7d3ac03eeb6c14094a1ed179f4aa2
+  rule_id: EA2
+  file: reference/new-work.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:61e6dee916f2f36ea95ea4c36388209daae8e338aa2a3b59017621edbf165bb5
+  rule_id: EA2
+  file: reference/new-work.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:52bac0ea798262894e5cb0bc31e55264fe90b1b5e9288638d87145b83b9cf3cf
+  rule_id: EA2
+  file: reference/visualize.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:64e972ad3aeb2559428bb709bc0a61d8bc7bb5bfad66c3d58378cee9d391f55f
+  rule_id: EA2
+  file: reference/visualize.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:5106e309418b591a3e95d7486980965153c0649aeb20dfe1d7d97d4f9a28fe5c
+  rule_id: MP3
+  file: reference/colorize.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:04becc82dc8e764883f3151d2c8b3f4a545687b20357c41be33023ee6c4050dd
+  rule_id: MP3
+  file: reference/mode-operate.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:c068e698e436954b9e8cd1cee7c306fc3a043718db0d93e9fdd7b46afa415459
+  rule_id: MP1
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:d11d44cde14821c90b78fec85c4da71c926277c2fd95b06b78420de8269d32a8
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:a47d04db79524308f4f63f7a689972decdec1d218a8cff925f0ec4ad362fba59
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:8b432a66d2c94631471eb3050014967f0e6ae926fd9146c5d746e69159cdbb94
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:106022c73a4fa1b6d4923c40bdea9bc65879664555bf38fa0a3ffcc3295c146c
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:2a9fcd921d0576a396237d66cda655188aa39c657c62005598108555428fb385
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:75cc5ced5848096ed3ab03b7971d4490700f8bffabd1d997793ab30712334191
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:6a247808d5fb1dba2d15c55008ddd0f8d7b61031d1e24f398d62f8fa194fe26e
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:dbc594b3fffb4f6c807b909e2f7b75e61da97594066e42c04e5fca5d64dd0d92
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:37e32bd329217f142004ed4e047642077ac8d6b9bb6223c08c6517701d6dfc40
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:4fc58669415345792dbd1c017219737de4bd6c01bc197ba97da9bb1a35bffef7
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:1450a701898815c3747077ace8a8fbc1f4fe77bf32d4c3733db65c75b9d3d038
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:e78b09470d940cd4ff55883828e3be20f68b0809347adc48550434ad74734585
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:2a2c3129521e9967061c7b6a5710c283019461754ad333bb5d35c56862019ed1
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:922661f819e485d20cc4cefdfe4b3e800874ac3c71b70629f8d3f462d1049e45
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:cc6a7b489accef4ad07bbbe8c61be975542e2d034484687b1d815bd3c0a15b55
+  rule_id: TM1
+  file: scripts/live-browser.js
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:ee968521e58ab7892b5fa6745588964f0097397504be0a9e28c93abf88886c91
+  rule_id: AE1
+  file: SKILL.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:81edb935587adbde55a4ea65eb6672df703240eee72463c24ab983298c3b8c0a
+  rule_id: AE1
+  file: SKILL.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."

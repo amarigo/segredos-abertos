@@ -1,0 +1,41 @@
+name: Segurança das skills (SkillSpector)
+
+# Confere todas as skills do projeto (.claude/skills/) e o material de consulta de design (.claude/referencias/)
+# com o SkillSpector, o verificador de segurança de skills da NVIDIA (https://github.com/NVIDIA/SkillSpector).
+# Procura instrução escondida, vazamento de dados, código perigoso e outros riscos antes que o agente use a skill.
+#
+# Roda a cada push e a cada PR, uma vez por semana (o SkillSpector ganha regras novas) e à mão
+# (Actions > Segurança das skills > Run workflow). Uma skill reprovada deixa o CI vermelho. Achados revisados por uma
+# pessoa e julgados alarme falso ficam em .claude/skillspector/aceitos/; ver .claude/skillspector/README.md.
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # Segunda, 5h11 de Brasília (8h11 UTC)
+    - cron: "11 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: skillspector-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Versão fixa (v2.12.0, commit de 06/11/2026). Os achados aceitos valem só para esta versão: ao trocar, rode de novo
+  # e revise o que aparecer.
+  SKILLSPECTOR_COMMIT: e48d771a26f7398b36256ceb8d8f94adce3d5c44
+
+jobs:
+  conferir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install "skillspector @ git+https://github.com/NVIDIA/SkillSpector@${SKILLSPECTOR_COMMIT}"
+      - run: python .claude/skillspector/verificar_skills.py

@@ -1,0 +1,36 @@
+# SkillSpector baseline — findings listed here are suppressed on future scans.
+# Edit 'reason' fields and add glob 'rules' as needed. See docs/SUPPRESSION.md.
+version: 2
+scanner_version: 2.12.0
+rules: []
+fingerprints:
+- hash: sha256:7ebed152d680df9f8d880417ee396ecf35b430ddf5043de390801938d44cccd4
+  rule_id: P2
+  file: PLAN-TEMPLATE.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:b9b2e74806828637b78eb995fc1b0ecab13f5314ddc6aa60dbad69ebccd737c4
+  rule_id: P2
+  file: PLAN-TEMPLATE.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:39bbecd3d286c3d36d77077d83dada85060c3c5ad3ae95452681943b288123a5
+  rule_id: P2
+  file: PLAN-TEMPLATE.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:6c546a960f113ee4f25bdd59527b44170ae9f5d864addaf7defd45fc91da4e43
+  rule_id: P2
+  file: PLAN-TEMPLATE.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:46d374cea529a9e6da0e97c3ee553b702509d05817ee4f94ea633770e51ee75c
+  rule_id: P1
+  file: SKILL.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
+- hash: sha256:436b883124a737afd6bb5a4b1ab76233d80d99e4f8f13c77ae16444934eec88a
+  rule_id: YR4
+  file: SKILL.md
+  reason: "Revisado em 2026-11-09: alarme falso da an\xE1lise est\xE1tica (coment\xE1\
+    rios HTML, links n\xE3o abertos at\xE9 o fim, testes e exemplos). Ver .claude/skillspector/README.md."
