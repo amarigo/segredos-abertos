@@ -30,6 +30,7 @@ causam dano real. Por isso a estratégia junta três ideias:
 | R16 | Leitura semanal dos pagamentos a empresas cancelada antes de começar (o GitHub guarda só uma execução esperando por fila) | alta | médio | `tentar-de-novo.yml` (etapa própria) | sem leitura boa em 7 dias e com a fila vazia, `tentar-de-novo.yml` dispara de novo `pagamentos-empresas.yml` |
 | R17 | Publicação no GitHub Pages parada em "syncing_files" até estourar o tempo, com coleta e conferência certas (execução 441, 08/11/2026) | baixa | médio | `actionlint` no workflow | o job `publicar` tenta de novo uma vez, 1 minuto depois, com o mesmo pacote, e deixa um aviso no Actions; o site no ar continua com a versão anterior até a nova entrar |
 | R14 | Deputado estadual que saiu do cargo no meio do mandato some do Minas Nossa, com verba, projetos e emendas (mesma causa do R13, na ALMG) | alta | alto | `test_estado::test_quem_saiu_do_cargo_*`, `test_quem_ficou_fora_da_lista_*`, `test_conferencia_da_lista_*`, `test_validar_mg`, `site/e2e/mg.spec.ts` | a lista junta a API `em_exercicio` com o arquivo oficial de deputados (coluna `Legislaturas`); projeto ou emenda de deputado do arquivo que não está na lista vai para `almg/deputados.json` (`fora_da_lista`) e `mg_etl.validar` bloqueia |
+| R19 | Doador ou parlamentar ligado por engano a uma empresa (homônimo), ou CPF do TSE publicado: o arquivo de campanha traz CPF inteiro de candidato e doador, e às vezes CPF dentro do nome do fornecedor | média | alto | `test_campanha` (homônimo com outros dígitos não liga; nome igual com CPF diferente não liga; nenhum CPF do TSE em nenhum arquivo do site), `test_verificar::test_socio_que_saiu_*` | liga só com nome completo e 6 dígitos do CPF iguais; com o CPF do deputado, só o CPF acha a candidatura; o CPF do candidato vira resumo (hash) e nunca é gravado; `validar.py` bloqueia CPF à mostra e CPF dentro de nomes; `verificar.py` reconfere o sócio na BrasilAPI; canal de correção no site |
 | R18 | Aba do menu escondida: com abas novas, as últimas ("Como funciona", "Minha rede") ficavam cortadas no fim da linha, sem sinal de que havia mais (09/11/2026) | alta | médio | `site/e2e/menu.ts` (`abasAVista`, de 320px a 1920px) em `site.spec.ts`, `mg.spec.ts`, `eleicao2026.spec.ts` | menus e barra dos projetos quebram a linha em vez de rolar de lado, em todos os sites |
 
 ## 2. A pirâmide
@@ -111,6 +112,7 @@ saem do cache de CNPJ; o cache vence em 30 dias.
 | Empresas | razão social e sócios (Minha Receita) | outra cópia da base da Receita (BrasilAPI) |
 | Emendas | empenhado e pago por autor (arquivo do Portal) | API de dados do Portal da Transparência |
 | Arrecadação e gastos | juros da dívida (orçamento do Portal) | RREO do Tesouro (SICONFI) |
+| Dinheiro da campanha | doador de campanha que é sócio de empresa paga no mandato (TSE + Minha Receita) | outra cópia da base da Receita (BrasilAPI): mesmo nome e mesmos 6 dígitos do CPF |
 
 Regras: fonte fora do ar ou API respondendo vazio vira "não conferido", nunca "conferido"; a cota só é conferida em
 meses fechados há mais de 60 dias; a página de incentivos aparece como "sem segunda fonte" até haver uma.

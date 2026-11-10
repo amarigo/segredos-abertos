@@ -11,6 +11,7 @@ import {
 import { AvisosFim, EmRevisao } from "../components/Selo";
 import { FotoPerfil } from "../components/Foto";
 import { AgendaPolitico } from "../components/Agenda";
+import { CampanhaPolitico } from "../components/Campanha";
 import { norm } from "./Home";
 import { MG } from "../recorte";
 
@@ -20,8 +21,8 @@ export default function PoliticoPage() {
   const { data: meta } = useData<Meta>("meta.json");
   const [params, setParams] = useSearchParams();
   const pedida = params.get("aba");
-  const aba = pedida === "votos" || pedida === "atuacao" || pedida === "agenda" ? pedida : "gastos";
-  const setAba = (a: "gastos" | "atuacao" | "votos" | "agenda") => setParams(a !== "gastos" ? { aba: a } : {}, { replace: true });
+  const aba = pedida === "votos" || pedida === "atuacao" || pedida === "agenda" || pedida === "campanha" ? pedida : "gastos";
+  const setAba = (a: "gastos" | "atuacao" | "votos" | "agenda" | "campanha") => setParams(a !== "gastos" ? { aba: a } : {}, { replace: true });
   const { ano } = useAno();
   if (!p) return <Loading error={error} />;
   return (
@@ -52,9 +53,10 @@ export default function PoliticoPage() {
         <button role="tab" aria-selected={aba === "agenda"} onClick={() => setAba("agenda")}>Dia a dia</button>
         <button role="tab" aria-selected={aba === "atuacao"} onClick={() => setAba("atuacao")}>Atuação</button>
         <button role="tab" aria-selected={aba === "votos"} onClick={() => setAba("votos")}>Votos</button>
+        <button role="tab" aria-selected={aba === "campanha"} onClick={() => setAba("campanha")}>Campanha</button>
       </div>
       {aba === "gastos" ? <Gastos p={p} meta={meta} /> : aba === "atuacao" ? <AtuacaoPolitico p={p} />
-        : aba === "agenda" ? <AgendaPolitico p={p} ano={ano} /> : <Votos p={p} />}
+        : aba === "agenda" ? <AgendaPolitico p={p} ano={ano} /> : aba === "campanha" ? <CampanhaPolitico p={p} /> : <Votos p={p} />}
       <AvisosFim secao="cota">
         {aba === "gastos" && <NotasCota p={p} />}
         <EmRevisao campo="politico" valor={p.id} />

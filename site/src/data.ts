@@ -156,6 +156,8 @@ export interface Empresa extends Omit<EmpresaResumo, "emendas" | "governo" | "re
     anos?: Record<string, { valor: number; beneficios: [string, number][] }> };
   n_notas?: number; notas_por_ano?: Record<string, number>;
   por_mes?: { politico: string; nome: string; ano: number; mes: number; valor: number }[];
+  /** Ligações com campanhas eleitorais (TSE): fornecedora de campanha, sócio que doou, parlamentar sócio */
+  campanha?: CampanhaEmpresa[];
   mesmo_endereco?: (OutraEmpresa & { mesmos_socios: boolean })[]; pagadores: { politico: string; nome: string; partido: string; uf: string; valor: number }[]; alertas: string[];
 }
 /* Nota fiscal na página da empresa: [data, id do político, tipo de gasto, valor, link] */
@@ -577,4 +579,30 @@ export interface Gabinetes {
   regras: null | { teto_mensal: number; max_secretarios: number; salario_min: number | null; salario_max: number | null; cota_por_uf: Record<string, number>; fonte: string };
   anos: Record<string, { meses: number | null; ufs: GabineteUf[] }>;
   fontes: Record<string, string>;
+}
+
+/* ---------- Dinheiro da campanha (TSE), ligado ao mandato (etl/sa_etl/campanha.py) ---------- */
+export type TipoDoador = "pessoa" | "empresa" | "partido" | "candidato" | "proprio" | "coletivo" | "nao_identificado" | "rendimento" | "outro";
+export interface DoadorCampanha { nome: string; doc: string; tipo: TipoDoador; valor: number; n: number; origem?: string; como?: string }
+export interface FornecedorCampanha { nome: string; doc: string; valor: number; n: number; tipo: string; pagina?: boolean }
+export interface Campanha {
+  ano: number; cargo: string; uf: string; partido: string; numero: string; nome: string; achada_por: "cpf" | "nome" | "";
+  prestacao: string; data_prestacao: string; gerado_em: string; fonte: string; arquivo: string; cnpj_campanha: string; divulga: string;
+  receitas: { total: number; financeiro: number; estimavel: number; n: number; por_origem: [string, number][]; por_fonte: [string, number][] };
+  n_doadores: number; doadores: DoadorCampanha[]; n_originarios: number; originarios: DoadorCampanha[];
+  despesas: { total: number; n: number; por_tipo: [string, number][] }; n_fornecedores: number; fornecedores: FornecedorCampanha[];
+}
+interface LigacaoBase {
+  ano?: number; empresa: { cnpj: string; nome: string }; cota?: number; cota_de?: string; cota_ate?: string; emendas?: number;
+  n_parlamentares: number; comum?: boolean;
+}
+export type Ligacao =
+  | (LigacaoBase & { tipo: "fornecedor"; ano: number; cnpj_campanha: string; campanha: number; n_campanha: number; servico: string })
+  | (LigacaoBase & { tipo: "doador_socio"; ano: number; via: "direto" | "originario"; doador: { nome: string; doc: string }; doacao: number;
+      papel: "socio" | "dono_final"; qualificacao: string })
+  | (LigacaoBase & { tipo: "politico_socio"; papel: "socio" | "dono_final"; qualificacao: string });
+export interface CampanhaPolitico { id: string; atualizado_em: string; campanhas: Campanha[]; ligacoes: Ligacao[] }
+export interface CampanhaEmpresa {
+  politico: string; nome: string; partido: string; uf: string; tipo: Ligacao["tipo"] | "fornecedor_campanha"; ano?: number;
+  campanha?: number; doacao?: number; doador?: { nome: string; doc: string }; cota?: number; emendas?: number; papel?: string; qualificacao?: string;
 }

@@ -127,6 +127,30 @@ test.describe("jornada", () => {
     expect(erros).toEqual([]);
   });
 
+  test("campanha: doador que é sócio de empresa paga no mandato, com fonte do TSE e CPF mascarado", async ({ page }) => {
+    const erros = vigiar(page);
+    const d = dados("p/campanha/dep-1000.json");
+    const lig = d.ligacoes.find((x: { tipo: string; comum?: boolean }) => x.tipo === "doador_socio" && !x.comum);
+    await page.goto("./#/p/dep-1000");
+    await page.getByRole("tab", { name: "Campanha" }).click();
+    await expect(page).toHaveURL(/aba=campanha/);
+    const card = page.getByTestId("ligacao-doador_socio").first();
+    await expect(card).toContainText(lig.doador.nome);
+    await expect(card).toContainText(lig.doador.doc);
+    await expect(card).toContainText(sp(brl(lig.doacao)));
+    await expect(card.getByRole("link", { name: /TSE/ })).toHaveAttribute("href", /^https:\/\/dadosabertos\.tse\.jus\.br\//);
+    await expect(card.getByRole("link", { name: lig.empresa.nome })).toHaveAttribute("href", `#/e/${lig.empresa.cnpj}`);
+    // as contas de cada campanha, da mais nova para a mais antiga, com o aviso de contas abertas no ano recente
+    await expect(page.getByRole("tab", { name: /2022/ })).toBeVisible();
+    await page.getByRole("tab", { name: /2022/ }).click();
+    await expect(page.locator("body")).toContainText(sp(brl(d.campanhas.find((c: { ano: number }) => c.ano === 2022).receitas.total)));
+    await expect(page.locator("body")).not.toContainText(/\d{3}\.\d{3}\.\d{3}-\d{2}/);
+    // a empresa mostra a mesma ligação, com link de volta para a aba
+    await page.goto(`./#/e/${lig.empresa.cnpj}`);
+    await expect(page.getByRole("link", { name: "Deputado Ficticio 00" }).first()).toHaveAttribute("href", "#/p/dep-1000?aba=campanha");
+    expect(erros).toEqual([]);
+  });
+
   test("dia a dia do senador: votos do dia e nenhum ponto para conferir", async ({ page }) => {
     const erros = vigiar(page);
     const s = pols.find((x) => x.casa === "senado" && dados(`p/${x.id}.json`).anos[ANO]?.agenda)!;
