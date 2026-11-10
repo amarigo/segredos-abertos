@@ -1179,3 +1179,11 @@ tr.nota-aberta > td { background: var(--tint); }
 .cobertura-completado h3 { color: var(--accent); }
 .cobertura-fonte_nao_publica h3, .cobertura-ainda_nao h3 { color: var(--muted); }
 .avisar-erro { align-self: stretch; font-size: .9rem; color: var(--ink-2); background: var(--tint); border-radius: var(--raio); padding: 10px 14px; }
+
+/* Compartilhar (perfil do político): imagem para o feed e os stories, e link da página simples */
+.compartilhar { flex-basis: 100%; display: grid; gap: 12px; justify-items: start; padding: 14px; border: 1.5px solid var(--line); border-radius: var(--raio); background: var(--surface); }
+.compartilhar-formatos, .compartilhar-acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+.compartilhar .chip[aria-pressed="true"] { color: var(--hot); border-color: currentColor; }
+.profile .compartilhar-previa { width: 100%; max-width: 320px; height: auto; border-radius: 6px; border: 0; object-fit: contain; background: none; box-shadow: 0 1px 6px rgba(0,0,0,.25); }
+.profile .compartilhar-previa.stories { max-width: 240px; }
+.profile .tags button.chip { cursor: pointer; font-family: inherit; }
