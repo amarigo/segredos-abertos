@@ -1,0 +1,33 @@
+# Quem me representa: roda o coletor com os arquivos reais do TSE quando ele muda num PR (ou à mão), sem publicar nada.
+# Serve para conferir com dados reais antes de juntar ao main: quantas cidades e vereadores, se o número de eleitos bate
+# com o de vagas, quem deixou o cargo para disputar 2026 e uma amostra de prefeitos conferida no site de resultados do
+# TSE. A coleta de todo dia (dados-e-site.yml) usa o mesmo coletor.
+name: Quem me representa (conferência)
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: [etl/sa_etl/representantes.py, .github/workflows/representantes.yml]
+permissions:
+  contents: read
+concurrency:
+  group: representantes-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  conferir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r etl/requirements.txt
+      - name: Coletar e conferir com os arquivos reais do TSE
+        working-directory: etl
+        shell: bash  # com pipefail: o erro do coletor não some no tee
+        run: |
+          mkdir -p "$RUNNER_TEMP/data"
+          # deputados federais e senadores de hoje: a lista publicada pelo próprio site (Câmara e Senado)
+          curl -fsS https://amarigo.github.io/segredos-abertos/data/politicos.json -o "$RUNNER_TEMP/data/politicos.json"
+          python -m sa_etl.representantes --saida "$RUNNER_TEMP/data" --cache "$RUNNER_TEMP/cache" --conferir \
+            --mostrar 71072 41238 60011 25313 | tee -a "$GITHUB_STEP_SUMMARY"

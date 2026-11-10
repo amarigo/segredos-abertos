@@ -49,6 +49,7 @@ const Cultura = pagina(() => import("./pages/Cultura"));
 const PainelAreas = pagina(() => import("./pages/PainelAreas"));
 const Corrupcao = pagina(() => import("./pages/Corrupcao"));
 const CasoCorrupcao = pagina(() => import("./pages/CasoCorrupcao"));
+const Representantes = pagina(() => import("./pages/Representantes"));
 
 /* Os projetos do Segredos Abertos, publicados lado a lado no mesmo site (/, /mg/, /eleicao2026/ e /terras-raras/).
    Links relativos: funcionam no GitHub Pages e numa cópia local de site/dist. */
@@ -115,6 +116,7 @@ export default function App() {
           <nav className="nav" aria-label="Principal">
             {!MG && <NavLink to="/dinheiro">Arrecadação e gastos</NavLink>}
             {MG && <NavLink to="/dinheiro">Dinheiro</NavLink>}
+            <NavLink to="/quem">Quem me representa</NavLink>
             {MG && <NavLink to="/governo">Governo</NavLink>}
             {MG && <NavLink to="/assembleia">Deputados estaduais</NavLink>}
             <NavLink to="/politicos">{MG ? "Federais" : "Políticos"}</NavLink>
@@ -132,8 +134,8 @@ export default function App() {
             <NavLink to="/rede">Minha rede</NavLink>
             <NavLink to="/sobre">Como funciona</NavLink>
           </nav>
-          {/* A página de arrecadação e o painel por área têm os próprios anos; corrupção, julgamentos do STF e shows e cultura não dependem do ano escolhido: o seletor só confundiria */}
-          {pathname !== "/dinheiro" && pathname !== "/licitacoes" && !pathname.startsWith("/corrupcao") && pathname !== "/votacoes/tribunais" && pathname !== "/painel" && pathname !== "/cultura" && <AnoSeletor />}
+          {/* A página de arrecadação e o painel por área têm os próprios anos; corrupção, julgamentos do STF, shows e cultura e quem me representa não dependem do ano escolhido: o seletor só confundiria */}
+          {pathname !== "/dinheiro" && pathname !== "/licitacoes" && !pathname.startsWith("/corrupcao") && pathname !== "/votacoes/tribunais" && pathname !== "/painel" && pathname !== "/cultura" && !pathname.startsWith("/quem") && <AnoSeletor />}
         </div>
       </header>
       <main className="wrap">
@@ -141,6 +143,8 @@ export default function App() {
         <Suspense fallback={<Loading />}>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/quem" element={<Representantes />} />
+          <Route path="/quem/:ue" element={<Representantes />} />
           <Route path="/politicos" element={<Politicos />} />
           <Route path="/p/:id" element={<PoliticoPage />} />
           <Route path="/empresas" element={<Empresas />} />

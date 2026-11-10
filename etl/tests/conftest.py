@@ -5,10 +5,11 @@ from pathlib import Path
 import pytest
 
 from fakegov import FakeGov, instalar
-from sa_etl import build, util
+from sa_etl import build, representantes, util
 from sa_etl.validar import validar
 
 MINIMOS_TESTE = {"camara": 1, "senado": 1, "votacoes": 1}
+representantes.MIN_CIDADES = 1  # o TSE fictício tem só algumas cidades
 
 
 class Coleta:
