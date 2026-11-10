@@ -31,6 +31,7 @@ causam dano real. Por isso a estratégia junta três ideias:
 | R17 | Publicação no GitHub Pages parada em "syncing_files" até estourar o tempo, com coleta e conferência certas (execução 441, 08/11/2026) | baixa | médio | `actionlint` no workflow | o job `publicar` tenta de novo uma vez, 1 minuto depois, com o mesmo pacote, e deixa um aviso no Actions; o site no ar continua com a versão anterior até a nova entrar |
 | R14 | Deputado estadual que saiu do cargo no meio do mandato some do Minas Nossa, com verba, projetos e emendas (mesma causa do R13, na ALMG) | alta | alto | `test_estado::test_quem_saiu_do_cargo_*`, `test_quem_ficou_fora_da_lista_*`, `test_conferencia_da_lista_*`, `test_validar_mg`, `site/e2e/mg.spec.ts` | a lista junta a API `em_exercicio` com o arquivo oficial de deputados (coluna `Legislaturas`); projeto ou emenda de deputado do arquivo que não está na lista vai para `almg/deputados.json` (`fora_da_lista`) e `mg_etl.validar` bloqueia |
 | R18 | Aba do menu escondida: com abas novas, as últimas ("Como funciona", "Minha rede") ficavam cortadas no fim da linha, sem sinal de que havia mais (09/11/2026) | alta | médio | `site/e2e/menu.ts` (`abasAVista`, de 320px a 1920px) em `site.spec.ts`, `mg.spec.ts`, `eleicao2026.spec.ts` | menus e barra dos projetos quebram a linha em vez de rolar de lado, em todos os sites |
+| R19 | Pessoa ligada por engano a uma lista oficial de punidos (homônimo) ou CPF inteiro das listas aparecendo no site | média | alto | `test_sancoes` (homônimo de sócio e de deputado não liga; CPF nunca sai), `site/e2e` (punições) | empresa só pelo CNPJ, sócio pelo nome e pelo meio do CPF, deputado pelo CPF da Câmara, senador nunca (o Senado não publica CPF); `validar.py` bloqueia CPF inteiro, link fora do Portal e do TCU e vigência que não bate com a data final |
 
 ## 2. A pirâmide
 
@@ -83,6 +84,8 @@ A coleta diária só publica se `python -m sa_etl.validar` não achar erro. Ela 
 - privacidade e segurança: nenhum CPF sem máscara (nem dentro de links), só links http(s), nomes de arquivo seguros;
 - ninguém esquecido: toda nota da cota e todo voto das fontes pertence a um parlamentar da lista (`fora_da_lista` vazio);
   no Minas Nossa, todo projeto e toda emenda de deputado estadual do arquivo oficial da ALMG pertence a alguém da lista;
+- punições oficiais (`sancoes.json`): CPF só com máscara, link só para o Portal da Transparência e o TCU, empresa e
+  deputado ligados existem no site;
 - tamanho: pelo menos 400 deputados, 70 senadores e 50 votações;
 - queda: nenhum total de ano nem contagem caiu mais de 20% em relação à versão no ar. Se a queda for real, rode o
   workflow à mão com "Publicar mesmo com queda grande".

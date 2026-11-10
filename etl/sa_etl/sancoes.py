@@ -453,7 +453,7 @@ def cpfs_deputados(politicos: list[dict], pasta: Path, hoje: dt.date) -> dict[st
         except (OSError, ValueError, KeyError):
             d = None
         try:
-            x = get_json(CAMARA.format(id=num), tries=3, timeout=60)["dados"]
+            x = get_json(CAMARA.format(id=num), tries=5, timeout=60)["dados"]
             novo = {"cpf": digits(x.get("cpf") or ""), "nome_civil": _txt(x.get("nomeCivil")), "lido_em": hoje.isoformat()}
             write_json(f, novo)
             return p["id"], novo
@@ -462,7 +462,9 @@ def cpfs_deputados(politicos: list[dict], pasta: Path, hoje: dt.date) -> dict[st
             return p["id"], d
 
     deps = [p for p in politicos if p.get("casa") == "camara" and str(p.get("id", "")).startswith("dep-")]
-    with ThreadPoolExecutor(6) as ex:
+    # Com 6 pedidos ao mesmo tempo a API da Câmara devolveu 503 para 1 em cada 6 deputados (10/11/2026); com 3 e mais
+    # tentativas, quase todos passam. Quem falhar entra na próxima execução (o CPF fica guardado por 90 dias).
+    with ThreadPoolExecutor(3) as ex:
         for pid, d in ex.map(um, deps):
             if d and len(d.get("cpf") or "") == 11:
                 out[pid] = d

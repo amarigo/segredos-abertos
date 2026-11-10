@@ -286,7 +286,7 @@ test.describe("jornada", () => {
 
   test("todas as páginas do menu abrem sem erro", async ({ page }) => {
     const erros = vigiar(page);
-    for (const rota of ["dinheiro", "politicos", "empresas", "votacoes", "votacoes/ja-votadas", "partidos", "emendas", "incentivos", "corrupcao", "corrupcao/banco-master", "sobre"]) {
+    for (const rota of ["dinheiro", "politicos", "empresas", "votacoes", "votacoes/ja-votadas", "partidos", "emendas", "incentivos", "corrupcao", "corrupcao/banco-master", "corrupcao/punicoes", "sobre"]) {
       await page.goto(`./#/${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();
       await expect(page.locator("main")).not.toContainText("Não foi possível");
@@ -317,10 +317,40 @@ test.describe("jornada", () => {
     expect(erros).toEqual([]);
   });
 
+  test("punições oficiais: lista, perfil do deputado e empresa batem com o arquivo, com link oficial e CPF mascarado", async ({ page }) => {
+    const erros = vigiar(page);
+    const sanc = dados("sancoes.json");
+    expect(sanc.politicos.length).toBeGreaterThan(0);
+    await page.goto("./#/corrupcao");
+    await page.getByTestId("link-punicoes").getByRole("link").click();
+    await expect(page.locator("h1")).toContainText("listas oficiais de punidos");
+    await page.getByRole("tab", { name: /Todas/ }).click();
+    for (const p of sanc.politicos) await expect(page.locator("main")).toContainText(p.nome);
+    for (const e of sanc.empresas) await expect(page.locator("main")).toContainText(e.nome);
+    const links = await page.locator(".punicao a[href^='http']").evaluateAll((as) => as.map((a) => a.getAttribute("href") || ""));
+    expect(links.length).toBeGreaterThan(0);
+    expect(links.every((h) => /^https:\/\/(portaldatransparencia\.gov\.br|contas\.tcu\.gov\.br|conecta-tcu\.apps\.tcu\.gov\.br|certidoes\.apps\.tcu\.gov\.br)\//.test(h))).toBe(true);
+    expect(await page.locator("main").innerText()).not.toMatch(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/);
+    // perfil do deputado: a seção aparece com cada punição do arquivo
+    const p = sanc.politicos[0];
+    await page.goto(`./#/p/${p.id}`);
+    await expect(page.getByTestId("punicoes-politico").locator(".punicao")).toHaveCount(p.registros.length);
+    // empresa: com punição, a seção e o aviso no topo; sem punição, a frase de que não aparece
+    const e = sanc.empresas.find((x: { registros: unknown[] }) => x.registros.length);
+    await page.goto(`./#/e/${e.cnpj}`);
+    await expect(page.getByTestId("punicoes-empresa")).toBeVisible();
+    const limpa = empresas.find((x) => !sanc.empresas.some((y: { cnpj: string }) => y.cnpj === x.cnpj));
+    await page.goto(`./#/e/${limpa!.cnpj}`);
+    await expect(page.getByTestId("punicoes-empresa-nada")).toBeVisible();
+    // senador nunca é ligado (a API do Senado não traz CPF)
+    expect(sanc.politicos.every((x: { casa: string }) => x.casa === "camara")).toBe(true);
+    expect(erros).toEqual([]);
+  });
+
   test("sem rolagem lateral no celular", async ({ page }, info) => {
     test.skip(info.project.name !== "celular");
     vigiar(page);
-    for (const rota of ["", `#/p/${pols[0].id}`, `#/p/${pols[0].id}?aba=agenda`, "#/votacoes", "#/votacoes/ja-votadas", "#/votacoes?aba=nova", "#/empresas", "#/incentivos", "#/dinheiro", "#/corrupcao", "#/corrupcao/mensalao", "#/corrupcao/banco-master"]) {
+    for (const rota of ["", `#/p/${pols[0].id}`, `#/p/${pols[0].id}?aba=agenda`, "#/votacoes", "#/votacoes/ja-votadas", "#/votacoes?aba=nova", "#/empresas", "#/incentivos", "#/dinheiro", "#/corrupcao", "#/corrupcao/mensalao", "#/corrupcao/banco-master", "#/corrupcao/punicoes"]) {
       await page.goto(`./${rota}`);
       await expect(page.locator("main")).not.toBeEmpty();
       const largura = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
