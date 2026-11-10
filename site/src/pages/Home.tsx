@@ -84,9 +84,9 @@ export default function Home() {
             {...comPeriodo((p, a) => p.total[a], (p) => p.total[ano])} />
           {meta.custo_por_ano?.[ano] ? <Kpi rotulo={`Custo conhecido em ${ano}`} valor={meta.custo_por_ano[ano]} serie={serie(meta.custo_por_ano)} ano={ano} dica="cota, salários e equipe dos gabinetes"
             anterior={emAndamento ? null : undefined} /> : null}
-          {medias.camara > 0 && <Kpi rotulo="Média por deputado federal" valor={medias.camara} serie={serieMedia("camara")} ano={ano} dica={`cota em ${ano}`}
+          {medias.camara > 0 && <Kpi rotulo="Média por deputado federal" valor={medias.camara} serie={serieMedia("camara")} ano={ano} dica={`cota em ${ano}, média de todos os deputados${MG ? " de MG" : ""} que usaram a cota no ano, inclusive suplentes que ficaram poucos meses`}
             {...comPeriodo((p, a) => p.medias[a]?.camara, (p) => p.medias[ano]?.camara)} />}
-          {medias.senado > 0 && <Kpi rotulo="Média por senador" valor={medias.senado} serie={serieMedia("senado")} ano={ano} dica={`cota em ${ano}`}
+          {medias.senado > 0 && <Kpi rotulo="Média por senador" valor={medias.senado} serie={serieMedia("senado")} ano={ano} dica={`cota em ${ano}, média de todos os senadores${MG ? " de MG" : ""} que usaram a cota no ano, inclusive suplentes`}
             {...comPeriodo((p, a) => p.medias[a]?.senado, (p) => p.medias[ano]?.senado)} />}
         </div>
         <p className="small muted">{emAndamento

@@ -15,6 +15,7 @@ from pathlib import Path
 from . import (agenda, autorias, gabinetes, historico, recursos_recebidos, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
                renuncias, senado, temas)
 from .categorias import GRUPOS, tema_de
+from . import medias as medias_casa
 from . import util
 from .util import cnpj_valido, doc_kind, mask_cpf, write_json
 
@@ -266,6 +267,7 @@ def montar(dados: dict, saida: Path, anos: list[int], anos_notas: list[int] | No
     presenca = dados.get("presenca") or {}
     rec_todos = salario_senadores(politicos, dados.get("recursos") or {})
     autorias_todas = dados.get("autorias") or {}
+    meses_periodo = medias_casa.meses_do_periodo(despesas, anos)
     resumo = []
     for p in politicos:
         ds = desp_por.get(p["id"], [])
@@ -288,6 +290,8 @@ def montar(dados: dict, saida: Path, anos: list[int], anos_notas: list[int] | No
             extra.update(fora_do_periodo_oficial(d_ano, r))
             extra["custo_total"] = round(det["total"] + (extra["salario"] or 0) + (extra["verba_gabinete"] or 0)
                                          + (extra["outros_gastos"] or 0), 2)
+            # Meses com nota da cota no ano: diz se ficou o período inteiro, para a média da Casa (medias.py)
+            extra["meses_com_nota"] = medias_casa.meses_com_nota(d_ano, ano, meses_periodo[str(ano)])
             atuacao = dict(r.get("atuacao") or {})
             aut = autorias_todas.get(p["id"], {})
             atuacao.update(aut.get(ano) or aut.get(str(ano)) or {})
@@ -499,6 +503,7 @@ def montar(dados: dict, saida: Path, anos: list[int], anos_notas: list[int] | No
         "empresas_por_ano": totais_empresas(lista_emp, anos),
         "atualizado_em": hoje, "anos": anos, "avisos": list(util.AVISOS),
         "avisos_tentar": util.avisos_para_tentar(), "grupos": GRUPOS, "medias": medias,
+        "medias_casa": medias_casa.medias_da_casa(resumo, meses_periodo),
         "fora_da_lista": dados.get("fora_da_lista") or {},
         "contagens": {"politicos": len(politicos), "despesas": len(despesas), "votacoes": len(votacoes),
                       "empresas_com_socios": len(emps)},

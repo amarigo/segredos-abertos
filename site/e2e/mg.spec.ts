@@ -347,7 +347,8 @@ test.describe("jornada", () => {
     await expect(main.getByRole("link", { name: /SICONFI/ })).toBeVisible();
     await expect(main.getByRole("link", { name: /Portal da Transparência \(CGU\)/ })).toBeVisible();
     await expect(main).toContainText(dinheiroIta.estaduais.lista[0].beneficiario);
-    for (const a of await main.locator("a[href^='http']").evaluateAll((as) => as.map((x) => (x as HTMLAnchorElement).href))) {
+    // Links das fontes de dados; o link de avisar um erro (formulário do GitHub) não é fonte e fica de fora
+    for (const a of await main.locator("a[href^='http']").evaluateAll((as) => as.filter((x) => !x.closest("[data-testid=avisar-erro]")).map((x) => (x as HTMLAnchorElement).href))) {
       expect(a).toMatch(/^https:\/\/(siconfi\.tesouro|apidatalake\.tesouro|portaldatransparencia|www\.almg|dados\.mg|www\.transparencia\.mg|dadosabertos\.tse|[a-z.]+\.mg\.(gov|leg)\.br)/);
     }
     expect(erros).toEqual([]);

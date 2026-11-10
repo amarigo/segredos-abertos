@@ -463,6 +463,28 @@ test.describe("idiomas e buscadores", () => {
       await expect(page.locator("h1")).toContainText(p.nome);
       await expect(page.locator(`a[href*="#/p/${p.id}"]`).first()).toBeVisible();
     }
+    // imagem de prévia (WhatsApp, redes): o cartão gravado por scripts/cartoes.mjs
+    const og = await page.locator('meta[property="og:image"]').getAttribute("content");
+    expect(og).toMatch(new RegExp(`/cartao/${p.id}\\.jpg$`));
+    const img = await request.get("./cartao/" + p.id + ".jpg");
+    expect(img.ok()).toBeTruthy();
+    expect(img.headers()["content-type"]).toContain("image/jpeg");
+    await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
+  });
+
+  test("perfil: compartilhar gera a imagem do feed e do stories e o link da página", async ({ page }) => {
+    const erros = vigiar(page);
+    const p = pols[0];
+    await page.goto(`./#/p/${p.id}`);
+    await page.getByRole("button", { name: "Compartilhar" }).click();
+    const previa = page.locator("img.compartilhar-previa");
+    await expect(previa).toBeVisible();
+    const tamanho = () => previa.evaluate((i: HTMLImageElement) => [i.naturalWidth, i.naturalHeight]);
+    await expect.poll(tamanho).toEqual([1080, 1350]);
+    await page.getByRole("button", { name: /Stories/ }).click();
+    await expect.poll(tamanho).toEqual([1080, 1920]);
+    await expect(page.getByRole("link", { name: "Baixar imagem" })).toHaveAttribute("download", /stories\.png$/);
+    expect(erros).toEqual([]);
   });
 });
 
@@ -720,6 +742,38 @@ test.describe("verificação independente", () => {
     }
     await page.goto("./");
     await expect(page.locator("[data-testid=avisos-fim]")).toContainText("Dados incompletos");
+    expect(erros).toEqual([]);
+  });
+
+  test("perfil: média da Casa ao lado dos números, o que falta e o link para avisar um erro", async ({ page }) => {
+    const erros = vigiar(page);
+    const p = pols.find((x) => x.casa === "camara")!;
+    const mc = meta.medias_casa.anos[ANO].camara;
+    await page.goto(`./#/p/${p.id}`);
+    const medias = page.locator("[data-testid=media-casa]");
+    await expect(medias.first()).toBeVisible();
+    // A média do custo vem do meta.json, com quantos deputados entraram na conta
+    await expect(page.locator("main")).toContainText(`Média de ${mc.custo_total.n} deputados com nota da cota`);
+    await expect(page.locator("[data-testid=fonte-gastos]")).toContainText("Dados coletados em");
+    // Quadro do que falta: abre e mostra os quatro tipos de linha possíveis
+    const quadro = page.locator("[data-testid=o-que-falta]");
+    await quadro.locator("summary").click();
+    await expect(quadro).toContainText("Está aqui");
+    await expect(quadro).toContainText("Ainda não trazemos");
+    // Avisar erro: formulário do GitHub com a página e o nome já preenchidos
+    const link = page.locator("[data-testid=avisar-erro] a", { hasText: "Avise aqui" });
+    const u = new URL((await link.getAttribute("href"))!);
+    expect(u.searchParams.get("template")).toBe("erro-nos-dados.yml");
+    expect(u.searchParams.get("title")).toContain(p.nome);
+    expect(u.searchParams.get("pagina")).toContain(`#/p/${p.id}`);
+    await expect(page.locator("[data-testid=avisar-erro]")).toContainText("direito de resposta");
+    // Votos: rótulo exato (Plenário) e a média da Casa
+    await page.goto(`./#/p/${p.id}?aba=votos`);
+    await expect(page.locator("main")).toContainText("votos nominais no Plenário da Câmara");
+    await expect(page.locator("main")).toContainText("Votou como a maioria do partido");
+    // Páginas sem perfil também têm o link, sem o direito de resposta
+    await page.goto("./#/empresas");
+    await expect(page.locator("[data-testid=avisar-erro]")).toContainText("Avise aqui");
     expect(erros).toEqual([]);
   });
 
