@@ -431,7 +431,7 @@ def coletar(saida: Path, cache: Path, cidades: list[dict], anos: list[int] | Non
             api = f"{API}/contratacoes/publicacao?uf={params['uf']}" + (
                 f"&codigoMunicipioIbge={params['codigoMunicipioIbge']}" if "codigoMunicipioIbge" in params else "")
             d = resumir(local, ano, do_ano, contratos, hoje, falta_ano, api)
-            write_json(saida / "licitacoes" / f"{local['id']}-{ano}.json", d)
+            write_json(saida / "licitacoes" / f"{local['id']}-{ano}.json", fontes.limpar_textos(d))
             anos_local.append({"ano": ano, "n": d["total"]["n"], "completo": d["completo"]})
             resumo[f"{local['id']}-{ano}"] = d["total"]["n"]
         if anos_local:
