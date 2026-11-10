@@ -446,6 +446,28 @@ test.describe("idiomas e buscadores", () => {
       await expect(page.locator("h1")).toContainText(p.nome);
       await expect(page.locator(`a[href*="#/p/${p.id}"]`).first()).toBeVisible();
     }
+    // imagem de prévia (WhatsApp, redes): o cartão gravado por scripts/cartoes.mjs
+    const og = await page.locator('meta[property="og:image"]').getAttribute("content");
+    expect(og).toMatch(new RegExp(`/cartao/${p.id}\\.jpg$`));
+    const img = await request.get("./cartao/" + p.id + ".jpg");
+    expect(img.ok()).toBeTruthy();
+    expect(img.headers()["content-type"]).toContain("image/jpeg");
+    await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
+  });
+
+  test("perfil: compartilhar gera a imagem do feed e do stories e o link da página", async ({ page }) => {
+    const erros = vigiar(page);
+    const p = pols[0];
+    await page.goto(`./#/p/${p.id}`);
+    await page.getByRole("button", { name: "Compartilhar" }).click();
+    const previa = page.locator("img.compartilhar-previa");
+    await expect(previa).toBeVisible();
+    const tamanho = () => previa.evaluate((i: HTMLImageElement) => [i.naturalWidth, i.naturalHeight]);
+    await expect.poll(tamanho).toEqual([1080, 1350]);
+    await page.getByRole("button", { name: /Stories/ }).click();
+    await expect.poll(tamanho).toEqual([1080, 1920]);
+    await expect(page.getByRole("link", { name: "Baixar imagem" })).toHaveAttribute("download", /stories\.png$/);
+    expect(erros).toEqual([]);
   });
 });
 

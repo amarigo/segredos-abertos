@@ -2,7 +2,8 @@
  *
  * O site é um app (React) que monta as telas no navegador, com endereços do tipo #/p/123 que o Google não indexa.
  * Este script roda depois do build e escreve, a partir dos mesmos arquivos de dados (dist/data):
- *   politico/<nome>-<id>.html    uma página por deputado e senador (gastos, empresas, votos), e en/ e es/
+ *   politico/<nome>-<id>.html    uma página por deputado e senador (gastos, empresas, votos), e en/ e es/,
+ *                                com a imagem de prévia cartao/<id>.jpg quando scripts/cartoes.mjs a gravou
  *   empresa/<cnpj>.html          as empresas que mais receberam, com os donos, e en/ e es/
  *   votacao/<id>.html            cada votação nominal, com o placar por partido, e en/ e es/
  *   indice.html                  lista de todas as páginas (en/indice.html, es/indice.html)
@@ -14,6 +15,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { imagemPolitico, paginaPolitico } from "../src/cartao.ts";
 
 const [dist, base, ...resto] = process.argv.slice(2);
 const MG = resto.includes("--mg");
@@ -116,7 +118,6 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const reais = (v, l) => new Intl.NumberFormat(LOCALE[l], { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(v || 0);
 const pct = (v) => (v == null ? "—" : `${Math.round(v * 100)}%`);
 const data = (s, l) => { if (!s) return ""; const [a, m, d] = s.slice(0, 10).split("-"); return l === "en" ? `${a}-${m}-${d}` : `${d}/${m}/${a}`; };
-const slug = (s) => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const cnpjF = (c) => { const d = String(c).replace(/\D/g, ""); return d.length === 14 ? `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}` : c; };
 const linkSeguro = (u) => (/^https?:\/\/[^\s<>"']+$/i.test(u || "") ? u : null);
 const rotulo = (r, l) => ({ Esquerda: T[l].esq, Direita: T[l].dir, Centro: T[l].centro, "Centro-esquerda": l === "pt" ? "Centro-esquerda" : l === "en" ? "Center-left" : "Centroizquierda", "Centro-direita": l === "pt" ? "Centro-direita" : l === "en" ? "Center-right" : "Centroderecha" }[r] || r || "—");
@@ -128,7 +129,7 @@ const appLink = (hash, l) => `${l === "pt" ? "../" : "../../"}${l === "pt" ? "" 
 const ate = (l) => (l === "pt" ? "../" : "../../");
 const gravar = (rel, html) => { const p = join(dist, rel); mkdirSync(join(p, ".."), { recursive: true }); writeFileSync(p, html); };
 
-function pagina({ l, rel, titulo, descricao, corpo, jsonld, tipo = "article" }) {
+function pagina({ l, rel, titulo, descricao, corpo, jsonld, tipo = "article", imagem = null }) {
   const alternativas = LINGUAS.map((x) => `<link rel="alternate" hreflang="${x === "pt" ? "pt-BR" : x}" href="${url(rel, x)}">`).join("\n");
   const raiz = rel.includes("/") ? ate(l) : l === "pt" ? "./" : "../";
   return `<!doctype html>
@@ -148,7 +149,13 @@ ${alternativas}
 <meta property="og:description" content="${esc(descricao)}">
 <meta property="og:url" content="${url(rel, l)}">
 <meta property="og:locale" content="${LOCALE[l].replace("-", "_")}">
-<meta name="twitter:card" content="summary">
+${imagem ? `<meta property="og:image" content="${base}${imagem.rel}">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${esc(imagem.alt)}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="${base}${imagem.rel}">` : '<meta name="twitter:card" content="summary">'}
 <link rel="icon" href="${raiz}icon.svg" type="image/svg+xml">
 <script type="application/ld+json">${JSON.stringify(jsonld).replace(/</g, "\\u003c")}</script>
 <style>
@@ -180,13 +187,15 @@ const editor = { "@type": "Organization", name: SITE, url: base };
 const paginas = []; // [rel, lastmod]
 
 /* ---------- Políticos ---------- */
-const idsPol = new Map(politicos.map((p) => [p.id, `politico/${slug(p.nome)}-${p.id}.html`]));
+const idsPol = new Map(politicos.map((p) => [p.id, paginaPolitico(p)]));
 for (const p of politicos) {
   const d = lerJson(`p/${p.id}.json`) || p;
   const anos = Object.keys(p.por_ano || {}).sort();
   const atual = (d.anos && d.anos[ANO]) || null;
   const rel = idsPol.get(p.id);
   paginas.push(rel);
+  // Imagem de prévia gravada antes por scripts/cartoes.mjs (o mesmo cartão do botão Compartilhar do app)
+  const temCartao = existsSync(join(dist, imagemPolitico(p.id)));
   for (const l of LINGUAS) {
     const t = T[l];
     const cargoT = p.casa === "senado" ? t.sen : t.dep;
@@ -221,6 +230,7 @@ ${forn.map((f) => `<tr><td>${f.tipo === "cnpj" ? `<a href="${appLink(`/e/${f.doc
 ${fonte ? `<p>${t.fonte}: <a href="${esc(fonte)}">${esc(fonte)}</a></p>` : ""}`;
     gravar(`${prefixo(l)}${rel}`, pagina({
       l, rel, tipo: "profile", titulo: t.tituloPol(p), descricao: t.descPol({ ...p, cargoT }, v), corpo,
+      imagem: temCartao ? { rel: imagemPolitico(p.id), alt: `${p.nome}, ${p.partido}-${p.uf}: ${t.cota} ${ANO}, ${v}` } : null,
       jsonld: {
         "@context": "https://schema.org", "@type": "ProfilePage", inLanguage: LOCALE[l], url: url(rel, l), publisher: editor, dateModified: meta.atualizado_em,
         mainEntity: {

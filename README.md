@@ -137,6 +137,12 @@ Para achar textos novos sem tradução, com o site servido localmente:
   político, empresa e votação, em português, inglês e espanhol, com link para a fonte oficial. Também geram
   `sitemap.xml` e `llms.txt` (um resumo do site e dos dados para assistentes de IA).
 - Cada página tem título, descrição, `hreflang`, Open Graph e dados estruturados (schema.org).
+- Imagem de prévia por político (`cartao/<id>.jpg`, 1200×630): `scripts/cartoes.mjs` desenha, num Chromium sem
+  tela, o mesmo cartão do botão **Compartilhar** do perfil (`src/cartao.ts`), com fonte e data no rodapé. Aparece
+  quando alguém manda o link da página no WhatsApp, Facebook, X ou LinkedIn. Sem navegador, as páginas saem sem
+  imagem e o site é publicado do mesmo jeito. Local: `CHROMIUM_PATH=/caminho/do/chromium npm run paginas`.
+- No perfil, **Compartilhar** monta a imagem para o feed (1080×1350) e os stories (1080×1920) do Instagram no
+  próprio navegador, para enviar ou baixar, e copia o link da página simples.
 - `robots.txt` libera buscadores e robôs de IA. Atenção: no GitHub Pages sem domínio próprio, os buscadores só leem
   o `robots.txt` da raiz do domínio (`amarigo.github.io/robots.txt`), então o arquivo daqui só vale se o site
   ganhar um domínio próprio. Para o Google achar todas as páginas logo, cadastre
