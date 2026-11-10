@@ -1,0 +1,16 @@
+name: Sonda sanções (temporária)
+on:
+  push:
+    branches: [claude/project-thread-kbdj4t]
+    paths: [".github/sonda/**", ".github/workflows/sonda-sancoes.yml"]
+permissions:
+  contents: read
+jobs:
+  sonda:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - run: python3 .github/sonda/sonda.py
+        env:
+          CHAVE: ${{ secrets.PORTAL_TRANSPARENCIA_CHAVE }}
