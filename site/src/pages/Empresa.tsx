@@ -122,7 +122,7 @@ function EmpresaAno({ e }: { e: Empresa }) {
 
       {e.total > 0 && <PorMes e={e} />}
       {e.total > 0 && <Notas e={e} />}
-      <AvisosFim secao="empresas"><EmRevisao campo="cnpj" valor={e.cnpj} /></AvisosFim>
+      <AvisosFim secao="empresas" assunto={`${e.nome} (CNPJ ${cnpjFmt(e.cnpj)})`} resposta><EmRevisao campo="cnpj" valor={e.cnpj} /></AvisosFim>
     </>
   );
 }

@@ -1,5 +1,6 @@
 import type { DocPagamento } from "./components/DocsEmendas";
 import type { PlanoPix } from "./components/DestinoPix";
+import type { MediasCasa } from "./confianca";
 // Tipos e funções para ler os arquivos JSON gerados pelo coletor (etl/).
 export type Casa = "camara" | "senado";
 export type Grupo = "pessoal" | "escritorio" | "servicos";
@@ -10,6 +11,8 @@ export interface AnoResumo {
   salario: number | null; verba_gabinete: number | null; outros_gastos: number | null;
   cota_oficial: number | null; n_pessoal: number | null; custo_total: number;
   fora_do_periodo?: number; meses_fora?: number[];
+  /** Em quantos meses do período houve nota da cota: diz se ficou o ano todo, para a média da Casa */
+  meses_com_nota?: number;
   atuacao?: Atuacao;
 }
 /** Atuação no ano. Presença: [presente, ausência justificada, ausência não justificada].
@@ -218,6 +221,8 @@ export interface Meta {
   /** Problemas da última coleta (fonte oficial fora do ar, cópia antiga em uso...), para avisar quem lê */
   avisos?: string[];
   atualizado_em: string; anos: number[]; grupos: Record<Grupo, string>; medias: Record<string, Record<Casa, number>>;
+  /** Média da Casa ao lado de cada número do perfil (etl/sa_etl/medias.py) */
+  medias_casa?: MediasCasa;
   contagens: { politicos: number; despesas: number; votacoes: number; empresas_com_socios: number }; total_gasto: number;
   total_por_ano: Record<string, number>; custo_por_ano: Record<string, number>;
   /** Janeiro até o mesmo mês em todos os anos, para comparar o ano em andamento com o mesmo período dos anteriores */

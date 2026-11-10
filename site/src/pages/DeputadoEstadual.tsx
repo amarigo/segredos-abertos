@@ -223,7 +223,7 @@ function Gastos({ d, ano, colegas, primeiro }: { d: DeputadoEstadual; ano: strin
           { nome: "API de dados abertos da ALMG", url: "https://dadosabertos.almg.gov.br/", explica: "de onde vêm estes dados" },
         ]} />
       </section>
-      <AvisosFim>
+      <AvisosFim assunto={`${d.nome}, deputado estadual, ${ano}`} resposta>
       {!!v.meses_faltando?.length && (
         <p className="alert small" role="note">Ainda estamos baixando da Assembleia os meses de {v.meses_faltando.map((m) => MESES[m - 1]).join(", ")} de {ano}. A ALMG só deixa consultar um mês por vez; o histórico completo aparece nos próximos dias.</p>
       )}
