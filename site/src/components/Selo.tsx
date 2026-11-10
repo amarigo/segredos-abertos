@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useData } from "./ui";
+import { AvisarErro } from "./Confianca";
 import { linkSeguro, reais, type ItemVerificado, type Verificacao, type SecaoVerificada, type StatusVerificacao } from "../data";
 
 /* Selo de verificação de cada seção do site. Mostra só o que a verificação diária de fato conferiu
@@ -60,12 +61,15 @@ export function SelosResumo() {
   );
 }
 
-/* Fim da página: avisos sobre os dados e a conferência ficam depois dos números (some quando não há nada) */
-export function AvisosFim({ secao, children }: { secao?: string; children?: ReactNode }) {
+/* Fim da página: avisos sobre os dados, a conferência e o link para avisar um erro ficam depois dos números.
+   assunto: o que aparece no título do aviso de erro (o nome do político, da empresa...); resposta: oferece também o
+   pedido de direito de resposta, nas páginas sobre uma pessoa ou empresa. */
+export function AvisosFim({ secao, children, assunto, resposta }: { secao?: string; children?: ReactNode; assunto?: string; resposta?: boolean }) {
   return (
     <aside className="avisos-fim" aria-label="Avisos sobre estes números" data-testid="avisos-fim">
       {children}
       {secao && <Selo secao={secao} />}
+      <AvisarErro assunto={assunto} resposta={resposta} />
     </aside>
   );
 }
