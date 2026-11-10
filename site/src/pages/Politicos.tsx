@@ -69,6 +69,8 @@ export default function Politicos() {
       <h1>Políticos</h1>
       {!MG && <p className="small"><Link to="/gabinetes">Gasto com assessores: compare os estados de forma justa, pela população e pelos salários de cada um ›</Link></p>}
       {!MG && <p className="small"><Link to="/historico">A cota parlamentar desde 2008: quanto a Câmara e o Senado gastaram em cada ano ›</Link></p>}
+      {!MG && <p className="small"><Link to="/patrimonio">Patrimônio declarado ao TSE por cada deputado e senador, em cada eleição desde 2014 ›</Link></p>}
+      {!MG && <p className="small"><Link to="/eleitos">Governadores, assembleias, prefeitos e vereadores eleitos, com o patrimônio declarado ›</Link></p>}
       <div className="secao-graficos">
         {ufs.length > 1 && (
           <div>

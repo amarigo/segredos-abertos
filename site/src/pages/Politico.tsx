@@ -15,6 +15,7 @@ import { Compartilhar } from "../components/Compartilhar";
 import { norm } from "./Home";
 import { MG } from "../recorte";
 import { HistoricoPolitico } from "./Historico";
+import { PatrimonioPolitico } from "./Patrimonio";
 import { MediaCasaLinha, OQueFaltaQuadro } from "../components/Confianca";
 import {
   comparacao, comparacaoPontos, nomeCasa, periodoInteiro, referenciaDinheiro, referenciaTaxa, type MediasCasaAno,
@@ -201,6 +202,8 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
         <GastoMensal meses={d.meses} ano={ano} cor="var(--s2)" />
         {!MG && <HistoricoPolitico id={p.id} />}
       </section>
+
+      {!MG && <PatrimonioPolitico id={p.id} />}
 
       <TodasNotas p={p} d={d} ano={ano} />
 

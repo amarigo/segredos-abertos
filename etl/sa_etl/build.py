@@ -12,7 +12,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import (agenda, autorias, gabinetes, historico, recursos_recebidos, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
+from . import (agenda, autorias, eleitos, gabinetes, historico, patrimonio, recursos_recebidos, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
                renuncias, senado, temas)
 from .categorias import GRUPOS, tema_de
 from . import medias as medias_casa
@@ -805,6 +805,8 @@ def main() -> None:
                          "dois anos dão cerca de 90 MB, 8 MB compactados)")
     ap.add_argument("--sem-historico", action="store_true",
                     help="não monta o histórico da cota desde 2008 (somas por ano da Câmara e do Senado)")
+    ap.add_argument("--sem-tse", action="store_true",
+                    help="não lê os arquivos do TSE (patrimônio declarado e eleitos de estados e cidades)")
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     executar(a.anos, a.cache, a.saida, max_empresas=a.max_empresas, com_recursos=not a.sem_recursos,
@@ -812,7 +814,8 @@ def main() -> None:
              minutos_pagamentos=a.minutos_pagamentos, minutos_gerais=a.minutos_pagamentos_gerais,
              com_financas=not a.sem_financas, com_tramitacao=not a.sem_tramitacao, novas_empresas=a.novas_empresas,
              minutos_transferegov=a.minutos_transferegov, com_tribunais=not a.sem_tribunais,
-             minutos_tribunais=a.minutos_tribunais, anos_notas=a.anos_notas, com_historico=not a.sem_historico)
+             minutos_tribunais=a.minutos_tribunais, anos_notas=a.anos_notas, com_historico=not a.sem_historico,
+             com_tse=not a.sem_tse)
 
 
 def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500, com_recursos: bool = True,
@@ -820,7 +823,7 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
              minutos_gerais: float = 40, com_financas: bool = True, com_tramitacao: bool = True,
              novas_empresas: int = cnpj.NOVAS_POR_COLETA, minutos_transferegov: float = 15,
              com_tribunais: bool = True, minutos_tribunais: float = 10, anos_notas: list[int] | None = None,
-             com_historico: bool = True, anos_historico: list[int] | None = None) -> None:
+             com_historico: bool = True, anos_historico: list[int] | None = None, com_tse: bool = True) -> None:
     """A coleta inteira, na ordem certa (usada também pelos testes)."""
     # A renúncia vem antes dos arquivos diários: o Portal passa a recusar downloads (HTTP 405) depois de muitos
     # pedidos seguidos, e os arquivos de renúncia são poucos (e ficam uma semana no cache)
@@ -855,6 +858,8 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
         coletar_financas(saida, cache)
     if com_historico:  # depois de coletar(): reaproveita os arquivos da cota que ela baixou
         coletar_historico(saida, cache, anos_historico)
+    if com_tse:  # patrimônio declarado e eleitos de estados e cidades (arquivos do TSE)
+        coletar_tse(saida, cache, dados["politicos"])
     regravar_avisos(saida)
 
 
@@ -888,6 +893,16 @@ def coletar_historico(saida: Path, cache: Path, anos: list[int] | None = None) -
     except Exception:  # noqa: BLE001
         log.exception("Histórico da cota: erro; a página não foi atualizada")
         util.avisar("Histórico da cota: a coleta falhou; a página ficou de fora desta atualização")
+
+
+def coletar_tse(saida: Path, cache: Path, politicos: list[dict]) -> None:
+    """Patrimônio declarado ao TSE e quem foi eleito em cada estado e cidade. Se falhar, o resto do site segue."""
+    try:
+        patrimonio.coletar(saida, cache, politicos)
+    except Exception:  # noqa: BLE001
+        log.exception("Patrimônio declarado: erro; a página não foi atualizada")
+        util.avisar("Patrimônio declarado: a coleta falhou; a página ficou de fora desta atualização")
+    eleitos.coletar(saida, cache)  # trata os próprios erros
 
 
 def coletar_tramitacao(saida: Path, cache: Path, politicos: list[dict]) -> None:

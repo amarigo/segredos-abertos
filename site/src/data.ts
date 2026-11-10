@@ -599,3 +599,35 @@ export interface HistoricoPessoa {
   id: string; casa: "camara" | "senado"; nome: string; total: number; atualizado: string; fontes: Record<string, string>;
   anos: Record<string, { total: number; total_hoje?: number; meses: number; uf: string; partido: string; por_mes: Record<string, number> }>;
 }
+
+/* Patrimônio declarado ao TSE (patrimonio.json e pat/{id}.json) */
+export interface BemTipo { tipo: string; valor: number }
+export interface Declaracao {
+  ano: number; cargo: string; uf: string; local: string; partido: string; urna: string; resultado: string; situacao: string;
+  suplementar: boolean; total: number; sem_bens: boolean; tipos: BemTipo[]; fonte: string; principal: boolean; salto?: boolean;
+}
+export interface PatrimonioPessoa { id: string; nome: string; declaracoes: Declaracao[]; anos_lidos: number[]; fontes: Record<string, string>; atualizado: string }
+export interface PatrimonioResumo {
+  id: string; nome: string; casa: "camara" | "senado"; uf: string; partido: string;
+  ultimo: { ano: number; total: number; cargo: string }; anterior?: { ano: number; total: number }; declaracoes: number; salto?: boolean;
+}
+export interface Patrimonio {
+  atualizado: string; anos: number[]; fontes: Record<string, string>; politicos: PatrimonioResumo[]; sem_registro: number; total_politicos: number;
+}
+
+/* Eleitos de estados e cidades (eleitos/estados.json, eleitos/cidades/{UF}.json, eleitos/indice.json) */
+export interface Eleito {
+  sq: string; nome: string; civil: string; partido: string; numero: string; resultado: string; patrimonio: number;
+  sem_bens?: boolean; tipos?: BemTipo[]; suplementar?: string;
+}
+export interface LugarEleitos {
+  uf: string; ue: string; nome: string; vagas?: number | null; sem_eleito?: string[];
+  suplementar?: Record<string, string>; suplementar_parcial?: Record<string, string>;
+  governador?: Eleito[]; vice?: Eleito[]; deputados?: Eleito[]; prefeito?: Eleito[]; vereadores?: Eleito[]; casa?: string;
+}
+export interface EleitosEstados { ano: number; mandato: string; ufs: Record<string, LugarEleitos>; fonte: string; proxima: string; atualizado: string }
+export interface EleitosCidades { ano: number; mandato: string; uf: string; cidades: LugarEleitos[]; fonte: string; atualizado: string }
+export interface EleitosIndice {
+  ano: number; mandato: string; cidades: [string, string, string][]; fonte: string; atualizado: string;
+  prefeitos: number; vereadores: number; sem_eleito?: number;
+}

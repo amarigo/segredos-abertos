@@ -86,11 +86,17 @@ SECOES = {
     "incentivos": "Dinheiro público para empresas",
     "agenda": "Presença dia a dia",
     "historico": "Histórico da cota desde 2008",
+    "patrimonio": "Patrimônio declarado ao TSE",
+    "eleitos": "Eleitos de estados e cidades",
 }
 # Seções que ainda não têm uma segunda fonte oficial para conferir, e por quê
 SEM_SEGUNDA_FONTE = {
     "incentivos": "Os pagamentos e a renúncia fiscal vêm direto do Portal da Transparência e da Receita Federal. Ainda não "
                   "há uma segunda fonte oficial com o mesmo dado para conferir; os totais passam só pela conferência de somas.",
+    "patrimonio": "Os bens declarados só existem nos dados abertos do TSE. A consulta de cada candidato no DivulgaCandContas "
+                  "recusa acesso automático (HTTP 403); a soma de cada declaração é conferida tipo a tipo.",
+    "eleitos": "Quem foi eleito vem do arquivo de candidatos do TSE; o número de eleitos de cada estado e cidade é conferido "
+               "com o arquivo de vagas do TSE, que é outra publicação.",
 }
 
 
