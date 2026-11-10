@@ -12,6 +12,7 @@ import { AvisosFim, EmRevisao } from "../components/Selo";
 import { FotoPerfil } from "../components/Foto";
 import { AgendaPolitico } from "../components/Agenda";
 import { norm } from "./Home";
+import { MG } from "../recorte";
 
 export default function PoliticoPage() {
   const { id = "" } = useParams();
@@ -289,6 +290,9 @@ function Equipe({ p, r, ano }: { p: Politico; r: Recursos; ano: string }) {
           <div className="card stat"><span className="label">Verba de gabinete gasta em {ano}</span><span className="value">{reais(r.verba_gasto)}</span>
             {r.verba_disponivel ? <span className="hint">{Math.round((r.verba_gasto / r.verba_disponivel) * 100)}% do disponível ({reais(r.verba_disponivel)})</span> : null}</div>
         </div>
+      )}
+      {p.casa === "camara" && r.verba_gasto != null && !MG && (
+        <p className="small">O teto da verba é o mesmo para todo deputado, de qualquer estado. <Link to="/gabinetes">Compare os estados de forma justa, pela população e pelos salários de cada um ›</Link></p>
       )}
       {r.vinculos && r.vinculos.length > 0 && <p>{r.vinculos.map((v) => `${v.quantidade} ${v.vinculo.toLowerCase()}${v.quantidade === 1 ? "" : "s"}`).join(" e ")}.</p>}
       {r.verba_meses && r.verba_meses.length > 0 && <>

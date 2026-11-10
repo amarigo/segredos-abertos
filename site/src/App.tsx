@@ -33,6 +33,7 @@ const TribunaisPage = pagina(() => import("./pages/Tribunais"));
 const Sobre = pagina(() => import("./pages/Sobre"));
 const VerificacaoPage = pagina(() => import("./pages/Verificacao"));
 const Partidos = pagina(() => import("./pages/Partidos"));
+const GabinetesPage = pagina(() => import("./pages/Gabinetes"));
 const Emendas = pagina(() => import("./pages/Emendas"));
 const Incentivos = pagina(() => import("./pages/Incentivos"));
 const Financas = pagina(() => import("./pages/Financas"));
@@ -150,6 +151,7 @@ export default function App() {
           <Route path="/votacoes/em-andamento" element={<EmAndamentoAntigo />} />
           <Route path="/v/:id" element={<VotacaoPage />} />
           <Route path="/partidos" element={<Partidos />} />
+          {!MG && <Route path="/gabinetes" element={<GabinetesPage />} />}
           {!MG && <Route path="/dinheiro" element={<Financas />} />}
           {!MG && <Route path="/emendas" element={<Emendas />} />}
           {!MG && <Route path="/incentivos" element={<Incentivos />} />}

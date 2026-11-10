@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { MG } from "../recorte";
 import { Abrir, Barras, Loading, OndeVer, useAno, useData } from "../components/ui";
 import { atuacaoAtiva, corPartido, reaisCurto, taxaPresenca, type Resumo } from "../data";
 import { PessoaLinha, norm } from "./Home";
@@ -66,6 +67,7 @@ export default function Politicos() {
   return (
     <section>
       <h1>Políticos</h1>
+      {!MG && <p className="small"><Link to="/gabinetes">Gasto com assessores: compare os estados de forma justa, pela população e pelos salários de cada um ›</Link></p>}
       <div className="secao-graficos">
         {ufs.length > 1 && (
           <div>

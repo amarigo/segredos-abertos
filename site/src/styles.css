@@ -1088,6 +1088,16 @@ tr.nota-aberta > td { background: var(--tint); }
 .rede-gaveta .fechar { position: sticky; top: 8px; float: right; margin: 8px 8px 0 0; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 1.4rem; cursor: pointer; z-index: 1; }
 @media (max-width: 640px) { .rede-gaveta { left: 8px; right: 8px; top: auto; height: 75vh; width: auto; bottom: 8px; } }
 
+/* Comparação justa dos gabinetes (pages/Gabinetes.tsx) */
+.gab-perguntas { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); margin: 16px 0 8px; }
+.gab-perguntas h3 { margin-top: 0; }
+.gab-perguntas p { margin: 0 0 8px; }
+.gabinetes .toggle { margin: 4px 0 8px; }
+.gab-tabela td, .gab-tabela th { white-space: nowrap; }
+.gab-tabela tr.ativa td { background: var(--tint); font-weight: 700; }
+.gab-tabela tr.total td { border-top: 2px solid var(--line); font-weight: 700; }
+.gab-ativo { font-weight: 700; }
+
 /* Dia a dia do parlamentar (components/Agenda.tsx): calendário do ano, lista de dias e o dia aberto, como uma caixa de entrada */
 .agenda { display: grid; gap: 14px; }
 .agenda .calendario { grid-template-columns: repeat(6, minmax(0, 1fr)); }

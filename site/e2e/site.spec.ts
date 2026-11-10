@@ -76,6 +76,25 @@ test.describe("jornada", () => {
     expect(erros).toEqual([]);
   });
 
+  test("gasto com assessores: a tabela soma a bancada inteira e as medidas batem com o arquivo", async ({ page }) => {
+    const erros = vigiar(page);
+    const g = dados("gabinetes.json");
+    const ufs: { uf: string; verba: number; teto: number; cadeiras: number; populacao: number }[] = g.anos[ANO].ufs;
+    await page.goto("./#/politicos");
+    await page.getByRole("link", { name: /compare os estados de forma justa/ }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("comparar de forma justa");
+    await expect(page.locator(".gab-perguntas")).toContainText(sp(brl(g.regras.teto_mensal, true)));
+    // linha do Brasil: soma da verba de todos os estados
+    const total = ufs.reduce((s, u) => s + u.verba, 0);
+    const curto = `R$ ${(total / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
+    await expect(page.locator(".gab-tabela tr.total")).toContainText(curto);
+    // "Habitantes por deputado": o primeiro da lista é o que tem mais gente por cadeira
+    await page.getByRole("button", { name: "Habitantes por deputado" }).click();
+    const maior = ufs.slice().sort((a, b) => b.populacao / b.cadeiras - a.populacao / a.cadeiras)[0];
+    await expect(page.locator(".bars .bar-row").first()).toContainText(Math.round(maior.populacao / maior.cadeiras).toLocaleString("pt-BR"));
+    expect(erros).toEqual([]);
+  });
+
   test("dia a dia: calendário, ponto para conferir com links e o dia aberto com presença e notas", async ({ page }) => {
     const erros = vigiar(page);
     // o FakeGov põe uma refeição em Recife num dia de sessão presencial em Brasília do primeiro deputado

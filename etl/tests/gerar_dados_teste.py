@@ -24,7 +24,7 @@ def main(saida: Path) -> None:
     import time
     time.sleep = lambda s: None
     with tempfile.TemporaryDirectory() as cache:
-        build.executar([2025], Path(cache), saida, max_empresas=200, com_recursos=False, minutos_pagamentos=5, minutos_gerais=5)
+        build.executar([2025], Path(cache), saida, max_empresas=200, minutos_pagamentos=5, minutos_gerais=5)
     r = validar(saida, minimos={"camara": 1, "senado": 1, "votacoes": 1})
     assert r.ok, r.erros
     print(f"Dados de teste em {saida}")

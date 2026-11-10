@@ -28,6 +28,7 @@ import requests
 from sa_etl.cnpj import cnpj_matriz
 
 import fakegov_financas  # noqa: E402  (mesma pasta dos testes)
+import fakegov_gabinetes  # noqa: E402
 import fakegov_noticias  # noqa: E402
 import fakegov_tramitacao  # noqa: E402
 import fakegov_transferegov  # noqa: E402
@@ -315,6 +316,9 @@ class FakeGov:
         u = urlparse(url)
         path = u.path
         q = {**{k: v[0] for k, v in parse_qs(u.query).items()}, **{k: str(v) for k, v in params.items()}}
+        gab = fakegov_gabinetes.rota(u.netloc, path, q, self.deputados)  # verba de gabinete, IBGE e equipe dos senadores
+        if gab is not None:
+            return gab
         fin = fakegov_financas.rota(u.netloc, path, q)  # aba de arrecadação e gastos
         if fin is not None:
             return fin
