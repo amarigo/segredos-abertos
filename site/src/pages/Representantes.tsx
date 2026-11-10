@@ -4,7 +4,7 @@ import { Explain, Loading, OndeVer, useData } from "../components/ui";
 import { FotoPolitico } from "../components/Foto";
 import { corPartido, dataBR, linkSeguro, numero, type CidadeResumo } from "../data";
 import { MG } from "../recorte";
-import { BuscaCidade, cidadeGuardada, guardar, normal, useRep, type Eleito, type Parlamentar, type RepCidade, type RepEstado, type RepIndice } from "../components/BuscaCidade";
+import { BuscaCidade, cidadeGuardada, guardar, normal, useRep, type AvisoTSE, type Eleito, type Parlamentar, type RepCidade, type RepEstado, type RepIndice } from "../components/BuscaCidade";
 
 /* Quem me representa: a pessoa digita a cidade e vê todos os cargos eleitos por quem vota ali, do vereador ao
    presidente. Os arquivos vêm de etl/sa_etl/representantes.py (TSE, Câmara e Senado), em data/representantes/. */
@@ -137,6 +137,8 @@ function PaginaCidade({ ue }: { ue: string }) {
 
 function SecaoCidade({ c, mgCidade, el }: { c: RepCidade; mgCidade: string; el: RepIndice["eleicoes"] }) {
   const s = c.suplementar;
+  const sv = c.suplementar_vereadores;
+  const av = c.aviso_tse || {};
   return (
     <section id="rep-cidade">
       <h2>Prefeitura de {c.nome}</h2>
@@ -147,22 +149,35 @@ function SecaoCidade({ c, mgCidade, el }: { c: RepCidade; mgCidade: string; el: 
           A eleição de {c.eleicao} para prefeito foi refeita em <strong>{dataBR(s.data)}</strong> (eleição suplementar, quando a Justiça
           Eleitoral anula a primeira).{s.eleitos_2024.prefeito && <> Em {c.eleicao} tinham sido eleitos {s.eleitos_2024.prefeito.nome} ({s.eleitos_2024.prefeito.partido})
           {s.eleitos_2024.vice_prefeito && <> e {s.eleitos_2024.vice_prefeito.nome} ({s.eleitos_2024.vice_prefeito.partido})</>}.</>}
+          {s.fonte && <> <a href={linkSeguro(s.fonte)} target="_blank" rel="noreferrer">Resultado da eleição suplementar no TSE</a>.</>}
         </div></div>
       )}
+      {c.prefeito && av.prefeito && <AvisoDoTSE a={av.prefeito} oque="prefeito" />}
       {c.prefeito ? (
         <div className="grid rep-chefes">
           <CartaoEleito cargo="Prefeito(a)" p={c.prefeito} ano={s ? Number(s.data.slice(0, 4)) : c.eleicao} titular />
           {c.vice_prefeito && <CartaoEleito cargo="Vice-prefeito(a)" p={c.vice_prefeito} ano={s ? Number(s.data.slice(0, 4)) : c.eleicao} doTitular={c.prefeito} />}
         </div>
       ) : (
-        <div className="empty">O arquivo do TSE não traz prefeito eleito em {c.eleicao} nesta cidade. Isso acontece quando a eleição foi anulada
-          ou ainda está em julgamento na Justiça Eleitoral.</div>
+        <div className="empty">O TSE não tem prefeito eleito em {c.eleicao} nesta cidade. Isso acontece quando a eleição foi anulada
+          ou ainda está em julgamento na Justiça Eleitoral.
+          {av.prefeito && <AvisoDoTSE a={av.prefeito} oque="prefeito" dentro />}</div>
       )}
 
       <h2>Câmara Municipal: {c.vereadores.length} vereadores</h2>
       <Explain>Os vereadores fazem as leis da cidade, aprovam o orçamento da prefeitura e fiscalizam o prefeito. Eleitos em {c.eleicao}, com o
         partido daquela eleição; mandato de 2025 a 2028.</Explain>
-      <Contagem n={c.vereadores.length} vagas={c.vagas_vereadores} oque="vereadores" />
+      {sv && (
+        <div className="alert rep-aviso" role="note"><div>
+          {sv.eleitos ? <>Em <strong>{dataBR(sv.data)}</strong> a Justiça Eleitoral refez a eleição de {sv.cadeiras === 1 ? "1 cadeira" : `${sv.cadeiras} cadeiras`} da
+            Câmara (eleição suplementar). Eleito(s): {sv.eleitos.map((p) => `${p.nome} (${p.partido})`).join(", ")}. A lista abaixo é a da eleição
+            de {c.eleicao}; o TSE não informa no resultado quem deixou a cadeira.</>
+            : <>A eleição de {c.eleicao} para vereador foi refeita em <strong>{dataBR(sv.data)}</strong> (eleição suplementar). A lista abaixo é
+            a dos eleitos nela.</>}{" "}
+          <a href={linkSeguro(sv.fonte)} target="_blank" rel="noreferrer">Resultado no TSE</a>.
+        </div></div>
+      )}
+      <Contagem n={c.vereadores.length} vagas={c.vagas_vereadores} oque="vereadores" aviso={av.vereadores} />
       <ListaEleitos pessoas={c.vereadores} ano={c.eleicao} seguinte={el.seguinte} />
     </section>
   );
@@ -209,12 +224,34 @@ function ListaParlamentares({ lista }: { lista: Parlamentar[] }) {
   );
 }
 
-function Contagem({ n, vagas, oque }: { n: number; vagas: number | null; oque: string }) {
-  if (vagas == null || vagas === n) return null;
+function Contagem({ n, vagas, oque, aviso }: { n: number; vagas: number | null; oque: string; aviso?: AvisoTSE }) {
+  if (vagas == null || vagas === n) return aviso ? <AvisoDoTSE a={aviso} oque={oque} /> : null;
   return (
-    <p className="small rep-diferenca">O TSE lista {n} {oque} eleitos para {vagas} cadeiras. A diferença costuma vir de recontagem ou de votos
-      anulados pela Justiça Eleitoral depois da eleição; quando o TSE atualizar o arquivo, a lista acompanha.</p>
+    <div className="small rep-diferenca">
+      <p>O TSE lista {n} {oque} eleitos para {vagas} cadeiras.{" "}
+        {aviso?.totalizado === false ? <>O TSE ainda não terminou a contagem dos votos para {oque} nesta cidade (ela é refeita quando a Justiça
+          Eleitoral anula votos depois da eleição). Quando terminar, a lista acompanha.</>
+          : <>A diferença costuma vir de recontagem ou de votos anulados pela Justiça Eleitoral depois da eleição; quando o TSE atualizar o
+          arquivo, a lista acompanha.</>}</p>
+      {aviso && <AvisoDoTSE a={aviso} oque={oque} dentro />}
+    </div>
   );
+}
+
+/** O aviso oficial do site de resultados do TSE (eleição anulada, nova eleição marcada...), com o link para o arquivo */
+function AvisoDoTSE({ a, oque, dentro = false }: { a: AvisoTSE; oque: string; dentro?: boolean }) {
+  const corpo = (
+    <>
+      {a.suplementar && <p>A Justiça Eleitoral marcou nova eleição (suplementar) para {oque} em <strong>{dataBR(a.suplementar)}</strong>; o TSE
+        ainda não publicou quem venceu.</p>}
+      {a.mensagens.length > 0 && <><p>O que o TSE informa sobre a eleição de {oque} nesta cidade:</p>
+        <ul>{a.mensagens.map((m) => <li key={m}>{m}</li>)}</ul></>}
+      <p><a href={linkSeguro(a.fonte)} target="_blank" rel="noreferrer">Arquivo oficial no site de resultados do TSE</a></p>
+    </>
+  );
+  if (!a.suplementar && !a.mensagens.length && dentro) return <p className="small"><a href={linkSeguro(a.fonte)} target="_blank" rel="noreferrer">Arquivo oficial no site de resultados do TSE</a></p>;
+  if (!a.suplementar && !a.mensagens.length) return null;
+  return dentro ? <div className="rep-aviso-tse small">{corpo}</div> : <div className="alert rep-aviso" role="note"><div className="rep-aviso-tse">{corpo}</div></div>;
 }
 
 function CartaoEleito({ cargo, p, ano, titular = false, doTitular }: { cargo: string; p: Eleito; ano: number; titular?: boolean; doTitular?: Eleito }) {
@@ -274,6 +311,7 @@ function Fontes({ idx, df }: { idx: RepIndice; df: boolean }) {
         ...(df ? [] : tse("candidatos_municipal", `Candidatos e eleitos de ${idx.eleicoes.municipal} (TSE)`, "prefeitos, vices e vereadores")),
         ...tse("candidatos_geral", `Candidatos e eleitos de ${idx.eleicoes.geral} (TSE)`, "presidente, governadores e deputados estaduais"),
         ...tse("candidatos_seguinte", `Candidatos de ${idx.eleicoes.seguinte} (TSE)`, "quem deixou o cargo para concorrer"),
+        ...(df ? [] : tse("resultados", "Site de resultados do TSE", "eleições suplementares e avisos de eleição anulada")),
         ...(typeof f.camara === "string" ? [{ nome: "Deputados em exercício (API da Câmara)", url: f.camara }] : []),
         ...(typeof f.senado === "string" ? [{ nome: "Senadores em exercício (API do Senado)", url: f.senado }] : []),
         ...(typeof f.divulga === "string" ? [{ nome: "Página de cada candidato no TSE (DivulgaCandContas)", url: f.divulga, explica: "bens, propostas e contas de campanha" }] : []),

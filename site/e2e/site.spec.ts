@@ -427,8 +427,24 @@ test.describe("quem me representa", () => {
     await page.goto("./#/quem/40000");
     await expect(page.locator("main")).toContainText("foi refeita em 05/04/2026");
     await expect(page.locator("main")).toContainText(rep("m/40000.json").prefeito.nome);
+    await expect(page.getByRole("link", { name: "Resultado da eleição suplementar no TSE" })).toHaveAttribute("href", rep("m/40000.json").suplementar.fonte);
     await page.goto("./#/quem/41238");
     await expect(page.locator("main")).toContainText("O TSE lista 4 vereadores eleitos para 5 cadeiras");
+    await expect(page.locator("main")).toContainText("O TSE ainda não terminou a contagem dos votos para vereadores");
+    // eleição anulada: sem prefeito, com o aviso oficial do TSE e a nova eleição marcada; Câmara eleita na suplementar
+    const anulada = rep("m/40001.json");
+    await page.goto("./#/quem/40001");
+    const main = page.locator("main");
+    await expect(main).toContainText("O TSE não tem prefeito eleito");
+    await expect(main).toContainText("marcou nova eleição (suplementar) para prefeito em 06/12/2026");
+    await expect(main).toContainText(anulada.aviso_tse.prefeito.mensagens[0]);
+    await expect(main).toContainText("A eleição de 2024 para vereador foi refeita em 17/05/2026");
+    for (const v of anulada.vereadores) await expect(main).toContainText(v.nome);
+    await expect(main.getByRole("link", { name: "Arquivo oficial no site de resultados do TSE" }).first()).toHaveAttribute("href", anulada.aviso_tse.prefeito.fonte);
+    // suplementar de uma cadeira só: a Câmara de 2024 fica e a página diz quem entrou
+    await page.goto("./#/quem/62910");
+    await expect(main).toContainText("refez a eleição de 1 cadeira");
+    await expect(main).toContainText(`Eleito(s): ${rep("m/62910.json").suplementar_vereadores.eleitos[0].nome}`);
     await page.goto("./#/quem");
     await page.getByLabel("Digite a sua cidade").fill("brasilia");
     await page.locator(".rep-sugestoes a", { hasText: "Brasília" }).click();

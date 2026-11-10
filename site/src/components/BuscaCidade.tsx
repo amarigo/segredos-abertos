@@ -29,8 +29,13 @@ export interface RepEstado {
 export interface RepCidade {
   ue: string; nome: string; uf: string; eleicao: number;
   prefeito?: Eleito; vice_prefeito?: Eleito; vereadores: Eleito[]; vagas_vereadores: number | null;
-  suplementar?: { data: string; eleitos_2024: { prefeito: Eleito | null; vice_prefeito: Eleito | null } };
+  suplementar?: { data: string; fonte?: string; eleitos_2024: { prefeito: Eleito | null; vice_prefeito: Eleito | null } };
+  /** eleição suplementar para a Câmara: com `eleitos`, foi só para algumas cadeiras e a lista de 2024 fica */
+  suplementar_vereadores?: { data: string; fonte: string; cadeiras: number; eleitos_2024: number; eleitos?: Eleito[] };
+  /** o que o TSE diz no site de resultados quando falta prefeito ou vereador eleito */
+  aviso_tse?: { prefeito?: AvisoTSE; vereadores?: AvisoTSE };
 }
+export interface AvisoTSE { mensagens: string[]; fonte: string; totalizado?: boolean; suplementar?: string }
 
 /* O Minas Nossa é publicado em /mg/, e os arquivos ficam no site nacional, um nível acima */
 const BASE = MG ? "../data/representantes/" : "./data/representantes/";

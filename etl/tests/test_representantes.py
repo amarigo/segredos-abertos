@@ -55,14 +55,65 @@ def test_prefeito_que_disputou_2026_renunciou(rodar):
 
 def test_eleicao_suplementar_troca_o_prefeito(rodar):
     m = ler(rodar() / "m" / "40000.json")
+    # vem do site de resultados do TSE; a linha suplementar do arquivo de 2026 (outro candidato) fica de fora
     assert m["prefeito"]["nome"] == "Prefeito Novo" and m["vice_prefeito"]["nome"] == "Vice Novo"
+    assert m["vice_prefeito"]["partido"] == "PT" and m["prefeito"]["turnos"] == 1
     assert m["suplementar"]["data"] == "2026-04-05"
+    assert m["suplementar"]["fonte"].endswith("/ele2024/6100/dados/mg/mg40000-c0011-e006100-u.json")
     assert m["suplementar"]["eleitos_2024"]["prefeito"]["situacao"].startswith("Cassado")
+    # ligado a 2026 pelo nome e nascimento do site de resultados: disputou deputado estadual, então renunciou
+    assert m["prefeito"]["em_2026"]["cargo"] == "Deputado estadual" and m["prefeito"]["em_2026"]["renunciou"]
+    assert "aviso_tse" not in m
+
+
+def test_suplementar_de_vereadores_e_aviso_do_tse(rodar):
+    m = ler(rodar() / "m" / "40001.json")
+    assert [v["nome"] for v in m["vereadores"]] == ["Nova Um", "Novo Dois", "Novo Três"]
+    assert m["suplementar_vereadores"]["data"] == "2026-05-17" and m["suplementar_vereadores"]["eleitos_2024"] == 0
+    # a suplementar de prefeito ainda não tem resultado: sem prefeito, com o aviso oficial da eleição de 2024
+    assert "prefeito" not in m and "vice_prefeito" not in m
+    a = m["aviso_tse"]["prefeito"]
+    assert a["suplementar"] == "2026-12-06" and a["mensagens"][0].startswith("Votos anulados ultrapassam 50%")
+    assert a["fonte"].endswith("/ele2024/619/dados/mg/mg40001-c0011-e000619-u.json")
+
+
+def test_suplementar_de_uma_cadeira_nao_troca_a_camara_inteira(rodar):
+    m = ler(rodar() / "m" / "62910.json")
+    assert len(m["vereadores"]) == 5  # os de 2024 ficam
+    s = m["suplementar_vereadores"]
+    assert s["cadeiras"] == 1 and [p["nome"] for p in s["eleitos"]] == ["Everton"] and s["data"] == "2025-12-07"
+
+
+def test_menos_vereadores_que_cadeiras_mostra_o_aviso_do_tse(rodar):
+    m = ler(rodar() / "m" / "41238.json")
+    assert m["aviso_tse"]["vereadores"]["totalizado"] is False
+    assert "prefeito" not in m["aviso_tse"]
+
+
+def test_site_de_resultados_fora_do_ar(rodar):
+    rodar.gov.falhar("resultados.tse.jus.br", "500")
+    pasta = rodar()
+    m = ler(pasta / "m" / "40000.json")
+    assert m["prefeito"]["situacao"].startswith("Cassado") and "suplementar" not in m  # fica o eleito de 2024, cassado
+    assert any("suplementares ficaram de fora" in a for a in util.AVISOS)
+    # com uma leitura guardada (vencida), usa a cópia e avisa com a data
+    rodar.gov.consertar()
+    rodar()
+    f = rodar.tmp / "cache" / "representantes" / "resultados.json"
+    d = ler(f)
+    for v in d["arquivos"].values():
+        v["lido_em"] = "2026-01-02"
+    f.write_text(json.dumps(d), encoding="utf-8")
+    rodar.gov.falhar("resultados.tse.jus.br", "500")
+    util.AVISOS.clear()
+    m = ler(rodar() / "m" / "40000.json")
+    assert m["prefeito"]["nome"] == "Prefeito Novo"
+    assert any("02/01/2026" in a and "resultados" in a for a in util.AVISOS)
 
 
 def test_suplementar_do_mandato_anterior_fica_de_fora(rodar):
     m = ler(rodar() / "m" / "41238.json")
-    assert m["prefeito"]["nome"] == "Fuad" and "suplementar" not in m
+    assert m["prefeito"]["nome"] == "Fuad" and "suplementar" not in m  # a de 03/03/2024 é do mandato anterior
 
 
 def test_estado_governador_que_saiu_e_deputados(rodar):
@@ -155,14 +206,17 @@ def test_verificar_prefeito_no_site_de_resultados(rodar):
     camp = ler(pasta / "m" / "62910.json")["prefeito"]["sq"]
     pedidos = []
 
+    def arquivo(*cands):
+        return {"tf": "s", "carg": [{"cd": "11", "agr": [{"par": [{"sg": "X", "cand": list(cands)}]}]}]}
+
     def buscar(url, **kw):
         pedidos.append(url)
-        if "sp62910" in url:
-            return {"cand": [{"nm": "DARIO", "sqcand": camp, "e": "s", "st": "Eleito"}, {"nm": "OUTRO", "sqcand": "1", "e": "n"}]}
-        if "sp70670" in url:
-            return {"cand": [{"nm": "OUTRA PESSOA", "sqcand": "999", "e": "s"}]}
+        if url.endswith("/ele2024/619/dados/sp/sp62910-c0011-e000619-u.json"):
+            return arquivo({"nm": "DARIO", "sqcand": camp, "e": "s", "st": "Eleito"}, {"nm": "OUTRO", "sqcand": "1", "e": "n"})
+        if url.endswith("/ele2024/619/dados/sp/sp70670-c0011-e000619-u.json"):
+            return arquivo({"nm": "OUTRA PESSOA", "sqcand": "999", "e": "s"})
         raise RuntimeError("404")
     c = prefeito_resultado(pasta.parent, random.Random(1), Prazo(1), buscar)
-    # São Paulo e Belo Horizonte (2º turno) e a cidade com suplementar ficam de fora da amostra
-    assert all("71072" not in u and "41238" not in u and "40000" not in u for u in pedidos)
+    # São Paulo e Belo Horizonte (2º turno), a cidade com suplementar e a sem prefeito ficam de fora da amostra
+    assert all("71072" not in u and "41238" not in u and "40000" not in u and "40001" not in u for u in pedidos)
     assert c.n == 2 and c.k == 1 and c.divergencias[0]["o_que"].startswith("Prefeito de Santa Bárbara")

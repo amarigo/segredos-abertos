@@ -1214,3 +1214,7 @@ tr.nota-aberta > td { background: var(--tint); }
 .rep-parlamentares .rep-ver { color: var(--accent); white-space: nowrap; }
 .rep-diferenca { color: var(--muted); max-width: 780px; }
 .rep-fontes { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--line); }
+.rep-aviso-tse { text-align: left; max-width: 640px; margin: 8px auto 0; }
+.rep-aviso-tse p { margin: 6px 0; }
+.rep-aviso-tse ul { margin: 4px 0; padding-left: 20px; }
+.rep-diferenca p { margin: 6px 0; }

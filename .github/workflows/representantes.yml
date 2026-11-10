@@ -6,7 +6,7 @@ name: Quem me representa (conferência)
 on:
   workflow_dispatch:
   pull_request:
-    paths: [etl/sa_etl/representantes.py, .github/workflows/representantes.yml]
+    paths: [etl/sa_etl/representantes.py, etl/sa_etl/verificar.py, .github/workflows/representantes.yml]
 permissions:
   contents: read
 concurrency:
@@ -30,4 +30,4 @@ jobs:
           # deputados federais e senadores de hoje: a lista publicada pelo próprio site (Câmara e Senado)
           curl -fsS https://amarigo.github.io/segredos-abertos/data/politicos.json -o "$RUNNER_TEMP/data/politicos.json"
           python -m sa_etl.representantes --saida "$RUNNER_TEMP/data" --cache "$RUNNER_TEMP/cache" --conferir \
-            --mostrar 71072 41238 60011 25313 | tee -a "$GITHUB_STEP_SUMMARY"
+            --mostrar 71072 41238 60011 25313 58394 85510 05614 | tee -a "$GITHUB_STEP_SUMMARY"

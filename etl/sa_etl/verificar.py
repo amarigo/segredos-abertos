@@ -58,6 +58,7 @@ from .camara import API as API_CAMARA, normaliza_voto
 from .emendas import _chave
 from .senado import LEGIS, _as_list, normaliza_voto_senado, placar_da_ata  # noqa: F401 (placar_da_ata: usado nos testes)
 from . import oficial
+from .representantes import ORDINARIA_2024, _resumo_resultado, url_resultado
 from .util import chave_portal, digits, get_json, norm_name, to_float, write_json
 
 log = logging.getLogger("sa_etl.verificar")
@@ -588,9 +589,10 @@ def presenca_camara(saida: Path, rng: random.Random, prazo: Prazo, buscar: Calla
     return c
 
 
-# Resultado oficial de cada cidade no site de resultados do TSE (o mesmo do aplicativo de resultados): 619 é a eleição
+# Resultado oficial de cada cidade no site de resultados do TSE (o mesmo do aplicativo Resultados): 619 é a eleição
 # municipal de 2024, 1º turno. O site lê o arquivo de candidatos dos dados abertos do TSE; esta é outra publicação.
-RESULTADO_TSE = "https://resultados.tse.jus.br/oficial/ele2024/619/dados-simplificados/{uf}/{uf}{ue}-c0011-e000619-r.json"
+# O endereço "dados-simplificados/…-r.json" dos anos anteriores responde 404 (conferido em 10/11/2026); o atual é
+# "dados/…-u.json", com o código da cidade em 5 dígitos (representantes.url_resultado).
 
 
 def prefeito_resultado(saida: Path, rng: random.Random, prazo: Prazo, buscar: Callable = get_json) -> Checagem:
@@ -615,20 +617,16 @@ def prefeito_resultado(saida: Path, rng: random.Random, prazo: Prazo, buscar: Ca
             break
         m = _ler(f) or {}
         p = m.get("prefeito") or {}
-        if not p.get("sq") or p.get("turnos") != 1 or m.get("suplementar"):
+        if not p.get("sq") or p.get("turnos") != 1 or m.get("suplementar") or (m.get("aviso_tse") or {}).get("prefeito"):
             continue
-        url = RESULTADO_TSE.format(uf=str(m.get("uf", "")).lower(), ue=m.get("ue", ""))
+        url = url_resultado(*ORDINARIA_2024, str(m.get("uf", "")), str(m.get("ue", "")), "11")
         try:
-            r = buscar(url, timeout=60)
-            cands = r.get("cand") if isinstance(r, dict) else None
-            if not isinstance(cands, list) or not cands:
-                raise ValueError("resposta sem a lista de candidatos")
+            eleitos = _resumo_resultado(buscar(url, timeout=60))["eleitos"]
         except Exception as ex:  # noqa: BLE001
             c.falhou(f"{m.get('nome')} ({m.get('uf')}): site de resultados do TSE não respondeu ({str(ex)[:100]})")
             continue
-        eleitos = [x for x in cands if str(x.get("e", "")).lower() == "s" or str(x.get("st", "")).lower().startswith("eleito")]
-        oficial = ", ".join(f"{x.get('nm')} ({x.get('sqcand')})" for x in eleitos) or "nenhum eleito"
-        ok = any(str(x.get("sqcand")) == str(p["sq"]) for x in eleitos)
+        oficial = ", ".join(f"{x['NM_CANDIDATO']} ({x['SQ_CANDIDATO']})" for x in eleitos) or "nenhum eleito"
+        ok = any(x["SQ_CANDIDATO"] == str(p["sq"]) for x in eleitos)
         c.bateu(ok, {"o_que": f"Prefeito de {m.get('nome')} ({m.get('uf')})", "site": f"{p.get('nome')} ({p['sq']})",
                      "oficial": oficial, "fonte": url})
     return c

@@ -1,11 +1,14 @@
 """Respostas fictícias do TSE para "Quem me representa": a API do Portal de Dados Abertos (CKAN) e os ZIPs de
-candidatos e de vagas no CDN, no mesmo formato dos oficiais (latin-1, ';', aspas, um CSV por estado e o _BRASIL).
+candidatos e de vagas no CDN, no mesmo formato dos oficiais (latin-1, ';', aspas, um CSV por estado e o _BRASIL), e o
+site de resultados (lista de eleições ele-c.json e o resultado de cada cidade, …-u.json), no formato real.
 
 Casos que os testes cobrem:
 - São Paulo: prefeito eleito no 2º turno; o vice teve a candidatura trocada (uma linha INAPTO, outra APTO).
 - Campinas: o prefeito disputou deputado federal em 2026 (teve de renunciar; a página diz que o vice assume).
-- Cidade Anulada (MG): eleição suplementar de prefeito em 2026.
-- Belo Horizonte: o TSE lista menos vereadores eleitos do que vagas (recontagem pendente).
+- Cidade Anulada (MG): eleição suplementar de prefeito em 2026 (só no site de resultados, como no TSE de verdade).
+- Vila Recontada (MG): eleição de 2024 anulada; vereadores eleitos de novo numa suplementar; a de prefeito ainda não
+  tem resultado e a página mostra o aviso do TSE.
+- Belo Horizonte: o TSE lista menos vereadores eleitos do que vagas (totalização ainda não concluída no site).
 - Santa Bárbara d'Oeste: nome com apóstrofo.
 - Minas Gerais: o governador disputou o Senado em 2026; um deputado estadual tentou a reeleição.
 - Presidente: disputou a reeleição (não precisa renunciar).
@@ -17,6 +20,7 @@ from __future__ import annotations
 import io
 import json
 import zipfile
+import zlib
 
 CKAN = "dadosabertos.tse.jus.br"
 CDN = "cdn.tse.jus.br"
@@ -70,6 +74,8 @@ def candidatos(ano: int) -> list[dict]:
         anul = [_c(2024, "MG", "40000", "CIDADE ANULADA", "11", "10", "PREFEITO CASSADO", "CASSADO", "PP", "01/01/1950", "ELEITO", det="CASSADO COM RECURSO"),
                 _c(2024, "MG", "40000", "CIDADE ANULADA", "12", "10", "VICE CASSADO", "VICE CASSADO", "PP", "02/01/1950", "#NULO#")]
         anul += _vereadores("40000", "CIDADE ANULADA", "MG", 3)
+        # Vila Recontada: ninguém eleito em 2024 (eleição anulada); só o vice aparece no arquivo, como no TSE
+        anul += [_c(2024, "MG", "40001", "VILA RECONTADA", "12", "20", "VICE SEM CHAPA", "VICE SEM CHAPA", "PV", "03/01/1950", "#NULO#")]
         # suplementar de 2024 do mandato anterior: não pode virar o prefeito de hoje
         velha = [_c(2024, "MG", "41238", "BELO HORIZONTE", "11", "99", "PREFEITO TAMPAO", "TAMPÃO", "NOVO", "01/01/1966", "ELEITO", tipo=SUP, data="03/03/2024")]
         return sp + camp + sbo + bh + anul + velha
@@ -98,15 +104,16 @@ def candidatos(ano: int) -> list[dict]:
                 # homônimo de outro estado, nascido em outro dia: não é o prefeito de São Paulo
                 _c(2026, "BA", "BA", "BAHIA", "6", "1515", "RICARDO NUNES FICTICIO", "RICARDO", "MDB", "14/11/1967", "SUPLENTE"),
                 _c(2026, "MG", "MG", "MINAS GERAIS", "7", "30000", "ESTADUAL 0 DE MINAS", "ESTADUAL 0", "PL", "01/05/1975", "ELEITO POR QP"),
-                _c(2026, "MG", "40000", "CIDADE ANULADA", "11", "40", "PREFEITO NOVO FICTICIO", "PREFEITO NOVO", "PSB", "01/01/1971",
-                   "ELEITO", tipo=SUP, data="05/04/2026"),
-                _c(2026, "MG", "40000", "CIDADE ANULADA", "12", "40", "VICE NOVO FICTICIO", "VICE NOVO", "PT", "01/01/1972",
-                   "#NULO#", tipo=SUP, data="05/04/2026")]
+                # o prefeito eleito na suplementar disputou deputado estadual (liga pelo nome e nascimento do site)
+                _c(2026, "MG", "MG", "MINAS GERAIS", "7", "40404", "PREFEITO NOVO FICTICIO", "PREFEITO NOVO", "PSB", "01/01/1971", "SUPLENTE"),
+                # linha suplementar no arquivo de 2026: fica de fora (as suplementares vêm do site de resultados)
+                _c(2026, "MG", "40000", "CIDADE ANULADA", "11", "77", "NAO E ESTE", "NÃO É ESTE", "PSB", "01/01/1971",
+                   "ELEITO", tipo=SUP, data="05/04/2026")]
     return []
 
 
 VAGAS = {2024: [("71072", "13", 7), ("71072", "11", 1), ("62910", "13", 5), ("70670", "13", 3), ("41238", "13", 5),
-                ("40000", "13", 3)],
+                ("40000", "13", 3), ("40001", "13", 3)],
          2022: [("MG", "7", 4), ("SP", "7", 3), ("DF", "8", 2), ("MG", "6", 53), ("SP", "6", 70), ("DF", "6", 8)]}
 
 
@@ -139,7 +146,72 @@ def zip_vagas(ano: int) -> bytes:
     return buf.getvalue()
 
 
+# ---------------------------------------------------------------- site de resultados do TSE
+
+RESULTADOS = "resultados.tse.jus.br"
+
+
+def _sup(ciclo, cd, data, uf, mu, cargo, nome):
+    return {"cd": str(int(cd) + 1000), "c": ciclo, "dt": data, "e": [
+        {"cd": cd, "cdt2": "", "nm": f"Eleição Suplementar - {nome}", "t": "1", "tp": "4",
+         "abr": [{"cd": uf, "mu": [{"cd": mu, "cdi": "0"}], "cp": [{"cd": cargo, "ds": "X", "tp": "1"}]}]}]}
+
+
+ELEICOES = {"dg": "29/09/2026", "hg": "19:26:27", "f": "o", "pl": [
+    {"cd": "452", "c": "ele2024", "dt": "06/10/2024", "e": [{"cd": "619", "cdt2": "620", "nm": "Eleição Ordinária Municipal - 2024 - 06/10/2024 1º Turno", "t": "1", "tp": "3", "abr": [{"cd": "br", "cp": [{"cd": "11"}, {"cd": "13"}]}]}]},
+    _sup("ele2024", "6100", "05/04/2026", "mg", "40000", "11", "Cidade Anulada"),
+    _sup("ele2024", "6269", "17/05/2026", "mg", "40001", "13", "Vila Recontada"),
+    _sup("ele2026", "6299", "06/12/2026", "mg", "40001", "11", "Vila Recontada"),
+    _sup("ele2024", "6247", "07/12/2025", "sp", "62910", "13", "Campinas"),  # só uma cadeira
+    # suplementar do mandato anterior (antes do 2º turno de 2024): não pode trocar o prefeito de hoje
+    _sup("ele2020", "555", "03/03/2024", "mg", "41238", "11", "Belo Horizonte"),
+]}
+
+
+def _cand(n, nm, nmu, nasc, e, st, vice=None, sq=""):
+    c = {"n": n, "sqcand": sq or f"9{zlib.crc32(nm.encode()):010d}", "nm": nm, "nmu": nmu, "dt": nasc, "dvt": "Válido",
+         "e": e, "st": st}
+    if vice:
+        c["vs"] = [{"tp": "v", "sqcand": "9" + c["sqcand"][1:], "nm": vice[0], "nmu": vice[1], "sgp": vice[2]}]
+    return c
+
+
+def _arquivo(ele, tf, cands, mnae=(), dt="06/10/2024", nv="1"):
+    """cands: [(partido, cand)]; nv: cadeiras em disputa"""
+    return {"ele": ele, "t": "1", "f": "o", "tf": "s" if tf else "n", "dt": dt, "mnae": list(mnae),
+            "carg": [{"cd": "11", "nv": nv, "agr": [{"n": "1", "par": [{"n": "1", "sg": p, "cand": [c]} for p, c in cands]}]}]}
+
+
+ARQUIVOS = {
+    "/oficial/ele2024/6100/dados/mg/mg40000-c0011-e006100-u.json": _arquivo("6100", True, [
+        ("PSB", _cand("40", "PREFEITO NOVO FICTICIO", "PREFEITO NOVO", "01/01/1971", "s", "Eleito", ("VICE NOVO FICTICIO", "VICE NOVO", "PT"))),
+        ("PL", _cand("22", "PERDEU A SUPLEMENTAR", "PERDEU", "02/02/1970", "n", "Não eleito"))], dt="05/04/2026"),
+    "/oficial/ele2024/6269/dados/mg/mg40001-c0013-e006269-u.json": _arquivo("6269", True, [
+        ("PT", _cand("13001", "VEREADORA NOVA UM", "NOVA UM", "01/02/1980", "s", "Eleito por QP")),
+        ("PL", _cand("22002", "VEREADOR NOVO DOIS", "NOVO DOIS", "02/02/1980", "s", "Eleito por média")),
+        ("PL", _cand("22003", "VEREADOR NOVO TRES", "NOVO TRÊS", "03/02/1980", "s", "Eleito por QP")),
+        ("MDB", _cand("15004", "SUPLENTE QUATRO", "SUPLENTE", "04/02/1980", "n", "Suplente"))], dt="17/05/2026", nv="3"),
+    "/oficial/ele2024/6247/dados/sp/sp62910-c0013-e006247-u.json": _arquivo("6247", True, [
+        ("PP", _cand("11111", "EVERTON FICTICIO", "EVERTON", "05/05/1985", "s", "Eleito por QP")),
+        ("PP", _cand("11112", "VITORIA FICTICIA", "VITORIA", "06/05/1985", "n", "Suplente"))], dt="07/12/2025", nv="1"),
+    "/oficial/ele2024/619/dados/mg/mg40001-c0011-e000619-u.json": _arquivo("619", True, [
+        ("PP", _cand("11", "MAIS VOTADO ANULADO", "ANULADO", "01/01/1960", "n", "Não eleito"))],
+        mnae=["Votos anulados ultrapassam 50% da votação nominal, incluindo votos de seções anuladas."]),
+    "/oficial/ele2024/619/dados/mg/mg41238-c0013-e000619-u.json": _arquivo("619", False, []),
+}
+
+
+def rota_resultados(path: str) -> tuple[int, bytes, str] | None:
+    if path == "/oficial/comum/config/ele-c.json":
+        return 200, json.dumps(ELEICOES).encode(), "application/json"
+    if path in ARQUIVOS:
+        return 200, json.dumps(ARQUIVOS[path]).encode(), "application/json"
+    return 404, b"<html>404</html>", "text/html"
+
+
 def rota(host: str, path: str, q: dict) -> tuple[int, bytes, str] | None:
+    if host == RESULTADOS and path.startswith("/oficial/"):
+        return rota_resultados(path)
     if host == CKAN and path == "/api/3/action/package_show":
         ano = int(str(q.get("id", "0")).rsplit("-", 1)[-1] or 0)
         if ano not in (2022, 2024, 2026):

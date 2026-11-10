@@ -14,8 +14,13 @@ O que cada cargo usa (API primeiro):
   (art. 14, § 6º) obriga presidente, governador e prefeito a renunciar 6 meses antes para concorrer a outro cargo.
   A pessoa é a mesma quando o nome completo e a data de nascimento são iguais nos dois arquivos (o TSE não publica
   mais o CPF dos candidatos). A data de nascimento só é usada para ligar os arquivos e não vai para o site.
-- Eleição suplementar (quando a eleição de 2024 de uma cidade foi anulada e feita de novo): arquivos de candidatos de
-  2025 e de 2026, linhas do tipo "suplementar" com data a partir de 2025.
+- Eleição suplementar (quando a eleição de 2024 de uma cidade, para prefeito ou para vereador, foi anulada e feita de
+  novo): site de resultados do TSE, que publica a lista oficial das eleições (comum/config/ele-c.json) e o resultado de
+  cada cidade em JSON (o mesmo do aplicativo Resultados, também usado em eleicao2026/etl/el_etl/eleitos.py). Os dados
+  abertos não servem aqui: não há pacote de candidatos de 2025 (HTTP 404 na API CKAN e no CDN) e o arquivo de 2026 não
+  traz as suplementares (conferido no GitHub Actions em 10/11/2026: 0 suplementares nos arquivos, 46 no site).
+- Cidade sem prefeito eleito ou com menos vereadores que cadeiras: o mesmo arquivo do site de resultados traz o aviso
+  oficial do TSE (eleição anulada, votos anulados, totalização ainda não concluída), que a página mostra.
 
 O TSE registra quem foi eleito. Troca no meio do mandato por outro motivo (cassação, morte, licença, suplente que
 assume) não aparece nesses arquivos, e a página avisa.
@@ -50,11 +55,19 @@ API_SENADO = "https://legis.senado.leg.br/dadosabertos/senador/lista/atual"
 DIVULGA = "https://divulgacandcontas.tse.jus.br/divulga/#/home"
 
 MUNICIPAL, GERAL, SEGUINTE = 2024, 2022, 2026  # eleições dos mandatos de hoje e a que já escolheu os próximos
-SUPLEMENTARES = (2025, 2026)  # arquivos onde podem estar as eleições suplementares de prefeito
-INICIO_SUPLEMENTAR = "2025-01-01"  # suplementar antes disso é do mandato anterior (2021 a 2024)
+# Suplementar marcada depois do 2º turno de 2024 refaz a eleição do mandato de 2025 a 2028; antes disso, é do anterior
+INICIO_SUPLEMENTAR = "2024-10-28"
 # Por quantos dias a leitura de cada arquivo vale. O resultado de 2024 e o de 2026 ainda mudam (recontagem, cassação,
 # eleição suplementar); o de 2022 quase não muda mais.
-VALIDADE_DIAS = {GERAL: 30, MUNICIPAL: 7, 2025: 7, SEGUINTE: 7}
+VALIDADE_DIAS = {GERAL: 30, MUNICIPAL: 7, SEGUINTE: 7}
+
+# Site de resultados do TSE (JSON oficial). 619 é a eleição municipal ordinária de 2024, 1º turno.
+RESULTADOS = "https://resultados.tse.jus.br/oficial"
+ELEICOES_TSE = RESULTADOS + "/comum/config/ele-c.json"
+ARQ_RESULTADO = RESULTADOS + "/{ciclo}/{eleicao}/dados/{uf}/{uf}{ue}-c{cargo:0>4}-e{eleicao:0>6}-u.json"
+PAGINA_RESULTADOS = RESULTADOS + "/app/index.html"
+ORDINARIA_2024 = ("ele2024", "619")
+VALIDADE_RESULTADO = 7  # dias
 
 # Códigos de cargo do TSE (CD_CARGO)
 PRESIDENTE, VICE_PRESIDENTE, GOVERNADOR, VICE_GOVERNADOR = "1", "2", "3", "4"
@@ -144,10 +157,7 @@ def ler_candidatos(zp: Path, ano: int) -> list[dict]:
         elif ano == SEGUINTE and not suplementar:
             if cargo not in (PRESIDENTE, GOVERNADOR, SENADOR, DEP_FEDERAL, DEP_ESTADUAL, DEP_DISTRITAL):
                 continue
-        elif suplementar and ano in SUPLEMENTARES:
-            if cargo not in (PREFEITO, VICE_PREFEITO) or _data_iso(r.get("DT_ELEICAO", "")) < INICIO_SUPLEMENTAR:
-                continue
-        else:
+        else:  # suplementares vêm do site de resultados (veja o começo do arquivo)
             continue
         k = (r.get("SQ_CANDIDATO"), r.get("NR_TURNO"), r.get("DT_ELEICAO"))
         if k in vistos:
@@ -207,6 +217,125 @@ def _lido(cache: Path, tipo: str, ano: int, ler, obrigatorio: bool = True):
 def _br(iso: str) -> str:
     a, m, d = iso.split("-")
     return f"{d}/{m}/{a}"
+
+
+# ---------------------------------------------------------------- site de resultados do TSE
+
+def ue5(ue: str) -> str:
+    """Código da cidade no TSE com 5 dígitos, como no site de resultados (01120, não 1120)."""
+    return str(ue).zfill(5)
+
+
+def url_resultado(ciclo: str, eleicao: str, uf: str, ue: str, cargo: str) -> str:
+    return ARQ_RESULTADO.format(ciclo=ciclo, eleicao=eleicao, uf=uf.lower(), ue=ue5(ue), cargo=cargo)
+
+
+def eleitos_do_resultado(d: dict) -> list[dict]:
+    """Eleitos de um arquivo do site de resultados (…-u.json), no formato das linhas do arquivo de candidatos, para
+    passar por pessoa(). O vice da chapa vem dentro do titular ("vs")."""
+    out = []
+    for c in d.get("carg") or []:
+        for a in c.get("agr") or []:
+            for par in a.get("par") or []:
+                for x in par.get("cand") or []:
+                    if str(x.get("e", "")).lower() != "s":
+                        continue
+                    r = {"NM_URNA_CANDIDATO": x.get("nmu", ""), "NM_CANDIDATO": x.get("nm", ""), "SG_PARTIDO": par.get("sg", ""),
+                         "NR_CANDIDATO": str(x.get("n", "")), "SQ_CANDIDATO": str(x.get("sqcand", "")),
+                         "DT_NASCIMENTO": x.get("dt", ""), "DS_SIT_TOT_TURNO": x.get("st", "")}
+                    vs = [v for v in x.get("vs") or [] if v.get("tp") == "v"]
+                    if vs:
+                        r["vice"] = {"NM_URNA_CANDIDATO": vs[0].get("nmu", ""), "NM_CANDIDATO": vs[0].get("nm", ""),
+                                     "SG_PARTIDO": vs[0].get("sgp", ""), "NR_CANDIDATO": r["NR_CANDIDATO"],
+                                     "SQ_CANDIDATO": str(vs[0].get("sqcand", ""))}
+                    out.append(r)
+    return out
+
+
+def _resumo_resultado(d: dict) -> dict:
+    """O que guardamos de cada arquivo do site de resultados."""
+    if not isinstance(d, dict) or not isinstance(d.get("carg"), list):
+        raise ValueError("resposta sem a lista de cargos")
+    nv = [int(c["nv"]) for c in d["carg"] if str(c.get("nv", "")).isdigit()]
+    return {"data": _data_iso(d.get("dt", "")), "totalizado": d.get("tf") == "s", "vagas": nv[0] if nv else None,
+            "mensagens": [str(m) for m in d.get("mnae") or [] if m], "eleitos": eleitos_do_resultado(d)}
+
+
+def _resumo_eleicoes(d: dict) -> list[dict]:
+    """Eleições suplementares de prefeito ou de vereador do mandato de 2025 a 2028, da lista oficial do site."""
+    out = []
+    for pl in d.get("pl") or []:
+        data = _data_iso(pl.get("dt", ""))
+        if data < INICIO_SUPLEMENTAR:
+            continue
+        for e in pl.get("e") or []:
+            if "SUPLEMENTAR" not in str(e.get("nm", "")).upper():
+                continue
+            for a in e.get("abr") or []:
+                cargos = [str(c.get("cd")) for c in a.get("cp") or [] if str(c.get("cd")) in (PREFEITO, VEREADOR)]
+                for mu in a.get("mu") or []:
+                    for cargo in cargos:
+                        out.append({"ciclo": pl.get("c", ""), "eleicao": str(e.get("cd", "")), "turno2": str(e.get("cdt2") or ""),
+                                    "data": data, "uf": str(a.get("cd", "")).upper(), "ue": ue5(mu.get("cd", "")), "cargo": cargo})
+    if not out and not d.get("pl"):
+        raise ValueError("lista de eleições vazia")
+    return out
+
+
+class Resultados:
+    """Leituras do site de resultados do TSE, guardadas no cache por VALIDADE_RESULTADO dias. Se o site não responder,
+    usa a última leitura boa e avisa com a data dela."""
+
+    def __init__(self, cache: Path, buscar=get_json):
+        self.alvo = cache / "resultados.json"
+        self.buscar = buscar
+        try:
+            self.guardado = json.loads(self.alvo.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            self.guardado = {}
+        self.guardado.setdefault("arquivos", {})
+        self.velhas: list[str] = []  # datas das leituras antigas usadas porque o site não respondeu
+        self.sem_resposta = 0
+        self.eleicoes: list[dict] | None = None
+        self.lido_em = ""
+
+    def ler(self, url: str, resumir) -> dict | list | None:
+        g = self.guardado["arquivos"].get(url)
+        hoje = dt.date.today()
+        if g and (hoje - dt.date.fromisoformat(g["lido_em"])).days < VALIDADE_RESULTADO:
+            self.lido_em = max(self.lido_em, g["lido_em"])
+            return g["dados"]
+        try:
+            dados = resumir(self.buscar(url, tries=3, timeout=60))
+        except Exception as e:  # noqa: BLE001
+            log.info("Site de resultados do TSE: %s (%s)", url, str(e)[:120])
+            self.sem_resposta += 1
+            if g:
+                self.velhas.append(g["lido_em"])
+                return g["dados"]
+            return None
+        self.guardado["arquivos"][url] = {"lido_em": hoje.isoformat(), "dados": dados}
+        self.lido_em = hoje.isoformat()
+        return dados
+
+    def suplementares(self) -> dict[str, list[dict]]:
+        """{código da cidade com 5 dígitos: [suplementares, da mais antiga à mais nova]}"""
+        self.eleicoes = self.ler(ELEICOES_TSE, _resumo_eleicoes)
+        if self.eleicoes is None:
+            avisar("Quem me representa: o site de resultados do TSE não respondeu; as eleições suplementares ficaram de fora")
+        por: dict[str, list[dict]] = defaultdict(list)
+        for e in sorted(self.eleicoes or [], key=lambda e: e["data"]):
+            por[e["ue"]].append(e)
+        return por
+
+    def resultado(self, ciclo: str, eleicao: str, uf: str, ue: str, cargo: str) -> tuple[dict | None, str]:
+        url = url_resultado(ciclo, eleicao, uf, ue, cargo)
+        return self.ler(url, _resumo_resultado), url
+
+    def gravar(self) -> None:
+        if self.velhas:
+            avisar(f"Quem me representa: o site de resultados do TSE não respondeu; usamos a leitura de {_br(min(self.velhas))}")
+        write_json(self.alvo, self.guardado)
 
 
 # ---------------------------------------------------------------- montar
@@ -303,13 +432,33 @@ def _ordem(p: dict) -> tuple:
     return (norm_name(p["nome"]), p.get("numero", ""))
 
 
+def _suplementar(res: Resultados, e: dict) -> tuple[dict | None, str, int]:
+    """Resultado de uma suplementar: o do 2º turno, se houve e já tem eleito; senão o do 1º."""
+    if e["turno2"]:
+        r, url = res.resultado(e["ciclo"], e["turno2"], e["uf"], e["ue"], e["cargo"])
+        if r and r.get("eleitos"):
+            return r, url, 2
+    r, url = res.resultado(e["ciclo"], e["eleicao"], e["uf"], e["ue"], e["cargo"])
+    return r, url, 1
+
+
+def _aviso(r: dict | None, url: str, **extra) -> dict:
+    """O que o TSE diz sobre a cidade no site de resultados, para a página mostrar."""
+    a = {"mensagens": (r or {}).get("mensagens") or [], "fonte": url, **extra}
+    if r is not None:
+        a["totalizado"] = bool(r.get("totalizado"))
+    return a
+
+
 def montar(cand: dict[int, list[dict]], vagas: dict[int, dict[str, int]], politicos: list[dict], saida: Path,
-           fontes: dict) -> dict:
+           fontes: dict, res: Resultados | None = None) -> dict:
     """Grava os arquivos do site e devolve um resumo das conferências."""
     pasta = saida / "representantes"
     c26 = candidaturas_2026(cand.get(SEGUINTE) or [])
     resumo: dict = {"cidades": 0, "vereadores": 0, "sem_prefeito": [], "vagas_diferentes": [], "suplementares": 0,
-                    "renunciaram": 0, "estados": 0, "estaduais_diferentes": [], "federais_diferentes": []}
+                    "suplementares_sem_resultado": [], "renunciaram": 0, "estados": 0, "estaduais_diferentes": [],
+                    "federais_diferentes": []}
+    sups = res.suplementares() if res else {}
 
     # --- cidades (eleição municipal de 2024 e suplementares)
     por_ue: dict[str, list[dict]] = defaultdict(list)
@@ -319,10 +468,6 @@ def montar(cand: dict[int, list[dict]], vagas: dict[int, dict[str, int]], politi
             continue
         por_ue[r["SG_UE"]].append(r)
         nome_ue.setdefault(r["SG_UE"], (r.get("NM_UE", ""), r.get("SG_UF", "")))
-    sup: dict[str, list[dict]] = defaultdict(list)
-    for ano in SUPLEMENTARES:
-        for r in cand.get(f"sup{ano}") or []:
-            sup[r["SG_UE"]].append(r)
     municipios = []
     for ue in sorted(por_ue):
         rs = por_ue[ue]
@@ -333,32 +478,68 @@ def montar(cand: dict[int, list[dict]], vagas: dict[int, dict[str, int]], politi
         onde = f"{cidade} ({uf})"
         pref, vice, turnos = titular_e_vice(rs, PREFEITO, VICE_PREFEITO, onde)
         out: dict = {"ue": ue, "nome": cidade, "uf": uf, "eleicao": MUNICIPAL}
-        s_pref, s_vice = None, None
-        if sup.get(ue):
-            # só a última suplementar (com o 2º turno dela, se houve): linhas até 45 dias antes da data mais recente
-            ult = max(_data_iso(r.get("DT_ELEICAO", "")) for r in sup[ue])
-            desde = (dt.date.fromisoformat(ult) - dt.timedelta(days=45)).isoformat()
-            s_pref, s_vice, _ = titular_e_vice([r for r in sup[ue] if _data_iso(r.get("DT_ELEICAO", "")) >= desde],
-                                               PREFEITO, VICE_PREFEITO, onde)
-            if s_pref:
-                out["suplementar"] = {"data": ult, "eleitos_2024": {
+        avisos: dict = {}
+        cid_sups = sups.get(ue5(ue), [])
+        # prefeito: a última suplementar da cidade, se houve, troca prefeito e vice
+        sp = [e for e in cid_sups if e["cargo"] == PREFEITO]
+        if sp and res:
+            r, url, t = _suplementar(res, sp[-1])
+            novos = (r or {}).get("eleitos") or []
+            if novos:
+                out["suplementar"] = {"data": sp[-1]["data"], "fonte": url, "eleitos_2024": {
                     "prefeito": pessoa(pref, {}, PREFEITO) if pref else None,
                     "vice_prefeito": pessoa(vice, {}, VICE_PREFEITO) if vice else None}}
-                pref, vice = s_pref, s_vice
+                if len(novos) > 1:
+                    log.warning("%s: %d eleitos na suplementar de prefeito; ficou o primeiro", onde, len(novos))
+                pref, vice, turnos = novos[0], novos[0].get("vice"), t
                 resumo["suplementares"] += 1
+            else:  # marcada, ou ainda sem resultado: o aviso da eleição de 2024 explica por que foi refeita
+                r0, url0 = res.resultado(*ORDINARIA_2024, uf, ue, PREFEITO)
+                avisos["prefeito"] = _aviso(r0, url0, suplementar=sp[-1]["data"])
+                resumo["suplementares_sem_resultado"].append(f"{onde}: prefeito, {_br(sp[-1]['data'])}")
         if pref:
             out["prefeito"] = pessoa(pref, c26, PREFEITO)
-            out["prefeito"]["turnos"] = turnos if not s_pref else 1
+            out["prefeito"]["turnos"] = turnos
             resumo["renunciaram"] += bool(out["prefeito"].get("em_2026", {}).get("renunciou"))
         else:
             resumo["sem_prefeito"].append(onde)
+            if res and "prefeito" not in avisos:
+                r, url = res.resultado(*ORDINARIA_2024, uf, ue, PREFEITO)
+                if r is not None:
+                    avisos["prefeito"] = _aviso(r, url)
         if vice:
             out["vice_prefeito"] = pessoa(vice, c26, VICE_PREFEITO)
         vers = [pessoa(r, c26, VEREADOR) for r in {r["SQ_CANDIDATO"]: r for r in rs if r["CD_CARGO"] == VEREADOR}.values()]
+        vagas_cm = vagas.get(MUNICIPAL, {}).get(f"{ue}|{VEREADOR}")
+        # vereadores: suplementar para todas as cadeiras troca a lista inteira; para só algumas (o TSE refaz a conta de
+        # uma cadeira, por exemplo), a lista de 2024 fica e a página mostra quem entrou nela
+        sv = [e for e in cid_sups if e["cargo"] == VEREADOR]
+        if sv and res:
+            r, url, _ = _suplementar(res, sv[-1])
+            novos = (r or {}).get("eleitos") or []
+            if novos:
+                todas = r.get("vagas") is None or vagas_cm is None or r["vagas"] >= vagas_cm
+                out["suplementar_vereadores"] = {"data": sv[-1]["data"], "fonte": url, "cadeiras": r.get("vagas") or len(novos),
+                                                 "eleitos_2024": len(vers)}
+                if todas:
+                    vers = [pessoa(x, c26, VEREADOR) for x in novos]
+                else:
+                    out["suplementar_vereadores"]["eleitos"] = sorted((pessoa(x, c26, VEREADOR) for x in novos), key=_ordem)
+                resumo["suplementares"] += 1
+            else:
+                r0, url0 = res.resultado(*ORDINARIA_2024, uf, ue, VEREADOR)
+                avisos["vereadores"] = _aviso(r0, url0, suplementar=sv[-1]["data"])
+                resumo["suplementares_sem_resultado"].append(f"{onde}: vereadores, {_br(sv[-1]['data'])}")
         out["vereadores"] = sorted(vers, key=_ordem)
-        out["vagas_vereadores"] = vagas.get(MUNICIPAL, {}).get(f"{ue}|{VEREADOR}")
+        out["vagas_vereadores"] = vagas_cm
         if out["vagas_vereadores"] is not None and out["vagas_vereadores"] != len(vers):
             resumo["vagas_diferentes"].append(f"{onde}: {len(vers)} eleitos, {out['vagas_vereadores']} vagas")
+            if res and "vereadores" not in avisos and len(vers) < out["vagas_vereadores"]:
+                r, url = res.resultado(*ORDINARIA_2024, uf, ue, VEREADOR)
+                if r is not None:
+                    avisos["vereadores"] = _aviso(r, url)
+        if avisos:
+            out["aviso_tse"] = avisos
         resumo["cidades"] += 1
         resumo["vereadores"] += len(vers)
         write_json(pasta / "m" / f"{ue}.json", out)
@@ -413,6 +594,8 @@ def montar(cand: dict[int, list[dict]], vagas: dict[int, dict[str, int]], politi
                         "vagas_diferentes": len(resumo["vagas_diferentes"]), "sem_prefeito": len(resumo["sem_prefeito"]),
                         "suplementares": resumo["suplementares"]},
     }
+    if res and res.lido_em:
+        fontes["resultados"] = {"url": ELEICOES_TSE, "pagina": PAGINA_RESULTADOS, "lido_em": res.lido_em}
     write_json(pasta / "indice.json", indice)
     return resumo
 
@@ -420,7 +603,8 @@ def montar(cand: dict[int, list[dict]], vagas: dict[int, dict[str, int]], politi
 # ---------------------------------------------------------------- coleta
 
 def fontes_de(lidos: dict) -> dict:
-    f = {"camara": API_CAMARA, "senado": API_SENADO, "constituicao": CONSTITUICAO, "divulga": DIVULGA}
+    f = {"camara": API_CAMARA, "senado": API_SENADO, "constituicao": CONSTITUICAO, "divulga": DIVULGA,
+         "resultados_pagina": PAGINA_RESULTADOS}
     for chave, (tipo, ano) in {"candidatos_municipal": ("consulta_cand", MUNICIPAL), "vagas_municipal": ("consulta_vagas", MUNICIPAL),
                                "candidatos_geral": ("consulta_cand", GERAL), "vagas_geral": ("consulta_vagas", GERAL),
                                "candidatos_seguinte": ("consulta_cand", SEGUINTE)}.items():
@@ -430,7 +614,7 @@ def fontes_de(lidos: dict) -> dict:
     return f
 
 
-def coletar(saida: Path, cache: Path) -> dict:
+def coletar(saida: Path, cache: Path, buscar=get_json) -> dict:
     """Lê os arquivos do TSE (com cache) e o politicos.json já gravado, e grava data/representantes/."""
     cache = cache / "representantes"
     lidos = {
@@ -445,21 +629,18 @@ def coletar(saida: Path, cache: Path) -> dict:
     lidos[("consulta_cand", SEGUINTE)] = seguinte
     cand: dict = {MUNICIPAL: lidos[("consulta_cand", MUNICIPAL)]["linhas"], GERAL: lidos[("consulta_cand", GERAL)]["linhas"],
                   SEGUINTE: (seguinte or {}).get("linhas") or []}
-    # Suplementares: no arquivo de 2026 elas vêm junto (ler_candidatos separa pelo tipo); o de 2025 pode não existir
-    for ano in SUPLEMENTARES:
-        d = seguinte if ano == SEGUINTE else _lido(cache, "consulta_cand", ano, ler_candidatos, obrigatorio=False)
-        cand[f"sup{ano}"] = [r for r in (d or {}).get("linhas") or [] if "SUPLEMENTAR" in (r.get("NM_TIPO_ELEICAO") or "").upper()]
-    cand[SEGUINTE] = [r for r in cand[SEGUINTE] if "SUPLEMENTAR" not in (r.get("NM_TIPO_ELEICAO") or "").upper()]
     vagas = {ano: (lidos[("consulta_vagas", ano)] or {}).get("linhas") or {} for ano in (MUNICIPAL, GERAL)}
     try:
         politicos = json.loads((saida / "politicos.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         politicos = []
         avisar("Quem me representa: sem a lista de deputados federais e senadores nesta coleta")
-    resumo = montar(cand, vagas, politicos, saida, fontes_de(lidos))
+    res = Resultados(cache, buscar)
+    resumo = montar(cand, vagas, politicos, saida, fontes_de(lidos), res)
+    res.gravar()
     log.info("Quem me representa: %d cidades, %d vereadores, %d estados, %d suplementares, %d renúncias para 2026",
              resumo["cidades"], resumo["vereadores"], resumo["estados"], resumo["suplementares"], resumo["renunciaram"])
-    for k in ("sem_prefeito", "vagas_diferentes", "estaduais_diferentes", "federais_diferentes"):
+    for k in ("sem_prefeito", "vagas_diferentes", "suplementares_sem_resultado", "estaduais_diferentes", "federais_diferentes"):
         if resumo[k]:
             log.warning("Quem me representa, %s (%d): %s", k, len(resumo[k]), "; ".join(resumo[k][:15]))
     if resumo["cidades"] < MIN_CIDADES:
