@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from .cnpj import MAX_NIVEL
+from .medias import medias_da_casa
 from .util import anotar, id_seguro
 
 FINS = {"pessoa", "estrangeiro", "sem_socios", "sem_dados", "limite", "ciclo"}
@@ -73,6 +74,37 @@ def _ler(f: Path, r: Resultado) -> Any:
 def _perto(a: float, b: float, n: int = 1) -> bool:
     """Igual, com tolerância para o arredondamento de centavos em n parcelas."""
     return abs((a or 0) - (b or 0)) <= 0.011 * max(n, 1) + 0.01
+
+
+def _conferir_medias_casa(meta: dict, pols: list[dict], r: Resultado) -> None:
+    """A média da Casa que o perfil mostra ao lado de cada número (medias.py). Taxas entre 0 e 1, valores positivos, e,
+    no site nacional, igual à conta refeita com os políticos de politicos.json. No Minas Nossa ("recorte") a média é a
+    da Casa inteira, copiada do nacional, e não dá para refazer só com os políticos de MG."""
+    mc = meta.get("medias_casa")
+    if not mc:
+        return
+    taxas = ("presenca_plenario", "fidelidade_partido", "alinhamento_governo")
+    blocos = [(f"{a}/{c}", m) for a, cs in (mc.get("anos") or {}).items() for c, m in cs.items()]
+    blocos += [(f"votos/{c}", m) for c, m in (mc.get("votos") or {}).items()]
+    for onde, m in blocos:
+        if "meses" in m and not 1 <= m["meses"] <= 12:
+            r.erro(f"meta.medias_casa {onde}: período de {m['meses']} meses")
+        for k, v in m.items():
+            if k in ("meses", "min_votos"):
+                continue
+            if not v.get("n") or v["n"] < 1 or v.get("media") is None or v["media"] < 0 or (k in taxas and v["media"] > 1):
+                r.erro(f"meta.medias_casa {onde} {k}: média fora do possível ({v})")
+    if meta.get("recorte"):
+        return
+    meses = {a: next(iter(cs.values()))["meses"] for a, cs in (mc.get("anos") or {}).items() if cs}
+    refeita = medias_da_casa(pols, meses)
+    for a in meses:
+        if refeita["anos"].get(a) != mc["anos"][a]:
+            r.erro(f"meta.medias_casa {a}: diferente da conta refeita com politicos.json")
+    if refeita["folga_meses"] != mc.get("folga_meses"):
+        r.erro("meta.medias_casa: folga de meses diferente da usada na conta")
+    if refeita["votos"] != (mc.get("votos") or {}):
+        r.erro("meta.medias_casa votos: diferente da conta refeita com politicos.json")
 
 
 def _varrer(x: Any, caminho: str, r: Resultado) -> None:
@@ -156,6 +188,7 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
             r.erro(f"meta.temas_por_ano[{ano}]: a soma dos temas (viagens, combustível...) é diferente do total do ano")
     if meta.get("contagens", {}).get("politicos") != len(pols):
         r.erro("meta.contagens.politicos diferente do número de parlamentares")
+    _conferir_medias_casa(meta, pols, r)
 
     # ---------------- partidos
     for pt in parts:

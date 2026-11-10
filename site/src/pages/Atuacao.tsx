@@ -121,8 +121,10 @@ function Presenca({ titulo, nome, quem, eu, colegas, unidade, explica }: {
   return (
     <div className="card atu-card">
       <div className="atu-topo"><h3>{titulo}</h3><span className="atu-valor">{pct(minha)}</span></div>
+      <p className="small muted atu-conta">Presente em {num(eu[0])} de {u(sum(eu))}. A ausência justificada conta como ausência nesta porcentagem.</p>
       <Veredito c={comparar(minha, taxas, quem, { mais: "Presença maior", menos: "Presença menor" }, pct)} />
       <BarraPresenca rotulo={nome} partes={eu} texto={(i) => [`${u(eu[0])} presente`, `${u(eu[1])} com ausência justificada`, `${u(eu[2])} sem justificativa`][i]} />
+      <p className="small media-presenca" data-testid="media-casa"><strong>Média dos {num(com.length)} {quem} com presença registrada:</strong> {pct(media[0])} presente</p>
       <BarraPresenca rotulo={`Média dos ${quem}`} partes={media} texto={(i) => `${pct(media[i])} ${["presente", "com ausência justificada", "sem justificativa"][i]}`} />
       <p className="small">{u(eu[0])} presente · {num(eu[1])} {eu[1] === 1 ? "ausência justificada" : "ausências justificadas"} · <strong>{num(eu[2])} sem justificativa</strong></p>
       <p className="muted small">{explica}</p>

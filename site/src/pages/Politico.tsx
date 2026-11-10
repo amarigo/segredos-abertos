@@ -12,8 +12,13 @@ import { AvisosFim, EmRevisao } from "../components/Selo";
 import { FotoPerfil } from "../components/Foto";
 import { AgendaPolitico } from "../components/Agenda";
 import { CampanhaPolitico } from "../components/Campanha";
+import { Compartilhar } from "../components/Compartilhar";
 import { norm } from "./Home";
 import { MG } from "../recorte";
+import { MediaCasaLinha, OQueFaltaQuadro } from "../components/Confianca";
+import {
+  comparacao, comparacaoPontos, nomeCasa, periodoInteiro, referenciaDinheiro, referenciaTaxa, type MediasCasaAno,
+} from "../confianca";
 
 export default function PoliticoPage() {
   const { id = "" } = useParams();
@@ -38,6 +43,7 @@ export default function PoliticoPage() {
             {p.campo && <span className="chip">{p.campo}</span>}
             <a className="chip" href={linkSeguro(p.fonte)} target="_blank" rel="noreferrer">Página oficial ↗</a>
             <Link className="chip" to={`/rede?seguir=${encodeURIComponent(p.id)}`}>Acompanhar na Minha rede</Link>
+            <Compartilhar p={p} meta={meta} ano={ano} />
           </div>
           {p.em_exercicio === false && <p className="small muted" role="note">
             <strong className="fora-cargo">Fora do cargo hoje</strong>
@@ -56,10 +62,11 @@ export default function PoliticoPage() {
         <button role="tab" aria-selected={aba === "campanha"} onClick={() => setAba("campanha")}>Campanha</button>
       </div>
       {aba === "gastos" ? <Gastos p={p} meta={meta} /> : aba === "atuacao" ? <AtuacaoPolitico p={p} />
-        : aba === "agenda" ? <AgendaPolitico p={p} ano={ano} /> : aba === "campanha" ? <CampanhaPolitico p={p} /> : <Votos p={p} />}
-      <AvisosFim secao="cota">
+        : aba === "agenda" ? <AgendaPolitico p={p} ano={ano} /> : aba === "campanha" ? <CampanhaPolitico p={p} /> : <Votos p={p} meta={meta} />}
+      <AvisosFim secao="cota" assunto={`${p.nome} (${p.cargo}, ${p.partido}-${p.uf}), ${ano}`} resposta>
         {aba === "gastos" && <NotasCota p={p} />}
         <EmRevisao campo="politico" valor={p.id} />
+        <OQueFaltaQuadro p={p} ano={ano} atualizado={meta?.atualizado_em} />
       </AvisosFim>
     </>
   );
@@ -73,8 +80,14 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
   const d = p.anos[ano];
   if (!d) return <div className="empty">Não há gastos registrados para {p.nome} em {ano}. Escolha outro ano no topo da página.</div>;
   const r = d.recursos || {};
-  const media = meta?.medias[ano]?.[p.casa] || 0;
-  const vezes = media ? d.total / media : 0;
+  // Média da Casa de quem ficou o período inteiro; quem ficou menos é comparado com a média proporcional aos meses
+  const ma = meta?.medias_casa?.anos[ano]?.[p.casa];
+  const folga = meta?.medias_casa?.folga_meses ?? 1;
+  const inteiro = ma ? periodoInteiro(d.meses_com_nota, ma.meses, folga) : false;
+  const refDe = (k: "total" | "custo_total") => (ma?.[k] ? referenciaDinheiro(ma[k]!, p.casa, ano, ma.meses, folga, d.meses_com_nota) : null);
+  const refCota = refDe("total");
+  const refCusto = refDe("custo_total");
+  const refEquipe = ma?.n_pessoal ? referenciaDinheiro(ma.n_pessoal, p.casa, ano, ma.meses, folga) : null;
   const partes = [
     { label: "Salário", valor: d.salario || 0, nota: "Pago ao próprio parlamentar, antes dos descontos.", cor: "var(--s1)" },
     { label: "Equipe do gabinete (verba de gabinete)", valor: d.verba_gabinete || 0, nota: "Salários dos assessores.", cor: "var(--s3)" },
@@ -94,17 +107,23 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
       <section className="grid">
         <Kpi rotulo={`Custo conhecido em ${ano}`} valor={d.custo_total} formato={(v) => reais(v)} serie={serieDe("custo_total")} ano={ano}
           anterior={periodo ? null : undefined}
-          dica="Soma de salário, equipe, cota e outros gastos informados pelos sites oficiais." />
+          dica={<>Soma de salário, equipe, cota e outros gastos informados pelos sites oficiais.
+            {refCusto && <MediaCasaLinha r={refCusto} fmt={(v) => reais(v)} comparacao={comparacao(d.custo_total, refCusto.valor)} />}</>} />
         <div className="card stat kpi">
           <span className="label">Cota parlamentar em {ano}</span>
           <span className="value">{reais(d.total)}</span>
           {anoAntes && (periodo
             ? <Variacao de={somaAte(p.anos[anoAntes]?.meses)} para={somaAte(d.meses)} rotulo={`jan–${MES_C[periodo]} ${anoAntes}`} />
             : <Variacao de={p.anos[anoAntes]?.total} para={d.total} rotulo={anoAntes} />)}
-          {media > 0 && <span className="hint">{vezes >= 1.05 ? `${vezes.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}× a média` : vezes <= 0.95 ? `${Math.round((1 - vezes) * 100)}% abaixo da média` : "Na média"} {p.casa === "camara" ? "dos deputados" : "dos senadores"} ({reais(media)})</span>}
+          <span className="hint">Reembolsos com nota fiscal{ma && ma.meses < 12 ? `, publicados até ${dataBR(meta!.atualizado_em)}` : ""}.
+            {refCota && <MediaCasaLinha r={refCota} fmt={(v) => reais(v)} comparacao={comparacao(d.total, refCota.valor)} />}</span>
         </div>
-        {d.n_pessoal != null && <div className="card stat"><span className="label">Pessoas na equipe em {ano}</span><span className="value">{d.n_pessoal}</span><span className="hint">Inclui quem entrou ou saiu durante o ano.</span></div>}
+        {d.n_pessoal != null && <div className="card stat"><span className="label">Pessoas que passaram pela equipe em {ano}</span><span className="value">{d.n_pessoal}</span>
+          <span className="hint">Conta quem entrou ou saiu durante o ano; não é o tamanho da equipe num dia só.
+            {refEquipe && <MediaCasaLinha r={refEquipe} fmt={(v) => v.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}
+              comparacao={inteiro ? comparacao(d.n_pessoal, refEquipe.valor) : undefined} />}</span></div>}
       </section>
+      <FonteGastos p={p} ano={ano} atualizado={meta?.atualizado_em} />
 
       {partes.length > 1 && (
         <section>
@@ -114,7 +133,7 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
       )}
 
       <SalarioBeneficios p={p} r={r} ano={ano} />
-      <Equipe p={p} r={r} ano={ano} />
+      <Equipe p={p} r={r} ano={ano} ma={ma} folga={folga} meses={d.meses_com_nota} />
 
       <section>
         <h2>Cota parlamentar</h2>
@@ -187,6 +206,19 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
 
       <ForaDoTotal d={d} ano={ano} />
     </>
+  );
+}
+
+/* Fonte e data dos números do topo da aba (regra: todo número mostra a fonte e a data da última atualização) */
+function FonteGastos({ p, ano, atualizado }: { p: Politico; ano: string; atualizado?: string }) {
+  const oficial = linkSeguro(p.fonte);
+  return (
+    <p className="muted small fonte-numeros" data-testid="fonte-gastos">
+      {p.casa === "camara"
+        ? <>Fontes: <a href={oficial} target="_blank" rel="noreferrer">página oficial do deputado na Câmara ↗</a> (salário, verba de gabinete e total da cota) e <a href={`https://www.camara.leg.br/cotas/Ano-${ano}.csv.zip`} target="_blank" rel="noreferrer">arquivo da cota de {ano} nos dados abertos ↗</a> (cada nota).</>
+        : <>Fontes: <a href="https://adm.senado.gov.br/adm-dadosabertos/swagger-ui/index.html" target="_blank" rel="noreferrer">API administrativa do Senado ↗</a> (cota, equipe e outros gastos) e <a href={oficial} target="_blank" rel="noreferrer">página oficial do senador ↗</a>. O salário é o subsídio pago aos deputados, que é o mesmo valor.</>}
+      {atualizado && <> Dados coletados em {dataBR(atualizado)}.</>}
+    </p>
   );
 }
 
@@ -270,7 +302,7 @@ function SalarioBeneficios({ p, r, ano }: { p: Politico; r: Recursos; ano: strin
   );
 }
 
-function Equipe({ p, r, ano }: { p: Politico; r: Recursos; ano: string }) {
+function Equipe({ p, r, ano, ma, folga, meses }: { p: Politico; r: Recursos; ano: string; ma?: MediasCasaAno; folga: number; meses?: number }) {
   const [todos, setTodos] = useState(false);
   const equipe = r.equipe || [];
   if (!equipe.length && !r.verba_gasto && !r.vinculos?.length) {
@@ -290,7 +322,11 @@ function Equipe({ p, r, ano }: { p: Politico; r: Recursos; ano: string }) {
       {r.verba_gasto != null && (
         <div className="grid">
           <div className="card stat"><span className="label">Verba de gabinete gasta em {ano}</span><span className="value">{reais(r.verba_gasto)}</span>
-            {r.verba_disponivel ? <span className="hint">{Math.round((r.verba_gasto / r.verba_disponivel) * 100)}% do disponível ({reais(r.verba_disponivel)})</span> : null}</div>
+            {r.verba_disponivel ? <span className="hint">{Math.round((r.verba_gasto / r.verba_disponivel) * 100)}% do disponível ({reais(r.verba_disponivel)})</span> : null}
+            {ma?.verba_gabinete && (() => {
+              const ref = referenciaDinheiro(ma.verba_gabinete, p.casa, ano, ma.meses, folga, meses);
+              return <span className="hint"><MediaCasaLinha r={ref} fmt={(v) => reais(v)} comparacao={comparacao(r.verba_gasto!, ref.valor)} /></span>;
+            })()}</div>
         </div>
       )}
       {p.casa === "camara" && r.verba_gasto != null && !MG && (
@@ -306,7 +342,7 @@ function Equipe({ p, r, ano }: { p: Politico; r: Recursos; ano: string }) {
   );
 }
 
-function Votos({ p }: { p: Politico }) {
+function Votos({ p, meta }: { p: Politico; meta: Meta | null }) {
   const { data: vots } = useData<VotacaoResumo[]>("votacoes.json");
   const { data: pols } = useData<Resumo[]>("politicos.json");
   const [filtro, setFiltro] = useState<"todos" | "contra">("todos");
@@ -330,13 +366,26 @@ function Votos({ p }: { p: Politico }) {
   const conta = (k: "" | "Sim" | "Não" | "outros") => p.votos.filter((v) => !k || (k === "outros" ? v.voto !== "Sim" && v.voto !== "Não" : v.voto === k)).length;
   const temas = Object.entries(p.temas || {}).sort((a, b) => tot(b[1]) - tot(a[1]));
   const colegas = (pols || []).filter((x) => x.casa === p.casa && x.posicao != null);
+  // Votos Sim ou Não em que o partido teve maioria: a base da taxa "votou como o partido" (mesma conta da coleta)
+  const comPartido = p.votos.filter((v) => v.partido && (v.voto === "Sim" || v.voto === "Não"));
+  const comoPartido = comPartido.filter((v) => v.voto === v.partido).length;
+  const datas = p.votos.map((v) => porId.get(v.votacao)?.data || "").filter(Boolean).sort();
+  const mv = meta?.medias_casa?.votos[p.casa];
+  const quemTem = mv ? `com ${mv.min_votos} ou mais votos Sim ou Não` : "";
   return (
     <>
       <section className="grid">
-        <div className="card stat"><span className="label">Posição pelos votos</span><span className="value">{p.rotulo}</span><span className="hint">Calculada a partir de {p.n_votos} votos nominais.</span></div>
-        <div className="card stat"><span className="label">Vota com o próprio partido</span><span className="value">{pct(p.fidelidade_partido)}</span><span className="hint">das vezes em que votou Sim ou Não.</span></div>
+        <div className="card stat"><span className="label">Posição pelos votos</span><span className="value">{p.rotulo}</span>
+          <span className="hint">Calculada a partir de {p.n_votos.toLocaleString("pt-BR")} votos nominais no Plenário {nomeCasa(p.casa)}{datas.length ? `, de ${dataBR(datas[0])} a ${dataBR(datas[datas.length - 1])}` : ""}. Votos em comissões não entram.</span></div>
+        <div className="card stat"><span className="label">Votou como a maioria do partido</span><span className="value">{pct(p.fidelidade_partido)}</span>
+          <span className="hint">Em {comoPartido.toLocaleString("pt-BR")} de {comPartido.length.toLocaleString("pt-BR")} votos Sim ou Não no Plenário.
+            {mv?.fidelidade_partido && p.fidelidade_partido != null && <MediaCasaLinha r={referenciaTaxa(mv.fidelidade_partido, p.casa, quemTem)} fmt={pct}
+              comparacao={comparacaoPontos(p.fidelidade_partido, mv.fidelidade_partido.media)} />}</span></div>
         {p.alinhamento_governo != null && (
-          <div className="card stat"><span className="label">Vota com o governo</span><span className="value">{pct(p.alinhamento_governo)}</span><span className="hint">quando o líder do governo orientou a votação.</span></div>
+          <div className="card stat"><span className="label">Votou como o governo orientou</span><span className="value">{pct(p.alinhamento_governo)}</span>
+            <span className="hint">Nas votações do Plenário em que o líder do governo orientou Sim ou Não.
+              {mv?.alinhamento_governo && <MediaCasaLinha r={referenciaTaxa(mv.alinhamento_governo, p.casa, `${quemTem} com orientação do governo`)} fmt={pct}
+                comparacao={comparacaoPontos(p.alinhamento_governo, mv.alinhamento_governo.media)} />}</span></div>
         )}
       </section>
       {p.posicao != null && colegas.length > 0 && (
@@ -370,7 +419,7 @@ function Votos({ p }: { p: Politico }) {
           <h2>Como votou{tema ? ` sobre ${tema.toLowerCase()}` : ""}</h2>
           {tema && <button className="chip" onClick={() => setTema("")}>Tirar filtro de tema ✕</button>}
           <select id="filtro-votos" aria-label="Filtrar votos" value={filtro} onChange={(e) => setFiltro(e.target.value as "todos" | "contra")}>
-            <option value="todos">Todas as votações ({p.votos.length})</option>
+            <option value="todos">Todas as votações nominais no Plenário ({p.votos.length})</option>
             <option value="contra">Só quando votou contra o partido ({contra.length})</option>
           </select>
         </div>

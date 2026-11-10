@@ -1,0 +1,44 @@
+# Direito de resposta: para o próprio político, a equipe dele ou a empresa citada (link no fim dos perfis do site).
+name: Direito de resposta
+description: Para o político, a equipe dele ou a empresa citada contestar ou explicar um dado do site.
+title: "Direito de resposta: "
+labels: ["direito-de-resposta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Este pedido é público.** Não escreva CPF, telefone, endereço ou outro dado pessoal.
+        Os números do site vêm de fontes oficiais. Se um dado estiver errado, corrigimos. Se estiver certo mas precisar
+        de contexto, a explicação pode ser publicada junto do número, com o link de um documento oficial que a sustente.
+  - type: input
+    id: pagina
+    attributes:
+      label: Página do site
+      description: O endereço da página (o link do site já preenche).
+    validations:
+      required: true
+  - type: input
+    id: quem
+    attributes:
+      label: Quem pede
+      description: Nome do político, gabinete ou empresa, e o cargo de quem escreve.
+    validations:
+      required: true
+  - type: textarea
+    id: resposta
+    attributes:
+      label: O que está errado ou o que precisa de explicação
+    validations:
+      required: true
+  - type: input
+    id: fonte
+    attributes:
+      label: Documento oficial
+      description: Link de um documento oficial que mostra o dado certo ou a explicação (ofício, nota da Casa, decisão...).
+  - type: checkboxes
+    id: privacidade
+    attributes:
+      label: Dados pessoais
+      options:
+        - label: Não escrevi CPF, telefone, endereço ou outro dado pessoal neste pedido.
+          required: true
