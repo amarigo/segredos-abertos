@@ -1,0 +1,39 @@
+# Formulário do aviso "Achou um número errado?" (link no fim de cada página do site, components/Confianca.tsx).
+# O site preenche o título e o campo "pagina" pelo endereço (?template=erro-nos-dados.yml&title=...&pagina=...).
+name: Erro nos dados
+description: Um número, nome ou link do site está diferente da fonte oficial.
+title: "Erro nos dados: "
+labels: ["erro-nos-dados"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por avisar. **Este aviso é público.** Não escreva CPF, telefone, endereço ou outro dado pessoal.
+        Vamos conferir com a fonte oficial. Se o site estiver errado, corrigimos e contamos aqui o que mudou.
+  - type: input
+    id: pagina
+    attributes:
+      label: Página do site
+      description: O endereço da página onde está o número (o link do site já preenche).
+    validations:
+      required: true
+  - type: textarea
+    id: numero
+    attributes:
+      label: O que está errado
+      description: Qual número ou informação, o que o site mostra e o que deveria mostrar.
+      placeholder: "Ex.: a cota de 2025 aparece como R$ 300.000, mas a página oficial do deputado mostra R$ 310.000."
+    validations:
+      required: true
+  - type: input
+    id: fonte
+    attributes:
+      label: Link da fonte oficial
+      description: O endereço oficial (Câmara, Senado, Portal da Transparência, TSE...) que mostra o número certo. Ajuda muito a conferir.
+  - type: checkboxes
+    id: privacidade
+    attributes:
+      label: Dados pessoais
+      options:
+        - label: Não escrevi CPF, telefone, endereço ou outro dado pessoal neste aviso.
+          required: true

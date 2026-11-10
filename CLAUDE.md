@@ -126,6 +126,12 @@ O ponto de entrada da coleta nacional é `etl/sa_etl/build.py`. A tabela complet
   ar continua com a versão anterior.
 - `etl/sa_etl/verificar.py` sorteia números do site e confere cada um numa segunda fonte oficial. Mais de 2% de
   diferenças sem motivo numa seção (com 20 ou mais conferidos) barra a publicação.
+- Média da Casa ao lado de cada número do perfil: `etl/sa_etl/medias.py` (`meta.json`, `medias_casa`). Dinheiro e
+  equipe: média de quem ficou o período inteiro (nota da cota em todos os meses, com folga de um mês); quem ficou menos é
+  comparado com a média proporcional aos meses. Taxas: média de todos que têm a taxa. `validar.py` refaz a conta.
+- Avisos de erro e direito de resposta chegam como issues no GitHub (formulários em `.github/ISSUE_TEMPLATE/`, link
+  no fim de cada página, `site/src/components/Confianca.tsx`). Cada aviso é conferido com a fonte oficial; se o site
+  estiver errado, corrija com teste e registre o motivo como abaixo, e responda no próprio aviso com o que mudou.
 - Diferenças com motivo entendido ficam registradas em `etl/sa_etl/oficial.py` (`MOTIVOS`), e não são investigadas de
   novo do zero. Diferenças sem motivo vão para o relatório de conferência manual `revisao-manual.md` e
   `revisao-manual.csv`, publicados junto dos dados (`data/`), onde a conclusão é anotada.

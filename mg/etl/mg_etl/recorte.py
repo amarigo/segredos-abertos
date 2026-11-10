@@ -219,6 +219,9 @@ def meta(meta_nac: dict, pols: list[dict], anos: list[str], n_vot: int, emps: li
     return {
         "atualizado_em": meta_nac.get("atualizado_em"), "anos": meta_nac.get("anos", []),
         "avisos": list(meta_nac.get("avisos") or []), "grupos": meta_nac.get("grupos"), "medias": medias,
+        # Média da Casa inteira (todos os estados), para o perfil comparar com a Câmara ou o Senado, não só com MG
+        **({"medias_casa": meta_nac["medias_casa"]} if meta_nac.get("medias_casa") else {}),
+        "recorte": (pols[0].get("uf") or "").upper() if pols else "",
         "contagens": {"politicos": len(pols), "votacoes": n_vot, "empresas_com_socios": sum(1 for e in emps if e.get("tem_socios"))},
         "total_gasto": round(sum(p["total"] for p in pols), 2),
         "total_por_ano": {a: round(sum((p["por_ano"].get(a) or {}).get("total", 0) for p in pols), 2) for a in anos},

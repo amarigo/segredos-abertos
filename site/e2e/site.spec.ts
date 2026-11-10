@@ -706,6 +706,38 @@ test.describe("verificação independente", () => {
     expect(erros).toEqual([]);
   });
 
+  test("perfil: média da Casa ao lado dos números, o que falta e o link para avisar um erro", async ({ page }) => {
+    const erros = vigiar(page);
+    const p = pols.find((x) => x.casa === "camara")!;
+    const mc = meta.medias_casa.anos[ANO].camara;
+    await page.goto(`./#/p/${p.id}`);
+    const medias = page.locator("[data-testid=media-casa]");
+    await expect(medias.first()).toBeVisible();
+    // A média do custo vem do meta.json, com quantos deputados entraram na conta
+    await expect(page.locator("main")).toContainText(`Média de ${mc.custo_total.n} deputados com nota da cota`);
+    await expect(page.locator("[data-testid=fonte-gastos]")).toContainText("Dados coletados em");
+    // Quadro do que falta: abre e mostra os quatro tipos de linha possíveis
+    const quadro = page.locator("[data-testid=o-que-falta]");
+    await quadro.locator("summary").click();
+    await expect(quadro).toContainText("Está aqui");
+    await expect(quadro).toContainText("Ainda não trazemos");
+    // Avisar erro: formulário do GitHub com a página e o nome já preenchidos
+    const link = page.locator("[data-testid=avisar-erro] a", { hasText: "Avise aqui" });
+    const u = new URL((await link.getAttribute("href"))!);
+    expect(u.searchParams.get("template")).toBe("erro-nos-dados.yml");
+    expect(u.searchParams.get("title")).toContain(p.nome);
+    expect(u.searchParams.get("pagina")).toContain(`#/p/${p.id}`);
+    await expect(page.locator("[data-testid=avisar-erro]")).toContainText("direito de resposta");
+    // Votos: rótulo exato (Plenário) e a média da Casa
+    await page.goto(`./#/p/${p.id}?aba=votos`);
+    await expect(page.locator("main")).toContainText("votos nominais no Plenário da Câmara");
+    await expect(page.locator("main")).toContainText("Votou como a maioria do partido");
+    // Páginas sem perfil também têm o link, sem o direito de resposta
+    await page.goto("./#/empresas");
+    await expect(page.locator("[data-testid=avisar-erro]")).toContainText("Avise aqui");
+    expect(erros).toEqual([]);
+  });
+
   test("número em revisão mostra o número oficial na página e o motivo na verificação", async ({ page }) => {
     const erros = vigiar(page);
     const p = pols[0];

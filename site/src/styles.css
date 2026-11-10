@@ -1162,3 +1162,20 @@ tr.nota-aberta > td { background: var(--tint); }
   .ag-caixa:not(.com-dia) .ag-painel { display: none; }
   .ag-painel { padding: 14px; }
 }
+
+/* Confiança em cada número: média da Casa ao lado, o que falta, avisar um erro (components/Confianca.tsx) */
+.media-casa { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); color: var(--ink-2); font-size: .85rem; }
+.media-casa strong { color: var(--ink); }
+.media-casa-quem { color: var(--muted); font-size: .78rem; line-height: 1.35; }
+.media-presenca { margin: 4px 0 0; }
+.atu-conta { margin: -2px 0 6px; }
+.fonte-numeros { margin-top: -4px; }
+.o-que-falta { align-self: stretch; border: 1.5px solid var(--line); border-radius: var(--raio); padding: 4px 14px; background: var(--surface); }
+.o-que-falta > summary { font-weight: 700; padding: 8px 0; cursor: pointer; }
+.cobertura h3 { font-size: .95rem; margin: 12px 0 4px; }
+.cobertura ul { margin: 0; padding-left: 20px; font-size: .9rem; }
+.cobertura li { margin: 4px 0; }
+.cobertura-tem h3 { color: var(--flag-g); }
+.cobertura-completado h3 { color: var(--accent); }
+.cobertura-fonte_nao_publica h3, .cobertura-ainda_nao h3 { color: var(--muted); }
+.avisar-erro { align-self: stretch; font-size: .9rem; color: var(--ink-2); background: var(--tint); border-radius: var(--raio); padding: 10px 14px; }
