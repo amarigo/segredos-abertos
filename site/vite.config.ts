@@ -3,14 +3,15 @@ import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
 /* Política de segurança de conteúdo (CSP). O GitHub Pages não deixa mandar cabeçalhos, então vai numa <meta>.
-   Só scripts do próprio site; imagens de qualquer https (fotos da Câmara e do Senado); fontes do Google;
+   Só scripts do próprio site; imagens de qualquer https (fotos da Câmara e do Senado) e blob: (o cartão do botão
+   Compartilhar, desenhado no próprio navegador); fontes do Google;
    os dados (fetch) só do próprio site. Só no build: o servidor de desenvolvimento usa scripts embutidos. */
 export const CSP = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
-  "img-src 'self' data: https:",
+  "img-src 'self' data: blob: https:",
   "connect-src 'self'",
   "worker-src 'self'",
   "manifest-src 'self'",

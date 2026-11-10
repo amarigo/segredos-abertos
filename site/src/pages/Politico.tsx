@@ -12,6 +12,7 @@ import { AvisosFim, EmRevisao } from "../components/Selo";
 import { FotoPerfil } from "../components/Foto";
 import { AgendaPolitico } from "../components/Agenda";
 import { PunicoesPolitico } from "../components/Punicoes";
+import { Compartilhar } from "../components/Compartilhar";
 import { norm } from "./Home";
 import { MG } from "../recorte";
 
@@ -38,6 +39,7 @@ export default function PoliticoPage() {
             {p.campo && <span className="chip">{p.campo}</span>}
             <a className="chip" href={linkSeguro(p.fonte)} target="_blank" rel="noreferrer">Página oficial ↗</a>
             <Link className="chip" to={`/rede?seguir=${encodeURIComponent(p.id)}`}>Acompanhar na Minha rede</Link>
+            <Compartilhar p={p} meta={meta} ano={ano} />
           </div>
           {p.em_exercicio === false && <p className="small muted" role="note">
             <strong className="fora-cargo">Fora do cargo hoje</strong>
