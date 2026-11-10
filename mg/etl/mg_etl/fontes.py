@@ -66,6 +66,25 @@ def sem_cpf(s: str) -> str:
     return re.sub(r"\s*[-–]\s*$", "", re.sub(r"\s{2,}", " ", s)).strip()
 
 
+# O mesmo padrão da conferência do Minas Nossa (validar.CPF_EM_TEXTO). Mais largo que CPF_NO_TEXTO: pega também
+# 11 dígitos colados num ponto ("processo 12345678901.") e o que sobra de um texto cortado no meio de um número.
+CPF_NA_CONFERENCIA = re.compile(r"(?<!\d)(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})(?!\d)")
+
+
+def limpar_textos(x):
+    """Tira de todos os textos de um JSON (dict, lista ou texto) o número que a conferência tomaria por CPF.
+
+    Os textos vêm das prefeituras e do governo e às vezes trazem CPF, telefone ou número de processo com 11
+    dígitos. Sem essa limpeza final, um único texto assim impedia a publicação do Minas Nossa inteiro."""
+    if isinstance(x, dict):
+        return {k: limpar_textos(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [limpar_textos(v) for v in x]
+    if isinstance(x, str) and CPF_NA_CONFERENCIA.search(x):
+        return re.sub(r"\s{2,}", " ", CPF_NA_CONFERENCIA.sub("", x)).strip()
+    return x
+
+
 def chave_nome(s: str) -> str:
     """Nome para comparar: sem acento, sem 'Deputado', sem pontuação e espaços repetidos."""
     n = norm_name(s or "")

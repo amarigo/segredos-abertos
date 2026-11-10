@@ -135,3 +135,27 @@ def test_pncp_fora_do_ar_sem_copia_nao_mostra_zero(estado, tmp_path):
     assert cont == {}, "sem nenhuma leitura, nenhum ano aparece como se fosse zero"
     assert _json(saida / "licitacoes" / "index.json")["locais"] == []
     assert any("PNCP" in a for a in util.AVISOS)
+
+
+def test_numero_de_11_digitos_colado_num_ponto_some_antes_de_gravar(estado, tmp_path):
+    """Caso real (Itajubá 2025): um objeto com 11 dígitos colados num ponto passou pela limpeza da leitura, ficou no
+    cache e a conferência barrou o Minas Nossa inteiro. A limpeza final, na hora de gravar, usa o padrão da conferência."""
+    import gzip
+
+    cache = tmp_path / "cache"
+    _coletar(tmp_path, cache=cache)
+    mexidos = 0
+    for f in (cache / "pncp").rglob("*.gz"):
+        st = json.loads(gzip.decompress(f.read_bytes()))
+        for c in st.get("linhas") or []:
+            if "objeto" in c:
+                c["objeto"] = "AQUISIÇÃO DE MEDICAMENTOS, processo 12345678901. Lote 1"
+                mexidos += 1
+        f.write_bytes(gzip.compress(json.dumps(st, ensure_ascii=False).encode()))
+    assert mexidos
+    saida, _ = _coletar(tmp_path, cache=cache)  # no mesmo dia: usa o cache, sem perguntar de novo ao PNCP
+    texto = "".join(f.read_text(encoding="utf-8") for f in (saida / "licitacoes").glob("*.json"))
+    assert "12345678901" not in texto and "AQUISIÇÃO DE MEDICAMENTOS" in texto
+    r = Resultado()
+    conferir_licitacoes(saida, r)
+    assert r.erros == []
