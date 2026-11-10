@@ -578,3 +578,19 @@ export interface Gabinetes {
   anos: Record<string, { meses: number | null; ufs: GabineteUf[] }>;
   fontes: Record<string, string>;
 }
+
+/* Histórico da cota desde 2008 (historico.json e h/{id}.json) */
+export interface HistoricoAno {
+  ano: number; casa: "camara" | "senado"; total: number; total_hoje: number | null; notas: number; parlamentares: number;
+  por_parlamentar: number; meses: number[]; meses_fracos: number[]; poucas_notas?: boolean; fora_parlamentares: number;
+  categorias: Record<string, number>;
+}
+export interface HistoricoMaior { id: string; nome: string; uf: string; partido: string; anos: number; de: number; ate: number; total: number; total_hoje: number | null }
+export interface Historico {
+  atualizado: string; inicio: number; ipca_base: string; fontes: Record<string, string>;
+  anos: HistoricoAno[]; maiores: Record<"camara" | "senado", HistoricoMaior[]>;
+}
+export interface HistoricoPessoa {
+  id: string; casa: "camara" | "senado"; nome: string; total: number; atualizado: string; fontes: Record<string, string>;
+  anos: Record<string, { total: number; total_hoje?: number; meses: number; uf: string; partido: string; por_mes: Record<string, number> }>;
+}

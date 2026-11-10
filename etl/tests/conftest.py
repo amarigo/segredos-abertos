@@ -32,7 +32,7 @@ class Coleta:
         saida = self.tmp / f"saida{self.n}"
         anos = list(anos)
         build.executar(anos, self.cache, saida, max_empresas=200, com_recursos=False, com_emendas=com_emendas,
-                       com_incentivos=com_incentivos, minutos_pagamentos=5, minutos_gerais=5)
+                       com_incentivos=com_incentivos, minutos_pagamentos=5, minutos_gerais=5, anos_historico=anos)
         return saida
 
     @staticmethod

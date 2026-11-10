@@ -12,7 +12,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import (agenda, autorias, gabinetes, recursos_recebidos, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
+from . import (agenda, autorias, gabinetes, historico, recursos_recebidos, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
                renuncias, senado, temas)
 from .categorias import GRUPOS, tema_de
 from . import util
@@ -798,6 +798,8 @@ def main() -> None:
     ap.add_argument("--anos-notas", type=int, nargs="+", default=[dt.date.today().year - 1, dt.date.today().year],
                     help="anos com a lista completa de notas de cada político (padrão: o ano passado e o atual; "
                          "dois anos dão cerca de 90 MB, 8 MB compactados)")
+    ap.add_argument("--sem-historico", action="store_true",
+                    help="não monta o histórico da cota desde 2008 (somas por ano da Câmara e do Senado)")
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     executar(a.anos, a.cache, a.saida, max_empresas=a.max_empresas, com_recursos=not a.sem_recursos,
@@ -805,14 +807,15 @@ def main() -> None:
              minutos_pagamentos=a.minutos_pagamentos, minutos_gerais=a.minutos_pagamentos_gerais,
              com_financas=not a.sem_financas, com_tramitacao=not a.sem_tramitacao, novas_empresas=a.novas_empresas,
              minutos_transferegov=a.minutos_transferegov, com_tribunais=not a.sem_tribunais,
-             minutos_tribunais=a.minutos_tribunais, anos_notas=a.anos_notas)
+             minutos_tribunais=a.minutos_tribunais, anos_notas=a.anos_notas, com_historico=not a.sem_historico)
 
 
 def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500, com_recursos: bool = True,
              com_emendas: bool = True, com_incentivos: bool = True, minutos_pagamentos: float = 45,
              minutos_gerais: float = 40, com_financas: bool = True, com_tramitacao: bool = True,
              novas_empresas: int = cnpj.NOVAS_POR_COLETA, minutos_transferegov: float = 15,
-             com_tribunais: bool = True, minutos_tribunais: float = 10, anos_notas: list[int] | None = None) -> None:
+             com_tribunais: bool = True, minutos_tribunais: float = 10, anos_notas: list[int] | None = None,
+             com_historico: bool = True, anos_historico: list[int] | None = None) -> None:
     """A coleta inteira, na ordem certa (usada também pelos testes)."""
     # A renúncia vem antes dos arquivos diários: o Portal passa a recusar downloads (HTTP 405) depois de muitos
     # pedidos seguidos, e os arquivos de renúncia são poucos (e ficam uma semana no cache)
@@ -845,6 +848,8 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
         coletar_gabinetes(saida, cache, anos)
     if com_financas:  # depois de tudo: usa as emendas e a verba de gabinete já gravadas
         coletar_financas(saida, cache)
+    if com_historico:  # depois de coletar(): reaproveita os arquivos da cota que ela baixou
+        coletar_historico(saida, cache, anos_historico)
     regravar_avisos(saida)
 
 
@@ -869,6 +874,15 @@ def coletar_gabinetes(saida: Path, cache: Path, anos: list[int]) -> None:
     except Exception:  # noqa: BLE001
         log.exception("Comparação dos gabinetes: erro; a página não foi atualizada")
         util.avisar("Comparação dos gabinetes: a coleta falhou; a página ficou de fora desta atualização")
+
+
+def coletar_historico(saida: Path, cache: Path, anos: list[int] | None = None) -> None:
+    """Histórico da cota desde 2008 (somas por ano). Se falhar, o resto do site segue."""
+    try:
+        historico.coletar(saida, cache, anos=anos)
+    except Exception:  # noqa: BLE001
+        log.exception("Histórico da cota: erro; a página não foi atualizada")
+        util.avisar("Histórico da cota: a coleta falhou; a página ficou de fora desta atualização")
 
 
 def coletar_tramitacao(saida: Path, cache: Path, politicos: list[dict]) -> None:

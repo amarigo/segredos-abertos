@@ -765,6 +765,11 @@ strong.sobe { color: var(--nao-ink); } strong.desce { color: var(--accent); }
 .coluna-barra { width: 100%; border-radius: 4px 4px 0 0; min-height: 2px; }
 @media (prefers-reduced-motion: no-preference) { .coluna-barra { transition: height .7s cubic-bezier(.23, 1, .32, 1); } }
 .coluna-rot { font-size: .82rem; font-weight: 700; color: var(--ink-2); }
+.colunas-anos.compacta { gap: 2px; }
+.colunas-anos.compacta .coluna-ano { flex: 1 0 34px; grid-template-rows: auto 160px auto; padding: 4px 0; border-radius: 6px; }
+.colunas-anos.compacta .coluna-ano > .coluna-trilho { grid-row: 2; } .colunas-anos.compacta .coluna-ano > .coluna-rot { grid-row: 3; }
+.colunas-anos.compacta .coluna-valor, .colunas-anos.compacta .coluna-rot { font-size: .62rem; white-space: nowrap; }
+.colunas-anos.compacta .coluna-trilho { width: 70%; }
 .secao-graficos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 24px 32px; align-items: start; }
 .secao-graficos > * { min-width: 0; }
 

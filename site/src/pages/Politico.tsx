@@ -13,6 +13,7 @@ import { FotoPerfil } from "../components/Foto";
 import { AgendaPolitico } from "../components/Agenda";
 import { norm } from "./Home";
 import { MG } from "../recorte";
+import { HistoricoPolitico } from "./Historico";
 
 export default function PoliticoPage() {
   const { id = "" } = useParams();
@@ -179,6 +180,7 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
         </div>
         <h2>Cota por mês em {ano}</h2>
         <GastoMensal meses={d.meses} ano={ano} cor="var(--s2)" />
+        {!MG && <HistoricoPolitico id={p.id} />}
       </section>
 
       <TodasNotas p={p} d={d} ano={ano} />

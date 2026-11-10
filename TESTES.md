@@ -111,6 +111,8 @@ saem do cache de CNPJ; o cache vence em 30 dias.
 | Empresas | razão social e sócios (Minha Receita) | outra cópia da base da Receita (BrasilAPI) |
 | Emendas | empenhado e pago por autor (arquivo do Portal) | API de dados do Portal da Transparência |
 | Arrecadação e gastos | juros da dívida (orçamento do Portal) | RREO do Tesouro (SICONFI) |
+| Histórico da cota (desde 2008) | gasto do mês de cada deputado (soma do arquivo anual) | página oficial do deputado naquele ano (só os meses que ela mostra) e API da Câmara |
+| Histórico da cota (desde 2008) | total do ano de cada senador (soma da CEAPS) | API do Senado, `recursos-utilizados` (quando ela traz aquele ano) |
 
 Regras: fonte fora do ar ou API respondendo vazio vira "não conferido", nunca "conferido"; a cota só é conferida em
 meses fechados há mais de 60 dias; a página de incentivos aparece como "sem segunda fonte" até haver uma.

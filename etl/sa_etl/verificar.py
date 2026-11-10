@@ -74,6 +74,7 @@ CONFIANCA = 0.95
 AMOSTRAS = {  # quantos itens por checagem, por dia
     "cota_camara_mes": 40, "cota_camara_empresa": 40, "cota_senado_ano": 30,
     "votos_camara": 12, "votos_senado": 8, "empresas_receita": 25, "emendas_autor": 15, "presenca_camara": 30,
+    "historico_camara_mes": 25, "historico_camara_pagina": 25, "historico_senado_ano": 20,
 }
 
 SECOES = {
@@ -84,6 +85,7 @@ SECOES = {
     "financas": "Arrecadação e gastos do governo",
     "incentivos": "Dinheiro público para empresas",
     "agenda": "Presença dia a dia",
+    "historico": "Histórico da cota desde 2008",
 }
 # Seções que ainda não têm uma segunda fonte oficial para conferir, e por quê
 SEM_SEGUNDA_FONTE = {
@@ -447,6 +449,141 @@ def cota_senado(pols: list[dict], rng: random.Random, prazo: Prazo, hoje: dt.dat
     return c
 
 
+# ---------------------------------------------------------------- histórico da cota (desde 2008)
+
+def _historico_pessoas(saida: Path, casa: str) -> list[dict]:
+    pasta = saida / "h"
+    prefixo = "dep-" if casa == "camara" else "sen-"
+    return [x for f in sorted(pasta.glob(f"{prefixo}*.json")) if (x := _ler(f))] if pasta.exists() else []
+
+
+def historico_camara(saida: Path, rng: random.Random, prazo: Prazo, hoje: dt.date, api: DespesasCamara) -> Checagem:
+    c = Checagem(
+        "historico_camara_mes", "historico", "Total do mês de cada deputado, desde 2008",
+        f"Sorteamos deputados e meses de todos os anos do histórico (desde 2008) e somamos, na API oficial da Câmara, "
+        f"todas as despesas daquele mês. O histórico soma o arquivo anual da cota; a soma tem de ser igual. Ficam de fora "
+        f"só as notas sem data do arquivo anual, que a API não lista. Só meses que terminaram há mais de "
+        f"{DIAS_MES_FECHADO} dias.",
+        "https://dadosabertos.camara.leg.br/swagger/api.html#/Deputados/despesasDeputado")
+    # Os anos que vêm do perfil do site (do_site) já passam pelas checagens da cota (cota_camara_mes e a página oficial)
+    pares = [(p, int(a), int(m)) for p in _historico_pessoas(saida, "camara") for a, x in (p.get("anos") or {}).items()
+             if not x.get("do_site") for m in (x.get("por_mes") or {}) if _mes_fechado(int(a), int(m), hoje)]
+    if not pares:
+        c.motivo = "Sem o histórico da cota da Câmara nesta coleta"
+        return c
+    vazios = []
+    for p, ano, mes in rng.sample(pares, min(AMOSTRAS["historico_camara_mes"], len(pares))):
+        if prazo.acabou():
+            c.falhou("tempo da verificação acabou")
+            break
+        a = p["anos"][str(ano)]
+        nosso = round(a["por_mes"][str(mes)] - ((a.get("sem_data") or {}).get(str(mes)) or 0), 2)
+        try:
+            linhas = api.mes(_num(p["id"]), ano, mes)
+        except Exception as e:  # noqa: BLE001
+            c.falhou(f"{p['id']} {mes:02d}/{ano}: API da Câmara não respondeu ({str(e)[:100]})")
+            continue
+        oficial = round(sum(to_float(x.get("valorLiquido")) for x in linhas), 2)
+        item = {"o_que": f"{p.get('nome', p['id'])}, {mes:02d}/{ano}", "politico": p["id"], "site": nosso,
+                "oficial": oficial, "fonte": api.url(_num(p["id"]), ano, mes)}
+        if not linhas:
+            vazios.append(item)  # a API pode estar sem dados; decidimos no fim, como em cota_camara
+        else:
+            c.bateu(_perto(nosso, oficial, len(linhas)), item)
+    if api.com_dados:
+        for item in vazios:
+            c.bateu(False, {**item, "oficial": "nenhuma despesa na API"})
+    elif vazios:
+        c.n = c.k = 0
+        c.exemplos, c.divergencias = [], []
+        c.motivo = "A API de despesas da Câmara respondeu sem nenhuma despesa em todos os meses pedidos. Nada foi conferido."
+    return c
+
+
+def _pagina_deputado(num: str, ano: int) -> dict | None:
+    from . import recursos
+    h = recursos._get_text(recursos.CAMARA.format(id=num, sub="", ano=ano))
+    return recursos.parse_camara_resumo(h) if h else None
+
+
+def historico_camara_pagina(saida: Path, rng: random.Random, prazo: Prazo, hoje: dt.date,
+                            pagina: Callable = _pagina_deputado) -> Checagem:
+    c = Checagem(
+        "historico_camara_pagina", "historico", "Gasto do mês de cada deputado, desde 2008, comparado com a página oficial",
+        f"Sorteamos deputados e anos do histórico e abrimos a página oficial do deputado naquele ano no site da Câmara, "
+        f"que mostra o gasto da cota mês a mês. Cada mês do histórico (soma do arquivo anual) tem de ser igual ao da "
+        f"página. A API não tem esse total pronto; a página é a mesma que qualquer pessoa vê. Só meses que terminaram há "
+        f"mais de {DIAS_MES_FECHADO} dias.",
+        "https://www.camara.leg.br/transparencia/gastos-parlamentares")
+    pares = [(p, a) for p in _historico_pessoas(saida, "camara") for a, x in (p.get("anos") or {}).items()
+             if not x.get("do_site") and _mes_fechado(int(a), 1, hoje)]
+    if not pares:
+        c.motivo = "Sem o histórico da cota da Câmara nesta coleta"
+        return c
+    for p, ano in rng.sample(pares, min(AMOSTRAS["historico_camara_pagina"], len(pares))):
+        if prazo.acabou():
+            c.falhou("tempo da verificação acabou")
+            break
+        try:
+            pag = pagina(_num(p["id"]), int(ano))
+        except Exception as e:  # noqa: BLE001
+            pag = None
+            c.falhou(f"{p['id']} {ano}: página da Câmara não respondeu ({str(e)[:100]})")
+            continue
+        meses_pag = {m["mes"]: m["valor"] for m in (pag or {}).get("cota_meses") or []}
+        if not meses_pag:
+            c.falhou(f"{p.get('nome', p['id'])} {ano}: a página oficial não mostrou o gasto mensal")
+            continue
+        nossos = {int(m): v for m, v in (p["anos"][ano].get("por_mes") or {}).items()}
+        # A página só mostra os meses do mandato em que o deputado estava no cargo (oficial.MOTIVOS
+        # ["camara_fora_do_mandato"]): janeiro do ano em que começa a legislatura, meses de licença, telefonia cobrada
+        # depois da saída. Conferimos só os meses que ela mostra, como na checagem da cota do ano atual.
+        for mes in sorted(meses_pag):
+            if not _mes_fechado(int(ano), mes, hoje):
+                continue
+            nosso, oficial = round(nossos.get(mes, 0.0), 2), round(meses_pag.get(mes, 0.0), 2)
+            c.bateu(abs(nosso - oficial) <= 1.0, {"o_que": f"{p.get('nome', p['id'])}, {mes:02d}/{ano}", "politico": p["id"],
+                                                  "site": nosso, "oficial": oficial,
+                                                  "fonte": PAGINA_CAMARA_MES.format(id=_num(p["id"]), ano=ano)})
+    return c
+
+
+def historico_senado(saida: Path, rng: random.Random, prazo: Prazo, hoje: dt.date, buscar: Callable = get_json) -> Checagem:
+    c = Checagem(
+        "historico_senado_ano", "historico", "Total do ano de cada senador, desde 2008",
+        "O histórico soma, nota por nota, a cota (CEAPS) da API do Senado em todos os anos desde 2008. Sorteamos senadores "
+        "e anos fechados e comparamos com o total oficial que o Senado publica para cada senador (recursos utilizados). "
+        "Essa consulta do Senado só traz o total de parte dos senadores e anos; quando não traz, o par conta como não "
+        "conferido.",
+        "https://adm.senado.gov.br/adm-dadosabertos/swagger-ui/index.html")
+    pares = [(p, a) for p in _historico_pessoas(saida, "senado") for a in (p.get("anos") or {}) if int(a) < hoje.year]
+    if not pares:
+        c.motivo = "Sem o histórico da cota do Senado nesta coleta"
+        return c
+    for p, ano in rng.sample(pares, min(AMOSTRAS["historico_senado_ano"], len(pares))):
+        if prazo.acabou():
+            c.falhou("tempo da verificação acabou")
+            break
+        url = SENADO_RECURSOS.format(cod=_num(p["id"]), ano=ano)
+        try:
+            d = buscar(url, timeout=60)
+            dados = _as_list((d or {}).get("data"))
+            cotas = (dados[0] or {}).get("cotas") if dados else None
+        except Exception as e:  # noqa: BLE001
+            c.falhou(f"{p['id']} {ano}: API do Senado não respondeu ({str(e)[:100]})")
+            continue
+        if not isinstance(cotas, dict) or "totalValor" not in cotas:
+            c.falhou(f"{p.get('nome', p['id'])} {ano}: o Senado não publica o total deste ano nessa consulta")
+            continue
+        oficial = round(to_float(cotas["totalValor"]), 2)
+        nosso = round(p["anos"][ano]["total"], 2)
+        c.bateu(abs(nosso - oficial) <= 1.0, {"o_que": f"{p.get('nome', p['id'])}, {ano}", "politico": p["id"],
+                                              "site": nosso, "oficial": oficial, "fonte": url})
+    if c.n == 0 and not c.motivo:
+        c.motivo = "O Senado não publicou o total oficial de nenhum dos senadores e anos sorteados"
+    return c
+
+
 # ---------------------------------------------------------------- votações
 
 def votos_camara(saida: Path, vots: list[dict], rng: random.Random, prazo: Prazo,
@@ -805,6 +942,9 @@ def verificar(saida: Path, anterior: dict | None = None, minutos: float = 20, se
                                                  chave_portal() if chave is None else chave, buscar))
     rodar("financas_juros", lambda: financas_juros(saida))
     rodar("presenca_camara", lambda: presenca_camara(saida, random.Random(rng.random()), prazo, buscar))
+    rodar("historico_camara_mes", lambda: historico_camara(saida, random.Random(rng.random()), prazo, hoje, api))
+    rodar("historico_camara_pagina", lambda: historico_camara_pagina(saida, random.Random(rng.random()), prazo, hoje))
+    rodar("historico_senado_ano", lambda: historico_senado(saida, random.Random(rng.random()), prazo, hoje, buscar))
 
     hist = {sid: (s.get("historico") or []) for sid, s in ((anterior or {}).get("secoes") or {}).items()}
     out = {
@@ -827,7 +967,8 @@ def verificar(saida: Path, anterior: dict | None = None, minutos: float = 20, se
 
 SECAO_DE = {"cota_camara": "cota", "cota_camara_pagina": "cota", "cota_senado_ano": "cota", "votos_camara": "votacoes", "votos_senado": "votacoes",
             "empresas_receita": "empresas", "emendas_autor": "emendas", "financas_juros": "financas",
-            "presenca_camara": "agenda"}
+            "presenca_camara": "agenda", "historico_camara_mes": "historico", "historico_senado_ano": "historico",
+            "historico_camara_pagina": "historico"}
 
 
 def _baixar_anterior(url: str) -> dict | None:

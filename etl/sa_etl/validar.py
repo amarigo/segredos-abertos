@@ -234,6 +234,7 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
     # ---------------- julgamentos do STF (aba de votações)
     _conferir_tribunais(saida, r)
     _conferir_gabinetes(saida, pols, r)
+    _conferir_historico(saida, r)
 
     # ---------------- privacidade e links (em todos os arquivos)
     for f in sorted(saida.rglob("*.json")):
@@ -562,6 +563,42 @@ def _conferir_gabinetes(saida: Path, pols: list[dict], r: Resultado) -> None:
         for uf, v in soma.items():
             if v and uf not in vistos:
                 r.erro(f"Gabinetes {ano}: estado {uf} com verba e fora da comparação")
+
+
+def _conferir_historico(saida: Path, r: Resultado) -> None:
+    """Histórico da cota: o total de cada Casa em cada ano é a soma dos parlamentares (h/{id}.json) mais as notas sem
+    parlamentar (lideranças), e também a soma dos tipos de despesa; cada ano tem as duas Casas; fontes com link https."""
+    f = saida / "historico.json"
+    if not f.exists():
+        r.alerta("Sem o histórico da cota desde 2008 (historico.json)")
+        return
+    d = _ler(f, r) or {}
+    for k, u in (d.get("fontes") or {}).items():
+        if not str(u).startswith("https://"):
+            r.erro(f"Histórico da cota: fonte sem link https ({k})")
+    soma: dict[tuple[str, str], float] = Counter()
+    for fp in sorted((saida / "h").glob("*.json")) if (saida / "h").exists() else []:
+        p = _ler(fp, r) or {}
+        for ano, a in (p.get("anos") or {}).items():
+            soma[(p.get("casa", ""), ano)] += a.get("total") or 0
+            meses = sum((a.get("por_mes") or {}).values())
+            if abs(meses - (a.get("total") or 0)) > 1:
+                r.erro(f"Histórico {fp.stem} {ano}: soma dos meses ({meses:.2f}) diferente do total ({a.get('total')})")
+    casas: dict[int, set] = {}
+    for x in d.get("anos") or []:
+        casas.setdefault(x["ano"], set()).add(x["casa"])
+        esperado = soma[(x["casa"], str(x["ano"]))] + (x.get("fora_parlamentares") or 0)
+        if abs(esperado - x["total"]) > 1:
+            r.erro(f"Histórico {x['casa']} {x['ano']}: total ({x['total']}) diferente da soma dos parlamentares "
+                   f"mais lideranças ({esperado:.2f})")
+        cats = sum((x.get("categorias") or {}).values())
+        if abs(cats - x["total"]) > 1:
+            r.erro(f"Histórico {x['casa']} {x['ano']}: soma dos tipos de despesa ({cats:.2f}) diferente do total")
+        if x.get("total_hoje") is not None and x["total"] > 0 and not (0.5 < x["total_hoje"] / x["total"] < 5):
+            r.erro(f"Histórico {x['casa']} {x['ano']}: valor corrigido pela inflação fora do razoável")
+    for ano, cs in sorted(casas.items()):
+        if len(cs) < 2:
+            r.alerta(f"Histórico da cota: {ano} só tem {', '.join(sorted(cs))}")
 
 
 def _conferir_financas(saida: Path, r: Resultado) -> None:

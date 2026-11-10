@@ -68,6 +68,7 @@ export default function Politicos() {
     <section>
       <h1>Políticos</h1>
       {!MG && <p className="small"><Link to="/gabinetes">Gasto com assessores: compare os estados de forma justa, pela população e pelos salários de cada um ›</Link></p>}
+      {!MG && <p className="small"><Link to="/historico">A cota parlamentar desde 2008: quanto a Câmara e o Senado gastaram em cada ano ›</Link></p>}
       <div className="secao-graficos">
         {ufs.length > 1 && (
           <div>
