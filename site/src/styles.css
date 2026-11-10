@@ -1162,3 +1162,10 @@ tr.nota-aberta > td { background: var(--tint); }
   .ag-caixa:not(.com-dia) .ag-painel { display: none; }
   .ag-painel { padding: 14px; }
 }
+
+/* Punições oficiais (components/Punicoes.tsx) */
+.punicoes { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 10px; }
+.punicao { border-left: 4px solid var(--flag-r); padding: 6px 0 6px 12px; display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.punicao-topo { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.punicao-socio { margin: 12px 0; }
+.punicao-bloco { margin-bottom: 12px; }

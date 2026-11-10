@@ -18,6 +18,8 @@ function recebeuTexto(o: OutraEmpresa) {
 }
 import { norm } from "./Home";
 import { AvisosFim, EmRevisao } from "../components/Selo";
+import { AlertaPunicaoEmpresa, PunicoesEmpresa } from "../components/Punicoes";
+import { MG } from "../recorte";
 
 export default function EmpresaPage() {
   const { cnpj = "" } = useParams();
@@ -63,6 +65,7 @@ function EmpresaAno({ e }: { e: Empresa }) {
         <h1>{e.nome}</h1>
         {emp?.nome_fantasia && <p className="muted">Nome fantasia: {emp.nome_fantasia}</p>}
         {e.alertas.map((a) => <div className="alert" key={a} role="note"><strong>Ponto de atenção:</strong> {a}</div>)}
+        {!MG && <AlertaPunicaoEmpresa cnpj={e.cnpj} />}
       </section>
       <section className="grid">
         {e.total > 0 && <div className="card stat"><span className="label">Recebeu da cota de parlamentares em {ano}</span><span className="value" title={reais(cotaValor)}>{grande(cotaValor)}</span>
@@ -85,6 +88,7 @@ function EmpresaAno({ e }: { e: Empresa }) {
         {!emp ? <div className="empty">Ainda não buscamos os dados desta empresa na Receita Federal.</div>
           : e.socios.length === 0 ? <Explain>A Receita não lista sócios para esta empresa. Isso é comum em empresário individual e MEI, em que o dono é a própria pessoa do nome da empresa.</Explain>
           : <Donos e={e} />}
+        {!MG && <PunicoesEmpresa cnpj={e.cnpj} />}
       </section>
 
       {e.mesmo_endereco && e.mesmo_endereco.length > 0 && (

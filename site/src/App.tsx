@@ -49,6 +49,7 @@ const Cultura = pagina(() => import("./pages/Cultura"));
 const PainelAreas = pagina(() => import("./pages/PainelAreas"));
 const Corrupcao = pagina(() => import("./pages/Corrupcao"));
 const CasoCorrupcao = pagina(() => import("./pages/CasoCorrupcao"));
+const PunicoesPage = pagina(() => import("./pages/Punicoes"));
 
 /* Os projetos do Segredos Abertos, publicados lado a lado no mesmo site (/, /mg/, /eleicao2026/ e /terras-raras/).
    Links relativos: funcionam no GitHub Pages e numa cópia local de site/dist. */
@@ -156,6 +157,7 @@ export default function App() {
           {!MG && <Route path="/emendas" element={<Emendas />} />}
           {!MG && <Route path="/incentivos" element={<Incentivos />} />}
           {!MG && <Route path="/corrupcao" element={<Corrupcao />} />}
+          {!MG && <Route path="/corrupcao/punicoes" element={<PunicoesPage />} />}
           {!MG && <Route path="/corrupcao/:id" element={<CasoCorrupcao />} />}
           {MG && <Route path="/cidades" element={<Cidades />} />}
           {MG && <Route path="/cidade/:id" element={<CidadePage />} />}

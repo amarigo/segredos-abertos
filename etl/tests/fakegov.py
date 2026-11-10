@@ -32,6 +32,7 @@ import fakegov_gabinetes  # noqa: E402
 import fakegov_noticias  # noqa: E402
 import fakegov_tramitacao  # noqa: E402
 import fakegov_transferegov  # noqa: E402
+import fakegov_sancoes  # noqa: E402
 import fakegov_tribunais  # noqa: E402
 
 PARTIDOS_DEP = ["PL", "PL", "NOVO", "PT", "PT", "PSOL", "MDB", "PSD"]
@@ -97,6 +98,7 @@ class FakeGov:
                 qsa = [empresa(h1[:8], "HOLDING UM")]  # a Receita às vezes traz só a raiz do CNPJ
             end = {"cep": "01001000", "numero": "100" if i in (3, 4) else str(200 + i), "complemento": ""}
             self.receita[c] = self._empresa(c, f"FORNECEDORA FICTICIA {i:02d} LTDA", qsa, end)
+        self.sancoes = fakegov_sancoes.Sancoes(self.fornecedoras, self.deputados)  # listas oficiais de punidos
         # empresas pagas com emendas: a primeira tem o mesmo dono de duas fornecedoras da cota
         r2 = random.Random(seed + 2)  # separado, para não mudar os outros dados fictícios
         self.emenda_empresas = [_cnpj(r2), _cnpj(r2)]
@@ -328,6 +330,9 @@ class FakeGov:
         noti = fakegov_noticias.rota(u.netloc, path, q)  # busca de notícias e páginas dos jornais
         if noti is not None:
             return noti
+        sanc = self.sancoes.rota(u.netloc, path, q)  # CEIS, CNEP, CEAF e listas do TCU
+        if sanc is not None:
+            return sanc
         trib = fakegov_tribunais.rota(u.netloc, path, q)  # votos dos ministros do STF
         if trib is not None:
             return trib
@@ -357,7 +362,8 @@ class FakeGov:
             if not d:
                 return 404, b"", "application/json"
             fora = d["id"] in self.dep_fora
-            return self._json({"dados": {"id": d["id"], "ultimoStatus": {
+            return self._json({"dados": {"id": d["id"], "cpf": fakegov_sancoes.cpf_deputado(d["id"]),
+                                         "nomeCivil": fakegov_sancoes.nome_civil(d["nome"]), "ultimoStatus": {
                 "id": d["id"], "nome": d["nome"], "nomeEleitoral": d["nome"], "siglaPartido": d["siglaPartido"],
                 "siglaUf": d["siglaUf"], "urlFoto": d["urlFoto"], "data": "2025-07-09" if fora else "2023-02-01",
                 "situacao": "Suplência" if fora else "Exercício", "condicaoEleitoral": "Suplente" if fora else "Titular"}}})
