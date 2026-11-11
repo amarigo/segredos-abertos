@@ -166,6 +166,14 @@ export default function Corrupcao() {
         {" "}Condenação anulada não é absolvição: quer dizer que o processo teve um erro e a Justiça não chegou a julgar de novo.
       </Explain>
 
+      <section className="card" data-testid="link-punicoes">
+        <h2 style={{ marginTop: 0 }}>Punições oficiais de empresas, sócios e deputados</h2>
+        <p className="small" style={{ margin: 0 }}>
+          Cruzamos todo dia as empresas que recebem dinheiro público, os donos delas e os deputados federais com as listas oficiais de punidos da CGU (CEIS, CNEP e CEAF) e do TCU.
+          {" "}<Link to="/corrupcao/punicoes">Ver quem aparece nas listas</Link>.
+        </p>
+      </section>
+
       <section>
         <h2>Os casos</h2>
         <div className="grid casos-grid">{CASOS.map((c) => <CartaoCaso key={c.id} c={c} />)}</div>

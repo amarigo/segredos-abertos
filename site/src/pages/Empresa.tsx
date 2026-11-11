@@ -18,6 +18,8 @@ function recebeuTexto(o: OutraEmpresa) {
 }
 import { norm } from "./Home";
 import { AvisosFim, EmRevisao } from "../components/Selo";
+import { AlertaPunicaoEmpresa, PunicoesEmpresa } from "../components/Punicoes";
+import { MG } from "../recorte";
 
 export default function EmpresaPage() {
   const { cnpj = "" } = useParams();
@@ -63,6 +65,7 @@ function EmpresaAno({ e }: { e: Empresa }) {
         <h1>{e.nome}</h1>
         {emp?.nome_fantasia && <p className="muted">Nome fantasia: {emp.nome_fantasia}</p>}
         {e.alertas.map((a) => <div className="alert" key={a} role="note"><strong>Ponto de atenção:</strong> {a}</div>)}
+        {!MG && <AlertaPunicaoEmpresa cnpj={e.cnpj} />}
       </section>
       <section className="grid">
         {e.total > 0 && <div className="card stat"><span className="label">Recebeu da cota de parlamentares em {ano}</span><span className="value" title={reais(cotaValor)}>{grande(cotaValor)}</span>
@@ -85,7 +88,10 @@ function EmpresaAno({ e }: { e: Empresa }) {
         {!emp ? <div className="empty">Ainda não buscamos os dados desta empresa na Receita Federal.</div>
           : e.socios.length === 0 ? <Explain>A Receita não lista sócios para esta empresa. Isso é comum em empresário individual e MEI, em que o dono é a própria pessoa do nome da empresa.</Explain>
           : <Donos e={e} />}
+        {!MG && <PunicoesEmpresa cnpj={e.cnpj} />}
       </section>
+
+      {e.campanha && e.campanha.length > 0 && <CampanhaEmpresa itens={e.campanha} />}
 
       {e.mesmo_endereco && e.mesmo_endereco.length > 0 && (
         <section>
@@ -528,5 +534,28 @@ function Donos({ e }: { e: Empresa }) {
       </details>
       <p className="muted small">A Receita esconde parte do CPF dos sócios. Por isso ligamos empresas pelo nome do sócio mais os dígitos visíveis do CPF. Homônimos raros podem aparecer.</p>
     </>
+  );
+}
+
+/** Campanhas eleitorais ligadas a esta empresa (TSE): fornecedora de campanha, sócio que doou, parlamentar sócio. */
+function CampanhaEmpresa({ itens }: { itens: NonNullable<Empresa["campanha"]> }) {
+  const como = (x: NonNullable<Empresa["campanha"]>[number]) =>
+    x.tipo === "fornecedor" || x.tipo === "fornecedor_campanha" ? <>A campanha de {x.ano} contratou esta empresa por <strong>{reais(x.campanha || 0)}</strong></>
+      : x.tipo === "doador_socio" ? <><strong>{x.doador?.nome}</strong> <span className="mono small">{x.doador?.doc}</span>, {x.papel === "dono_final" ? "dono por meio de outra empresa" : (x.qualificacao || "sócio").toLowerCase()}, doou <strong>{reais(x.doacao || 0)}</strong> à campanha de {x.ano}</>
+      : <>O parlamentar aparece na Receita como {x.papel === "dono_final" ? "dono, por meio de outra empresa" : (x.qualificacao || "sócio").toLowerCase()}</>;
+  return (
+    <section>
+      <h2>Ligações com campanhas eleitorais</h2>
+      <Explain>Cruzamento das contas de campanha entregues ao TSE com esta empresa e os sócios dela. Doador e sócio são ligados só quando o nome completo e os 6 dígitos do meio do CPF são iguais. São fatos lado a lado: não indicam irregularidade.</Explain>
+      <div className="table-wrap"><table>
+        <thead><tr><th>Parlamentar</th><th>O que aconteceu</th><th className="r">No mandato</th></tr></thead>
+        <tbody>{itens.map((x, i) => (
+          <tr key={i}>
+            <td><Link to={`/p/${x.politico}?aba=campanha`}>{x.nome}</Link><div className="muted small">{x.partido}-{x.uf}</div></td>
+            <td className="small">{como(x)}</td>
+            <td className="r num">{x.cota || x.emendas ? reais((x.cota || 0) + (x.emendas || 0)) : "—"}</td>
+          </tr>))}</tbody>
+      </table></div>
+    </section>
   );
 }

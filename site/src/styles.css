@@ -1171,6 +1171,18 @@ tr.nota-aberta > td { background: var(--tint); }
   .ag-painel { padding: 14px; }
 }
 
+/* Aba Campanha: cada ligação entre campanha e mandato como fatos curtos, um por linha */
+.card.ligacao { margin: 0 0 12px; display: block; }
+.card.ligacao .label { display: block; margin-bottom: 6px; }
+.fatos { margin: 0 0 6px; padding-left: 1.3em; }
+.fatos li { margin: 4px 0; line-height: 1.5; overflow-wrap: anywhere; }
+/* Punições oficiais (components/Punicoes.tsx) */
+.punicoes { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 10px; }
+.punicao { border-left: 4px solid var(--flag-r); padding: 6px 0 6px 12px; display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.punicao-topo { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.punicao-socio { margin: 12px 0; }
+.punicao-bloco { margin-bottom: 12px; }
+
 /* Confiança em cada número: média da Casa ao lado, o que falta, avisar um erro (components/Confianca.tsx) */
 .media-casa { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); color: var(--ink-2); font-size: .85rem; }
 .media-casa strong { color: var(--ink); }

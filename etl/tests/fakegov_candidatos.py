@@ -1,5 +1,5 @@
-"""Respostas fictícias do TSE (API do portal de dados abertos e arquivos do CDN), do arquivo de deputados da Câmara
-e do detalhe de cada senador: o que o patrimônio declarado e a página de eleitos leem.
+"""Respostas fictícias do TSE (API do portal de dados abertos e arquivos do CDN) e do arquivo de deputados da Câmara:
+o que o patrimônio declarado e a página de eleitos leem. O detalhe de cada senador fica no fakegov.py.
 
 Os arquivos imitam os de verdade: CSV latin-1 com ';' dentro de ZIP, um _BRASIL.csv, e com as colunas que o site
 não pode ler (CPF, e-mail, título de eleitor, descrição do bem). Os testes conferem que nada disso chega ao site.
@@ -13,6 +13,8 @@ import io
 import json
 import re
 import zipfile
+
+import fakegov_tse  # noqa: E402  (mesma pasta dos testes)
 
 CDN = "https://cdn.tse.jus.br/estatistica/sead/odsele"
 GERAIS = set(range(2014, 2100, 4))
@@ -58,8 +60,11 @@ def _zip(nome: str, cab: list[str], linhas: list[list]) -> bytes:
 class TSE:
     def __init__(self, deputados: list[dict], senadores: list[dict]):
         # nome civil e nascimento de cada parlamentar (o TSE não usa o código da Câmara nem o do Senado)
-        self.civil = {f"dep-{d['id']}": (f"FULANO DE TAL {d['id']}", nascimento(d["id"])) for d in deputados}
-        self.civil |= {f"sen-{s['cod']}": (f"BELTRANO DA SILVA {s['cod']}", nascimento(s["cod"])) for s in senadores}
+        # Os mesmos nomes civis das contas de campanha (fakegov_tse): no governo de verdade, a pessoa é uma só.
+        self.civil = {f"dep-{d['id']}": (fakegov_tse.nome_civil_deputado(d["id"] - 1000).upper(), nascimento(d["id"]))
+                      for d in deputados}
+        self.civil |= {f"sen-{s['cod']}": (fakegov_tse.nome_civil_senador(i).upper(), nascimento(s["cod"]))
+                       for i, s in enumerate(senadores)}
         self.pedidos_cdn = 0
         self.ckan_fora = False
 
@@ -174,10 +179,4 @@ class TSE:
                 {"uri": f"https://dadosabertos.camara.leg.br/api/v2/deputados/{pid[4:]}", "nome": nome.title(),
                  "nomeCivil": nome, "dataNascimento": nasc}
                 for pid, (nome, nasc) in self.civil.items() if pid.startswith("dep-")]}).encode(), "application/json"
-        m = re.fullmatch(r"/dadosabertos/senador/(\d+)\.json", path)
-        if netloc == "legis.senado.leg.br" and m and f"sen-{m.group(1)}" in self.civil:
-            nome, nasc = self.civil[f"sen-{m.group(1)}"]
-            return 200, json.dumps({"DetalheParlamentar": {"Parlamentar": {
-                "IdentificacaoParlamentar": {"CodigoParlamentar": m.group(1), "NomeCompletoParlamentar": nome},
-                "DadosBasicosParlamentar": {"DataNascimento": nasc}}}}).encode(), "application/json"
-        return None
+        return None  # o detalhe de cada senador (nome civil e nascimento) fica no fakegov.py

@@ -34,7 +34,9 @@ import fakegov_representantes  # noqa: E402
 import fakegov_tramitacao  # noqa: E402
 import fakegov_transferegov  # noqa: E402
 import fakegov_candidatos  # noqa: E402
+import fakegov_sancoes  # noqa: E402
 import fakegov_tribunais  # noqa: E402
+import fakegov_tse  # noqa: E402
 
 PARTIDOS_DEP = ["PL", "PL", "NOVO", "PT", "PT", "PSOL", "MDB", "PSD"]
 PARTIDOS_SEN = ["PL", "PT", "MDB", "PSD", "NOVO"]
@@ -111,6 +113,8 @@ class FakeGov:
         self.api_paginas_sem_filtro = None  # a consulta sem filtro falha depois desta página (a API não pula tantas linhas)
         self.repetir_linhas = False  # caos de dados: arquivos com linhas repetidas
         self.legislatura_so_atuais = False  # a lista da legislatura sem quem saiu (o defeito que escondia gente)
+        self.tse_baixados: list[int] = []  # anos cujo ZIP de contas de campanha foi baixado (não só conferido)
+        self.tse_etag: dict[int, str] = {}  # troca a versão de um ano (o TSE publicou um arquivo novo)
         rng = self.rng
 
         # ---------- parlamentares
@@ -146,6 +150,7 @@ class FakeGov:
                 qsa = [empresa(h1[:8], "HOLDING UM")]  # a Receita às vezes traz só a raiz do CNPJ
             end = {"cep": "01001000", "numero": "100" if i in (3, 4) else str(200 + i), "complemento": ""}
             self.receita[c] = self._empresa(c, f"FORNECEDORA FICTICIA {i:02d} LTDA", qsa, end)
+        self.sancoes = fakegov_sancoes.Sancoes(self.fornecedoras, self.deputados)  # listas oficiais de punidos
         # empresas pagas com emendas: a primeira tem o mesmo dono de duas fornecedoras da cota
         r2 = random.Random(seed + 2)  # separado, para não mudar os outros dados fictícios
         self.emenda_empresas = [_cnpj(r2), _cnpj(r2)]
@@ -315,6 +320,12 @@ class FakeGov:
         if "/renuncias/" in url and (self.renuncia_so_navegador and "Mozilla" not in h.get("User-Agent", "")
                                      or "json" in h.get("Accept", "")):
             return self._resp(403, b"<Error>AccessDenied</Error>", full, "application/xml")
+        if fakegov_tse.CDN in url and method == "HEAD":  # o CDN do TSE diz a versão do arquivo sem mandar o arquivo
+            ano = next((a for a in fakegov_tse.ANOS if f"_{a}.zip" in url), None)
+            r = self._resp(200 if ano else 404, b"", full, "application/zip")
+            if ano:
+                r.headers["ETag"] = self.tse_etag.get(ano, fakegov_tse.ETAG[ano])
+            return r
         status, corpo, tipo = self._rota(method, url, params or {})
         r = self._resp(status, corpo, full, tipo)
         if status == 200 and url.endswith("_RenunciasFiscais.zip"):  # o S3 da CGU diz quando o arquivo foi publicado
@@ -377,6 +388,12 @@ class FakeGov:
         noti = fakegov_noticias.rota(u.netloc, path, q)  # busca de notícias e páginas dos jornais
         if noti is not None:
             return noti
+        tse = fakegov_tse.rota(u.netloc, path, q, self)  # contas de campanha (TSE)
+        if tse is not None:
+            return tse
+        sanc = self.sancoes.rota(u.netloc, path, q)  # CEIS, CNEP, CEAF e listas do TCU
+        if sanc is not None:
+            return sanc
         trib = fakegov_tribunais.rota(u.netloc, path, q)  # votos dos ministros do STF
         if trib is not None:
             return trib
@@ -411,7 +428,9 @@ class FakeGov:
             if not d:
                 return 404, b"", "application/json"
             fora = d["id"] in self.dep_fora
-            return self._json({"dados": {"id": d["id"], "ultimoStatus": {
+            # um CPF e um nome civil por deputado, os mesmos nas contas de campanha e nas listas de punidos
+            return self._json({"dados": {"id": d["id"], "cpf": fakegov_sancoes.cpf_deputado(d["id"]),
+                                         "nomeCivil": fakegov_sancoes.nome_civil(d["id"]), "ultimoStatus": {
                 "id": d["id"], "nome": d["nome"], "nomeEleitoral": d["nome"], "siglaPartido": d["siglaPartido"],
                 "siglaUf": d["siglaUf"], "urlFoto": d["urlFoto"], "data": "2025-07-09" if fora else "2023-02-01",
                 "situacao": "Suplência" if fora else "Exercício", "condicaoEleitoral": "Suplente" if fora else "Titular"}}})
@@ -475,6 +494,16 @@ class FakeGov:
                                                                             "DescricaoCausaAfastamento": "Retorno do titular"}]
                                                              if s["cod"] in self.sen_fora else []}}]}}
                    for s in self.senadores]}}})
+
+        m = re.match(r"^/dadosabertos/senador/(\d+)\.json$", path)
+        if u.netloc == "legis.senado.leg.br" and m:
+            s = next((s for s in self.senadores if str(s["cod"]) == m.group(1)), None)
+            if not s:
+                return 404, b"", "application/json"
+            return self._json({"DetalheParlamentar": {"Parlamentar": {"IdentificacaoParlamentar": {
+                "CodigoParlamentar": str(s["cod"]), "NomeParlamentar": s["nome"],
+                "NomeCompletoParlamentar": fakegov_tse.nome_civil_senador(self.senadores.index(s)), "UfParlamentar": s["uf"]},
+                "DadosBasicosParlamentar": {"DataNascimento": fakegov_candidatos.nascimento(s["cod"])}}}})
 
         m = re.match(r"^/adm-dadosabertos/api/v1/senadores/despesas_ceaps/(\d{4})$", path)
         if u.netloc == "adm.senado.gov.br" and m:

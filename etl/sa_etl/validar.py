@@ -266,11 +266,15 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
 
     # ---------------- julgamentos do STF (aba de votações)
     _conferir_tribunais(saida, r)
+    _conferir_campanha(saida, r)
     _conferir_gabinetes(saida, pols, r)
     _conferir_historico(saida, r)
     _conferir_patrimonio(saida, r)
     _conferir_eleitos(saida, r)
     _conferir_representantes(saida, r)
+
+    # ---------------- punições oficiais (CEIS, CNEP, CEAF, TCU)
+    _conferir_sancoes(saida, pols, r)
 
     # ---------------- privacidade e links (em todos os arquivos)
     for f in sorted(saida.rglob("*.json")):
@@ -569,6 +573,93 @@ def _conferir_tribunais(saida: Path, r: Resultado) -> None:
             r.erro(f"Julgamento do STF com mais de 11 votos: {j.get('id')} ({len(votos)})")
         if sum((j.get("placar") or {}).values()) != len(votos):
             r.erro(f"Placar do julgamento do STF não bate com os votos: {j.get('id')}")
+
+
+CPF_EM_TEXTO = re.compile(r"(?<!\d)\d{3}\.?\d{3}\.?\d{3}-?\d{2}(?!\d)")
+CPF_MASCARADO = re.compile(r"^\*\*\*\.\d{3}\.\d{3}-\*\*$")
+
+
+def _conferir_campanha(saida: Path, r: Resultado) -> None:
+    """Dinheiro da campanha (campanha.py): as partes somam o total, nenhum CPF aparece (nem dentro de nomes, como o TSE
+    às vezes publica), doador ligado a sócio sempre com o CPF mascarado, e a lista geral bate com os perfis."""
+    f = saida / "campanha.json"
+    if not f.exists():
+        r.alerta("Sem o dinheiro da campanha (campanha.json)")
+        return
+    geral = _ler(f, r) or {}
+    n_perfis = 0
+    for g in sorted((saida / "p" / "campanha").glob("*.json")) if (saida / "p" / "campanha").exists() else []:
+        d = _ler(g, r) or {}
+        n_perfis += len(d.get("ligacoes") or [])
+        for c in d.get("campanhas") or []:
+            rc, dp = c.get("receitas") or {}, c.get("despesas") or {}
+            if not _perto(sum(v for _, v in rc.get("por_origem") or []), rc.get("total", 0), len(rc.get("por_origem") or [])):
+                r.erro(f"Campanha {g.stem} {c.get('ano')}: as origens não somam o total recebido")
+            if not _perto(rc.get("financeiro", 0) + rc.get("estimavel", 0), rc.get("total", 0), 2):
+                r.erro(f"Campanha {g.stem} {c.get('ano')}: dinheiro + estimável não somam o total recebido")
+            if not _perto(sum(v for _, v in dp.get("por_tipo") or []), dp.get("total", 0), len(dp.get("por_tipo") or [])):
+                r.erro(f"Campanha {g.stem} {c.get('ano')}: os tipos de despesa não somam o total contratado")
+            if not str(c.get("fonte") or "").startswith("https://dadosabertos.tse.jus.br/"):
+                r.erro(f"Campanha {g.stem} {c.get('ano')}: sem link para o conjunto de dados do TSE")
+            for x in (c.get("doadores") or []) + (c.get("originarios") or []) + (c.get("fornecedores") or []):
+                for k in ("nome", "como", "tipo"):
+                    if CPF_EM_TEXTO.search(str(x.get(k) or "")):
+                        r.erro(f"Campanha {g.stem} {c.get('ano')}: CPF dentro do texto ({k})")
+        for x in d.get("ligacoes") or []:
+            if x.get("tipo") == "doador_socio" and not CPF_MASCARADO.match(str((x.get("doador") or {}).get("doc") or "")):
+                r.erro(f"Campanha {g.stem}: doador ligado a sócio sem CPF mascarado")
+            if not (x.get("cota") or x.get("emendas")):
+                r.erro(f"Campanha {g.stem}: ligação sem dinheiro do mandato ({x.get('tipo')})")
+            if not (saida / "e" / f"{(x.get('empresa') or {}).get('cnpj')}.json").exists():
+                r.erro(f"Campanha {g.stem}: ligação com empresa sem página ({(x.get('empresa') or {}).get('cnpj')})")
+    if n_perfis != len(geral.get("ligacoes") or []):
+        r.erro(f"Campanha: a lista geral tem {len(geral.get('ligacoes') or [])} ligações e os perfis somam {n_perfis}")
+
+
+LINK_SANCAO = re.compile(r"^https://(portaldatransparencia\.gov\.br|contas\.tcu\.gov\.br|conecta-tcu\.apps\.tcu\.gov\.br|certidoes\.apps\.tcu\.gov\.br)/")
+# 11 dígitos soltos ou no formato do CPF. Não conta número de processo no caminho de um link do TCU
+# (.../acordao-completo/00741520214.PROC), que vem antes de ".PROC".
+CPF_NO_TEXTO = re.compile(r"(?<![\d*])\d{3}\.?\d{3}\.?\d{3}-?\d{2}(?![\d/]|\.PROC)")
+
+
+def _conferir_sancoes(saida: Path, pols: list[dict], r: Resultado) -> None:
+    """Punições oficiais (sancoes.py): só decisão oficial com link para quem puniu; empresa ligada só pelo próprio CNPJ;
+    parlamentar e empresa existem no site; nenhum CPF inteiro em lugar nenhum do arquivo."""
+    f = saida / "sancoes.json"
+    if not f.exists():
+        r.alerta("Sem as punições oficiais (sancoes.json)")
+        return
+    texto = f.read_text(encoding="utf-8")
+    if CPF_NO_TEXTO.search(texto):
+        r.erro("Punições oficiais: há um CPF sem máscara em sancoes.json")
+    d = _ler(f, r) or {}
+    ids = {p["id"] for p in pols}
+    hoje = d.get("atualizado_em") or ""
+
+    def regs(rs: list[dict], onde: str) -> None:
+        for x in rs:
+            if not LINK_SANCAO.match(str(x.get("link") or "")):
+                r.erro(f"Punições oficiais: {onde} sem link oficial ({x.get('cad')} {x.get('id')})")
+            fim = x.get("fim") or ""
+            if bool(x.get("vigente")) != (not fim or fim >= hoje):
+                r.erro(f"Punições oficiais: {onde} com situação (em vigor ou não) diferente da data final ({x.get('id')})")
+
+    for e in d.get("empresas") or []:
+        c = e.get("cnpj") or ""
+        if not (saida / "e" / f"{c}.json").exists():
+            r.erro(f"Punições oficiais: empresa {c} sem página no site")
+        for x in e.get("registros") or []:
+            if x.get("cnpj") != c:
+                r.erro(f"Punições oficiais: punição de outro CNPJ ligada à empresa {c} ({x.get('cnpj')})")
+        regs(e.get("registros") or [], f"empresa {c}")
+        for so in e.get("socios") or []:
+            regs(so.get("registros") or [], f"sócio da empresa {c}")
+    for p in d.get("politicos") or []:
+        if p.get("id") not in ids:
+            r.erro(f"Punições oficiais: parlamentar {p.get('id')} fora de politicos.json")
+        if p.get("casa") != "camara":
+            r.erro(f"Punições oficiais: {p.get('id')} ligado sem CPF da fonte oficial (só deputados federais têm CPF na API)")
+        regs(p.get("registros") or [], f"parlamentar {p.get('id')}")
 
 
 def _conferir_representantes(saida: Path, r: Resultado) -> None:
