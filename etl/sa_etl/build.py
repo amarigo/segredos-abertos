@@ -12,7 +12,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import (agenda, autorias, gabinetes, recursos_recebidos, sancoes, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
+from . import (agenda, autorias, gabinetes, recursos_recebidos, representantes, sancoes, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
                renuncias, senado, temas)
 from .categorias import GRUPOS, tema_de
 from . import medias as medias_casa
@@ -802,6 +802,8 @@ def main() -> None:
                     help="tempo máximo, por execução, para completar os dias antigos dos pagamentos a empresas")
     ap.add_argument("--minutos-transferegov", type=float, default=15,
                     help="tempo máximo, por execução, para ler os planos e pagamentos das emendas Pix no Transferegov")
+    ap.add_argument("--sem-representantes", action="store_true",
+                    help="não monta \"quem me representa\" (os eleitos de cada cidade e estado, pelo TSE)")
     ap.add_argument("--novas-empresas", type=int, default=cnpj.NOVAS_POR_COLETA,
                     help="quantas fornecedoras além das maiores buscar na Receita nesta coleta (o resto vem do cache)")
     ap.add_argument("--anos-notas", type=int, nargs="+", default=[dt.date.today().year - 1, dt.date.today().year],
@@ -815,7 +817,8 @@ def main() -> None:
              com_financas=not a.sem_financas, com_tramitacao=not a.sem_tramitacao, novas_empresas=a.novas_empresas,
              minutos_transferegov=a.minutos_transferegov, com_tribunais=not a.sem_tribunais,
              minutos_tribunais=a.minutos_tribunais, anos_notas=a.anos_notas,
-             com_sancoes=not a.sem_sancoes, minutos_sancoes=a.minutos_sancoes)
+             com_sancoes=not a.sem_sancoes, minutos_sancoes=a.minutos_sancoes,
+             com_representantes=not a.sem_representantes)
 
 
 def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500, com_recursos: bool = True,
@@ -823,7 +826,8 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
              minutos_gerais: float = 40, com_financas: bool = True, com_tramitacao: bool = True,
              novas_empresas: int = cnpj.NOVAS_POR_COLETA, minutos_transferegov: float = 15,
              com_tribunais: bool = True, minutos_tribunais: float = 10, anos_notas: list[int] | None = None,
-             com_sancoes: bool = True, minutos_sancoes: float = sancoes.MINUTOS) -> None:
+             com_sancoes: bool = True, minutos_sancoes: float = sancoes.MINUTOS,
+             com_representantes: bool = True) -> None:
     """A coleta inteira, na ordem certa (usada também pelos testes)."""
     # A renúncia vem antes dos arquivos diários: o Portal passa a recusar downloads (HTTP 405) depois de muitos
     # pedidos seguidos, e os arquivos de renúncia são poucos (e ficam uma semana no cache)
@@ -856,6 +860,8 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
         coletar_gabinetes(saida, cache, anos)
     if com_sancoes:  # depois de montar(): liga as listas de punidos às empresas (e/) e aos deputados já gravados
         coletar_sancoes(saida, cache, minutos_sancoes)
+    if com_representantes:  # depois de montar(): usa os deputados federais e senadores já gravados em politicos.json
+        coletar_representantes(saida, cache)
     if com_financas:  # depois de tudo: usa as emendas e a verba de gabinete já gravadas
         coletar_financas(saida, cache)
     regravar_avisos(saida)
@@ -873,6 +879,15 @@ def regravar_avisos(saida: Path) -> None:
     if meta.get("avisos") != util.AVISOS or meta.get("avisos_tentar") != util.avisos_para_tentar():
         meta["avisos"], meta["avisos_tentar"] = list(util.AVISOS), util.avisos_para_tentar()
         write_json(f, meta)
+
+
+def coletar_representantes(saida: Path, cache: Path) -> None:
+    """Quem me representa: os eleitos de cada cidade e estado (TSE). Se falhar, o resto do site segue."""
+    try:
+        representantes.coletar(saida, cache)
+    except Exception:  # noqa: BLE001
+        log.exception("Quem me representa: erro; a página não foi atualizada")
+        util.avisar("Quem me representa: a coleta dos eleitos no TSE falhou; a página ficou de fora desta atualização")
 
 
 def coletar_gabinetes(saida: Path, cache: Path, anos: list[int]) -> None:

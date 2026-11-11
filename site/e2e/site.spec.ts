@@ -421,6 +421,80 @@ test("barra dos projetos liga o nacional aos outros sites do Segredos Abertos", 
   await expect(nav.locator('a[aria-current="page"]')).toHaveText("Brasil");
 });
 
+test.describe("quem me representa", () => {
+  const rep = (rel: string) => dados(`representantes/${rel}`);
+
+  test("da página inicial à cidade: todos os cargos, com quem saiu para disputar 2026", async ({ page }) => {
+    const erros = vigiar(page);
+    const m = rep("m/62910.json");
+    const uf = rep(`uf/${m.uf}.json`);
+    const idx = rep("indice.json");
+    await page.goto("./");
+    await page.getByLabel("Sua cidade").fill("campinas");
+    await page.locator(".rep-sugestoes a", { hasText: "Campinas" }).click();
+    await expect(page).toHaveURL(/#\/quem\/62910$/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Quem representa Campinas (${m.uf})`);
+    const main = page.locator("main");
+    await expect(main).toContainText(m.prefeito.nome);
+    await expect(main).toContainText(m.vice_prefeito.nome);
+    await expect(main).toContainText("Deixou o cargo para disputar deputado federal");
+    await expect(main).toContainText(`Câmara Municipal: ${m.vereadores.length} vereadores`);
+    for (const v of m.vereadores) await expect(main).toContainText(v.nome);
+    await expect(main).toContainText(uf.governador.nome);
+    await expect(main).toContainText(idx.presidente.nome);
+    // deputados federais e senadores do estado levam ao perfil com gastos e votos
+    const d = uf.deputados_federais[0];
+    await page.locator(".rep-parlamentares a", { hasText: d.nome }).first().click();
+    await expect(page).toHaveURL(new RegExp(`#/p/${d.id}$`));
+    // a última cidade fica guardada para a próxima visita
+    await page.goto("./");
+    await expect(page.getByRole("link", { name: "Ver de novo a última cidade que você procurou" })).toHaveAttribute("href", "#/quem/62910");
+    expect(erros).toEqual([]);
+  });
+
+  test("eleição suplementar, menos eleitos que cadeiras e Brasília", async ({ page }) => {
+    const erros = vigiar(page);
+    await page.goto("./#/quem/40000");
+    await expect(page.locator("main")).toContainText("foi refeita em 05/04/2026");
+    await expect(page.locator("main")).toContainText(rep("m/40000.json").prefeito.nome);
+    await expect(page.getByRole("link", { name: "Resultado da eleição suplementar no TSE" })).toHaveAttribute("href", rep("m/40000.json").suplementar.fonte);
+    await page.goto("./#/quem/41238");
+    await expect(page.locator("main")).toContainText("O TSE lista 4 vereadores eleitos para 5 cadeiras");
+    await expect(page.locator("main")).toContainText("O TSE ainda não terminou a contagem dos votos para vereadores");
+    // eleição anulada: sem prefeito, com o aviso oficial do TSE e a nova eleição marcada; Câmara eleita na suplementar
+    const anulada = rep("m/40001.json");
+    await page.goto("./#/quem/40001");
+    const main = page.locator("main");
+    await expect(main).toContainText("O TSE não tem prefeito eleito");
+    await expect(main).toContainText("marcou nova eleição (suplementar) para prefeito em 06/12/2026");
+    await expect(main).toContainText(anulada.aviso_tse.prefeito.mensagens[0]);
+    await expect(main).toContainText("A eleição de 2024 para vereador foi refeita em 17/05/2026");
+    for (const v of anulada.vereadores) await expect(main).toContainText(v.nome);
+    await expect(main.getByRole("link", { name: "Arquivo oficial no site de resultados do TSE" }).first()).toHaveAttribute("href", anulada.aviso_tse.prefeito.fonte);
+    // suplementar de uma cadeira só: a Câmara de 2024 fica e a página diz quem entrou
+    await page.goto("./#/quem/62910");
+    await expect(main).toContainText("refez a eleição de 1 cadeira");
+    await expect(main).toContainText(`Eleito(s): ${rep("m/62910.json").suplementar_vereadores.eleitos[0].nome}`);
+    await page.goto("./#/quem");
+    await page.getByLabel("Digite a sua cidade").fill("brasilia");
+    await page.locator(".rep-sugestoes a", { hasText: "Brasília" }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Quem representa Brasília");
+    await expect(page.locator("main")).toContainText("não tem prefeito nem vereadores");
+    await expect(page.locator("main")).toContainText("Câmara Legislativa: 2 deputados distritais");
+    expect(erros).toEqual([]);
+  });
+
+  test("cidade que não existe e arquivo que não carrega não deixam a tela em branco", async ({ page }) => {
+    const erros = vigiar(page);
+    await page.goto("./#/quem/abc");
+    await expect(page.locator("main")).toContainText("Cidade não encontrada");
+    await page.route(/representantes\/m\/71072\.json/, (r) => r.fulfill({ status: 500, body: "erro" }));
+    await page.goto("./#/quem/71072");
+    await expect(page.locator("main")).toContainText("Não foi possível carregar");
+    expect(erros).toEqual([]);
+  });
+});
+
 test.describe("idiomas e buscadores", () => {
   test("troca para inglês e espanhol e volta para português", async ({ page }) => {
     const erros = vigiar(page);

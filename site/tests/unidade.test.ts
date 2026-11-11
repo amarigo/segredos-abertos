@@ -80,3 +80,15 @@ test("lado pelos votos usa os mesmos cortes do coletor", () => {
   assert.equal(ladoPelosVotos(0.15), "Centro-direita");
   assert.equal(ladoPelosVotos(0.5), "Direita");
 });
+
+test("busca de cidade: começo do nome primeiro, sem acento, e a sigla do estado no fim filtra", async () => {
+  const { buscarCidades } = await import("../src/busca-cidades.ts");
+  const lista: [string, string, string][] = [["1", "Belém", "PA"], ["2", "Belém", "PB"], ["3", "Santa Maria de Belém", "XX"],
+    ["4", "São Paulo", "SP"], ["5", "Santa Bárbara d'Oeste", "SP"], ["6", "Campinas", "SP"], ["7", "Campina Grande", "PB"]];
+  assert.deepEqual(buscarCidades(lista, "belem").map((c) => c[0]), ["1", "2", "3"]);
+  assert.deepEqual(buscarCidades(lista, "Belém - PB").map((c) => c[0]), ["2"]);
+  assert.deepEqual(buscarCidades(lista, "sao paulo").map((c) => c[0]), ["4"]);
+  assert.deepEqual(buscarCidades(lista, "barbara d oeste").map((c) => c[0]), ["5"]);
+  assert.deepEqual(buscarCidades(lista, "campina").map((c) => c[0]), ["6", "7"]);
+  assert.deepEqual(buscarCidades(lista, "c"), []);
+});
