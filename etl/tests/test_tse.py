@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-import fakegov_tse
+import fakegov_candidatos
 from fakegov import FakeGov, instalar
 from sa_etl import eleitos, patrimonio, tse, util
 from sa_etl.validar import Resultado, _conferir_eleitos, _conferir_patrimonio
@@ -68,7 +68,7 @@ def test_cache_nao_guarda_cpf_email_nem_descricao_do_bem(gov, tmp_path):
     tse.bens(2024, tmp_path)
     for f in (tmp_path / "tse").glob("*.gz"):
         texto = gzip.open(f, "rt", encoding="utf-8").read()
-        for proibido in (fakegov_tse.CPF_FALSO, fakegov_tse.EMAIL_FALSO, "RUA FICTICIA", "012345678901"):
+        for proibido in (fakegov_candidatos.CPF_FALSO, fakegov_candidatos.EMAIL_FALSO, "RUA FICTICIA", "012345678901"):
             assert proibido not in texto, (f.name, proibido)
     assert {c["uf"] for c in cands} == {"SP", "MG"}
     assert not list(tmp_path.rglob("*.zip"))  # o ZIP é apagado depois de lido
@@ -95,7 +95,7 @@ def test_eleitos_de_estados_e_cidades(gov, tmp_path):
     e = json.loads((saida / "eleitos" / "estados.json").read_text())
     mg = e["ufs"]["MG"]
     assert [g["nome"] for g in mg["governador"]] == ["GOV MG"] and mg["governador"][0]["resultado"] == "Eleito"
-    assert len(mg["deputados"]) == mg["vagas"] == fakegov_tse.VAGAS_DEP
+    assert len(mg["deputados"]) == mg["vagas"] == fakegov_candidatos.VAGAS_DEP
     assert mg["governador"][0]["tipos"][0] == {"tipo": "Apartamento", "valor": 500000.0}
     assert mg["vice"][0]["sem_bens"] is True and e["proxima"]  # a eleição de 2026 já aconteceu
     assert e["fonte"] == "https://dadosabertos.tse.jus.br/dataset/candidatos-2022"
@@ -143,7 +143,7 @@ def test_patrimonio_liga_cada_parlamentar_pelo_nome_e_nascimento(gov, tmp_path):
     _conferir_patrimonio(saida, res)
     assert res.erros == [] and res.alertas == []
     texto = "".join(f.read_text() for f in (saida / "pat").glob("*.json"))
-    assert fakegov_tse.CPF_FALSO not in texto and "RUA FICTICIA" not in texto
+    assert fakegov_candidatos.CPF_FALSO not in texto and "RUA FICTICIA" not in texto
 
 
 def test_salto_de_patrimonio_e_marcado():

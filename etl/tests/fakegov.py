@@ -33,7 +33,7 @@ import fakegov_noticias  # noqa: E402
 import fakegov_representantes  # noqa: E402
 import fakegov_tramitacao  # noqa: E402
 import fakegov_transferegov  # noqa: E402
-import fakegov_tse  # noqa: E402
+import fakegov_candidatos  # noqa: E402
 import fakegov_tribunais  # noqa: E402
 
 PARTIDOS_DEP = ["PL", "PL", "NOVO", "PT", "PT", "PSOL", "MDB", "PSD"]
@@ -124,7 +124,7 @@ class FakeGov:
         # mas gastou e votou no ano. Como a deputada Dayany Bittencourt, que a lista atual da Câmara deixou de trazer.
         self.dep_fora = {self.deputados[-1]["id"]} if n_dep >= 3 else set()
         self.sen_fora = {self.senadores[-1]["cod"]} if n_sen >= 3 else set()
-        self.tse = fakegov_tse.TSE(self.deputados, self.senadores)  # patrimônio declarado e eleitos
+        self.tse = fakegov_candidatos.TSE(self.deputados, self.senadores)  # patrimônio declarado e eleitos
         self.lider = "Senador Ficticio 01"  # do PT: faz o papel do líder do governo
 
         # ---------- empresas: fornecedoras, holdings (com cadeia e ciclo) e mesmo endereço
@@ -380,8 +380,8 @@ class FakeGov:
         trib = fakegov_tribunais.rota(u.netloc, path, q)  # votos dos ministros do STF
         if trib is not None:
             return trib
-        # TSE: o patrimônio e os eleitos (fakegov_tse) e Quem me representa (fakegov_representantes) leem os mesmos
-        # arquivos de verdade. Cada simulação tem as linhas dos seus testes; aqui elas viram um arquivo só.
+        # TSE: o patrimônio e os eleitos (fakegov_candidatos) e Quem me representa (fakegov_representantes) leem
+        # os mesmos arquivos de verdade. Cada simulação tem as linhas dos seus testes; aqui elas viram um arquivo só.
         tse = _juntar_tse(self.tse.rota(u.netloc, path, q), fakegov_representantes.rota(u.netloc, path, q))
         if tse is not None:
             return tse
