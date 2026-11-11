@@ -101,6 +101,8 @@ def classificar(checagem: str, item: dict) -> str | None:
             return "senado_sem_tipo"
     if checagem == "placar_senado_ata" and item.get("painel_difere_da_ata"):
         return "senado_painel_ata"
+    if checagem == "campanha_socios" and item.get("minha_receita_tem_socio") is not None:
+        return "receita_meses_diferentes" if item["minha_receita_tem_socio"] else "receita_copia_antiga"
     if checagem == "empresas_receita":
         agora = item.get("minha_receita_agora")
         if agora is not None:

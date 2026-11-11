@@ -75,6 +75,7 @@ CONFIANCA = 0.95
 AMOSTRAS = {  # quantos itens por checagem, por dia
     "cota_camara_mes": 40, "cota_camara_empresa": 40, "cota_senado_ano": 30,
     "votos_camara": 12, "votos_senado": 8, "empresas_receita": 25, "emendas_autor": 15, "presenca_camara": 30,
+    "campanha_socios": 25,
     "prefeito_resultado": 25,
 }
 
@@ -86,6 +87,7 @@ SECOES = {
     "financas": "Arrecadação e gastos do governo",
     "incentivos": "Dinheiro público para empresas",
     "agenda": "Presença dia a dia",
+    "campanha": "Dinheiro da campanha",
     "representantes": "Quem me representa",
 }
 # Seções que ainda não têm uma segunda fonte oficial para conferir, e por quê
@@ -695,6 +697,64 @@ def empresas_receita(saida: Path, rng: random.Random, prazo: Prazo, buscar: Call
     return c
 
 
+# ---------------------------------------------------------------- dinheiro da campanha
+
+def _digitos_socio(doc: str) -> str:
+    """'***.123.456-**' ou '***123456**' -> '123456'"""
+    d = re.sub(r"\D", "", doc or "")
+    return d if len(d) == 6 else ""
+
+
+def campanha_socios(saida: Path, rng: random.Random, prazo: Prazo, buscar: Callable = get_json,
+                    cache_cnpj: Path | None = None) -> Checagem:
+    c = Checagem(
+        "campanha_socios", "campanha", "Doador de campanha que é sócio de empresa paga no mandato",
+        "O site liga o doador (contas de campanha do TSE) ao sócio (base de CNPJ da Receita, pelo Minha Receita) quando o "
+        "nome completo e os 6 dígitos do meio do CPF são iguais. Sorteamos ligações e conferimos, em outra cópia da base "
+        "da Receita (BrasilAPI), se a empresa ainda tem um sócio com o mesmo nome e os mesmos 6 dígitos. Os valores "
+        "doados vêm só do TSE: ainda não há outra fonte oficial com a doação linha a linha.",
+        "https://brasilapi.com.br/docs#tag/CNPJ")
+    geral = _ler(saida / "campanha.json") or {}
+    ligs = [x for x in geral.get("ligacoes") or [] if x.get("tipo") == "doador_socio" and x.get("papel") == "socio"]
+    if not ligs:
+        c.motivo = "Nenhuma ligação entre doador e sócio para sortear"
+        return c
+    for x in rng.sample(ligs, len(ligs)):
+        if c.n >= AMOSTRAS["campanha_socios"]:
+            break
+        if prazo.acabou():
+            c.falhou("tempo da verificação acabou")
+            break
+        cnpj = (x.get("empresa") or {}).get("cnpj", "")
+        url = BRASILAPI.format(cnpj=cnpj)
+        try:
+            r = buscar(url, timeout=40)
+            if not isinstance(r, dict) or not r.get("razao_social"):
+                raise ValueError("resposta sem razão social")
+        except Exception as ex:  # noqa: BLE001
+            c.falhou(f"{cnpj}: BrasilAPI não respondeu ({str(ex)[:100]})")
+            continue
+        quem = _nome(x["doador"]["nome"]), _digitos_socio(x["doador"]["doc"])
+        socios = {(_nome(s.get("nome_socio")), _digitos_socio(s.get("cnpj_cpf_do_socio"))) for s in r.get("qsa") or []}
+        item = {"o_que": f"{x['doador']['nome']} · {x['empresa'].get('nome') or cnpj}", "cnpj": cnpj,
+                "politico": x.get("politico"), "site": f"sócio {x['doador']['nome']} {x['doador']['doc']}",
+                "oficial": "; ".join(sorted(f"{n} ***{d}**" for n, d in socios)) or "nenhum sócio", "fonte": url}
+        if quem not in socios:
+            # Por quê? Consultamos de novo o Minha Receita agora. Se a consulta nova também não tem o sócio, a ligação
+            # veio de uma cópia antiga (a cópia sai do cache e a próxima coleta refaz a ligação); se tem, as duas cópias
+            # da base da Receita estão em meses diferentes.
+            try:
+                agora = buscar(MINHA_RECEITA.format(cnpj=cnpj), timeout=40)
+                item["minha_receita_tem_socio"] = quem in {(_nome(s.get("nome_socio")), _digitos_socio(s.get("cnpj_cpf_do_socio")))
+                                                           for s in agora.get("qsa") or []}
+            except Exception:  # noqa: BLE001 - sem a consulta nova, a diferença fica sem motivo
+                pass
+            if cache_cnpj is not None:
+                (cache_cnpj / f"{cnpj}.json").unlink(missing_ok=True)
+        c.bateu(quem in socios, item)
+    return c
+
+
 # ---------------------------------------------------------------- emendas
 
 def emendas_autor(saida: Path, rng: random.Random, prazo: Prazo, chave: str, buscar: Callable = get_json) -> Checagem:
@@ -851,6 +911,7 @@ def verificar(saida: Path, anterior: dict | None = None, minutos: float = 20, se
                                                  chave_portal() if chave is None else chave, buscar))
     rodar("financas_juros", lambda: financas_juros(saida))
     rodar("presenca_camara", lambda: presenca_camara(saida, random.Random(rng.random()), prazo, buscar))
+    rodar("campanha_socios", lambda: campanha_socios(saida, random.Random(rng.random()), prazo, buscar, cache_cnpj))
     rodar("prefeito_resultado", lambda: prefeito_resultado(saida, random.Random(rng.random()), prazo, buscar))
 
     hist = {sid: (s.get("historico") or []) for sid, s in ((anterior or {}).get("secoes") or {}).items()}
@@ -874,7 +935,8 @@ def verificar(saida: Path, anterior: dict | None = None, minutos: float = 20, se
 
 SECAO_DE = {"cota_camara": "cota", "cota_camara_pagina": "cota", "cota_senado_ano": "cota", "votos_camara": "votacoes", "votos_senado": "votacoes",
             "empresas_receita": "empresas", "emendas_autor": "emendas", "financas_juros": "financas",
-            "presenca_camara": "agenda", "prefeito_resultado": "representantes"}
+            "presenca_camara": "agenda", "campanha_socios": "campanha",
+            "prefeito_resultado": "representantes"}
 
 
 def _baixar_anterior(url: str) -> dict | None:

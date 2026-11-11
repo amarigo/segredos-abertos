@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import json
 
+import fakegov_tse  # noqa: E402  (mesma pasta dos testes)
+
 PORTAL = "api.portaldatransparencia.gov.br"
 TCU = "certidoes.apps.tcu.gov.br"
 SERVICOS = {"responsaveis-contas-irregulares-com-paginacao": "irregulares", "responsaveis-fins-eleitorais-com-paginacao": "eleitoral",
@@ -26,13 +28,14 @@ SERVICOS = {"responsaveis-contas-irregulares-com-paginacao": "irregulares", "res
 POR_PAGINA = 15
 
 
-def cpf_deputado(i: int) -> str:
-    """CPF fictício (11 dígitos) do deputado de id i, o mesmo que o FakeGov devolve em /deputados/{id}."""
-    return f"9{i:06d}{i % 97:04d}"
+def cpf_deputado(id_: int) -> str:
+    """CPF fictício (11 dígitos) do deputado, o mesmo que o FakeGov devolve em /deputados/{id} e o mesmo das contas
+    de campanha (fakegov_tse): os ids dos deputados fictícios começam em 1000."""
+    return fakegov_tse.cpf_deputado(id_ - 1000)
 
 
-def nome_civil(nome: str) -> str:
-    return nome.upper().replace("DEPUTADO", "JOSE DEPUTADO")
+def nome_civil(id_: int) -> str:
+    return fakegov_tse.nome_civil_deputado(id_ - 1000).upper()
 
 
 def _fmt_cpf(d: str) -> str:
@@ -100,18 +103,18 @@ class Sancoes:
         ceis.append(_ceis(101, "FORNECEDORA FICTICIA 04 LTDA", f[4], True, "2019-01-01", "2021-01-01"))
         ceis.append(_ceis(102, "DONO FICTICIO 1", "55510000112", False, "2024-05-01", "2032-05-01"))
         if 1002 in dep:
-            ceis.append(_ceis(103, nome_civil(dep[1002]["nome"]), cpf_deputado(1002), False, "2023-02-01", "2031-02-01"))
+            ceis.append(_ceis(103, nome_civil(1002), cpf_deputado(1002), False, "2023-02-01", "2031-02-01"))
         self.listas = {
             "ceis": ceis,
             "cnep": [_ceis(200 + i, f"OUTRA EMPRESA {i:02d} SA", f"{22000000 + i:08d}000188", True, "2024-01-01", "2027-01-01", "cnep")
                      for i in range(5)] + [_ceis(210, "FORNECEDORA FICTICIA 05 LTDA", f[5], True, "2025-06-01", "", "cnep")],
             "ceaf": [_ceaf(1, "DONO FICTICIO 2", "44499999901")]  # homônimo do sócio, com outro CPF
-            + ([_ceaf(2, nome_civil(dep[1003]["nome"]), cpf_deputado(1003))] if 1003 in dep else []),
+            + ([_ceaf(2, nome_civil(1003), cpf_deputado(1003))] if 1003 in dep else []),
         }
         self.tcu = {
-            "inabilitados": ([_tcu(nome_civil(dep[1004]["nome"]), cpf_deputado(1004), 1)] if 1004 in dep else [])
-            + ([_tcu(nome_civil(dep[1005]["nome"]), "12345678900", 2)] if 1005 in dep else []),
-            "eleitoral": ([_tcu(nome_civil(dep[1004]["nome"]), cpf_deputado(1004), 1, "2030-07-16", True)] if 1004 in dep else [])
+            "inabilitados": ([_tcu(nome_civil(1004), cpf_deputado(1004), 1)] if 1004 in dep else [])
+            + ([_tcu(nome_civil(1005), "12345678900", 2)] if 1005 in dep else []),
+            "eleitoral": ([_tcu(nome_civil(1004), cpf_deputado(1004), 1, "2030-07-16", True)] if 1004 in dep else [])
             + [_tcu(f"PESSOA SEM LIGACAO {i}", f"{30000000000 + i}", 10 + i, "2031-01-01", True) for i in range(5)],
             "irregulares": [_tcu("FORNECEDORA FICTICIA 07 LTDA", f[7], 3, None)]
             + [_tcu(f"PESSOA SEM LIGACAO {i}", f"{30000000000 + i}", 10 + i, None) for i in range(5)],

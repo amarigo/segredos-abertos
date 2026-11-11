@@ -91,6 +91,8 @@ function EmpresaAno({ e }: { e: Empresa }) {
         {!MG && <PunicoesEmpresa cnpj={e.cnpj} />}
       </section>
 
+      {e.campanha && e.campanha.length > 0 && <CampanhaEmpresa itens={e.campanha} />}
+
       {e.mesmo_endereco && e.mesmo_endereco.length > 0 && (
         <section>
           <h2>Outras fornecedoras no mesmo endereço</h2>
@@ -532,5 +534,28 @@ function Donos({ e }: { e: Empresa }) {
       </details>
       <p className="muted small">A Receita esconde parte do CPF dos sócios. Por isso ligamos empresas pelo nome do sócio mais os dígitos visíveis do CPF. Homônimos raros podem aparecer.</p>
     </>
+  );
+}
+
+/** Campanhas eleitorais ligadas a esta empresa (TSE): fornecedora de campanha, sócio que doou, parlamentar sócio. */
+function CampanhaEmpresa({ itens }: { itens: NonNullable<Empresa["campanha"]> }) {
+  const como = (x: NonNullable<Empresa["campanha"]>[number]) =>
+    x.tipo === "fornecedor" || x.tipo === "fornecedor_campanha" ? <>A campanha de {x.ano} contratou esta empresa por <strong>{reais(x.campanha || 0)}</strong></>
+      : x.tipo === "doador_socio" ? <><strong>{x.doador?.nome}</strong> <span className="mono small">{x.doador?.doc}</span>, {x.papel === "dono_final" ? "dono por meio de outra empresa" : (x.qualificacao || "sócio").toLowerCase()}, doou <strong>{reais(x.doacao || 0)}</strong> à campanha de {x.ano}</>
+      : <>O parlamentar aparece na Receita como {x.papel === "dono_final" ? "dono, por meio de outra empresa" : (x.qualificacao || "sócio").toLowerCase()}</>;
+  return (
+    <section>
+      <h2>Ligações com campanhas eleitorais</h2>
+      <Explain>Cruzamento das contas de campanha entregues ao TSE com esta empresa e os sócios dela. Doador e sócio são ligados só quando o nome completo e os 6 dígitos do meio do CPF são iguais. São fatos lado a lado: não indicam irregularidade.</Explain>
+      <div className="table-wrap"><table>
+        <thead><tr><th>Parlamentar</th><th>O que aconteceu</th><th className="r">No mandato</th></tr></thead>
+        <tbody>{itens.map((x, i) => (
+          <tr key={i}>
+            <td><Link to={`/p/${x.politico}?aba=campanha`}>{x.nome}</Link><div className="muted small">{x.partido}-{x.uf}</div></td>
+            <td className="small">{como(x)}</td>
+            <td className="r num">{x.cota || x.emendas ? reais((x.cota || 0) + (x.emendas || 0)) : "—"}</td>
+          </tr>))}</tbody>
+      </table></div>
+    </section>
   );
 }
