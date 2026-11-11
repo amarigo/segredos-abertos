@@ -29,7 +29,7 @@ SENADO_AUTORIA = SENADO_LEGIS + "/processo?codigoParlamentarAutor={cod}&ano={ano
 SENADO_RELATORIA = SENADO_LEGIS + "/processo/relatoria?codigoParlamentar={cod}&dataInicio={ano}-01-01&dataFim={ano}-12-31"
 SENADO_DISCURSOS = SENADO_LEGIS + "/senador/{cod}/discursos.json?dataInicio={ano}0101&dataFim={ano}1231"
 SENADO_PESSOAL = "https://www6g.senado.leg.br/transparencia/sen/{cod}/pessoal/?local=gabinete&ano={ano}&vinculo=TODOS"
-VERSAO = 3  # aumente quando mudar o que é lido das páginas, para não reaproveitar cache antigo
+VERSAO = 4  # aumente quando mudar o que é lido das páginas, para não reaproveitar cache antigo
 MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"]
 NUM = r"(-?[\d.]+,\d+)"
 
@@ -148,10 +148,24 @@ def parse_camara_remuneracao(h: str) -> list[dict]:
     return out
 
 
+def ano_da_pagina(h: str) -> int | None:
+    """O ano que a página do deputado mostra de fato, pelos links "Veja mais" dela (verba-gabinete?ano=AAAA)."""
+    m = re.search(r"/(?:verba-gabinete|remuneracao|pessoal-gabinete)\?ano=(\d{4})", h or "")
+    return int(m.group(1)) if m else None
+
+
 def camara_ano(dep_id: str, ano: int) -> dict | None:
     h = _get_text(CAMARA.format(id=dep_id, sub="", ano=ano))
     if not h:
         return None
+    mostrado = ano_da_pagina(h)
+    if mostrado is not None and mostrado != ano:
+        # Pedido um ano em que o deputado não teve mandato, a Câmara mostra o último ano dele (conferido em 10/11/2026:
+        # Pedro Augusto Palareti, suplente que saiu em janeiro de 2023, com ?ano=2024 mostra a cota de janeiro de 2023).
+        # Sem esta conferência, o site repetia o gasto desse ano como "sem nota" em 2024, 2025 e 2026 (209 deputados,
+        # cerca de R$ 6 milhões por ano). Sem página para o ano, não há nada a completar.
+        log.info("Câmara: página do deputado %s para %s mostra %s; ignorada", dep_id, ano, mostrado)
+        return {}
     out = parse_camara_resumo(h)
     at = parse_camara_atuacao(_texto(h), ano)
     if at:

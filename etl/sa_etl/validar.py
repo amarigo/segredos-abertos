@@ -268,6 +268,9 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
     _conferir_tribunais(saida, r)
     _conferir_campanha(saida, r)
     _conferir_gabinetes(saida, pols, r)
+    _conferir_historico(saida, r)
+    _conferir_patrimonio(saida, r)
+    _conferir_eleitos(saida, r)
     _conferir_representantes(saida, r)
 
     # ---------------- punições oficiais (CEIS, CNEP, CEAF, TCU)
@@ -751,6 +754,146 @@ def _conferir_gabinetes(saida: Path, pols: list[dict], r: Resultado) -> None:
         for uf, v in soma.items():
             if v and uf not in vistos:
                 r.erro(f"Gabinetes {ano}: estado {uf} com verba e fora da comparação")
+
+
+def _conferir_historico(saida: Path, r: Resultado) -> None:
+    """Histórico da cota: o total de cada Casa em cada ano é a soma dos parlamentares (h/{id}.json) mais as notas sem
+    parlamentar (lideranças), e também a soma dos tipos de despesa; cada ano tem as duas Casas; fontes com link https."""
+    f = saida / "historico.json"
+    if not f.exists():
+        r.alerta("Sem o histórico da cota desde 2008 (historico.json)")
+        return
+    d = _ler(f, r) or {}
+    for k, u in (d.get("fontes") or {}).items():
+        if not str(u).startswith("https://"):
+            r.erro(f"Histórico da cota: fonte sem link https ({k})")
+    soma: dict[tuple[str, str], float] = Counter()
+    for fp in sorted((saida / "h").glob("*.json")) if (saida / "h").exists() else []:
+        p = _ler(fp, r) or {}
+        for ano, a in (p.get("anos") or {}).items():
+            soma[(p.get("casa", ""), ano)] += a.get("total") or 0
+            meses = sum((a.get("por_mes") or {}).values())
+            if abs(meses - (a.get("total") or 0)) > 1:
+                r.erro(f"Histórico {fp.stem} {ano}: soma dos meses ({meses:.2f}) diferente do total ({a.get('total')})")
+    casas: dict[int, set] = {}
+    for x in d.get("anos") or []:
+        casas.setdefault(x["ano"], set()).add(x["casa"])
+        esperado = soma[(x["casa"], str(x["ano"]))] + (x.get("fora_parlamentares") or 0)
+        if abs(esperado - x["total"]) > 1:
+            r.erro(f"Histórico {x['casa']} {x['ano']}: total ({x['total']}) diferente da soma dos parlamentares "
+                   f"mais lideranças ({esperado:.2f})")
+        cats = sum((x.get("categorias") or {}).values())
+        if abs(cats - x["total"]) > 1:
+            r.erro(f"Histórico {x['casa']} {x['ano']}: soma dos tipos de despesa ({cats:.2f}) diferente do total")
+        if x.get("total_hoje") is not None and x["total"] > 0 and not (0.5 < x["total_hoje"] / x["total"] < 5):
+            r.erro(f"Histórico {x['casa']} {x['ano']}: valor corrigido pela inflação fora do razoável")
+    for ano, cs in sorted(casas.items()):
+        if len(cs) < 2:
+            r.alerta(f"Histórico da cota: {ano} só tem {', '.join(sorted(cs))}")
+
+
+CHAVES_PROIBIDAS_TSE = {"cpf", "email", "titulo", "titulo_eleitor", "descricao", "ds_bem"}
+
+
+def _dados_pessoais_tse(x: Any, caminho: str, r: Resultado) -> None:
+    """Os arquivos do TSE trazem CPF, e-mail, título de eleitor e a descrição de cada bem (com endereço e placa).
+    Nada disso pode chegar ao site: nem a chave, nem um número de 11 dígitos (fora o "sq"), nem um e-mail."""
+    if isinstance(x, dict):
+        for k, v in x.items():
+            if k.lower() in CHAVES_PROIBIDAS_TSE:
+                r.erro(f"Dado pessoal do TSE no site: {caminho}.{k}")
+            elif k != "sq":  # número sequencial do candidato no TSE (público, tem 11 ou 12 dígitos)
+                _dados_pessoais_tse(v, f"{caminho}.{k}", r)
+    elif isinstance(x, list):
+        for i, v in enumerate(x):
+            _dados_pessoais_tse(v, f"{caminho}[{i}]", r)
+    elif isinstance(x, str) and (re.fullmatch(r"\d{11}", x.strip()) or re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", x)):
+        r.erro(f"Parece CPF ou e-mail no site: {caminho}")
+
+
+def _conferir_patrimonio(saida: Path, r: Resultado) -> None:
+    """Patrimônio declarado (patrimonio.py): total de cada declaração = soma dos tipos; uma declaração principal por
+    eleição; o resumo bate com o arquivo de cada parlamentar; nenhum dado pessoal do TSE."""
+    f = saida / "patrimonio.json"
+    if not f.exists():
+        r.alerta("Sem o patrimônio declarado ao TSE (patrimonio.json)")
+        return
+    d = _ler(f, r) or {}
+    for k, u in (d.get("fontes") or {}).items():
+        if not str(u).startswith("https://"):
+            r.erro(f"Patrimônio: fonte sem link https ({k})")
+    for p in d.get("politicos") or []:
+        fp = saida / "pat" / f"{p['id']}.json"
+        x = _ler(fp, r) if fp.exists() else None
+        if not x:
+            r.erro(f"Patrimônio {p['id']}: está no resumo, mas falta pat/{p['id']}.json")
+            continue
+        _dados_pessoais_tse(x, f"pat/{p['id']}", r)
+        anos: Counter = Counter()
+        for dcl in x.get("declaracoes") or []:
+            soma = sum(t["valor"] for t in dcl.get("tipos") or [])
+            if abs(soma - dcl["total"]) > 1 or dcl["total"] < 0:
+                r.erro(f"Patrimônio {p['id']} {dcl['ano']}: total ({dcl['total']}) diferente da soma dos tipos ({soma:.2f})")
+            if not str(dcl.get("fonte", "")).startswith("https://"):
+                r.erro(f"Patrimônio {p['id']} {dcl['ano']}: sem link da fonte")
+            anos[dcl["ano"]] += bool(dcl.get("principal"))
+        if any(n != 1 for n in anos.values()):
+            r.erro(f"Patrimônio {p['id']}: eleição sem exatamente uma declaração principal ({dict(anos)})")
+        prin = [dcl for dcl in x.get("declaracoes") or [] if dcl.get("principal")]
+        if prin and (prin[-1]["ano"], prin[-1]["total"]) != (p["ultimo"]["ano"], p["ultimo"]["total"]):
+            r.erro(f"Patrimônio {p['id']}: resumo diferente da última declaração")
+    n, sem = d.get("total_politicos") or 0, d.get("sem_registro") or 0
+    if n and sem > n * 0.1:
+        r.alerta(f"Patrimônio: {sem} de {n} parlamentares sem registro achado no TSE")
+
+
+def _conferir_eleitos(saida: Path, r: Resultado) -> None:
+    """Eleitos (eleitos.py): cada estado tem um governador e tantos deputados quanto as vagas; cada cidade, um
+    prefeito e tantos vereadores quanto as vagas (o arquivo de vagas do TSE é outra publicação); o índice soma as
+    cidades; nenhum dado pessoal do TSE. Diferença com as vagas é alerta: há eleição anulada e em julgamento, que o
+    site mostra como "sem eleito"."""
+    pasta = saida / "eleitos"
+    if not pasta.exists():
+        r.alerta("Sem os eleitos de estados e cidades (eleitos/)")
+        return
+    e = _ler(pasta / "estados.json", r) if (pasta / "estados.json").exists() else None
+    if e:
+        _dados_pessoais_tse(e, "eleitos/estados", r)
+        if not str(e.get("fonte", "")).startswith("https://"):
+            r.erro("Eleitos dos estados: sem link da fonte")
+        for uf, x in (e.get("ufs") or {}).items():
+            sem = x.get("sem_eleito") or []
+            if "governador" not in sem and len(x.get("governador") or []) != 1:
+                r.alerta(f"Eleitos {uf}: {len(x.get('governador') or [])} governadores")
+            if "deputados" not in sem and x.get("vagas") and len(x.get("deputados") or []) != x["vagas"]:
+                r.alerta(f"Eleitos {uf}: {len(x.get('deputados') or [])} deputados estaduais para {x['vagas']} vagas")
+            for dep in (x.get("governador") or []) + (x.get("deputados") or []):
+                if dep.get("tipos") and sum(t["valor"] for t in dep["tipos"]) > dep["patrimonio"] + 1:
+                    r.erro(f"Eleitos {uf}: tipos de bens de {dep['nome']} somam mais que o patrimônio")
+    i = _ler(pasta / "indice.json", r) if (pasta / "indice.json").exists() else None
+    if not i:
+        r.alerta("Sem o índice das cidades (eleitos/indice.json)")
+        return
+    n: Counter = Counter()
+    difs = []
+    for fp in sorted((pasta / "cidades").glob("*.json")):
+        x = _ler(fp, r) or {}
+        _dados_pessoais_tse(x, f"eleitos/cidades/{fp.stem}", r)
+        for c in x.get("cidades") or []:
+            n["cidades"] += 1
+            n["prefeitos"] += len(c.get("prefeito") or [])
+            n["vereadores"] += len(c.get("vereadores") or [])
+            sem = c.get("sem_eleito") or []
+            if "prefeito" not in sem and len(c.get("prefeito") or []) != 1:
+                difs.append(f"{c['nome']}-{c['uf']} (prefeitos: {len(c.get('prefeito') or [])})")
+            if ("vereadores" not in sem and "vereadores" not in (c.get("suplementar_parcial") or {}) and c.get("vagas")
+                    and len(c.get("vereadores") or []) != c["vagas"]):
+                difs.append(f"{c['nome']}-{c['uf']} (vereadores: {len(c.get('vereadores') or [])} de {c['vagas']})")
+    if n["cidades"] != len(i.get("cidades") or []) or any(n[k] != i.get(k) for k in ("prefeitos", "vereadores")):
+        r.erro(f"Eleitos: índice ({len(i.get('cidades') or [])} cidades, {i.get('prefeitos')} prefeitos, "
+               f"{i.get('vereadores')} vereadores) diferente da soma dos estados ({dict(n)})")
+    if difs:
+        r.alerta(f"Eleitos: {len(difs)} cidades com número de eleitos diferente das vagas: {', '.join(difs[:5])}")
 
 
 def _conferir_financas(saida: Path, r: Resultado) -> None:

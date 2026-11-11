@@ -26,7 +26,8 @@ def main(saida: Path) -> None:
     import time
     time.sleep = lambda s: None
     with tempfile.TemporaryDirectory() as cache:
-        build.executar([2025], Path(cache), saida, max_empresas=200, minutos_pagamentos=5, minutos_gerais=5)
+        build.executar([2025], Path(cache), saida, max_empresas=200, minutos_pagamentos=5, minutos_gerais=5,
+                       anos_historico=[2025])
         # Punições oficiais de novo, agora com a chave da API do Portal (CEIS, CNEP e CEAF simulados); sem ela, só o TCU.
         # A chave entra só aqui para não mudar o caminho da renúncia fiscal (que também usa a API) nos dados de teste.
         import os

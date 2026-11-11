@@ -148,6 +148,18 @@ def link_detalhe(nu, ano, mes, sub, cnpj, num, ide) -> str:
                           num=quote((num or "").strip()), ide=(ide or "").strip() or "0")
 
 
+def valor_da_nota(r: dict) -> float:
+    """Valor de uma linha do arquivo da cota, como a página oficial do deputado soma."""
+    valor = to_float(r.get("vlrLiquido"))
+    if valor < 0 < to_float(r.get("vlrDocumento")) and "MORADIA" in (r.get("txtDescricao") or "").upper():
+        # Complementação do auxílio-moradia: o arquivo anual traz o valor líquido negativo (em 2025, todas as 834
+        # linhas), mas é um gasto da cota. A página oficial de cada deputado soma o valor positivo (vlrDocumento):
+        # conferido em novembro de 2026 mês a mês (dep. 204422, jan/2025: 41.135,65 + 2 x 2.841,54 = 46.818,73,
+        # igual à página). Com o sinal trocado, o total ficava menor e a diferença virava "sem nota".
+        valor = -valor
+    return valor
+
+
 def parse_cota(rows, ids: set[str]) -> list[dict]:
     """Converte linhas do arquivo da cota em despesas no formato comum."""
     out = []
@@ -162,16 +174,10 @@ def parse_cota(rows, ids: set[str]) -> list[dict]:
             if ide.isdigit() and to_float(r.get("vlrLiquido")):
                 fora_da_lista("cota da Câmara", pid(ide), to_float(r.get("vlrLiquido")))
             continue
-        valor = to_float(r.get("vlrLiquido"))
+        valor = valor_da_nota(r)
         if valor == 0:
             continue
         cat = r.get("txtDescricao") or ""
-        if valor < 0 < to_float(r.get("vlrDocumento")) and "MORADIA" in cat.upper():
-            # Complementação do auxílio-moradia: o arquivo anual traz o valor líquido negativo (em 2025, todas as 834
-            # linhas), mas é um gasto da cota. A página oficial de cada deputado soma o valor positivo (vlrDocumento):
-            # conferido em novembro de 2026 mês a mês (dep. 204422, jan/2025: 41.135,65 + 2 x 2.841,54 = 46.818,73,
-            # igual à página). Com o sinal trocado, o total ficava menor e a diferença virava "sem nota".
-            valor = -valor
         url = url_segura(r.get("urlDocumento"))
         nu = (r.get("nuDeputadoId") or "").strip()
         ano, mes = int(to_float(r.get("numAno"))), int(to_float(r.get("numMes")))

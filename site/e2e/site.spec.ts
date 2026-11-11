@@ -76,6 +76,56 @@ test.describe("jornada", () => {
     expect(erros).toEqual([]);
   });
 
+  test("histórico da cota: soma dos anos e o maior gastador batem com o arquivo", async ({ page }) => {
+    const erros = vigiar(page);
+    const h = dados("historico.json");
+    const linhas: { total: number; total_hoje: number | null }[] = h.anos;
+    await page.goto("./#/politicos");
+    await page.getByRole("link", { name: /cota parlamentar desde 2008/ }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(`desde ${h.inicio}`);
+    const soma = linhas.reduce((s, x) => s + (x.total_hoje ?? x.total), 0);
+    await expect(page.locator(".historico")).toContainText(sp(brl(soma)));
+    await page.getByRole("button", { name: "Valores da época" }).click();
+    await expect(page.locator(".historico")).toContainText(sp(brl(linhas.reduce((s, x) => s + x.total, 0))));
+    await page.getByRole("button", { name: "Câmara", exact: true }).click();
+    const maior = h.maiores.camara[0];
+    await expect(page.locator(".historico table").first()).toContainText(maior.nome);
+    expect(erros).toEqual([]);
+  });
+
+  test("patrimônio declarado: o maior da lista e o perfil batem com o arquivo do TSE", async ({ page }) => {
+    const erros = vigiar(page);
+    const d = dados("patrimonio.json");
+    const maior = d.politicos[0];
+    await page.goto("./#/politicos");
+    await page.getByRole("link", { name: /Patrimônio declarado ao TSE/ }).click();
+    const primeira = page.locator(".patrimonio table").first().locator("tbody tr").first();
+    await expect(primeira).toContainText(maior.nome);
+    await expect(primeira).toContainText(sp(brl(maior.ultimo.total)));
+    await primeira.getByRole("link", { name: maior.nome }).click();
+    const bloco = page.locator(".patrimonio-politico");
+    await expect(bloco).toContainText(sp(brl(maior.ultimo.total)));
+    await expect(bloco.getByRole("link", { name: String(maior.ultimo.ano) }).first()).toHaveAttribute("href", /dadosabertos\.tse\.jus\.br/);
+    expect(erros).toEqual([]);
+  });
+
+  test("eleitos: governador, assembleia e uma cidade sem eleito no TSE", async ({ page }) => {
+    const erros = vigiar(page);
+    const e = dados("eleitos/estados.json");
+    const mg = e.ufs.MG;
+    await page.goto("./#/politicos");
+    await page.getByRole("link", { name: /Governadores, assembleias/ }).click();
+    await page.locator("#eleitos-uf").selectOption("MG");
+    await expect(page.locator(".eleito-card").first()).toContainText(mg.governador[0].nome);
+    await expect(page.locator(".eleitos")).toContainText(`${mg.deputados.length} deputados (${mg.vagas} vagas)`);
+    await page.locator("#busca-cidade").fill("merces");
+    await page.locator(".lista-cidades button").first().click();
+    const cid = page.getByTestId("eleitos-cidade");
+    await expect(cid).toContainText("Mercês");
+    await expect(cid).toContainText("não traz ninguém eleito para prefeito");
+    expect(erros).toEqual([]);
+  });
+
   test("gasto com assessores: a tabela soma a bancada inteira e as medidas batem com o arquivo", async ({ page }) => {
     const erros = vigiar(page);
     const g = dados("gabinetes.json");
