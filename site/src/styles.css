@@ -1230,7 +1230,7 @@ tr.nota-aberta > td { background: var(--tint); }
 .rep-bancada { font-size: .92rem; }
 .rep-nomes { list-style: none; margin: 0; padding: 0; display: grid; gap: 0 24px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); }
 .rep-nomes li { padding: 8px 2px; border-bottom: 1px solid var(--line); min-width: 0; overflow-wrap: anywhere; }
-.rep-civil { display: block; }
+.rep-civil, .rep-nomes .rep-bens { display: block; }
 .rep-parlamentares .rep-ver { color: var(--accent); white-space: nowrap; }
 .rep-diferenca { color: var(--muted); max-width: 780px; }
 .rep-fontes { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--line); }

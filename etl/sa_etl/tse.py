@@ -17,6 +17,7 @@ registro ou outro): lemos de novo a cada 30 dias.
 from __future__ import annotations
 
 import csv
+import datetime as dt
 import gzip
 import io
 import json
@@ -28,7 +29,15 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Iterator
 
-from .util import avisar, data_do_arquivo, download, eh_zip, get_json, to_float
+from .util import (
+    _BRASILIA,
+    avisar,
+    data_do_arquivo,
+    download,
+    eh_zip,
+    get_json,
+    to_float,
+)
 
 log = logging.getLogger("sa_etl.tse")
 
@@ -36,9 +45,8 @@ CKAN = "https://dadosabertos.tse.jus.br/api/3/action/package_show?id={pacote}"
 PAGINA = "https://dadosabertos.tse.jus.br/dataset/{pacote}"
 CDN = "https://cdn.tse.jus.br/estatistica/sead/odsele"
 ARQUIVO = {"cand": CDN + "/consulta_cand/consulta_cand_{ano}.zip",
-           "bens": CDN + "/bem_candidato/bem_candidato_{ano}.zip",
-           "vagas": CDN + "/consulta_vagas/consulta_vagas_{ano}.zip"}
-PREFIXO = {"cand": "consulta_cand_", "bens": "bem_candidato_", "vagas": "consulta_vagas_"}
+           "bens": CDN + "/bem_candidato/bem_candidato_{ano}.zip"}
+PREFIXO = {"cand": "consulta_cand_", "bens": "bem_candidato_"}
 DIAS = 30
 
 # Colunas lidas (e só elas). Nada de CPF, e-mail, título de eleitor.
@@ -48,8 +56,6 @@ COLUNAS_CAND = ["ANO_ELEICAO", "NM_TIPO_ELEICAO", "NR_TURNO", "DT_ELEICAO", "DS_
 CAMPOS = ["ano", "tipo", "turno", "data", "eleicao", "uf", "ue", "nm_ue", "cargo", "sq", "nr", "nome", "urna",
           "partido", "nasc", "situacao", "resultado"]
 COLUNAS_BEM = ["SQ_CANDIDATO", "DS_TIPO_BEM_CANDIDATO", "VR_BEM_CANDIDATO"]
-COLUNAS_VAGAS = ["ANO_ELEICAO", "NM_TIPO_ELEICAO", "SG_UF", "SG_UE", "DS_CARGO", "QT_VAGA"]
-ELEITO = ("ELEITO", "ELEITO POR QP", "ELEITO POR MÉDIA")
 
 
 BUSCA = "https://dadosabertos.tse.jus.br/api/3/action/package_search?q=name:candidatos-{ano}*&rows=5"
@@ -197,21 +203,8 @@ def bens(ano: int, cache: Path) -> dict[str, list]:
     return _com_cache(pasta / f"bens-{ano}.json.gz", montar, f"Bens de candidatos de {ano} (TSE)")
 
 
-def vagas(ano: int, cache: Path) -> dict[str, int]:
-    """Cadeiras de cada cargo em cada lugar (só eleição ordinária): {"UF|UE|CARGO": n}."""
-    pasta = cache / "tse"
-
-    def montar():
-        with tempfile.TemporaryDirectory() as tmp:
-            z = _baixar("vagas", ano, Path(tmp))
-            out: dict[str, int] = defaultdict(int)
-            for r in ler(z, "vagas", COLUNAS_VAGAS):
-                if "SUPLEMENTAR" in r["NM_TIPO_ELEICAO"].upper():
-                    continue
-                out[f"{r['SG_UF']}|{r['SG_UE']}|{r['DS_CARGO'].upper()}"] += int(to_float(r["QT_VAGA"]))
-            return dict(out)
-    return _com_cache(pasta / f"vagas-{ano}.json.gz", montar, f"Vagas de {ano} (TSE)")
-
-
-def eleito(c: dict) -> bool:
-    return c["resultado"].upper() in ELEITO
+def lido_em(tipo: str, ano: int, cache: Path) -> str:
+    """Dia (AAAA-MM-DD, horário de Brasília) em que a cópia guardada do arquivo foi lida do TSE."""
+    f = cache / "tse" / f"{tipo}-{ano}.json.gz"
+    quando = f.stat().st_mtime if f.exists() else time.time()
+    return dt.datetime.fromtimestamp(quando, _BRASILIA).date().isoformat()

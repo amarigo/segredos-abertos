@@ -10,7 +10,9 @@ export { normal };
    O Minas Nossa (/mg/) lê os mesmos arquivos do site nacional (../data/), só com as cidades de Minas. */
 
 export interface Em2026 { cargo: string; uf: string; partido: string; resultado: string; reeleicao?: boolean; renunciou?: boolean }
-export interface Eleito { nome: string; partido: string; numero?: string; nome_completo?: string; situacao?: string; turnos?: number; em_2026?: Em2026 }
+export interface Eleito { nome: string; partido: string; numero?: string; nome_completo?: string; situacao?: string; turnos?: number; em_2026?: Em2026;
+  /** soma dos bens declarados ao TSE na candidatura (só quem está no arquivo de candidatos) */
+  patrimonio?: number; sem_bens?: boolean }
 export interface Parlamentar { id: string; nome: string; partido: string; foto?: string; cargo?: string }
 type Fonte = { url: string; pagina: string; lido_em: string };
 export interface RepIndice {

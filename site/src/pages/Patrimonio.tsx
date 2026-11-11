@@ -78,7 +78,7 @@ export default function PatrimonioPage() {
         { nome: "TSE: DivulgaCandContas", url: "https://divulgacandcontas.tse.jus.br/", explica: "cada candidato, com a lista de bens e a descrição de cada um" },
         { nome: "TSE: dados abertos", url: data.fontes.tse, explica: "arquivos de candidatos e bens de cada eleição" },
       ]} />
-      <p className="small"><Link to="/eleitos">Governadores, assembleias, prefeitos e vereadores eleitos, com o patrimônio declarado ›</Link></p>
+      <p className="small"><Link to="/quem">Governadores, assembleias, prefeitos e vereadores eleitos, com o patrimônio declarado ›</Link></p>
     </section>
   );
 }

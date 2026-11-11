@@ -2,7 +2,7 @@ import { useEffect, useMemo, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Explain, Loading, OndeVer, useData } from "../components/ui";
 import { FotoPolitico } from "../components/Foto";
-import { corPartido, dataBR, linkSeguro, numero, type CidadeResumo } from "../data";
+import { corPartido, dataBR, linkSeguro, numero, reais, reaisCurto, type CidadeResumo } from "../data";
 import { MG } from "../recorte";
 import { BuscaCidade, cidadeGuardada, guardar, normal, useRep, type AvisoTSE, type Eleito, type Parlamentar, type RepCidade, type RepEstado, type RepIndice } from "../components/BuscaCidade";
 
@@ -201,6 +201,7 @@ function ListaEleitos({ pessoas, ano, seguinte = 2026 }: { pessoas: Eleito[]; an
           <li key={`${p.nome}-${p.numero}`}>
             <span className="pname">{p.nome}</span> <span className="muted small">{p.partido}{p.numero ? ` · nº ${p.numero}` : ""}</span>
             {p.nome_completo && <span className="muted small rep-civil">{p.nome_completo}</span>}
+            {p.patrimonio != null && <span className="muted small rep-bens">{p.sem_bens ? "Não declarou bens ao TSE" : `Bens declarados ao TSE: ${reaisCurto(p.patrimonio)}`}</span>}
             <Notas p={p} titular={false} seguinte={seguinte} />
           </li>
         ))}
@@ -262,6 +263,8 @@ function CartaoEleito({ cargo, p, ano, titular = false, doTitular }: { cargo: st
       <span className="small"><i className="partido-cor" style={{ background: corPartido(p.partido) }} />{p.partido}{p.numero ? ` · nº ${p.numero}` : ""}</span>
       {p.nome_completo && <span className="small muted">{p.nome_completo}</span>}
       <span className="small muted">Eleito(a) em {ano}{p.turnos === 2 ? ", no 2º turno" : ""}.</span>
+      {p.patrimonio != null && <span className="small rep-bens">{p.sem_bens ? `Não declarou bens ao TSE na candidatura de ${ano}.`
+        : `Patrimônio declarado ao TSE na candidatura de ${ano}: ${reais(p.patrimonio)}`}</span>}
       <Notas p={p} titular={titular} />
       {doTitular?.em_2026?.renunciou && <p className="small rep-nota"><strong>Pela regra, assumiu o cargo</strong> quando {doTitular.nome} saiu para
         disputar a eleição de 2026.</p>}
@@ -310,6 +313,8 @@ function Fontes({ idx, df }: { idx: RepIndice; df: boolean }) {
       <OndeVer titulo="Fontes oficiais" links={[
         ...(df ? [] : tse("candidatos_municipal", `Candidatos e eleitos de ${idx.eleicoes.municipal} (TSE)`, "prefeitos, vices e vereadores")),
         ...tse("candidatos_geral", `Candidatos e eleitos de ${idx.eleicoes.geral} (TSE)`, "presidente, governadores e deputados estaduais"),
+        ...(df ? [] : tse("bens_municipal", `Bens declarados pelos candidatos de ${idx.eleicoes.municipal} (TSE)`, "patrimônio de prefeitos, vices e vereadores; só o tipo e o valor de cada bem")),
+        ...tse("bens_geral", `Bens declarados pelos candidatos de ${idx.eleicoes.geral} (TSE)`, "patrimônio do presidente, dos governadores e dos deputados estaduais; só o tipo e o valor de cada bem"),
         ...tse("candidatos_seguinte", `Candidatos de ${idx.eleicoes.seguinte} (TSE)`, "quem deixou o cargo para concorrer"),
         ...(df ? [] : tse("resultados", "Site de resultados do TSE", "eleições suplementares e avisos de eleição anulada")),
         ...(typeof f.camara === "string" ? [{ nome: "Deputados em exercício (API da Câmara)", url: f.camara }] : []),

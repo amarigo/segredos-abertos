@@ -31,18 +31,21 @@ COLS = ["DT_GERACAO", "ANO_ELEICAO", "CD_TIPO_ELEICAO", "NM_TIPO_ELEICAO", "NR_T
         "SG_PARTIDO", "DT_NASCIMENTO", "DS_SIT_TOT_TURNO"]
 
 ORD, SUP = "ELEIÇÃO ORDINÁRIA", "ELEIÇÃO SUPLEMENTAR"
-_sq = [100]
+
+
+def sq_de(ano, uf, ue, cargo, nr, nome, turno=1, tipo=ORD) -> str:
+    """SQ_CANDIDATO fixo para cada linha (o mesmo a cada pedido), para o arquivo de bens apontar para ele."""
+    return f"{ano}{zlib.crc32(f'{uf}|{ue}|{cargo}|{nr}|{nome}|{turno}|{tipo}'.encode()) % 10**6:06d}"
 
 
 def _c(ano, uf, ue, nm_ue, cargo, nr, nome, urna, partido, nasc, sit, turno=1, apto="APTO", det="DEFERIDO",
        tipo=ORD, data=None):
-    _sq[0] += 1
     data = data or {2022: "02/10/2022", 2024: "06/10/2024", 2026: "04/10/2026"}[ano]
     if turno == 2:
         data = {2022: "30/10/2022", 2024: "27/10/2024", 2026: "25/10/2026"}.get(ano, data)
     return {"DT_GERACAO": "01/11/2026", "ANO_ELEICAO": str(ano), "CD_TIPO_ELEICAO": "2" if tipo == ORD else "1",
             "NM_TIPO_ELEICAO": tipo, "NR_TURNO": str(turno), "CD_ELEICAO": "1", "DT_ELEICAO": data, "SG_UF": uf,
-            "SG_UE": ue, "NM_UE": nm_ue, "CD_CARGO": cargo, "DS_CARGO": "X", "SQ_CANDIDATO": f"{ano}{_sq[0]:06d}",
+            "SG_UE": ue, "NM_UE": nm_ue, "CD_CARGO": cargo, "DS_CARGO": "X", "SQ_CANDIDATO": sq_de(ano, uf, ue, cargo, nr, nome, turno, tipo),
             "NR_CANDIDATO": nr, "NM_CANDIDATO": nome, "NM_URNA_CANDIDATO": urna, "NR_CPF_CANDIDATO": "12345678909",
             "DS_EMAIL": "x@x.com", "DS_SITUACAO_CANDIDATURA": apto, "DS_DETALHE_SITUACAO_CAND": det,
             "SG_PARTIDO": partido, "DT_NASCIMENTO": nasc, "DS_SIT_TOT_TURNO": sit}
@@ -136,6 +139,23 @@ def zip_candidatos(ano: int) -> bytes:
     return buf.getvalue()
 
 
+# Bens declarados (arquivo "Bens de candidatos"): o prefeito de São Paulo (do 2º turno, a linha final) e o governador
+# de Minas declararam bens; o vice de São Paulo, nenhum.
+BENS = {2024: [(sq_de(2024, "SP", "71072", "11", "15", "RICARDO NUNES FICTICIO", 2), "Apartamento", "1500000,00"),
+               (sq_de(2024, "SP", "71072", "11", "15", "RICARDO NUNES FICTICIO", 2), "Veículo automotor terrestre", "85000,50")],
+        2022: [(sq_de(2022, "MG", "MG", "3", "30", "ROMEU ZEMA FICTICIO"), "Quotas ou quinhões de capital", "70000000,00")]}
+
+
+def zip_bens(ano: int) -> bytes:
+    cols = ["ANO_ELEICAO", "SG_UF", "SQ_CANDIDATO", "DS_TIPO_BEM_CANDIDATO", "DS_BEM_CANDIDATO", "VR_BEM_CANDIDATO"]
+    linhas = [{"ANO_ELEICAO": str(ano), "SG_UF": "SP", "SQ_CANDIDATO": sq, "DS_TIPO_BEM_CANDIDATO": t,
+               "DS_BEM_CANDIDATO": "RUA FICTICIA 1", "VR_BEM_CANDIDATO": v} for sq, t, v in BENS.get(ano, [])]
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr(f"bem_candidato_{ano}_BRASIL.csv", _csv(linhas, cols))
+    return buf.getvalue()
+
+
 def zip_vagas(ano: int) -> bytes:
     cols = ["ANO_ELEICAO", "NM_TIPO_ELEICAO", "SG_UF", "SG_UE", "CD_CARGO", "QT_VAGA"]
     linhas = [{"ANO_ELEICAO": str(ano), "NM_TIPO_ELEICAO": ORD, "SG_UF": ue if len(ue) == 2 else "SP", "SG_UE": ue,
@@ -219,9 +239,9 @@ def rota(host: str, path: str, q: dict) -> tuple[int, bytes, str] | None:
         res = [{"name": n, "url": f"https://{CDN}/estatistica/sead/odsele/{t}/{t}_{ano}.zip"}
                for t, n in (("consulta_cand", "Candidatos"), ("consulta_vagas", "Vagas"))]
         return 200, json.dumps({"success": True, "result": {"resources": res}}).encode(), "application/json"
-    if host == CDN and path.startswith("/estatistica/sead/odsele/consulta_"):
+    if host == CDN and path.startswith(("/estatistica/sead/odsele/consulta_", "/estatistica/sead/odsele/bem_candidato/")):
         nome = path.rsplit("/", 1)[-1]
-        for t, f in (("consulta_cand_", zip_candidatos), ("consulta_vagas_", zip_vagas)):
+        for t, f in (("consulta_cand_", zip_candidatos), ("consulta_vagas_", zip_vagas), ("bem_candidato_", zip_bens)):
             if nome.startswith(t) and nome.endswith(".zip"):
                 ano = int(nome[len(t):-4])
                 if ano in (2022, 2024, 2026):

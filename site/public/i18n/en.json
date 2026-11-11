@@ -2919,5 +2919,15 @@
 "de emendas deste parlamentar": "from this legislator's amendments",
 "notas e pagamentos": "invoices and payments",
 "quadro de sócios": "list of partners",
-"doou": "donated"
+"doou": "donated",
+"Não declarou bens ao TSE": "Declared no assets to the Electoral Court (TSE)",
+"Bens declarados ao TSE: R$ {0}": "Assets declared to the Electoral Court (TSE): R$ {0}",
+"Bens declarados ao TSE: R$ {0} mil": "Assets declared to the Electoral Court (TSE): R$ {0} thousand",
+"Bens declarados ao TSE: R$ {0} mi": "Assets declared to the Electoral Court (TSE): R$ {0} million",
+"Bens declarados ao TSE: R$ {0} bi": "Assets declared to the Electoral Court (TSE): R$ {0} billion",
+"Não declarou bens ao TSE na candidatura de {0}.": "Declared no assets to the Electoral Court (TSE) when running in {0}.",
+"Patrimônio declarado ao TSE na candidatura de {0}: R$ {1}": "Assets declared to the Electoral Court (TSE) when running in {0}: R$ {1}",
+"Bens declarados pelos candidatos de {0} (TSE) ↗": "Assets declared by the candidates in {0} (TSE) ↗",
+"· patrimônio de prefeitos, vices e vereadores; só o tipo e o valor de cada bem; arquivo lido em {0}/{1}/{2}": "· assets of mayors, deputy mayors and city councillors; only the type and value of each item; file read on {0}/{1}/{2}",
+"· patrimônio do presidente, dos governadores e dos deputados estaduais; só o tipo e o valor de cada bem; arquivo lido em {0}/{1}/{2}": "· assets of the president, governors and state deputies; only the type and value of each item; file read on {0}/{1}/{2}"
 }

@@ -12,7 +12,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import (agenda, campanha, autorias, eleitos, gabinetes, historico, patrimonio, recursos_recebidos, representantes, sancoes, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
+from . import (agenda, campanha, autorias, gabinetes, historico, patrimonio, recursos_recebidos, representantes, sancoes, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
                renuncias, senado, temas)
 from .categorias import GRUPOS, tema_de
 from . import medias as medias_casa
@@ -814,7 +814,7 @@ def main() -> None:
     ap.add_argument("--sem-historico", action="store_true",
                     help="não monta o histórico da cota desde 2008 (somas por ano da Câmara e do Senado)")
     ap.add_argument("--sem-tse", action="store_true",
-                    help="não lê os arquivos do TSE (patrimônio declarado e eleitos de estados e cidades)")
+                    help="não lê os arquivos do TSE (patrimônio declarado dos deputados e senadores)")
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     executar(a.anos, a.cache, a.saida, max_empresas=a.max_empresas, com_recursos=not a.sem_recursos,
@@ -875,7 +875,7 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
         coletar_financas(saida, cache)
     if com_historico:  # depois de coletar(): reaproveita os arquivos da cota que ela baixou
         coletar_historico(saida, cache, anos_historico)
-    if com_tse:  # patrimônio declarado e eleitos de estados e cidades (arquivos do TSE)
+    if com_tse:  # patrimônio declarado dos deputados e senadores (arquivos do TSE)
         coletar_tse(saida, cache, dados["politicos"])
     regravar_avisos(saida)
 
@@ -931,13 +931,13 @@ def coletar_historico(saida: Path, cache: Path, anos: list[int] | None = None) -
 
 
 def coletar_tse(saida: Path, cache: Path, politicos: list[dict]) -> None:
-    """Patrimônio declarado ao TSE e quem foi eleito em cada estado e cidade. Se falhar, o resto do site segue."""
+    """Patrimônio declarado ao TSE pelos deputados e senadores. Se falhar, o resto do site segue. O dos eleitos de
+    cada cidade e estado fica em Quem me representa (representantes.py), com o mesmo arquivo do TSE."""
     try:
         patrimonio.coletar(saida, cache, politicos)
     except Exception:  # noqa: BLE001
         log.exception("Patrimônio declarado: erro; a página não foi atualizada")
         util.avisar("Patrimônio declarado: a coleta falhou; a página ficou de fora desta atualização")
-    eleitos.coletar(saida, cache)  # trata os próprios erros
 
 
 def coletar_tramitacao(saida: Path, cache: Path, politicos: list[dict]) -> None:

@@ -2919,5 +2919,15 @@
 "de emendas deste parlamentar": "de enmiendas de este parlamentario",
 "notas e pagamentos": "facturas y pagos",
 "quadro de sócios": "cuadro de socios",
-"doou": "donó"
+"doou": "donó",
+"Não declarou bens ao TSE": "No declaró bienes al Tribunal Electoral (TSE)",
+"Bens declarados ao TSE: R$ {0}": "Bienes declarados al Tribunal Electoral (TSE): R$ {0}",
+"Bens declarados ao TSE: R$ {0} mil": "Bienes declarados al Tribunal Electoral (TSE): R$ {0} mil",
+"Bens declarados ao TSE: R$ {0} mi": "Bienes declarados al Tribunal Electoral (TSE): R$ {0} millones",
+"Bens declarados ao TSE: R$ {0} bi": "Bienes declarados al Tribunal Electoral (TSE): R$ {0} mil millones",
+"Não declarou bens ao TSE na candidatura de {0}.": "No declaró bienes al Tribunal Electoral (TSE) en la candidatura de {0}.",
+"Patrimônio declarado ao TSE na candidatura de {0}: R$ {1}": "Patrimonio declarado al Tribunal Electoral (TSE) en la candidatura de {0}: R$ {1}",
+"Bens declarados pelos candidatos de {0} (TSE) ↗": "Bienes declarados por los candidatos de {0} (TSE) ↗",
+"· patrimônio de prefeitos, vices e vereadores; só o tipo e o valor de cada bem; arquivo lido em {0}/{1}/{2}": "· patrimonio de alcaldes, vicealcaldes y concejales; solo el tipo y el valor de cada bien; archivo leído el {0}/{1}/{2}",
+"· patrimônio do presidente, dos governadores e dos deputados estaduais; só o tipo e o valor de cada bem; arquivo lido em {0}/{1}/{2}": "· patrimonio del presidente, de los gobernadores y de los diputados estatales; solo el tipo y el valor de cada bien; archivo leído el {0}/{1}/{2}"
 }
