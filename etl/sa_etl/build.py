@@ -12,7 +12,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import (agenda, autorias, gabinetes, recursos_recebidos, representantes, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
+from . import (agenda, campanha, autorias, gabinetes, recursos_recebidos, representantes, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
                renuncias, senado, temas)
 from .categorias import GRUPOS, tema_de
 from . import medias as medias_casa
@@ -792,6 +792,8 @@ def main() -> None:
                     help="não monta a lista de projetos em andamento (pauta, novas e medidas provisórias)")
     ap.add_argument("--sem-tribunais", action="store_true",
                     help="não lê os julgamentos do STF (como cada ministro votou no Plenário Virtual)")
+    ap.add_argument("--sem-campanha", action="store_true",
+                    help="não lê as contas de campanha do TSE (doadores e fornecedores ligados à cota e às emendas)")
     ap.add_argument("--minutos-tribunais", type=float, default=10,
                     help="tempo máximo, por execução, para ler as sessões do STF ainda não guardadas")
     ap.add_argument("--minutos-pagamentos-gerais", type=float, default=40,
@@ -812,7 +814,7 @@ def main() -> None:
              minutos_pagamentos=a.minutos_pagamentos, minutos_gerais=a.minutos_pagamentos_gerais,
              com_financas=not a.sem_financas, com_tramitacao=not a.sem_tramitacao, novas_empresas=a.novas_empresas,
              minutos_transferegov=a.minutos_transferegov, com_tribunais=not a.sem_tribunais,
-             minutos_tribunais=a.minutos_tribunais, anos_notas=a.anos_notas,
+             minutos_tribunais=a.minutos_tribunais, anos_notas=a.anos_notas, com_campanha=not a.sem_campanha,
              com_representantes=not a.sem_representantes)
 
 
@@ -821,7 +823,7 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
              minutos_gerais: float = 40, com_financas: bool = True, com_tramitacao: bool = True,
              novas_empresas: int = cnpj.NOVAS_POR_COLETA, minutos_transferegov: float = 15,
              com_tribunais: bool = True, minutos_tribunais: float = 10, anos_notas: list[int] | None = None,
-             com_representantes: bool = True) -> None:
+             com_campanha: bool = True, com_representantes: bool = True) -> None:
     """A coleta inteira, na ordem certa (usada também pelos testes)."""
     # A renúncia vem antes dos arquivos diários: o Portal passa a recusar downloads (HTTP 405) depois de muitos
     # pedidos seguidos, e os arquivos de renúncia são poucos (e ficam uma semana no cache)
@@ -848,6 +850,8 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
     if com_tribunais:
         coletar_tribunais(saida, cache, minutos_tribunais)
     montar(dados, saida, anos, anos_notas)
+    if com_campanha:  # depois de montar(): liga a campanha às páginas de empresa já gravadas
+        coletar_campanha(saida, cache, dados)
     if inc:
         gravar_incentivos(dados, saida, anos, inc, pag)
     if com_recursos:  # depois de montar(): usa a verba de gabinete já gravada em politicos.json
@@ -898,6 +902,15 @@ def coletar_tramitacao(saida: Path, cache: Path, politicos: list[dict]) -> None:
     except Exception:  # noqa: BLE001
         log.exception("Projetos em andamento: erro; a página não foi atualizada")
         util.avisar("Projetos em andamento: a coleta falhou; a página ficou de fora desta atualização")
+
+
+def coletar_campanha(saida: Path, cache: Path, dados: dict) -> None:
+    """Dinheiro da campanha (TSE) ligado à cota, às emendas e aos sócios. Se falhar, o resto do site segue."""
+    try:
+        campanha.coletar(saida, cache, dados)
+    except Exception:  # noqa: BLE001
+        log.exception("Dinheiro da campanha: erro; a aba não foi atualizada")
+        util.avisar("Dinheiro da campanha: a coleta falhou; a aba ficou de fora desta atualização")
 
 
 def coletar_tribunais(saida: Path, cache: Path, minutos: float) -> None:

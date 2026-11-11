@@ -89,6 +89,7 @@ class Oficial:
         self.voto_trocado: str | None = None
         self.senado_total_diferente = 0.0
         self.presenca_faltando = False
+        self.socio_saiu = False  # a pessoa deixou de ser sócia (nas duas cópias da base da Receita)
         self.presentes: dict[int, set[int]] = defaultdict(set)  # evento -> deputados com presença no calendário do site
         for f in (s / "p" / "agenda").glob("dep-*.json"):
             for x in _ler(f)["dias"].values():
@@ -148,7 +149,10 @@ class Oficial:
         if m := re.search(r"/cnpj/v1/(\d{14})", url):
             e = _ler(self.s / "e" / f"{m.group(1)}.json")
             return {"razao_social": (e.get("empresa") or {}).get("razao_social") or "",
-                    "qsa": [{"nome_socio": x["nome"]} for x in e.get("socios") or []]}
+                    "qsa": [{"nome_socio": x["nome"], "cnpj_cpf_do_socio": x["doc"]} for x in e.get("socios") or []
+                            if not (self.socio_saiu and x["nome"] == "DONO FICTICIO 3")]}
+        if m := re.search(r"minhareceita.org/(\d{14})", url):
+            return self(f"https://brasilapi.com.br/api/cnpj/v1/{m.group(1)}")
         if url == vf.PORTAL_EMENDAS:
             if params["pagina"] > 1:
                 return []
@@ -173,7 +177,7 @@ def _checagem(v: dict, cid: str) -> dict:
 def test_tudo_batendo_fica_conferido(saida):
     v = _rodar(saida, Oficial(saida))
     for cid in ("cota_camara_mes", "cota_camara_empresa", "cota_senado_ano", "votos_camara", "placar_camara",
-                "votos_senado", "placar_senado_ata", "empresas_receita", "emendas_autor", "presenca_camara"):
+                "votos_senado", "placar_senado_ata", "empresas_receita", "emendas_autor", "presenca_camara", "campanha_socios"):
         c = _checagem(v, cid)
         assert c["status"] == "conferido", (cid, c)
         assert c["conferidos"] > 0 and c["divergentes"] == 0
@@ -183,6 +187,16 @@ def test_tudo_batendo_fica_conferido(saida):
     assert v["secoes"]["cota"]["status"] == "parcial"
     a = v["secoes"]["votacoes"]["acumulado"]
     assert a["conferidos"] > 0 and a["divergentes"] == 0 and 0 < a["certos_min"] < 1
+
+
+def test_socio_que_saiu_da_empresa_tem_motivo(saida):
+    """Doador ligado a um sócio que já saiu da empresa: a ligação veio de uma cópia antiga da Receita."""
+    of = Oficial(saida)
+    of.socio_saiu = True
+    v = _rodar(saida, of)
+    c = _checagem(v, "campanha_socios")
+    assert c["divergentes"] > 0 and c["sem_motivo"] == 0
+    assert {d["motivo"] for d in c["divergencias"]} == {"receita_copia_antiga"}
 
 
 def test_divergencia_aparece_com_link(saida):
