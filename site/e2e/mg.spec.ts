@@ -638,3 +638,25 @@ test("menu principal: todas as abas à vista, do celular pequeno ao monitor gran
   await abasAVista(page, "nav.nav", "a");
   await abasAVista(page, "nav.projetos .wrap", "a");
 });
+
+test("quem me representa no Minas Nossa: só cidades de Minas, lidas do site nacional", async ({ page }) => {
+  const erros = vigiar(page);
+  // Publicado, o Minas Nossa (/mg/) lê ../data/representantes/ do site nacional; aqui, os arquivos de teste do nacional
+  const nacional = (rel: string) => readFileSync(new URL(`../public/data/representantes/${rel}`, import.meta.url));
+  await page.route(/\/data\/representantes\/(.+\.json)$/, (r) => {
+    const rel = r.request().url().split("/data/representantes/")[1];
+    try { return r.fulfill({ status: 200, contentType: "application/json", body: nacional(rel) }); } catch { return r.fulfill({ status: 404, body: "" }); }
+  });
+  await page.goto("./");
+  await page.getByLabel("Sua cidade").fill("sao paulo");
+  await expect(page.locator("main")).toContainText("Nenhuma cidade com esse nome em Minas Gerais");  // São Paulo é de SP
+  await page.getByLabel("Sua cidade").fill("belo");
+  await page.locator(".rep-sugestoes a", { hasText: "Belo Horizonte" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Quem representa Belo Horizonte (MG)");
+  await expect(page.locator("main")).toContainText("Deixou o cargo para disputar senador por MG em 2026");
+  await expect(page.locator("main a", { hasText: "Deputados estaduais" }).first()).toBeVisible();
+  // cidade de outro estado: aviso com link para o site nacional
+  await page.goto("./#/quem/71072");
+  await expect(page.locator("main")).toContainText("O Minas Nossa mostra só as cidades de Minas");
+  expect(erros).toEqual([]);
+});
