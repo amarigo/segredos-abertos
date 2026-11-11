@@ -30,6 +30,7 @@ from sa_etl.cnpj import cnpj_matriz
 import fakegov_financas  # noqa: E402  (mesma pasta dos testes)
 import fakegov_gabinetes  # noqa: E402
 import fakegov_noticias  # noqa: E402
+import fakegov_representantes  # noqa: E402
 import fakegov_tramitacao  # noqa: E402
 import fakegov_transferegov  # noqa: E402
 import fakegov_tribunais  # noqa: E402
@@ -331,6 +332,9 @@ class FakeGov:
         trib = fakegov_tribunais.rota(u.netloc, path, q)  # votos dos ministros do STF
         if trib is not None:
             return trib
+        rep = fakegov_representantes.rota(u.netloc, path, q)  # TSE: quem me representa
+        if rep is not None:
+            return rep
         tg = self.transferegov.rota(u.netloc, path, q)  # emendas Pix no Transferegov
         if tg is not None:
             return tg
