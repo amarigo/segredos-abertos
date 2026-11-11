@@ -10,6 +10,7 @@ import { Kpi, MapaAnos } from "../components/graficos";
 import { ParaOndeVai } from "../components/ParaOndeVai";
 import { FotoPolitico } from "../components/Foto";
 import { EspectroPartidos } from "../components/EspectroPartidos";
+import { BuscaCidade, cidadeGuardada } from "../components/BuscaCidade";
 
 export default function Home() {
   const { data: meta, error } = useData<Meta>("meta.json");
@@ -63,8 +64,15 @@ export default function Home() {
     ? pols.filter((p) => norm(`${p.nome} ${p.partido} ${p.uf}`).includes(norm(q))
       || (p.outros_nomes || []).some((n) => norm(n).includes(norm(q)))).slice(0, 8) : [];
 
+  const minhaCidade = cidadeGuardada();
   return (
     <>
+      <section className="porta" aria-labelledby="porta-titulo">
+        <h2 id="porta-titulo">Quem representa você?</h2>
+        <p className="small">Digite a sua cidade e veja todos os eleitos por ela, do vereador ao presidente: partido, o que cada cargo faz e, de quem está em Brasília, quanto gasta e como vota.</p>
+        <BuscaCidade rotulo="Sua cidade" id="busca-cidade" />
+        {minhaCidade && <p className="small" style={{ margin: "8px 0 0" }}><Link to={`/quem/${minhaCidade}`}>Ver de novo a última cidade que você procurou</Link></p>}
+      </section>
       <section className="hero">
         <span className="eyebrow">Cota parlamentar · {ano}</span>
         <h1 className="big">{reaisCurto(meta.total_por_ano?.[ano] || 0)}</h1>

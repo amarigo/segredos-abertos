@@ -30,6 +30,7 @@ from sa_etl.cnpj import cnpj_matriz
 import fakegov_financas  # noqa: E402  (mesma pasta dos testes)
 import fakegov_gabinetes  # noqa: E402
 import fakegov_noticias  # noqa: E402
+import fakegov_representantes  # noqa: E402
 import fakegov_tramitacao  # noqa: E402
 import fakegov_transferegov  # noqa: E402
 import fakegov_tse  # noqa: E402
@@ -48,6 +49,52 @@ def _csv(cab: list[str], linhas: list[list]) -> str:
 
 def _cnpj(rng: random.Random) -> str:
     return cnpj_matriz(str(rng.randint(10_000_000, 99_999_999)))
+
+
+
+def _linhas_zip(corpo: bytes) -> tuple[str, list[str], list[dict]] | None:
+    """Prefixo, colunas e linhas do CSV _BRASIL de um ZIP do TSE simulado."""
+    with zipfile.ZipFile(io.BytesIO(corpo)) as z:
+        for n in z.namelist():
+            if n.endswith("_BRASIL.csv"):
+                leitor = csv.DictReader(io.StringIO(z.read(n).decode("latin-1")), delimiter=";")
+                return n[: -len("_BRASIL.csv")], list(leitor.fieldnames or []), list(leitor)
+    return None
+
+
+def _juntar_tse(a: tuple | None, b: tuple | None) -> tuple | None:
+    """Junta as respostas das duas simulações do TSE para o mesmo endereço. Falha simulada (status diferente de 200 e
+    de 404) vale para as duas; 404 de um lado fica com a resposta do outro. Na API (JSON), os recursos se somam; nos
+    ZIPs, as colunas e as linhas se somam (coluna que um lado não tem fica vazia)."""
+    if a is None or b is None:
+        return a if b is None else b
+    for r in (a, b):
+        if r[0] not in (200, 404):
+            return r
+    if a[0] != 200 or b[0] != 200:
+        return a if a[0] == 200 else b
+    if a[2] == "application/json":
+        ja, jb = json.loads(a[1]), json.loads(b[1])
+        ra = (ja.get("result") or {}).get("resources")
+        rb = (jb.get("result") or {}).get("resources")
+        if isinstance(ra, list) and isinstance(rb, list):
+            urls = {x.get("url") for x in ra}
+            ja["result"]["resources"] = ra + [x for x in rb if x.get("url") not in urls]
+            return 200, json.dumps(ja).encode(), a[2]
+        return a
+    la, lb = _linhas_zip(a[1]), _linhas_zip(b[1])
+    if not la or not lb:
+        return a if la else b
+    cols = la[1] + [c for c in lb[1] if c not in la[1]]
+    out = io.StringIO()
+    w = csv.DictWriter(out, cols, delimiter=";", quoting=csv.QUOTE_ALL, lineterminator="\r\n", restval="")
+    w.writeheader()
+    w.writerows(la[2] + lb[2])
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr(f"{la[0]}_BRASIL.csv", out.getvalue().encode("latin-1"))
+        z.writestr("leiame.pdf", b"%PDF")
+    return 200, buf.getvalue(), a[2]
 
 
 class FakeGov:
@@ -333,7 +380,9 @@ class FakeGov:
         trib = fakegov_tribunais.rota(u.netloc, path, q)  # votos dos ministros do STF
         if trib is not None:
             return trib
-        tse = self.tse.rota(u.netloc, path, q)  # TSE, arquivo de deputados da Câmara e detalhe do senador
+        # TSE: o patrimônio e os eleitos (fakegov_tse) e Quem me representa (fakegov_representantes) leem os mesmos
+        # arquivos de verdade. Cada simulação tem as linhas dos seus testes; aqui elas viram um arquivo só.
+        tse = _juntar_tse(self.tse.rota(u.netloc, path, q), fakegov_representantes.rota(u.netloc, path, q))
         if tse is not None:
             return tse
         tg = self.transferegov.rota(u.netloc, path, q)  # emendas Pix no Transferegov

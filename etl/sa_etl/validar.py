@@ -22,7 +22,7 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from .cnpj import MAX_NIVEL
 from .medias import medias_da_casa
@@ -270,6 +270,7 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
     _conferir_historico(saida, r)
     _conferir_patrimonio(saida, r)
     _conferir_eleitos(saida, r)
+    _conferir_representantes(saida, r)
 
     # ---------------- privacidade e links (em todos os arquivos)
     for f in sorted(saida.rglob("*.json")):
@@ -568,6 +569,70 @@ def _conferir_tribunais(saida: Path, r: Resultado) -> None:
             r.erro(f"Julgamento do STF com mais de 11 votos: {j.get('id')} ({len(votos)})")
         if sum((j.get("placar") or {}).values()) != len(votos):
             r.erro(f"Placar do julgamento do STF não bate com os votos: {j.get('id')}")
+
+
+def _conferir_representantes(saida: Path, r: Resultado) -> None:
+    """Quem me representa: toda cidade da busca tem arquivo, todo estado tem arquivo, nenhuma Câmara Municipal ou
+    Assembleia tem mais eleitos que cadeiras, todo eleito tem nome e partido e nenhum dado pessoal além do que o
+    site mostra (a data de nascimento só liga os arquivos do TSE e não pode sair da coleta)."""
+    pasta = saida / "representantes"
+    if not (pasta / "indice.json").exists():
+        r.alerta("Sem a página Quem me representa (representantes/indice.json)")
+        return
+    idx = _ler(pasta / "indice.json", r) or {}
+    muns = idx.get("municipios") or []
+    if len(muns) < 2:
+        r.erro("Quem me representa: lista de cidades vazia")
+    ufs = {m[2] for m in muns if isinstance(m, list) and len(m) == 3}
+    for uf in sorted(ufs):
+        if not (pasta / "uf" / f"{uf}.json").exists():
+            r.erro(f"Quem me representa: falta o arquivo do estado {uf}")
+    menos, sem_prefeito, proibido = [], 0, re.compile(r"nasc|cpf|email|titulo", re.I)
+
+    def pessoas(x: Any) -> Iterator[dict]:
+        for k in ("prefeito", "vice_prefeito", "governador", "vice_governador", "presidente", "vice_presidente"):
+            if isinstance(x.get(k), dict):
+                yield x[k]
+        for k in ("vereadores", "deputados_estaduais", "deputados_federais", "senadores"):
+            yield from (p for p in x.get(k) or [] if isinstance(p, dict))
+
+    def conferir_pessoas(x: dict, onde: str) -> None:
+        for p in pessoas(x):
+            if not str(p.get("nome") or "").strip() or not str(p.get("partido") or "").strip():
+                r.erro(f"Quem me representa, {onde}: eleito sem nome ou sem partido ({p.get('nome')!r})")
+            vaz = [k for k in p if proibido.search(k)] + [k for k in (p.get("em_2026") or {}) if proibido.search(k)]
+            if vaz:
+                r.erro(f"Quem me representa, {onde}: dado pessoal que não deveria sair da coleta ({', '.join(vaz)})")
+
+    conferir_pessoas(idx, "presidente")
+    for ue, nome, uf in (m for m in muns if isinstance(m, list) and len(m) == 3):
+        if ue == "DF":
+            continue
+        f = pasta / "m" / f"{ue}.json"
+        if not NOME_ARQ.match(f.name) or not f.exists():
+            r.erro(f"Quem me representa: falta o arquivo da cidade {nome} ({uf})")
+            continue
+        c = _ler(f, r) or {}
+        conferir_pessoas(c, f"{nome} ({uf})")
+        n, vagas = len(c.get("vereadores") or []), c.get("vagas_vereadores")
+        if vagas is not None and n > vagas:
+            r.erro(f"Quem me representa, {nome} ({uf}): {n} vereadores eleitos para {vagas} cadeiras")
+        elif vagas is not None and n < vagas:
+            menos.append(f"{nome} ({uf})")
+        sem_prefeito += not c.get("prefeito")
+    for f in sorted((pasta / "uf").glob("*.json")) if (pasta / "uf").exists() else []:
+        e = _ler(f, r) or {}
+        conferir_pessoas(e, f.stem)
+        n, vagas = len(e.get("deputados_estaduais") or []), e.get("vagas_estaduais")
+        if vagas is not None and n > vagas:
+            r.erro(f"Quem me representa, {f.stem}: {n} deputados estaduais eleitos para {vagas} cadeiras")
+        if e.get("senadores") and len(e["senadores"]) != 3:
+            r.alerta(f"Quem me representa, {f.stem}: {len(e['senadores'])} senadores em exercício (são 3 por estado)")
+    if menos:
+        r.alerta(f"Quem me representa: {len(menos)} cidade(s) com menos vereadores eleitos que cadeiras no arquivo do TSE "
+                 f"(recontagem ou votos anulados), ex.: {', '.join(menos[:5])}")
+    if sem_prefeito:
+        r.alerta(f"Quem me representa: {sem_prefeito} cidade(s) sem prefeito eleito no arquivo do TSE")
 
 
 def _conferir_gabinetes(saida: Path, pols: list[dict], r: Resultado) -> None:

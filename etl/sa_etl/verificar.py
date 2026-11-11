@@ -58,6 +58,7 @@ from .camara import API as API_CAMARA, normaliza_voto
 from .emendas import _chave
 from .senado import LEGIS, _as_list, normaliza_voto_senado, placar_da_ata  # noqa: F401 (placar_da_ata: usado nos testes)
 from . import oficial
+from .representantes import ORDINARIA_2024, _resumo_resultado, url_resultado
 from .util import chave_portal, digits, get_json, norm_name, to_float, write_json
 
 log = logging.getLogger("sa_etl.verificar")
@@ -75,6 +76,7 @@ AMOSTRAS = {  # quantos itens por checagem, por dia
     "cota_camara_mes": 40, "cota_camara_empresa": 40, "cota_senado_ano": 30,
     "votos_camara": 12, "votos_senado": 8, "empresas_receita": 25, "emendas_autor": 15, "presenca_camara": 30,
     "historico_camara_mes": 25, "historico_camara_pagina": 25, "historico_senado_ano": 20,
+    "prefeito_resultado": 25,
 }
 
 SECOES = {
@@ -88,6 +90,7 @@ SECOES = {
     "historico": "Histórico da cota desde 2008",
     "patrimonio": "Patrimônio declarado ao TSE",
     "eleitos": "Eleitos de estados e cidades",
+    "representantes": "Quem me representa",
 }
 # Seções que ainda não têm uma segunda fonte oficial para conferir, e por quê
 SEM_SEGUNDA_FONTE = {
@@ -729,6 +732,49 @@ def presenca_camara(saida: Path, rng: random.Random, prazo: Prazo, buscar: Calla
     return c
 
 
+# Resultado oficial de cada cidade no site de resultados do TSE (o mesmo do aplicativo Resultados): 619 é a eleição
+# municipal de 2024, 1º turno. O site lê o arquivo de candidatos dos dados abertos do TSE; esta é outra publicação.
+# O endereço "dados-simplificados/…-r.json" dos anos anteriores responde 404 (conferido em 10/11/2026); o atual é
+# "dados/…-u.json", com o código da cidade em 5 dígitos (representantes.url_resultado).
+
+
+def prefeito_resultado(saida: Path, rng: random.Random, prazo: Prazo, buscar: Callable = get_json) -> Checagem:
+    """Prefeito eleito em 2024: o site lê o arquivo de candidatos do TSE; o site de resultados do TSE mostra o
+    resultado de cada cidade. Sorteamos cidades decididas no 1º turno e sem eleição suplementar."""
+    c = Checagem(
+        "prefeito_resultado", "representantes", "Prefeito eleito em cada cidade",
+        "Sorteamos cidades em que o prefeito foi eleito no 1º turno de 2024, sem eleição suplementar depois, e "
+        "conferimos se o eleito no site de resultados do TSE é o mesmo candidato (mesmo número sequencial do TSE) que a "
+        "página Quem me representa mostra.",
+        "https://resultados.tse.jus.br/oficial/app/index.html")
+    pasta = saida / "representantes" / "m"
+    arqs = sorted(pasta.glob("*.json")) if pasta.exists() else []
+    if not arqs:
+        c.motivo = "o site ainda não tem a página Quem me representa"
+        return c
+    for f in rng.sample(arqs, min(len(arqs), AMOSTRAS["prefeito_resultado"] * 2)):
+        if c.n + len(c.falhas) >= AMOSTRAS["prefeito_resultado"]:
+            break
+        if prazo.acabou():
+            c.falhou("tempo da verificação acabou")
+            break
+        m = _ler(f) or {}
+        p = m.get("prefeito") or {}
+        if not p.get("sq") or p.get("turnos") != 1 or m.get("suplementar") or (m.get("aviso_tse") or {}).get("prefeito"):
+            continue
+        url = url_resultado(*ORDINARIA_2024, str(m.get("uf", "")), str(m.get("ue", "")), "11")
+        try:
+            eleitos = _resumo_resultado(buscar(url, timeout=60))["eleitos"]
+        except Exception as ex:  # noqa: BLE001
+            c.falhou(f"{m.get('nome')} ({m.get('uf')}): site de resultados do TSE não respondeu ({str(ex)[:100]})")
+            continue
+        oficial = ", ".join(f"{x['NM_CANDIDATO']} ({x['SQ_CANDIDATO']})" for x in eleitos) or "nenhum eleito"
+        ok = any(x["SQ_CANDIDATO"] == str(p["sq"]) for x in eleitos)
+        c.bateu(ok, {"o_que": f"Prefeito de {m.get('nome')} ({m.get('uf')})", "site": f"{p.get('nome')} ({p['sq']})",
+                     "oficial": oficial, "fonte": url})
+    return c
+
+
 def _nome(s: str) -> str:
     return re.sub(r"[^A-Z0-9]+", " ", norm_name(s or "").upper()).strip()
 
@@ -951,6 +997,7 @@ def verificar(saida: Path, anterior: dict | None = None, minutos: float = 20, se
     rodar("historico_camara_mes", lambda: historico_camara(saida, random.Random(rng.random()), prazo, hoje, api))
     rodar("historico_camara_pagina", lambda: historico_camara_pagina(saida, random.Random(rng.random()), prazo, hoje))
     rodar("historico_senado_ano", lambda: historico_senado(saida, random.Random(rng.random()), prazo, hoje, buscar))
+    rodar("prefeito_resultado", lambda: prefeito_resultado(saida, random.Random(rng.random()), prazo, buscar))
 
     hist = {sid: (s.get("historico") or []) for sid, s in ((anterior or {}).get("secoes") or {}).items()}
     out = {
@@ -974,7 +1021,7 @@ def verificar(saida: Path, anterior: dict | None = None, minutos: float = 20, se
 SECAO_DE = {"cota_camara": "cota", "cota_camara_pagina": "cota", "cota_senado_ano": "cota", "votos_camara": "votacoes", "votos_senado": "votacoes",
             "empresas_receita": "empresas", "emendas_autor": "emendas", "financas_juros": "financas",
             "presenca_camara": "agenda", "historico_camara_mes": "historico", "historico_senado_ano": "historico",
-            "historico_camara_pagina": "historico"}
+            "historico_camara_pagina": "historico", "prefeito_resultado": "representantes"}
 
 
 def _baixar_anterior(url: str) -> dict | None:
