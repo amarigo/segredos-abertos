@@ -270,7 +270,6 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
     _conferir_gabinetes(saida, pols, r)
     _conferir_historico(saida, r)
     _conferir_patrimonio(saida, r)
-    _conferir_eleitos(saida, r)
     _conferir_representantes(saida, r)
 
     # ---------------- punições oficiais (CEIS, CNEP, CEAF, TCU)
@@ -694,6 +693,9 @@ def _conferir_representantes(saida: Path, r: Resultado) -> None:
             vaz = [k for k in p if proibido.search(k)] + [k for k in (p.get("em_2026") or {}) if proibido.search(k)]
             if vaz:
                 r.erro(f"Quem me representa, {onde}: dado pessoal que não deveria sair da coleta ({', '.join(vaz)})")
+            pat = p.get("patrimonio")
+            if pat is not None and (not isinstance(pat, (int, float)) or pat < 0 or (p.get("sem_bens") and pat != 0)):
+                r.erro(f"Quem me representa, {onde}: patrimônio declarado inválido ({p.get('nome')!r}: {pat!r})")
 
     conferir_pessoas(idx, "presidente")
     for ue, nome, uf in (m for m in muns if isinstance(m, list) and len(m) == 3):
@@ -845,55 +847,6 @@ def _conferir_patrimonio(saida: Path, r: Resultado) -> None:
     n, sem = d.get("total_politicos") or 0, d.get("sem_registro") or 0
     if n and sem > n * 0.1:
         r.alerta(f"Patrimônio: {sem} de {n} parlamentares sem registro achado no TSE")
-
-
-def _conferir_eleitos(saida: Path, r: Resultado) -> None:
-    """Eleitos (eleitos.py): cada estado tem um governador e tantos deputados quanto as vagas; cada cidade, um
-    prefeito e tantos vereadores quanto as vagas (o arquivo de vagas do TSE é outra publicação); o índice soma as
-    cidades; nenhum dado pessoal do TSE. Diferença com as vagas é alerta: há eleição anulada e em julgamento, que o
-    site mostra como "sem eleito"."""
-    pasta = saida / "eleitos"
-    if not pasta.exists():
-        r.alerta("Sem os eleitos de estados e cidades (eleitos/)")
-        return
-    e = _ler(pasta / "estados.json", r) if (pasta / "estados.json").exists() else None
-    if e:
-        _dados_pessoais_tse(e, "eleitos/estados", r)
-        if not str(e.get("fonte", "")).startswith("https://"):
-            r.erro("Eleitos dos estados: sem link da fonte")
-        for uf, x in (e.get("ufs") or {}).items():
-            sem = x.get("sem_eleito") or []
-            if "governador" not in sem and len(x.get("governador") or []) != 1:
-                r.alerta(f"Eleitos {uf}: {len(x.get('governador') or [])} governadores")
-            if "deputados" not in sem and x.get("vagas") and len(x.get("deputados") or []) != x["vagas"]:
-                r.alerta(f"Eleitos {uf}: {len(x.get('deputados') or [])} deputados estaduais para {x['vagas']} vagas")
-            for dep in (x.get("governador") or []) + (x.get("deputados") or []):
-                if dep.get("tipos") and sum(t["valor"] for t in dep["tipos"]) > dep["patrimonio"] + 1:
-                    r.erro(f"Eleitos {uf}: tipos de bens de {dep['nome']} somam mais que o patrimônio")
-    i = _ler(pasta / "indice.json", r) if (pasta / "indice.json").exists() else None
-    if not i:
-        r.alerta("Sem o índice das cidades (eleitos/indice.json)")
-        return
-    n: Counter = Counter()
-    difs = []
-    for fp in sorted((pasta / "cidades").glob("*.json")):
-        x = _ler(fp, r) or {}
-        _dados_pessoais_tse(x, f"eleitos/cidades/{fp.stem}", r)
-        for c in x.get("cidades") or []:
-            n["cidades"] += 1
-            n["prefeitos"] += len(c.get("prefeito") or [])
-            n["vereadores"] += len(c.get("vereadores") or [])
-            sem = c.get("sem_eleito") or []
-            if "prefeito" not in sem and len(c.get("prefeito") or []) != 1:
-                difs.append(f"{c['nome']}-{c['uf']} (prefeitos: {len(c.get('prefeito') or [])})")
-            if ("vereadores" not in sem and "vereadores" not in (c.get("suplementar_parcial") or {}) and c.get("vagas")
-                    and len(c.get("vereadores") or []) != c["vagas"]):
-                difs.append(f"{c['nome']}-{c['uf']} (vereadores: {len(c.get('vereadores') or [])} de {c['vagas']})")
-    if n["cidades"] != len(i.get("cidades") or []) or any(n[k] != i.get(k) for k in ("prefeitos", "vereadores")):
-        r.erro(f"Eleitos: índice ({len(i.get('cidades') or [])} cidades, {i.get('prefeitos')} prefeitos, "
-               f"{i.get('vereadores')} vereadores) diferente da soma dos estados ({dict(n)})")
-    if difs:
-        r.alerta(f"Eleitos: {len(difs)} cidades com número de eleitos diferente das vagas: {', '.join(difs[:5])}")
 
 
 def _conferir_financas(saida: Path, r: Resultado) -> None:

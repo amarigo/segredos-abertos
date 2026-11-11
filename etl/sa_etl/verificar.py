@@ -91,7 +91,6 @@ SECOES = {
     "campanha": "Dinheiro da campanha",
     "historico": "Histórico da cota desde 2008",
     "patrimonio": "Patrimônio declarado ao TSE",
-    "eleitos": "Eleitos de estados e cidades",
     "representantes": "Quem me representa",
 }
 # Seções que ainda não têm uma segunda fonte oficial para conferir, e por quê
@@ -100,8 +99,6 @@ SEM_SEGUNDA_FONTE = {
                   "há uma segunda fonte oficial com o mesmo dado para conferir; os totais passam só pela conferência de somas.",
     "patrimonio": "Os bens declarados só existem nos dados abertos do TSE. A consulta de cada candidato no DivulgaCandContas "
                   "recusa acesso automático (HTTP 403); a soma de cada declaração é conferida tipo a tipo.",
-    "eleitos": "Quem foi eleito vem do arquivo de candidatos do TSE; o número de eleitos de cada estado e cidade é conferido "
-               "com o arquivo de vagas do TSE, que é outra publicação.",
 }
 
 

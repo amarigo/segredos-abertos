@@ -1,11 +1,9 @@
 """Respostas fictícias do TSE (API do portal de dados abertos e arquivos do CDN) e do arquivo de deputados da Câmara:
-o que o patrimônio declarado e a página de eleitos leem. O detalhe de cada senador fica no fakegov.py.
+o que o patrimônio declarado lê. O detalhe de cada senador fica no fakegov.py. Os eleitos de estados e cidades
+(Quem me representa) ficam no fakegov_representantes.py.
 
 Os arquivos imitam os de verdade: CSV latin-1 com ';' dentro de ZIP, um _BRASIL.csv, e com as colunas que o site
 não pode ler (CPF, e-mail, título de eleitor, descrição do bem). Os testes conferem que nada disso chega ao site.
-
-Casos do mundo real que estão aqui: eleição suplementar que troca o prefeito (substitui a normal), suplementar que
-elege só 1 vereador (não substitui), vereadores com resultado "#NULO" (eleição anulada ou em julgamento), 2º turno.
 """
 from __future__ import annotations
 
@@ -28,10 +26,6 @@ COL_CAND = ["DT_GERACAO", "ANO_ELEICAO", "NM_TIPO_ELEICAO", "NR_TURNO", "DS_ELEI
             "DS_SIT_TOT_TURNO"]
 COL_BEM = ["ANO_ELEICAO", "SG_UF", "SQ_CANDIDATO", "NR_ORDEM_BEM_CANDIDATO", "DS_TIPO_BEM_CANDIDATO", "DS_BEM_CANDIDATO",
            "VR_BEM_CANDIDATO"]
-COL_VAGAS = ["ANO_ELEICAO", "NM_TIPO_ELEICAO", "SG_UF", "SG_UE", "NM_UE", "DS_CARGO", "QT_VAGA"]
-UFS = {"SP": "SÃO PAULO", "MG": "MINAS GERAIS"}
-CIDADES = {"SP": [("71072", "SÃO PAULO"), ("62910", "CAMPINAS")], "MG": [("41238", "BELO HORIZONTE"), ("48313", "MERCÊS")]}
-VAGAS_DEP, VAGAS_VER = 3, 3
 
 
 def nascimento(i: int) -> str:
@@ -96,55 +90,11 @@ class TSE:
             valor = 100000.0 * (1 + k) * (1 + (ano - 2014) / 10)
             add("SP", "SP" if geral else "71072", "SÃO PAULO", cargo, nome, nome.split()[0], "PT", nasc,
                 "ELEITO" if geral else "NÃO ELEITO", bens_=(("Casa", valor), ("Depósito bancário em conta-corrente", 1000.0)))
-        if geral:
-            for uf, nome_uf in UFS.items():
-                add(uf, uf, nome_uf, "GOVERNADOR", f"GOVERNADOR DE {uf}", f"GOV {uf}", "PSD", "1960-05-05", "ELEITO", turno=2)
-                add(uf, uf, nome_uf, "VICE-GOVERNADOR", f"VICE DE {uf}", f"VICE {uf}", "PP", "1961-05-05", "ELEITO", turno=2,
-                    bens_=())
-                add(uf, uf, nome_uf, "GOVERNADOR", f"PERDEDOR DE {uf}", f"PERDEU {uf}", "PL", "1962-05-05", "NÃO ELEITO",
-                    turno=2)
-                for i in range(VAGAS_DEP):
-                    add(uf, uf, nome_uf, "DEPUTADO ESTADUAL", f"ESTADUAL {uf} {i}", f"Est {uf} {i}", ["PT", "PL", "MDB"][i],
-                        "1970-01-01", ["ELEITO POR QP", "ELEITO POR QP", "ELEITO POR MÉDIA"][i])
-                add(uf, uf, nome_uf, "DEPUTADO ESTADUAL", f"SUPLENTE {uf}", f"Sup {uf}", "PT", "1970-01-01", "SUPLENTE")
-            return cands, bens
-        for uf, cidades in CIDADES.items():
-            for ue, nome in cidades:
-                if nome == "MERCÊS":  # o mais votado teve o registro negado: ninguém eleito para prefeito
-                    add(uf, ue, nome, "PREFEITO", "MAIS VOTADO", "Mais Votado", "PL", "1970-02-02", "NÃO ELEITO",
-                        sit="INDEFERIDO COM RECURSO")
-                    add(uf, ue, nome, "VICE-PREFEITO", "VICE DO MAIS VOTADO", "Vice", "PL", "1970-02-02", "NÃO ELEITO")
-                else:
-                    add(uf, ue, nome, "PREFEITO", f"PREFEITO DE {nome}", f"Pref {nome.title()}", "MDB", "1965-03-03", "ELEITO",
-                        turno=2 if nome == "SÃO PAULO" else 1)
-                    add(uf, ue, nome, "VICE-PREFEITO", f"VICE DE {nome}", f"Vice {nome.title()}", "MDB", "1966-03-03", "ELEITO")
-                anulada = nome == "CAMPINAS"  # vereadores "#NULO": eleição do cargo anulada ou em julgamento
-                for i in range(VAGAS_VER):
-                    add(uf, ue, nome, "VEREADOR", f"VEREADOR {nome} {i}", f"Ver {i}", ["PT", "PL", "PSOL"][i], "1980-04-04",
-                        "#NULO" if anulada else "ELEITO POR QP", bens_=() if i == 2 else (("Terreno", 30000.0),))
-                add(uf, ue, nome, "VEREADOR", f"SUPLENTE {nome}", "Sup", "PT", "1980-04-04", "#NULO" if anulada else "SUPLENTE")
-        # Belo Horizonte: a eleição foi anulada e houve suplementar, que troca prefeito e vice
-        sup = {"tipo": "ELEIÇÃO SUPLEMENTAR", "data": f"{ano + 1}-06-01", "eleicao": "Eleição Suplementar Belo Horizonte - MG"}
-        add("MG", "41238", "BELO HORIZONTE", "PREFEITO", "PREFEITO DA SUPLEMENTAR", "Pref Novo", "PSB", "1975-05-05",
-            "ELEITO", **sup)
-        add("MG", "41238", "BELO HORIZONTE", "VICE-PREFEITO", "VICE DA SUPLEMENTAR", "Vice Novo", "PSB", "1975-05-05",
-            "ELEITO", **sup)
-        # São Paulo: suplementar para 1 cadeira de vereador (como Braga-RS em 2025): não troca os outros
-        add("SP", "71072", "SÃO PAULO", "VEREADOR", "VEREADOR DA SUPLEMENTAR", "Ver Sup", "NOVO", "1985-06-06",
-            "ELEITO POR QP", **{**sup, "eleicao": "Eleição Suplementar São Paulo - SP"})
         return cands, bens
-
-    def _vagas(self, ano: int) -> list[list]:
-        if ano in GERAIS:
-            return [[ano, "ELEIÇÃO ORDINÁRIA", uf, uf, n, c, q] for uf, n in UFS.items()
-                    for c, q in (("GOVERNADOR", 1), ("VICE-GOVERNADOR", 1), ("DEPUTADO ESTADUAL", VAGAS_DEP))]
-        out = [[ano, "ELEIÇÃO ORDINÁRIA", uf, ue, n, c, q] for uf, cs in CIDADES.items() for ue, n in cs
-               for c, q in (("PREFEITO", 1), ("VICE-PREFEITO", 1), ("VEREADOR", VAGAS_VER))]
-        return out + [[ano, "ELEIÇÃO SUPLEMENTAR", "MG", "41238", "BELO HORIZONTE", "PREFEITO", 1]]
 
     @staticmethod
     def _pacote(a: str) -> dict:
-        res = [{"url": f"{CDN}/{p}/{p}_{a}.zip", "format": "ZIP"} for p in ("consulta_cand", "bem_candidato", "consulta_vagas")]
+        res = [{"url": f"{CDN}/{p}/{p}_{a}.zip", "format": "ZIP"} for p in ("consulta_cand", "bem_candidato")]
         res.append({"url": f"{CDN}/consulta_cand/leiame-{a}.pdf", "format": "PDF"})
         return {"name": f"candidatos-{a}" + ("-subtemas" if a == "2020" else ""), "resources": res}
 
@@ -163,13 +113,11 @@ class TSE:
             res = [self._pacote(m.group(1))] if m else []
             return 200, json.dumps({"success": True, "result": {"count": len(res), "results": res}}).encode(), "application/json"
         if netloc == "cdn.tse.jus.br":
-            m = re.fullmatch(r"/estatistica/sead/odsele/(consulta_cand|bem_candidato|consulta_vagas)/\1_(\d{4})\.zip", path)
+            m = re.fullmatch(r"/estatistica/sead/odsele/(consulta_cand|bem_candidato)/\1_(\d{4})\.zip", path)
             if not m:
                 return 404, b"", "text/html"
             self.pedidos_cdn += 1
             tipo, ano = m.group(1), int(m.group(2))
-            if tipo == "consulta_vagas":
-                return 200, _zip(f"consulta_vagas_{ano}", COL_VAGAS, self._vagas(ano)), "application/zip"
             cands, bens = self._cand(ano)
             if tipo == "consulta_cand":
                 return 200, _zip(f"consulta_cand_{ano}", COL_CAND, cands), "application/zip"

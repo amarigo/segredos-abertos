@@ -130,6 +130,39 @@ def test_estado_governador_que_saiu_e_deputados(rodar):
     assert df["casa_estadual"] == "Câmara Legislativa" and len(df["deputados_estaduais"]) == 2
 
 
+def test_patrimonio_declarado_de_cada_eleito(rodar):
+    pasta = rodar()
+    sp = ler(pasta / "m" / "71072.json")
+    assert sp["prefeito"]["patrimonio"] == 1585000.5  # soma dos dois bens da linha do 2º turno
+    assert sp["vice_prefeito"]["patrimonio"] == 0 and sp["vice_prefeito"]["sem_bens"]  # no arquivo, sem nenhum bem
+    assert all("patrimonio" in v for v in sp["vereadores"])
+    assert ler(pasta / "uf" / "MG.json")["governador"]["patrimonio"] == 70000000.0
+    assert all("patrimonio" not in d for d in ler(pasta / "uf" / "MG.json")["deputados_federais"])  # esses têm perfil
+    # eleito da suplementar que vem só do site de resultados (não está no arquivo de candidatos): sem número
+    assert "patrimonio" not in ler(pasta / "m" / "40000.json")["prefeito"]
+    idx = ler(pasta / "indice.json")
+    assert idx["fontes"]["bens_municipal"]["pagina"] == "https://dadosabertos.tse.jus.br/dataset/candidatos-2024"
+    assert "patrimonio" in idx["presidente"]
+
+
+def test_sem_os_bens_a_pagina_sai_sem_patrimonio(rodar):
+    rodar.gov.falhar("bem_candidato", "500")
+    pasta = rodar()
+    assert "patrimonio" not in ler(pasta / "m" / "71072.json")["prefeito"]
+    assert any("bens declarados" in a for a in util.AVISOS)
+
+
+def test_validar_barra_patrimonio_invalido(rodar):
+    pasta = rodar()
+    f = pasta / "m" / "71072.json"
+    m = ler(f)
+    m["prefeito"]["patrimonio"] = -5
+    f.write_text(json.dumps(m), encoding="utf-8")
+    r = Resultado()
+    _conferir_representantes(pasta.parent, r)
+    assert any("patrimônio declarado inválido" in e for e in r.erros)
+
+
 def test_indice_presidente_e_busca(rodar):
     idx = ler(rodar() / "indice.json")
     assert idx["presidente"]["nome"] == "Lula Ficticio"
@@ -142,7 +175,7 @@ def test_indice_presidente_e_busca(rodar):
 def test_sem_dados_pessoais(rodar):
     pasta = rodar()
     texto = " ".join(f.read_text(encoding="utf-8") for f in pasta.rglob("*.json"))
-    for proibido in ("12345678909", "x@x.com", "1967", "NASCIMENTO", "nascimento"):
+    for proibido in ("12345678909", "x@x.com", "1967", "NASCIMENTO", "nascimento", "RUA FICTICIA"):
         assert proibido not in texto
     r = Resultado()
     _conferir_representantes(pasta.parent, r)

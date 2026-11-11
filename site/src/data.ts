@@ -642,20 +642,3 @@ export interface PatrimonioResumo {
 export interface Patrimonio {
   atualizado: string; anos: number[]; fontes: Record<string, string>; politicos: PatrimonioResumo[]; sem_registro: number; total_politicos: number;
 }
-
-/* Eleitos de estados e cidades (eleitos/estados.json, eleitos/cidades/{UF}.json, eleitos/indice.json) */
-export interface Eleito {
-  sq: string; nome: string; civil: string; partido: string; numero: string; resultado: string; patrimonio: number;
-  sem_bens?: boolean; tipos?: BemTipo[]; suplementar?: string;
-}
-export interface LugarEleitos {
-  uf: string; ue: string; nome: string; vagas?: number | null; sem_eleito?: string[];
-  suplementar?: Record<string, string>; suplementar_parcial?: Record<string, string>;
-  governador?: Eleito[]; vice?: Eleito[]; deputados?: Eleito[]; prefeito?: Eleito[]; vereadores?: Eleito[]; casa?: string;
-}
-export interface EleitosEstados { ano: number; mandato: string; ufs: Record<string, LugarEleitos>; fonte: string; proxima: string; atualizado: string }
-export interface EleitosCidades { ano: number; mandato: string; uf: string; cidades: LugarEleitos[]; fonte: string; atualizado: string }
-export interface EleitosIndice {
-  ano: number; mandato: string; cidades: [string, string, string][]; fonte: string; atualizado: string;
-  prefeitos: number; vereadores: number; sem_eleito?: number;
-}

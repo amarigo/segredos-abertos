@@ -109,23 +109,6 @@ test.describe("jornada", () => {
     expect(erros).toEqual([]);
   });
 
-  test("eleitos: governador, assembleia e uma cidade sem eleito no TSE", async ({ page }) => {
-    const erros = vigiar(page);
-    const e = dados("eleitos/estados.json");
-    const mg = e.ufs.MG;
-    await page.goto("./#/politicos");
-    await page.getByRole("link", { name: /Governadores, assembleias/ }).click();
-    await page.locator("#eleitos-uf").selectOption("MG");
-    await expect(page.locator(".eleito-card").first()).toContainText(mg.governador[0].nome);
-    await expect(page.locator(".eleitos")).toContainText(`${mg.deputados.length} deputados (${mg.vagas} vagas)`);
-    await page.locator("#busca-cidade").fill("merces");
-    await page.locator(".lista-cidades button").first().click();
-    const cid = page.getByTestId("eleitos-cidade");
-    await expect(cid).toContainText("Mercês");
-    await expect(cid).toContainText("não traz ninguém eleito para prefeito");
-    expect(erros).toEqual([]);
-  });
-
   test("gasto com assessores: a tabela soma a bancada inteira e as medidas batem com o arquivo", async ({ page }) => {
     const erros = vigiar(page);
     const g = dados("gabinetes.json");
@@ -523,6 +506,18 @@ test.describe("quem me representa", () => {
     // a última cidade fica guardada para a próxima visita
     await page.goto("./");
     await expect(page.getByRole("link", { name: "Ver de novo a última cidade que você procurou" })).toHaveAttribute("href", "#/quem/62910");
+    expect(erros).toEqual([]);
+  });
+
+  test("patrimônio declarado ao TSE ao lado de cada eleito, com a fonte", async ({ page }) => {
+    const erros = vigiar(page);
+    const m = rep("m/71072.json");
+    await page.goto("./#/quem/71072");
+    const main = page.locator("main");
+    const pref = main.locator(".rep-cartao", { hasText: m.prefeito.nome });
+    await expect(pref).toContainText(sp(`Patrimônio declarado ao TSE na candidatura de ${m.eleicao}: ${brl(m.prefeito.patrimonio)}`));
+    await expect(main.locator(".rep-cartao", { hasText: m.vice_prefeito.nome })).toContainText("Não declarou bens ao TSE");
+    await expect(main.getByRole("link", { name: new RegExp(`Bens declarados pelos candidatos de ${m.eleicao}`) })).toHaveAttribute("href", /dadosabertos\.tse\.jus\.br/);
     expect(erros).toEqual([]);
   });
 

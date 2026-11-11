@@ -119,8 +119,7 @@ saem do cache de CNPJ; o cache vence em 30 dias.
 | Dinheiro da campanha | doador de campanha que é sócio de empresa paga no mandato (TSE + Minha Receita) | outra cópia da base da Receita (BrasilAPI): mesmo nome e mesmos 6 dígitos do CPF |
 | Histórico da cota (desde 2008) | gasto do mês de cada deputado (soma do arquivo anual) | página oficial do deputado naquele ano (só os meses que ela mostra) e API da Câmara |
 | Histórico da cota (desde 2008) | total do ano de cada senador (soma da CEAPS) | API do Senado, `recursos-utilizados` (quando ela traz aquele ano) |
-| Eleitos de estados e cidades | quantos eleitos em cada estado e cidade (arquivo de candidatos do TSE) | arquivo de vagas do TSE, em `validar.py` (diferença vira alerta: há eleição anulada e em julgamento) |
-| Patrimônio declarado | total de cada declaração (soma dos bens) | sem segunda fonte: o DivulgaCandContas recusa acesso automático; a soma é conferida tipo a tipo |
+| Patrimônio declarado | total de cada declaração (soma dos bens), no perfil e no Quem me representa | sem segunda fonte: o DivulgaCandContas recusa acesso automático; a soma é conferida tipo a tipo e `validar.py` barra valor negativo ou "sem bens" com valor |
 | Quem me representa | prefeito eleito em 2024 (arquivo de candidatos do TSE) | site de resultados do TSE, cidade por cidade |
 
 Regras: fonte fora do ar ou API respondendo vazio vira "não conferido", nunca "conferido"; a cota só é conferida em

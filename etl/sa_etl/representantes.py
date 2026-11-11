@@ -42,6 +42,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Iterator
 
+from . import tse
 from .util import avisar, download, eh_zip, get_json, norm_name, write_json
 
 log = logging.getLogger("sa_etl.representantes")
@@ -405,6 +406,29 @@ def pessoa(r: dict, cand26: dict, cargo: str) -> dict:
     return p
 
 
+def com_patrimonio(x, bens: dict[str, list], sqs: set[str]) -> None:
+    """Põe em cada eleito (dict com "sq" e "partido") o patrimônio que ele declarou ao TSE na candidatura: a soma dos
+    bens do arquivo "Bens de candidatos" (tse.bens). Candidato que está no arquivo de candidatos e não tem nenhuma
+    linha de bem não declarou bens. Eleito de suplementar que não está no arquivo (vem do site de resultados) fica
+    sem o número: não adivinhamos."""
+    if isinstance(x, list):
+        for v in x:
+            com_patrimonio(v, bens, sqs)
+        return
+    if not isinstance(x, dict):
+        return
+    sq = x.get("sq")
+    if sq and "partido" in x:
+        b = bens.get(str(sq))
+        if b:
+            x["patrimonio"] = b[0]
+        elif str(sq) in sqs:
+            x["patrimonio"], x["sem_bens"] = 0.0, True
+    for v in x.values():
+        if isinstance(v, (dict, list)):
+            com_patrimonio(v, bens, sqs)
+
+
 def _ultimo_turno(rs: list[dict]) -> list[dict]:
     t = max(int(r.get("NR_TURNO") or 1) for r in rs)
     return [r for r in rs if int(r.get("NR_TURNO") or 1) == t]
@@ -451,9 +475,16 @@ def _aviso(r: dict | None, url: str, **extra) -> dict:
 
 
 def montar(cand: dict[int, list[dict]], vagas: dict[int, dict[str, int]], politicos: list[dict], saida: Path,
-           fontes: dict, res: Resultados | None = None) -> dict:
-    """Grava os arquivos do site e devolve um resumo das conferências."""
+           fontes: dict, res: Resultados | None = None, bens: dict[int, dict[str, list]] | None = None) -> dict:
+    """Grava os arquivos do site e devolve um resumo das conferências. Com bens ({ano: tse.bens(ano)}), cada eleito
+    leva o patrimônio declarado ao TSE naquela eleição."""
     pasta = saida / "representantes"
+    bens = bens or {}
+    sqs = {ano: {r.get("SQ_CANDIDATO") for r in cand.get(ano) or []} for ano in bens}
+
+    def patrimonio(x, ano: int) -> None:
+        if ano in bens:
+            com_patrimonio(x, bens[ano], sqs[ano])
     c26 = candidaturas_2026(cand.get(SEGUINTE) or [])
     resumo: dict = {"cidades": 0, "vereadores": 0, "sem_prefeito": [], "vagas_diferentes": [], "suplementares": 0,
                     "suplementares_sem_resultado": [], "renunciaram": 0, "estados": 0, "estaduais_diferentes": [],
@@ -542,6 +573,7 @@ def montar(cand: dict[int, list[dict]], vagas: dict[int, dict[str, int]], politi
             out["aviso_tse"] = avisos
         resumo["cidades"] += 1
         resumo["vereadores"] += len(vers)
+        patrimonio(out, MUNICIPAL)
         write_json(pasta / "m" / f"{ue}.json", out)
         municipios.append([ue, cidade, uf])
 
@@ -576,6 +608,7 @@ def montar(cand: dict[int, list[dict]], vagas: dict[int, dict[str, int]], politi
              "deputados_federais": fed, "vagas_federais": vag_fed, "senadores": sen}
         resumo["renunciaram"] += bool(((e["governador"] or {}).get("em_2026") or {}).get("renunciou"))
         resumo["estados"] += 1
+        patrimonio({k: v for k, v in e.items() if k not in ("deputados_federais", "senadores")}, GERAL)
         write_json(pasta / "uf" / f"{uf}.json", e)
     # Brasília não tem prefeito nem vereadores: quem procura a cidade cai no Distrito Federal
     municipios.append(["DF", "Brasília", "DF"])
@@ -594,6 +627,7 @@ def montar(cand: dict[int, list[dict]], vagas: dict[int, dict[str, int]], politi
                         "vagas_diferentes": len(resumo["vagas_diferentes"]), "sem_prefeito": len(resumo["sem_prefeito"]),
                         "suplementares": resumo["suplementares"]},
     }
+    patrimonio({"presidente": indice["presidente"], "vice_presidente": indice["vice_presidente"]}, GERAL)
     if res and res.lido_em:
         fontes["resultados"] = {"url": ELEICOES_TSE, "pagina": PAGINA_RESULTADOS, "lido_em": res.lido_em}
     write_json(pasta / "indice.json", indice)
@@ -616,7 +650,7 @@ def fontes_de(lidos: dict) -> dict:
 
 def coletar(saida: Path, cache: Path, buscar=get_json) -> dict:
     """Lê os arquivos do TSE (com cache) e o politicos.json já gravado, e grava data/representantes/."""
-    cache = cache / "representantes"
+    raiz, cache = cache, cache / "representantes"
     lidos = {
         ("consulta_cand", MUNICIPAL): _lido(cache, "consulta_cand", MUNICIPAL, ler_candidatos),
         ("consulta_vagas", MUNICIPAL): _lido(cache, "consulta_vagas", MUNICIPAL, ler_vagas, obrigatorio=False),
@@ -636,7 +670,17 @@ def coletar(saida: Path, cache: Path, buscar=get_json) -> dict:
         politicos = []
         avisar("Quem me representa: sem a lista de deputados federais e senadores nesta coleta")
     res = Resultados(cache, buscar)
-    resumo = montar(cand, vagas, politicos, saida, fontes_de(lidos), res)
+    fontes = fontes_de(lidos)
+    bens = {}
+    for ano, chave in ((MUNICIPAL, "bens_municipal"), (GERAL, "bens_geral")):
+        try:  # o mesmo arquivo (e o mesmo cache, tse/) do patrimônio dos deputados e senadores
+            bens[ano] = tse.bens(ano, raiz)
+            fontes[chave] = {"url": tse.ARQUIVO["bens"].format(ano=ano), "pagina": tse.PAGINA.format(pacote=tse.pacote(ano)),
+                             "lido_em": tse.lido_em("bens", ano, raiz)}
+        except Exception:  # sem os bens, a página sai sem o patrimônio, com aviso
+            log.exception("Quem me representa: bens de %s do TSE", ano)
+            avisar(f"Quem me representa: os bens declarados ao TSE em {ano} não puderam ser lidos; a página saiu sem o patrimônio")
+    resumo = montar(cand, vagas, politicos, saida, fontes, res, bens)
     res.gravar()
     log.info("Quem me representa: %d cidades, %d vereadores, %d estados, %d suplementares, %d renúncias para 2026",
              resumo["cidades"], resumo["vereadores"], resumo["estados"], resumo["suplementares"], resumo["renunciaram"])
