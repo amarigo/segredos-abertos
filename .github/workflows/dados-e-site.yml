@@ -80,8 +80,15 @@ jobs:
         working-directory: site
       - name: Painel de status (contas)
         run: node --test status/painel.test.mjs
-      - run: npx playwright install --with-deps chromium
+      # Chromium guardado entre execuções; instalado sem apt (o espelho do Ubuntu do GitHub caiu em 11/11/2026 e
+      # travava este passo). Detalhes em site/scripts/instalar-chromium.sh.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('site/package-lock.json') }}
+      - run: bash scripts/instalar-chromium.sh
         working-directory: site
+        timeout-minutes: 12
       # paginas: imagem de prévia e uma página HTML simples por político, empresa e votação (PT/EN/ES), sitemap e llms.txt,
       # para buscadores, IAs e quem compartilha o link
       - run: npm run build && npm run paginas && npm run build:mg && npm run paginas:mg
@@ -252,7 +259,7 @@ jobs:
           fi
       # Chromium sem tela para desenhar a imagem de prévia de cada político (scripts/cartoes.mjs). Se falhar, as páginas
       # saem sem imagem e o site é publicado do mesmo jeito.
-      - run: npm ci && (npx playwright install --with-deps chromium || echo "::warning title=Cartões de prévia::Chromium não instalou") && npm run build && npm run paginas
+      - run: npm ci && (bash scripts/instalar-chromium.sh || echo "::warning title=Cartões de prévia::Chromium não instalou") && npm run build && npm run paginas
         working-directory: site
       - name: "Minas Nossa: montar o site em /mg/"
         if: steps.mg_dados.outputs.ok == '1'
