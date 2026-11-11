@@ -33,6 +33,7 @@ causam dano real. Por isso a estratégia junta três ideias:
 | R19 | Quem me representa mostra a pessoa errada no cargo: governador ou prefeito que saiu para disputar 2026, prefeito de eleição anulada, vice errado (candidatura trocada), número de eleitos diferente das cadeiras | média | alto | `test_representantes`, `site/e2e` (quem me representa) | quem disputou 2026 aparece com a renúncia e a regra da Constituição; eleição suplementar (pelo site de resultados do TSE) troca o prefeito ou a Câmara (só a lista inteira quando foram todas as cadeiras); cidade sem eleito mostra o aviso oficial do TSE; `validar.py` bloqueia mais eleitos que cadeiras, eleito sem nome ou partido e data de nascimento no site; `verificar.py` confere prefeitos sorteados no site de resultados do TSE |
 | R20 | Doador ou parlamentar ligado por engano a uma empresa (homônimo), ou CPF do TSE publicado: o arquivo de campanha traz CPF inteiro de candidato e doador, e às vezes CPF dentro do nome do fornecedor | média | alto | `test_campanha` (homônimo com outros dígitos não liga; nome igual com CPF diferente não liga; nenhum CPF do TSE em nenhum arquivo do site), `test_verificar::test_socio_que_saiu_*` | liga só com nome completo e 6 dígitos do CPF iguais; com o CPF do deputado, só o CPF acha a candidatura; o CPF do candidato vira resumo (hash) e nunca é gravado; `validar.py` bloqueia CPF à mostra e CPF dentro de nomes; `verificar.py` reconfere o sócio na BrasilAPI; canal de correção no site |
 | R18 | Aba do menu escondida: com abas novas, as últimas ("Como funciona", "Minha rede") ficavam cortadas no fim da linha, sem sinal de que havia mais (09/11/2026) | alta | médio | `site/e2e/menu.ts` (`abasAVista`, de 320px a 1920px) em `site.spec.ts`, `mg.spec.ts`, `eleicao2026.spec.ts` | menus e barra dos projetos quebram a linha em vez de rolar de lado, em todos os sites |
+| R21 | Pessoa ligada por engano a uma lista oficial de punidos (homônimo) ou CPF inteiro das listas aparecendo no site | média | alto | `test_sancoes` (homônimo de sócio e de deputado não liga; CPF nunca sai), `site/e2e` (punições) | empresa só pelo CNPJ, sócio pelo nome e pelo meio do CPF, deputado pelo CPF da Câmara, senador nunca (o Senado não publica CPF); `validar.py` bloqueia CPF inteiro, link fora do Portal e do TCU e vigência que não bate com a data final |
 
 ## 2. A pirâmide
 
@@ -85,6 +86,8 @@ A coleta diária só publica se `python -m sa_etl.validar` não achar erro. Ela 
 - privacidade e segurança: nenhum CPF sem máscara (nem dentro de links), só links http(s), nomes de arquivo seguros;
 - ninguém esquecido: toda nota da cota e todo voto das fontes pertence a um parlamentar da lista (`fora_da_lista` vazio);
   no Minas Nossa, todo projeto e toda emenda de deputado estadual do arquivo oficial da ALMG pertence a alguém da lista;
+- punições oficiais (`sancoes.json`): CPF só com máscara, link só para o Portal da Transparência e o TCU, empresa e
+  deputado ligados existem no site;
 - tamanho: pelo menos 400 deputados, 70 senadores e 50 votações;
 - queda: nenhum total de ano nem contagem caiu mais de 20% em relação à versão no ar. Se a queda for real, rode o
   workflow à mão com "Publicar mesmo com queda grande".

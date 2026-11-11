@@ -12,6 +12,7 @@ import { AvisosFim, EmRevisao } from "../components/Selo";
 import { FotoPerfil } from "../components/Foto";
 import { AgendaPolitico } from "../components/Agenda";
 import { CampanhaPolitico } from "../components/Campanha";
+import { PunicoesPolitico } from "../components/Punicoes";
 import { Compartilhar } from "../components/Compartilhar";
 import { norm } from "./Home";
 import { MG } from "../recorte";
@@ -54,6 +55,7 @@ export default function PoliticoPage() {
           {p.outros_nomes?.length ? <p className="small muted"><span>Também aparece nos dados oficiais como</span> {p.outros_nomes.join(", ")}</p> : null}
         </div>
       </section>
+      {!MG && <PunicoesPolitico id={p.id} />}
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={aba === "gastos"} onClick={() => setAba("gastos")}>Gastos e equipe</button>
         <button role="tab" aria-selected={aba === "agenda"} onClick={() => setAba("agenda")}>Dia a dia</button>

@@ -12,7 +12,7 @@ import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from . import (agenda, campanha, autorias, gabinetes, recursos_recebidos, representantes, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
+from . import (agenda, campanha, autorias, gabinetes, recursos_recebidos, representantes, sancoes, tramitacao, transferegov, tribunais, camara, cnpj, emendas, financas, ideologia, incentivos, links_notas, pagamentos, passagens, recursos,
                renuncias, senado, temas)
 from .categorias import GRUPOS, tema_de
 from . import medias as medias_casa
@@ -796,6 +796,10 @@ def main() -> None:
                     help="não lê as contas de campanha do TSE (doadores e fornecedores ligados à cota e às emendas)")
     ap.add_argument("--minutos-tribunais", type=float, default=10,
                     help="tempo máximo, por execução, para ler as sessões do STF ainda não guardadas")
+    ap.add_argument("--sem-sancoes", action="store_true",
+                    help="não lê as punições oficiais (CEIS, CNEP, CEAF e listas do TCU)")
+    ap.add_argument("--minutos-sancoes", type=float, default=sancoes.MINUTOS,
+                    help="tempo máximo, por execução, para ler as listas de punidos da API do Portal da Transparência")
     ap.add_argument("--minutos-pagamentos-gerais", type=float, default=40,
                     help="tempo máximo, por execução, para completar os dias antigos dos pagamentos a empresas")
     ap.add_argument("--minutos-transferegov", type=float, default=15,
@@ -815,6 +819,7 @@ def main() -> None:
              com_financas=not a.sem_financas, com_tramitacao=not a.sem_tramitacao, novas_empresas=a.novas_empresas,
              minutos_transferegov=a.minutos_transferegov, com_tribunais=not a.sem_tribunais,
              minutos_tribunais=a.minutos_tribunais, anos_notas=a.anos_notas, com_campanha=not a.sem_campanha,
+             com_sancoes=not a.sem_sancoes, minutos_sancoes=a.minutos_sancoes,
              com_representantes=not a.sem_representantes)
 
 
@@ -823,7 +828,8 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
              minutos_gerais: float = 40, com_financas: bool = True, com_tramitacao: bool = True,
              novas_empresas: int = cnpj.NOVAS_POR_COLETA, minutos_transferegov: float = 15,
              com_tribunais: bool = True, minutos_tribunais: float = 10, anos_notas: list[int] | None = None,
-             com_campanha: bool = True, com_representantes: bool = True) -> None:
+             com_campanha: bool = True, com_sancoes: bool = True, minutos_sancoes: float = sancoes.MINUTOS,
+             com_representantes: bool = True) -> None:
     """A coleta inteira, na ordem certa (usada também pelos testes)."""
     # A renúncia vem antes dos arquivos diários: o Portal passa a recusar downloads (HTTP 405) depois de muitos
     # pedidos seguidos, e os arquivos de renúncia são poucos (e ficam uma semana no cache)
@@ -856,6 +862,8 @@ def executar(anos: list[int], cache: Path, saida: Path, max_empresas: int = 1500
         gravar_incentivos(dados, saida, anos, inc, pag)
     if com_recursos:  # depois de montar(): usa a verba de gabinete já gravada em politicos.json
         coletar_gabinetes(saida, cache, anos)
+    if com_sancoes:  # depois de montar(): liga as listas de punidos às empresas (e/) e aos deputados já gravados
+        coletar_sancoes(saida, cache, minutos_sancoes)
     if com_representantes:  # depois de montar(): usa os deputados federais e senadores já gravados em politicos.json
         coletar_representantes(saida, cache)
     if com_financas:  # depois de tudo: usa as emendas e a verba de gabinete já gravadas
@@ -893,6 +901,15 @@ def coletar_gabinetes(saida: Path, cache: Path, anos: list[int]) -> None:
     except Exception:  # noqa: BLE001
         log.exception("Comparação dos gabinetes: erro; a página não foi atualizada")
         util.avisar("Comparação dos gabinetes: a coleta falhou; a página ficou de fora desta atualização")
+
+
+def coletar_sancoes(saida: Path, cache: Path, minutos: float) -> None:
+    """Punições e condenações oficiais (CEIS, CNEP, CEAF, TCU). Se falhar, o resto do site segue."""
+    try:
+        sancoes.coletar(saida, cache, minutos=minutos)
+    except Exception:  # noqa: BLE001
+        log.exception("Punições oficiais: erro; a lista não foi atualizada")
+        util.avisar("Punições oficiais: a coleta falhou; a lista ficou de fora desta atualização")
 
 
 def coletar_tramitacao(saida: Path, cache: Path, politicos: list[dict]) -> None:

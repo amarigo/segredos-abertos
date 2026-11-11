@@ -270,6 +270,9 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
     _conferir_gabinetes(saida, pols, r)
     _conferir_representantes(saida, r)
 
+    # ---------------- punições oficiais (CEIS, CNEP, CEAF, TCU)
+    _conferir_sancoes(saida, pols, r)
+
     # ---------------- privacidade e links (em todos os arquivos)
     for f in sorted(saida.rglob("*.json")):
         x = _ler(f, r)
@@ -608,6 +611,52 @@ def _conferir_campanha(saida: Path, r: Resultado) -> None:
                 r.erro(f"Campanha {g.stem}: ligação com empresa sem página ({(x.get('empresa') or {}).get('cnpj')})")
     if n_perfis != len(geral.get("ligacoes") or []):
         r.erro(f"Campanha: a lista geral tem {len(geral.get('ligacoes') or [])} ligações e os perfis somam {n_perfis}")
+
+
+LINK_SANCAO = re.compile(r"^https://(portaldatransparencia\.gov\.br|contas\.tcu\.gov\.br|conecta-tcu\.apps\.tcu\.gov\.br|certidoes\.apps\.tcu\.gov\.br)/")
+# 11 dígitos soltos ou no formato do CPF. Não conta número de processo no caminho de um link do TCU
+# (.../acordao-completo/00741520214.PROC), que vem antes de ".PROC".
+CPF_NO_TEXTO = re.compile(r"(?<![\d*])\d{3}\.?\d{3}\.?\d{3}-?\d{2}(?![\d/]|\.PROC)")
+
+
+def _conferir_sancoes(saida: Path, pols: list[dict], r: Resultado) -> None:
+    """Punições oficiais (sancoes.py): só decisão oficial com link para quem puniu; empresa ligada só pelo próprio CNPJ;
+    parlamentar e empresa existem no site; nenhum CPF inteiro em lugar nenhum do arquivo."""
+    f = saida / "sancoes.json"
+    if not f.exists():
+        r.alerta("Sem as punições oficiais (sancoes.json)")
+        return
+    texto = f.read_text(encoding="utf-8")
+    if CPF_NO_TEXTO.search(texto):
+        r.erro("Punições oficiais: há um CPF sem máscara em sancoes.json")
+    d = _ler(f, r) or {}
+    ids = {p["id"] for p in pols}
+    hoje = d.get("atualizado_em") or ""
+
+    def regs(rs: list[dict], onde: str) -> None:
+        for x in rs:
+            if not LINK_SANCAO.match(str(x.get("link") or "")):
+                r.erro(f"Punições oficiais: {onde} sem link oficial ({x.get('cad')} {x.get('id')})")
+            fim = x.get("fim") or ""
+            if bool(x.get("vigente")) != (not fim or fim >= hoje):
+                r.erro(f"Punições oficiais: {onde} com situação (em vigor ou não) diferente da data final ({x.get('id')})")
+
+    for e in d.get("empresas") or []:
+        c = e.get("cnpj") or ""
+        if not (saida / "e" / f"{c}.json").exists():
+            r.erro(f"Punições oficiais: empresa {c} sem página no site")
+        for x in e.get("registros") or []:
+            if x.get("cnpj") != c:
+                r.erro(f"Punições oficiais: punição de outro CNPJ ligada à empresa {c} ({x.get('cnpj')})")
+        regs(e.get("registros") or [], f"empresa {c}")
+        for so in e.get("socios") or []:
+            regs(so.get("registros") or [], f"sócio da empresa {c}")
+    for p in d.get("politicos") or []:
+        if p.get("id") not in ids:
+            r.erro(f"Punições oficiais: parlamentar {p.get('id')} fora de politicos.json")
+        if p.get("casa") != "camara":
+            r.erro(f"Punições oficiais: {p.get('id')} ligado sem CPF da fonte oficial (só deputados federais têm CPF na API)")
+        regs(p.get("registros") or [], f"parlamentar {p.get('id')}")
 
 
 def _conferir_representantes(saida: Path, r: Resultado) -> None:
