@@ -101,7 +101,8 @@ class Sancoes:
                 for i in range(40)]  # enche as páginas
         ceis.append(_ceis(100, "FORNECEDORA FICTICIA 03 LTDA", f[3], True, "2025-03-01", "2030-03-01"))
         ceis.append(_ceis(101, "FORNECEDORA FICTICIA 04 LTDA", f[4], True, "2019-01-01", "2021-01-01"))
-        ceis.append(_ceis(102, "DONO FICTICIO 1", "55510000112", False, "2024-05-01", "2032-05-01"))
+        # Como no TCU real (15/11/2026): o CPF às vezes vem colado no nome. Tem de sair do nome e a ligação continuar.
+        ceis.append(_ceis(102, "DONO FICTICIO 1 - CPF 555.100.001-12", "55510000112", False, "2024-05-01", "2032-05-01"))
         if 1002 in dep:
             ceis.append(_ceis(103, nome_civil(1002), cpf_deputado(1002), False, "2023-02-01", "2031-02-01"))
         self.listas = {
@@ -112,7 +113,7 @@ class Sancoes:
             + ([_ceaf(2, nome_civil(1003), cpf_deputado(1003))] if 1003 in dep else []),
         }
         self.tcu = {
-            "inabilitados": ([_tcu(nome_civil(1004), cpf_deputado(1004), 1)] if 1004 in dep else [])
+            "inabilitados": ([_tcu(f"{nome_civil(1004)} {cpf_deputado(1004)}", cpf_deputado(1004), 1)] if 1004 in dep else [])
             + ([_tcu(nome_civil(1005), "12345678900", 2)] if 1005 in dep else []),
             "eleitoral": ([_tcu(nome_civil(1004), cpf_deputado(1004), 1, "2030-07-16", True)] if 1004 in dep else [])
             + [_tcu(f"PESSOA SEM LIGACAO {i}", f"{30000000000 + i}", 10 + i, "2031-01-01", True) for i in range(5)],

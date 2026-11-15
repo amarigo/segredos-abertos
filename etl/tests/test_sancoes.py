@@ -41,6 +41,20 @@ def test_nome_do_acordao_e_registro_do_tcu():
     assert s.registro_tcu("tcu_irregulares", {"nome": "SEM DOCUMENTO", "numeroRegistro": ""}) is None
 
 
+def test_cpf_colado_no_nome_sai_do_nome():
+    # Linhas reais da lista de contas irregulares do TCU (15/11/2026) trazem "NOME 12345678901" no campo do nome
+    r = s.registro_tcu("tcu_irregulares", fs._tcu("FULANO DE TAL DA SILVA 10699681707", "10699681707", 1, None))
+    assert r["nome"] == "FULANO DE TAL DA SILVA" and r["_cpf"] == "10699681707"
+    for nome in ("FULANO DE TAL (CPF: 106.996.817-07)", "FULANO DE TAL - 106.996.817-07", "FULANO DE TAL, CPF nº 10699681707"):
+        assert s._nome(nome) == "FULANO DE TAL", nome
+    p = s.registro_portal("ceis", fs._ceis(1, "FULANO DE TAL 10699681707", "10699681707", False, "2024-01-01", "2030-01-01"))
+    assert p["nome"] == "FULANO DE TAL"
+    # Número que não é CPF fica: CNPJ inteiro, ano, número de empresa
+    assert s._nome("CONSTRUTORA 2000 LTDA") == "CONSTRUTORA 2000 LTDA"
+    assert s._nome("12.345.678 FULANO DE TAL") == "12.345.678 FULANO DE TAL"
+    assert s._nome("EMPRESA 12345678000190") == "EMPRESA 12345678000190"
+
+
 def test_registro_do_ceis_guarda_cpf_inteiro_so_em_campo_interno():
     x = fs._ceis(1, "FULANO DE TAL", "10699681707", False, "2024-01-01", "2030-01-01")
     r = s.registro_portal("ceis", x)
@@ -205,7 +219,9 @@ def test_validar_barra_cpf_inteiro_link_estranho_e_ligacao_errada(tmp_path):
         return r.erros
 
     assert rodar(base) == []
-    assert rodar({**base, "politicos": [{"id": "dep-1", "casa": "camara", "registros": [{**reg, "doc": "106.996.817-07"}]}]})
+    erros = rodar({**base, "politicos": [{"id": "dep-1", "casa": "camara", "registros": [{**reg, "doc": "106.996.817-07"}]}]})
+    assert any("politicos[].registros[].doc" in e for e in erros)  # diz em que campo está, sem mostrar o número
+    assert not any("106.996.817-07" in e for e in erros)
     assert rodar({**base, "empresas": [{"cnpj": "12345678000190", "socios": [], "registros": [{**reg, "link": "https://exemplo.com/x"}]}]})
     assert rodar({**base, "empresas": [{"cnpj": "12345678000190", "socios": [], "registros": [{**reg, "cnpj": "99999999000199"}]}]})
     assert rodar({**base, "empresas": [{"cnpj": "12345678000190", "socios": [], "registros": [{**reg, "vigente": False}]}]})

@@ -124,6 +124,19 @@ def _txt(x: Any) -> str:
     return "" if s.lower() in ("sem informação", "sem informacao", "null", "none", "-1", "s/i") else s
 
 
+# CPF solto no meio de um texto (11 dígitos, com ou sem pontos), com o rótulo "CPF" que às vezes vem antes.
+CPF_SOLTO = re.compile(r"[\s,;(\-–]*(?:\bCPF\b[\s:nº°.]*)?(?<![\d*])\d{3}\.?\d{3}\.?\d{3}-?\d{2}(?![\d/])\)?", re.I)
+
+
+def _nome(x: Any) -> str:
+    """Nome de quem foi punido, sem CPF dentro dele.
+
+    Na lista de contas irregulares do TCU, algumas linhas trazem o CPF inteiro colado no fim do nome
+    ("FULANO DE TAL 12345678901"; 6 de 48.302 linhas em 15/11/2026). O CPF já vem no campo próprio, então sai do nome:
+    o site nunca mostra CPF sem máscara (validar.py barra), e a coleta inteira parava por causa dessas linhas."""
+    return CPF_SOLTO.sub("", _txt(x)).strip(" -–,;(")
+
+
 def _data(s: Any) -> str:
     """dd/mm/aaaa ou aaaa-mm-ddT... -> aaaa-mm-dd (vazio se não for data)."""
     s = _txt(s)
@@ -193,7 +206,7 @@ def registro_portal(cad: str, x: dict) -> dict | None:
     """Uma linha do CEIS, CNEP ou CEAF no formato do site. CPF só com máscara."""
     if cad == "ceaf":
         pessoa = x.get("pessoa") or {}
-        nome = _txt(_g(x, "punicao", "nomePunido") or pessoa.get("nome"))
+        nome = _nome(_g(x, "punicao", "nomePunido") or pessoa.get("nome"))
         cpf = _txt(_g(x, "punicao", "cpfPunidoFormatado") or pessoa.get("cpfFormatado"))
         orgao = _txt(_g(x, "orgaoLotacao", "nome"))
         r = {"cad": cad, "id": x.get("id"), "nome": nome, "pf": True, "cnpj": "", "doc": cpf_mascarado(cpf),
@@ -206,7 +219,7 @@ def registro_portal(cad: str, x: dict) -> dict | None:
     else:
         pessoa = x.get("pessoa") or {}
         sanc = x.get("sancionado") or {}
-        nome = _txt(sanc.get("nome") or pessoa.get("nome") or pessoa.get("razaoSocialReceita"))
+        nome = _nome(sanc.get("nome") or pessoa.get("nome") or pessoa.get("razaoSocialReceita"))
         codigo = _txt(sanc.get("codigoFormatado"))
         cnpj = digits(_txt(pessoa.get("cnpjFormatado")) or (codigo if "*" not in codigo else ""))
         cpf = _txt(pessoa.get("cpfFormatado")) or (codigo if "*" in codigo else "")
@@ -243,7 +256,7 @@ def registro_tcu(cad: str, x: dict) -> dict | None:
     pf = len(d) == 11 and tipo != "CNPJ"
     if not (pf or len(d) == 14):
         return None
-    nome = _txt(x.get("nome")).strip("'\" ")
+    nome = _nome(x.get("nome")).strip("'\" ")
     if not nome:
         return None
     acordao = _txt(x.get("numeroAcordaoFormatado"))

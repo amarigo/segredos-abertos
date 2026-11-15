@@ -57,8 +57,9 @@ jobs:
 
   # Topo da pirâmide: o site no navegador (jornada, segurança e caos), com dados fictícios
   testes-site:
-    # Ubuntu fixo: a ubuntu-latest virou 26.04 em 12/11/2026 e o Playwright 1.56 não tem Chromium para ela.
-    # Volte para ubuntu-latest quando o @playwright/test suportar o 26.04.
+    # Ubuntu fixo nos jobs com Chromium: em 12/11/2026 a ubuntu-latest virou 26.04 sem aviso no repositório e o
+    # Playwright da época (1.56) não tinha Chromium para ela; o site ficou 4 dias sem publicar. O @playwright/test
+    # (1.64) já conhece o 26.04: para mudar de Ubuntu, troque aqui nos dois jobs e confira os testes do navegador no PR.
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -145,8 +146,9 @@ jobs:
   coletar:
     needs: [testes-coletor, testes-site]
     if: github.event_name != 'pull_request'
-    # Ubuntu fixo: a ubuntu-latest virou 26.04 em 12/11/2026 e o Playwright 1.56 não tem Chromium para ela.
-    # Volte para ubuntu-latest quando o @playwright/test suportar o 26.04.
+    # Ubuntu fixo nos jobs com Chromium: em 12/11/2026 a ubuntu-latest virou 26.04 sem aviso no repositório e o
+    # Playwright da época (1.56) não tinha Chromium para ela; o site ficou 4 dias sem publicar. O @playwright/test
+    # (1.64) já conhece o 26.04: para mudar de Ubuntu, troque aqui nos dois jobs e confira os testes do navegador no PR.
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
