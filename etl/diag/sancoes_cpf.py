@@ -36,3 +36,4 @@ for cad, regs in listas.items():
 for key, n in cont.most_common():
     print(key, n, "exemplo:", ex[key])
 print("total", sum(cont.values()))
+# rodada 2: com a correção
