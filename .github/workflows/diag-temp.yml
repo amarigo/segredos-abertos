@@ -1,0 +1,22 @@
+name: Diagnóstico temporário (punições)
+on:
+  push:
+    branches: [claude/project-thread-q9ra8g]
+    paths: [etl/diag/**, .github/workflows/diag-temp.yml]
+jobs:
+  diag:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r etl/requirements.txt
+      - uses: actions/cache/restore@v4
+        with:
+          path: etl/.cache
+          key: dados-nada
+          restore-keys: dados-
+      - working-directory: etl
+        run: ls .cache/sancoes/portal .cache/sancoes/tcu 2>&1 | head; python -m diag.sancoes_cpf .cache
