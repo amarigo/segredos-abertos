@@ -455,6 +455,7 @@ test.describe("jornada", () => {
     vigiar(page);
     await page.goto("./#/politicos");
     await expect(page.locator(".list .person").first()).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 0));
     await expect(page.locator(".voltar-menu")).toHaveCount(0);
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.locator(".voltar-menu").click();
