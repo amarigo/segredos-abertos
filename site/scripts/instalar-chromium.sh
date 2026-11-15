@@ -16,7 +16,14 @@ abre() {
 
 baixou=0
 for t in 1 2 3; do
-  npx playwright install chromium && { baixou=1; break; }
+  saida=$(npx playwright install chromium 2>&1) && { echo "$saida"; baixou=1; break; }
+  echo "$saida"
+  # Sistema que esta versão do Playwright não conhece (em 12/11/2026 a ubuntu-latest virou 26.04 e o Playwright 1.56
+  # recusou). Tentar de novo não resolve: sai na hora dizendo o que fazer.
+  if grep -q "does not support" <<< "$saida"; then
+    echo "::error title=Navegador::o Playwright $(npx playwright --version 2>/dev/null) não tem Chromium para este sistema ($(. /etc/os-release && echo "$PRETTY_NAME")). Atualize o @playwright/test em site/package.json ou fixe o runs-on do job numa versão do Ubuntu que ele conhece."
+    exit 1
+  fi
   echo "Download do Chromium falhou (tentativa $t)"
   [ "$t" -lt 3 ] && sleep $((t * 10))
 done

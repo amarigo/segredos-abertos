@@ -621,6 +621,18 @@ LINK_SANCAO = re.compile(r"^https://(portaldatransparencia\.gov\.br|contas\.tcu\
 CPF_NO_TEXTO = re.compile(r"(?<![\d*])\d{3}\.?\d{3}\.?\d{3}-?\d{2}(?![\d/]|\.PROC)")
 
 
+def _textos(d: Any, caminho: str = "") -> Iterator[tuple[str, str]]:
+    """(campo, texto) de cada valor do JSON. O campo vai sem os números das listas: empresas[].cnep[].nome."""
+    if isinstance(d, dict):
+        for k, v in d.items():
+            yield from _textos(v, f"{caminho}.{k}" if caminho else str(k))
+    elif isinstance(d, list):
+        for v in d:
+            yield from _textos(v, f"{caminho}[]")
+    else:
+        yield caminho, str(d)
+
+
 def _conferir_sancoes(saida: Path, pols: list[dict], r: Resultado) -> None:
     """Punições oficiais (sancoes.py): só decisão oficial com link para quem puniu; empresa ligada só pelo próprio CNPJ;
     parlamentar e empresa existem no site; nenhum CPF inteiro em lugar nenhum do arquivo."""
@@ -629,9 +641,11 @@ def _conferir_sancoes(saida: Path, pols: list[dict], r: Resultado) -> None:
         r.alerta("Sem as punições oficiais (sancoes.json)")
         return
     texto = f.read_text(encoding="utf-8")
-    if CPF_NO_TEXTO.search(texto):
-        r.erro("Punições oficiais: há um CPF sem máscara em sancoes.json")
     d = _ler(f, r) or {}
+    if CPF_NO_TEXTO.search(texto):
+        # Diz em que campo está (sem mostrar o número), para achar a causa sem rodar a coleta de novo
+        onde = sorted({c for c, v in _textos(d) if CPF_NO_TEXTO.search(v)}) or ["fora dos campos de texto"]
+        r.erro(f"Punições oficiais: há um CPF sem máscara em sancoes.json ({', '.join(onde[:5])})")
     ids = {p["id"] for p in pols}
     hoje = d.get("atualizado_em") or ""
 
