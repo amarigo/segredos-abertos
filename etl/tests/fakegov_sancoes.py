@@ -100,6 +100,7 @@ class Sancoes:
         ceis = [_ceis(i, f"EMPRESA SEM LIGACAO {i:03d} LTDA", f"{11000000 + i:08d}000199", True, "2024-01-01", "2029-01-01")
                 for i in range(40)]  # enche as páginas
         ceis.append(_ceis(100, "FORNECEDORA FICTICIA 03 LTDA", f[3], True, "2025-03-01", "2030-03-01"))
+        ceis[-1]["numeroProcesso"] = "34567890123"  # como no CEIS real: processo de 11 dígitos soltos, com cara de CPF
         ceis.append(_ceis(101, "FORNECEDORA FICTICIA 04 LTDA", f[4], True, "2019-01-01", "2021-01-01"))
         # Como no TCU real (15/11/2026): o CPF às vezes vem colado no nome. Tem de sair do nome e a ligação continuar.
         ceis.append(_ceis(102, "DONO FICTICIO 1 - CPF 555.100.001-12", "55510000112", False, "2024-05-01", "2032-05-01"))
