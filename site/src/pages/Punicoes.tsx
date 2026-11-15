@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Explain, Loading } from "../components/ui";
 import { cnpjFmt, dataBR, linkSeguro } from "../data";
-import { ChipCadastro, ListaRegistros, situacaoFonte, usePunicoes, type Cadastro } from "../components/Punicoes";
+import { ChipCadastro, ListaRegistros, listasLidas, situacaoFonte, usePunicoes, type Cadastro } from "../components/Punicoes";
 
 /** Empresas, sócios e deputados que aparecem nas listas oficiais de punidos (CEIS, CNEP, CEAF e TCU) */
 export default function PunicoesPage() {
@@ -12,6 +12,7 @@ export default function PunicoesPage() {
   const filtro = <T extends { vigente: boolean }>(xs: T[]) => (so === "vigentes" ? xs.filter((x) => x.vigente) : xs);
   const emps = filtro(p.empresas), pols = filtro(p.politicos);
   const c = p.cobertura;
+  const { faltam } = listasLidas(p);
   return (
     <>
       <section className="hero">
@@ -22,6 +23,13 @@ export default function PunicoesPage() {
           Só entram punições e condenações já decididas, publicadas por quem puniu. Conferido em {dataBR(p.atualizado_em)}.
         </p>
       </section>
+
+      {faltam.length > 0 && (
+        <div className="alert" role="note" data-testid="punicoes-faltam" style={{ marginTop: 16 }}>
+          <span><strong>Ainda sem dados:</strong> {faltam.join(", ")}. Os números abaixo ainda não contam estas listas; a leitura
+            continua na próxima atualização (veja a situação de cada uma em “As listas”).</span>
+        </div>
+      )}
 
       <div className="grid stats" style={{ marginTop: 16 }}>
         <div className="card stat"><span className="label">Empresas do site nas listas</span><span className="value">{p.empresas.filter((e) => e.registros.length).length}</span>
