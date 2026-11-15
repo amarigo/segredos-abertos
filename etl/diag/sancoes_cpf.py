@@ -27,7 +27,7 @@ cont = collections.Counter()
 ex = {}
 for cad, regs in listas.items():
     for r in regs:
-        for k, v in s._publico(r, hoje).items():
+        for k, v in s._publico(s.limpar(dict(r)), hoje).items():
             for item in (v if isinstance(v, list) else [v]):
                 txt = str(item)
                 m = CPF_NO_TEXTO.search(txt)
@@ -49,4 +49,4 @@ for k, n in c2.most_common(15):
 for key, n in cont.most_common():
     print(key, n, "exemplo:", ex[key])
 print("total", sum(cont.values()))
-# rodada 4: CEIS e CNEP lidos pela metade também
+# rodada 5: com limpar(): CEIS e CNEP lidos pela metade também

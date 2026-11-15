@@ -55,6 +55,40 @@ def test_cpf_colado_no_nome_sai_do_nome():
     assert s._nome("EMPRESA 12345678000190") == "EMPRESA 12345678000190"
 
 
+def test_processo_com_cara_de_cpf_nao_vai_para_o_site():
+    x = fs._ceis(1, "EMPRESA X LTDA", "12345678000190", True, "2024-01-01", "2030-01-01")
+    x["numeroProcesso"] = "34567890123"  # 11 dígitos soltos, como alguns órgãos registram no CEIS
+    r = s.registro_portal("ceis", x)
+    assert r["processo"] == "" and r["link"].startswith("https://portaldatransparencia.gov.br/")
+    x["numeroProcesso"] = "08012.001234/2019-11"
+    assert s.registro_portal("ceis", x)["processo"] == "08012.001234/2019-11"
+    x["numeroProcesso"] = "0001234-56.2024.8.26.0000"  # número de processo da Justiça (CNJ) fica
+    assert s.registro_portal("ceis", x)["processo"] == "0001234-56.2024.8.26.0000"
+
+
+def test_linha_guardada_antes_da_regra_e_limpa_na_coleta(tmp_path, monkeypatch):
+    # O cache guarda as linhas já no formato do site; as lidas antes desta regra têm CPF no nome e no processo
+    monkeypatch.setenv("PORTAL_TRANSPARENCIA_CHAVE", "chave-de-teste")
+    instalar(monkeypatch, FakeGov(anos=(2025,)))
+    from sa_etl import build
+    saida, cache = tmp_path / "saida", tmp_path / "cache"
+    build.executar([2025], cache, saida, max_empresas=200, com_recursos=False, com_incentivos=False,
+                   com_financas=False, com_tramitacao=False, com_tribunais=False, minutos_pagamentos=5)
+    f = cache / "sancoes" / "portal" / "ceis.json"
+    d = json.loads(f.read_text(encoding="utf-8"))
+    for r in d["linhas"]:
+        r["nome"] = f"{r['nome']} 10699681707"
+        r["processo"] = "10699681707"
+    f.write_text(json.dumps(d), encoding="utf-8")
+    s.coletar(saida, cache, HOJE)
+    texto = (saida / "sancoes.json").read_text(encoding="utf-8")
+    assert "10699681707" not in texto
+    from sa_etl.validar import Resultado, _conferir_sancoes
+    r = Resultado()
+    _conferir_sancoes(saida, json.loads((saida / "politicos.json").read_text(encoding="utf-8")), r)
+    assert not [e for e in r.erros if "CPF" in e]
+
+
 def test_registro_do_ceis_guarda_cpf_inteiro_so_em_campo_interno():
     x = fs._ceis(1, "FULANO DE TAL", "10699681707", False, "2024-01-01", "2030-01-01")
     r = s.registro_portal("ceis", x)

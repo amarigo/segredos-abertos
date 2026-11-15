@@ -137,6 +137,25 @@ def _nome(x: Any) -> str:
     return CPF_SOLTO.sub("", _txt(x)).strip(" -–,;(")
 
 
+def _processo(x: Any) -> str:
+    """Número do processo, ou vazio quando tem cara de CPF.
+
+    No CEIS, alguns órgãos (prefeituras, tribunais de justiça, Petrobras) registram o processo como 11 dígitos soltos
+    (40 de 20.757 linhas lidas em 15/11/2026, quase todas de empresas). Pode ser só o número interno deles, mas não há
+    como provar que não é um CPF, e o site nunca mostra CPF. Nesses casos o número não vai para o site; a punição
+    continua, com o link do Portal, onde o processo aparece."""
+    s = _txt(x)
+    return "" if CPF_SOLTO.search(s) else s
+
+
+def limpar(r: dict) -> dict:
+    """Nome e processo sem CPF, também nas linhas guardadas no cache antes desta regra (a lista vale vários dias)."""
+    r["nome"] = _nome(r.get("nome")).strip("'\" ")
+    if r.get("processo"):
+        r["processo"] = _processo(r["processo"])
+    return r
+
+
 def _data(s: Any) -> str:
     """dd/mm/aaaa ou aaaa-mm-ddT... -> aaaa-mm-dd (vazio se não for data)."""
     s = _txt(s)
@@ -212,7 +231,7 @@ def registro_portal(cad: str, x: dict) -> dict | None:
         r = {"cad": cad, "id": x.get("id"), "nome": nome, "pf": True, "cnpj": "", "doc": cpf_mascarado(cpf),
              "meio": meio_cpf(cpf), "tipo": _txt(_g(x, "tipoPunicao", "descricao")),
              "orgao": orgao, "inicio": _data(x.get("dataPublicacao")), "fim": "",
-             "processo": _txt(_g(x, "punicao", "processo")), "portaria": _txt(_g(x, "punicao", "portaria")),
+             "processo": _processo(_g(x, "punicao", "processo")), "portaria": _txt(_g(x, "punicao", "portaria")),
              "cargo": _txt(x.get("cargoEfetivo")) or _txt(x.get("cargoComissao")),
              "fundamento": [_txt(f.get("codigo") or f.get("descricao"))[:200] for f in x.get("fundamentacao") or []][:3],
              "referencia": _data(x.get("dataReferencia"))}
@@ -235,7 +254,7 @@ def registro_portal(cad: str, x: dict) -> dict | None:
              or _txt(_g(x, "fonteSancao", "nomeExibicao")),
              "inicio": _data(x.get("dataInicioSancao")), "fim": _data(x.get("dataFimSancao")),
              "transito": _data(x.get("dataTransitadoJulgado")),
-             "processo": _txt(x.get("numeroProcesso")),
+             "processo": _processo(x.get("numeroProcesso")),
              "fundamento": [_txt(f.get("codigo") or f.get("descricao"))[:200] for f in x.get("fundamentacao") or []][:3],
              "referencia": _data(x.get("dataReferencia"))}
         multa = valor_br(x.get("valorMulta"))
@@ -266,7 +285,7 @@ def registro_tcu(cad: str, x: dict) -> dict | None:
             "_cpf": d if pf else "", "tipo": TIPO_TCU[cad], "orgao": "Tribunal de Contas da União (TCU)",
             "inicio": _data(x.get("dataTransitoEmJulgado")),
             "fim": _data(x.get("dataFinalFinsEleitorais") or x.get("dataFinalSancao")),
-            "transito": _data(x.get("dataTransitoEmJulgado")), "processo": _txt(x.get("numeroProcessoFormatado")),
+            "transito": _data(x.get("dataTransitoEmJulgado")), "processo": _processo(x.get("numeroProcessoFormatado")),
             "decisao": nome_acordao(acordao), "data_decisao": _data(x.get("dataAcordao")),
             "uf": _txt(x.get("uf")), "link": link or CADASTROS[cad]["pagina"],
             "acompanhar": url_segura(x.get("linkAcompanhamentoProcesso"))}
@@ -591,6 +610,9 @@ def coletar(saida: Path, cache: Path, hoje: dt.date | None = None, minutos: floa
     l_tcu, s_tcu = coletar_tcu(pasta / "tcu", hoje)
     listas.update(l_tcu)
     situacao.update(s_tcu)
+    for regs in listas.values():
+        for r in regs:
+            limpar(r)
     faltando = [CADASTROS[c]["nome"] for c, s in situacao.items() if s["situacao"] == "faltando"]
     if faltando:
         avisar(f"Punições oficiais: as listas {', '.join(faltando)} não responderam e não há cópia anterior")
