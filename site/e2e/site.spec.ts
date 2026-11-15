@@ -404,6 +404,24 @@ test.describe("jornada", () => {
     expect(erros).toEqual([]);
   });
 
+  test("punições: lista ainda sem dados não vira \"não aparece\" (primeira leitura do Portal em andamento)", async ({ page }) => {
+    vigiar(page);
+    const sanc = dados("sancoes.json");
+    const vazias = ["ceis", "cnep", "ceaf"];
+    const fontes = Object.fromEntries(Object.entries(sanc.fontes).map(([k, f]) =>
+      [k, vazias.includes(k) ? { ...(f as object), situacao: "parcial", n: 0, lida_em: "" } : f]));
+    await page.route("**/data/sancoes.json", (r) => r.fulfill({ json: { ...sanc, fontes } }));
+    const limpa = empresas.find((x) => !sanc.empresas.some((y: { cnpj: string }) => y.cnpj === x.cnpj));
+    await page.goto(`./#/e/${limpa!.cnpj}`);
+    const nada = page.getByTestId("punicoes-empresa-nada");
+    await expect(nada).toContainText("Ainda sem dados: CEIS, CNEP, CEAF");
+    await expect(nada).not.toContainText("não aparecem nestas listas: CEIS");
+    await expect(nada).toContainText("não aparecem nestas listas: TCU");
+    await page.goto("./#/corrupcao/punicoes");
+    await expect(page.getByTestId("punicoes-faltam")).toContainText("CEIS, CNEP, CEAF");
+    await expect(page.locator("table")).toContainText("primeira leitura em andamento (ainda sem dados)");
+  });
+
   test("sem rolagem lateral no celular", async ({ page }, info) => {
     test.skip(info.project.name !== "celular");
     vigiar(page);

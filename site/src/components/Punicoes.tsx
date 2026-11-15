@@ -97,7 +97,16 @@ export function PunicoesEmpresa({ cnpj }: { cnpj: string }) {
   const e = p?.empresas.find((y) => y.cnpj === cnpj);
   if (!p) return null;
   if (!e) {
-    return <p className="small muted" data-testid="punicoes-empresa-nada">Punições oficiais: esta empresa e os sócios dela não aparecem no CEIS, no CNEP, no CEAF nem nas listas do TCU (conferido em {dataBR(p.atualizado_em)}). <Link to="/corrupcao/punicoes">Ver a lista de punidos</Link>.</p>;
+    const { lidas, faltam } = listasLidas(p);
+    return (
+      <p className="small muted" data-testid="punicoes-empresa-nada">
+        {lidas.length > 0
+          ? <>Punições oficiais: esta empresa e os sócios dela não aparecem nestas listas: {lidas.join(", ")} (conferido em {dataBR(p.atualizado_em)}).</>
+          : <>Punições oficiais: as listas ainda não foram lidas.</>}
+        {faltam.length > 0 && <> Ainda sem dados: {faltam.join(", ")}. A leitura continua na próxima atualização.</>}
+        {" "}<Link to="/corrupcao/punicoes">Ver a lista de punidos</Link>.
+      </p>
+    );
   }
   return (
     <section data-testid="punicoes-empresa">
@@ -131,6 +140,15 @@ export function AlertaPunicaoEmpresa({ cnpj }: { cnpj: string }) {
   return <div className="alert" role="note"><strong>Punição oficial em vigor:</strong> {propria ? "a empresa aparece" : "um sócio aparece"} em lista oficial de punidos ({[...new Set([...e.registros, ...e.socios.flatMap((s) => s.registros)].filter((r) => r.vigente).map((r) => p!.fontes[r.cad]?.nome || r.cad))].join(", ")}). Detalhes mais abaixo.</div>;
 }
 
+/** Listas com dados e listas ainda sem nenhuma leitura completa (primeira leitura em andamento, fonte fora do ar ou sem
+    chave). Sem dados de uma lista, o site não pode dizer que alguém "não aparece" nela. */
+export function listasLidas(p: Punicoes): { lidas: string[]; faltam: string[] } {
+  const fs = Object.values(p.fontes);
+  return { lidas: fs.filter((f) => f.n > 0).map((f) => f.nome), faltam: fs.filter((f) => !f.n).map((f) => f.nome) };
+}
+
 export function situacaoFonte(f: FontePunicao): string {
+  if (!f.n && (f.situacao === "parcial" || f.situacao === "copia")) return "primeira leitura em andamento (ainda sem dados)";
+  if (!f.n && f.situacao === "falhou") return "a fonte não respondeu; ainda sem dados";
   return SITUACAO[f.situacao] || f.situacao;
 }

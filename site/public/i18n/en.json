@@ -2929,5 +2929,13 @@
 "Patrimônio declarado ao TSE na candidatura de {0}: R$ {1}": "Assets declared to the Electoral Court (TSE) when running in {0}: R$ {1}",
 "Bens declarados pelos candidatos de {0} (TSE) ↗": "Assets declared by the candidates in {0} (TSE) ↗",
 "· patrimônio de prefeitos, vices e vereadores; só o tipo e o valor de cada bem; arquivo lido em {0}/{1}/{2}": "· assets of mayors, deputy mayors and city councillors; only the type and value of each item; file read on {0}/{1}/{2}",
-"· patrimônio do presidente, dos governadores e dos deputados estaduais; só o tipo e o valor de cada bem; arquivo lido em {0}/{1}/{2}": "· assets of the president, governors and state deputies; only the type and value of each item; file read on {0}/{1}/{2}"
+"· patrimônio do presidente, dos governadores e dos deputados estaduais; só o tipo e o valor de cada bem; arquivo lido em {0}/{1}/{2}": "· assets of the president, governors and state deputies; only the type and value of each item; file read on {0}/{1}/{2}",
+". Os números abaixo ainda não contam estas listas; a leitura continua na próxima atualização (veja a situação de cada uma em “As listas”).": ". The numbers below do not count these lists yet; reading continues in the next update (see each list's status under “The lists”).",
+"Ainda sem dados:": "No data yet:",
+"primeira leitura em andamento (ainda sem dados)": "first reading in progress (no data yet)",
+"a fonte não respondeu; ainda sem dados": "the source did not respond; no data yet",
+"Punições oficiais: esta empresa e os sócios dela não aparecem nestas listas:": "Official sanctions: this company and its partners do not appear on these lists:",
+"(conferido em": "(checked on",
+". A leitura continua na próxima atualização.": ". Reading continues in the next update.",
+"Punições oficiais: as listas ainda não foram lidas.": "Official sanctions: the lists have not been read yet."
 }
