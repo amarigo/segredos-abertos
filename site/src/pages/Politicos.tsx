@@ -14,13 +14,19 @@ const ROTULO: Record<string, [string, string]> = { autoria: ["proposta", "propos
 
 export default function Politicos() {
   const { data, error } = useData<Resumo[]>("politicos.json");
-  const [q, setQ] = useState("");
-  const [casa, setCasa] = useState("");
-  const [params] = useSearchParams();
-  const [uf, setUf] = useState(params.get("uf") || "");
-  const [partido, setPartido] = useState(params.get("partido") || "");
-  const [situacao, setSituacao] = useState("");
-  const [ordem, setOrdem] = useState<Ordem>("total");
+  // Filtros guardados no endereço da página: o botão Voltar do navegador volta à lista filtrada, e o link pode ser
+  // enviado para outra pessoa já com os filtros (ex.: #/politicos?uf=MG&partido=PT).
+  const [params, setParams] = useSearchParams();
+  const [q, setQ] = useState(params.get("nome") || "");
+  const filtro = (k: string) => params.get(k) || "";
+  const setFiltro = (k: string) => (v: string) => setParams((p) => { const n = new URLSearchParams(p); if (v) n.set(k, v); else n.delete(k); return n; }, { replace: true });
+  const casa = filtro("casa"), setCasa = setFiltro("casa");
+  const uf = filtro("uf"), setUf = setFiltro("uf");
+  const partido = filtro("partido"), setPartido = setFiltro("partido");
+  const situacao = filtro("situacao"), setSituacao = setFiltro("situacao");
+  const ordem = (filtro("ordem") || "total") as Ordem, setOrdem = setFiltro("ordem");
+  const filtrado = !!(q || casa || uf || partido || situacao);
+  const limpar = () => { setQ(""); setParams({}, { replace: true }); };
   const { ano } = useAno();
   const t = (p: Resumo) => p.por_ano[ano]?.total || 0;
   /** Valor da atuação no ano para ordenar (-1 quando não há dado: vai para o fim da lista). */
@@ -86,7 +92,7 @@ export default function Politicos() {
         </div>
       </div>
       <div className="search">
-        <input id="filtro-nome" aria-label="Nome" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nome" />
+        <input id="filtro-nome" aria-label="Nome" type="search" value={q} onChange={(e) => { setQ(e.target.value); setFiltro("nome")(e.target.value); }} placeholder="Nome" />
         <select id="filtro-casa" aria-label="Casa" value={casa} onChange={(e) => setCasa(e.target.value)}>
           <option value="">Câmara e Senado</option><option value="camara">Deputados federais</option><option value="senado">Senadores</option>
         </select>
@@ -102,7 +108,7 @@ export default function Politicos() {
           <option value="">No cargo hoje e quem já saiu</option><option value="exercicio">Só quem está no cargo hoje</option>
           <option value="fora">Só quem saiu do cargo</option>
         </select>
-        <select id="filtro-ordem" aria-label="Ordenar" value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)}>
+        <select id="filtro-ordem" aria-label="Ordenar" value={ordem} onChange={(e) => setOrdem(e.target.value === "total" ? "" : e.target.value)}>
           <option value="total">Maior gasto de cota em {ano}</option><option value="nome">Nome</option><option value="posicao">Da esquerda para a direita</option>
           <option value="presenca">Maior presença no Plenário em {ano}</option><option value="autoria">Mais propostas apresentadas em {ano}</option>
           <option value="relatadas">Mais relatorias em {ano}</option><option value="discursos">Mais discursos em {ano}</option>
@@ -114,7 +120,8 @@ export default function Politicos() {
           valor: t(p), cor: corPartido(p.partido) }))} /></div>
         <p className="muted small">Os 15 maiores gastos com os filtros escolhidos acima. Clique no nome para abrir cada gasto, nota por nota.</p>
       </Abrir>}
-      <p className="muted small">{lista.length} resultado{lista.length === 1 ? "" : "s"}. A lista traz todos que tiveram mandato nesta legislatura, inclusive suplentes que já devolveram a vaga e quem se licenciou: os gastos e votos do período no cargo continuam contando.</p>
+      <p className="muted small"><strong>{lista.length} resultado{lista.length === 1 ? "" : "s"}</strong>{filtrado && <> · <button type="button" className="link" onClick={limpar}>Limpar filtros</button></>}. A lista traz todos que tiveram mandato nesta legislatura, inclusive suplentes que já devolveram a vaga e quem se licenciou: os gastos e votos do período no cargo continuam contando.</p>
+      {lista.length === 0 && <div className="empty">Ninguém com esses filtros. <button type="button" className="link" onClick={limpar}>Limpar filtros</button></div>}
       <div className="list">
         {lista.map((p) => <PessoaLinha key={p.id} p={p} extra={extra(p)} />)}
       </div>

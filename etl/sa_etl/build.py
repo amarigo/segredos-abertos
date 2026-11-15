@@ -490,7 +490,11 @@ def montar(dados: dict, saida: Path, anos: list[int], anos_notas: list[int] | No
             todos = round(sum(x["custo_total"] for x in com), 2)
             anos_p[a] = {"n": len(com), "cota": cota, "cota_por_membro": round(cota / len(com), 2),
                          "custo_total": todos, "custo_por_membro": round(todos / len(com), 2)}
+        # n: todos que passaram pelo partido nesta legislatura (os gastos de todos contam); n_exercicio: só quem está
+        # no cargo hoje, que é o tamanho da bancada (as cadeiras). Antes a página Partidos somava n e mostrava 929
+        # cadeiras na Câmara, que tem 513.
         partidos.append({"casa": casa, "sigla": sigla, "n": len(rs),
+                         "n_exercicio": sum(1 for r in rs if r.get("em_exercicio") is not False),
                          "posicao": round(sum(ps) / len(ps), 3) if ps else None,
                          "alinhamento_governo": round(sum(als) / len(als), 3) if als else None,
                          "fidelidade": round(sum(fs) / len(fs), 3) if fs else None,

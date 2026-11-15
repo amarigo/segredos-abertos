@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Barras, Explain, Loading, OndeVer, useAno, useData } from "../components/ui";
 import { MG } from "../recorte";
-import { casaNome, corPartido, reais, reaisCurto, type Casa, type Partido } from "../data";
+import { cadeiras, casaNome, comCadeiras, type Resumo, corPartido, reais, reaisCurto, type Casa, type Partido } from "../data";
 import { CompararAnos, Rosca, prepararFatias, type Fatia, type FatiaPronta } from "../components/graficos";
 import { COR_LADO, LADOS, ladoPelosVotos } from "../partidos";
 
@@ -71,12 +71,14 @@ export function Pizza({ fatias, titulo }: { fatias: { sigla: string; valor: numb
 
 export default function Partidos() {
   const { data, error } = useData<Partido[]>("partidos.json");
+  const precisaLista = !!data && data.some((p) => p.n_exercicio == null);
+  const { data: pols } = useData<Resumo[]>(precisaLista ? "politicos.json" : null);
   const { ano } = useAno();
   if (!data) return <Loading error={error} />;
   return (
     <>
       <h1>Partidos</h1>
-      <Bancadas partidos={data} />
+      {(!precisaLista || pols) && <Bancadas partidos={comCadeiras(data, pols)} />}
       <GastoPartidos partidos={data} ano={ano} />
       <PartidosAnos partidos={data} ano={ano} />
       <p className="muted small">Conta cada parlamentar no partido atual. Quem mudou de partido aparece no partido de hoje, com todos os gastos do ano. Para ver cada parlamentar de um partido, use o filtro de partido em <Link to="/politicos">{MG ? "Federais" : "Políticos"}</Link>.</p>
@@ -97,17 +99,17 @@ function Bancadas({ partidos }: { partidos: Partido[] }) {
       <p className="small muted">Parlamentares no mandato hoje, pelo partido atual. O lado vem dos votos da bancada nas votações nominais, o mesmo critério para todos.</p>
       <div className="secao-graficos">
         {(["camara", "senado"] as Casa[]).map((c) => {
-          const ps = partidos.filter((p) => p.casa === c && p.n > 0).sort((a, b) => b.n - a.n);
+          const ps = partidos.filter((p) => p.casa === c && cadeiras(p) > 0).sort((a, b) => cadeiras(b) - cadeiras(a));
           if (!ps.length) return null;
-          const total = ps.reduce((a, p) => a + p.n, 0);
+          const total = ps.reduce((a, p) => a + cadeiras(p), 0);
           const porLado: Record<string, number> = {};
-          ps.forEach((p) => { const l = p.posicao == null ? "Sem posição" : ladoPelosVotos(p.posicao); porLado[l] = (porLado[l] || 0) + p.n; });
+          ps.forEach((p) => { const l = p.posicao == null ? "Sem posição" : ladoPelosVotos(p.posicao); porLado[l] = (porLado[l] || 0) + cadeiras(p); });
           const fmt = (v: number) => `${v} cadeira${v === 1 ? "" : "s"}`;
           return (
             <div key={c} className="card">
               <h3>{casaNome(c)}</h3>
               <div className="secao-graficos">
-                <Rosca fatias={prepararFatias(ps.map((p) => ({ nome: p.sigla, valor: p.n, cor: corPartido(p.sigla) })), 7)} titulo={`Cadeiras por partido na ${casaNome(c)}`} formato={fmt} centroRotulo="Cadeiras" centro={String(total)} />
+                <Rosca fatias={prepararFatias(ps.map((p) => ({ nome: p.sigla, valor: cadeiras(p), cor: corPartido(p.sigla) })), 7)} titulo={`Cadeiras por partido na ${casaNome(c)}`} formato={fmt} centroRotulo="Cadeiras" centro={String(total)} />
                 <Rosca fatias={prepararFatias([...LADOS, "Sem posição"].map((l) => ({ nome: l, valor: porLado[l] || 0, cor: COR_LADO[l] })), 9)} titulo={`Cadeiras por lado na ${casaNome(c)}`} formato={fmt} centroRotulo="Por lado" centro={String(total)} />
               </div>
             </div>

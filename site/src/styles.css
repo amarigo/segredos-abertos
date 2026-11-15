@@ -1238,3 +1238,31 @@ tr.nota-aberta > td { background: var(--tint); }
 .rep-aviso-tse p { margin: 6px 0; }
 .rep-aviso-tse ul { margin: 4px 0; padding-left: 20px; }
 .rep-diferenca p { margin: 6px 0; }
+
+/* ------------------------------------------------------------------ topo compacto no celular e botão "Menu" */
+/* No celular, a barra dos projetos, a marca e o menu ocupavam metade da primeira tela (cerca de 370px em 390px de
+   largura) antes de qualquer número. Todas as abas continuam à vista (regra de site/e2e/menu.ts); só os espaços,
+   o rótulo "Projetos:" e o rótulo "Ano" saem, e a letra da marca diminui um pouco. */
+@media (max-width: 699px) {
+  .projetos .wrap > span:first-child { display: none; }
+  .projetos { font-size: .72rem; letter-spacing: .03em; }
+  .projetos .wrap { gap: 0 12px; padding-block: 0; }
+  .projetos a { padding: 8px 2px; }
+  .linguas a { padding: 8px 8px; }
+  .top .wrap { padding-block: 10px 6px; gap: 6px 10px; padding-bottom: 12px !important; }
+  .brand { font-size: 1.08rem; gap: 8px; }
+  .brand img { width: 24px; height: 24px; }
+  .top .ano-sel .muted { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+.voltar-menu {
+  position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 40;
+  background: var(--navy); color: #fff; border: 2px solid #fff; border-radius: 999px; padding: 10px 16px; min-height: 44px;
+  font: inherit; font-weight: 700; font-size: .9rem; cursor: pointer; box-shadow: 0 4px 14px rgba(7, 29, 65, .35);
+}
+.voltar-menu:hover { background: var(--navy-2); }
+.voltar-menu:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) {
+  .voltar-menu { animation: voltar-menu-entra .2s cubic-bezier(.23, 1, .32, 1); }
+  @keyframes voltar-menu-entra { from { opacity: 0; transform: translateY(8px); } }
+}
+@media print { .voltar-menu { display: none; } }

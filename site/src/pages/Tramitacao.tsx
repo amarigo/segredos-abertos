@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Explain, Loading, useData } from "../components/ui";
-import { TEMAS, autorSigla, casaNome, dataBR, dataHoraBR, linkSeguro, type ArgumentoProjeto, type GrupoProjeto, type NoticiaContra, type Projeto, type Tramitacao, type TramitacaoAlmg } from "../data";
+import { TEMAS, autorSigla, nomeTipo, casaNome, dataBR, dataHoraBR, linkSeguro, type ArgumentoProjeto, type GrupoProjeto, type NoticiaContra, type Projeto, type Tramitacao, type TramitacaoAlmg } from "../data";
 import { norm } from "./Home";
 import { MG } from "../recorte";
 import { VotacoesAbas } from "./Votacoes";
@@ -254,7 +254,7 @@ export default function TramitacaoPage() {
           </select>
         )}
         <select aria-label="Tipo" value={tipo} onChange={(e) => setTipo(e.target.value)}>
-          <option value="">Todos os tipos</option>{tipos.map((t) => <option key={t}>{t}</option>)}
+          <option value="">Todos os tipos</option>{tipos.map((t) => <option key={t} value={t}>{nomeTipo(t)}</option>)}
         </select>
         {aba !== "almg" && (
           <select aria-label="Tema" value={tema} onChange={(e) => setTema(e.target.value)}>

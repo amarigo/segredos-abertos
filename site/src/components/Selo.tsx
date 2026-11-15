@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useData } from "./ui";
+import { MG } from "../recorte";
 import { AvisarErro } from "./Confianca";
 import { linkSeguro, reais, type ItemVerificado, type Verificacao, type SecaoVerificada, type StatusVerificacao } from "../data";
 
@@ -29,7 +30,7 @@ export function resumoSecao(s: SecaoVerificada): string {
 }
 
 export default function Selo({ secao }: { secao: string }) {
-  const { data } = useData<Verificacao>("verificacao.json");
+  const { data } = useData<Verificacao>(MG ? null : "verificacao.json");
   const s = data?.secoes?.[secao];
   if (!s) return null;
   const txt = resumoSecao(s);
@@ -43,7 +44,7 @@ export default function Selo({ secao }: { secao: string }) {
 
 /* Todas as seções numa lista curta, para a página inicial */
 export function SelosResumo() {
-  const { data } = useData<Verificacao>("verificacao.json");
+  const { data } = useData<Verificacao>(MG ? null : "verificacao.json");
   if (!data?.secoes) return null;
   return (
     <section>
@@ -79,7 +80,7 @@ const valor = (x: number | string) => (typeof x === "number" ? reais(x, true) : 
 /* Diferenças que a conferência achou para este político, empresa ou votação, com o número da fonte oficial.
    As já corrigidas na coleta (o site já mostra o número oficial) não aparecem. */
 export function EmRevisao({ campo, valor: chave }: { campo: "politico" | "cnpj" | "votacao"; valor: string }) {
-  const { data } = useData<Verificacao>("verificacao.json");
+  const { data } = useData<Verificacao>(MG ? null : "verificacao.json");
   if (!data?.checagens) return null;
   const itens: ItemVerificado[] = data.checagens.flatMap((c) => c.divergencias)
     .filter((d) => d[campo] === chave && !(d.motivo && data.motivos?.[d.motivo]?.corrigido));

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Barras, COR_GRUPO, Explain, Loading, useAno, useData } from "../components/ui";
-import { basePeriodo, corPartido, cotaNoAno, nomePeriodo, GRUPO_CURTO, GRUPO_EXPLICA, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
+import { basePeriodo, comCadeiras, corPartido, cotaNoAno, nomePeriodo, GRUPO_CURTO, GRUPO_EXPLICA, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
 import { GastoPartidos } from "./Partidos";
 import { MG, SITE } from "../recorte";
 import type { CidadeResumo } from "../data";
@@ -64,6 +64,10 @@ export default function Home() {
     ? pols.filter((p) => norm(`${p.nome} ${p.partido} ${p.uf}`).includes(norm(q))
       || (p.outros_nomes || []).some((n) => norm(n).includes(norm(q)))).slice(0, 8) : [];
 
+  // Quem usou a cota no ano escolhido. meta.contagens.politicos conta todos da legislatura, inclusive quem saiu antes
+  // do ano: em 2026 a frase dizia "os 1087 ... pediram em 2026", mas só 658 tinham nota no ano.
+  const nNoAno = (pols || []).filter((p) => totalAno(p) > 0).length;
+  const nHoje = (pols || []).filter((p) => p.em_exercicio !== false).length;
   const minhaCidade = cidadeGuardada();
   return (
     <>
@@ -76,7 +80,7 @@ export default function Home() {
       <section className="hero">
         <span className="eyebrow">Cota parlamentar · {ano}</span>
         <h1 className="big">{reaisCurto(meta.total_por_ano?.[ano] || 0)}</h1>
-        <p>foi o que os {meta.contagens.politicos} {SITE.quem} pediram de reembolso com dinheiro público em {ano}.{meta.custo_por_ano?.[ano] ? <> Somando salários e equipe dos gabinetes, o custo conhecido chega a <strong>{reaisCurto(meta.custo_por_ano[ano])}</strong>.</> : null} Veja quanto cada um gastou, com quais empresas, quem são os donos dessas empresas e como cada um vota.</p>
+        <p>foi o que {nNoAno ? `os ${nNoAno.toLocaleString("pt-BR")}` : "os"} {SITE.quem} pediram de reembolso com dinheiro público em {ano}.{meta.custo_por_ano?.[ano] ? <> Somando salários e equipe dos gabinetes, o custo conhecido chega a <strong>{reaisCurto(meta.custo_por_ano[ano])}</strong>.</> : null} Veja quanto cada um gastou, com quais empresas, quem são os donos dessas empresas e como cada um vota.</p>
         <form className="search" role="search" onSubmit={(e) => { e.preventDefault(); if (resultados[0]) nav(`/p/${resultados[0].id}`); }}>
           <label htmlFor="busca" className="muted small" style={{ flexBasis: "100%" }}>{SITE.busca}</label>
           <input id="busca" value={q} onChange={(e) => setQ(e.target.value)} placeholder={SITE.buscaExemplo} autoComplete="off" />
@@ -113,7 +117,7 @@ export default function Home() {
             <Link to="/emendas-estaduais" className="card cidade-card"><strong>Emendas estaduais</strong><span className="small muted">Quanto cada deputado estadual indicou do orçamento de Minas, para quais cidades e quem recebeu.</span></Link>
             <Link to="/cultura" className="card cidade-card"><strong>Shows e cultura</strong><span className="small muted">Quanto as prefeituras gastam com shows e artistas, quem indicou o dinheiro e a Lei Rouanet em cada região, com a população das cidades.</span></Link>
             <Link to="/painel" className="card cidade-card"><strong>Painel por área</strong><span className="small muted">Saúde, educação, cultura, esporte: quanto as emendas estaduais mandaram para cada área, onde e em quê. Junte áreas e filtre por cidade.</span></Link>
-            <Link to="/politicos" className="card cidade-card"><strong>Deputados federais e senadores</strong><span className="small muted">Os {meta.contagens.politicos} que representam Minas em Brasília: cota parlamentar, empresas e votos.</span></Link>
+            <Link to="/politicos" className="card cidade-card"><strong>Deputados federais e senadores</strong><span className="small muted">{nHoje ? `Os ${nHoje} que representam` : "Quem representa"} Minas em Brasília: cota parlamentar, empresas e votos.</span></Link>
           </div>
         </section>
       )}
@@ -175,11 +179,11 @@ export default function Home() {
           <Link to="/incentivos" className="card cidade-card"><strong>Incentivos e dinheiro para empresas</strong><span className="small muted">Pagamentos, renúncia fiscal e emendas: quem recebeu mais e quem deu mais.</span></Link>
         </section>
       )}
-      {partidos && partidos.some((p) => p.casa === "camara") && (
+      {partidos && pols && partidos.some((p) => p.casa === "camara") && (
         <section>
           <h2>Onde cada partido está, pelos votos</h2>
           <Explain>Cada partido da Câmara aparece no lado em que fica pelo voto dos seus deputados nas votações nominais. É o mesmo critério para todos. Não usamos o que o partido diz de si, porque nem todos se colocam num lado em documento oficial, como estatuto ou programa. Cada bolha é um partido no seu ponto da régua, do tamanho da bancada; a tabela embaixo lista os partidos de cada lado, também do mais à esquerda para o mais à direita. <Link to="/sobre">Entenda o cálculo</Link>.</Explain>
-          <EspectroPartidos partidos={partidos.filter((p) => p.casa === "camara")} />
+          <EspectroPartidos partidos={comCadeiras(partidos, pols).filter((p) => p.casa === "camara")} />
         </section>
       )}
       {partidos && <GastoPartidos partidos={partidos} ano={ano} limite={10} />}

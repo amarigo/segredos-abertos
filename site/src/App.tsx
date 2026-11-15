@@ -193,7 +193,28 @@ export default function App() {
           <span>Projeto independente e sem fins lucrativos. Código aberto em <a href="https://github.com/amarigo/segredos-abertos">GitHub</a>.</span>
         </div>
       </footer>
+      <VoltarAoMenu />
     </AnoCtx.Provider>
+  );
+}
+
+/** Botão "Menu" que aparece depois de rolar uma página longa. No celular o menu não fica preso no topo (ocuparia
+ * meia tela), então numa lista comprida a pessoa precisava rolar tudo de volta para trocar de aba. */
+function VoltarAoMenu() {
+  const [ver, setVer] = useState(false);
+  useEffect(() => {
+    const olhar = () => setVer(window.scrollY > window.innerHeight * 1.5);
+    olhar();
+    window.addEventListener("scroll", olhar, { passive: true });
+    return () => window.removeEventListener("scroll", olhar);
+  }, []);
+  if (!ver) return null;
+  return (
+    <button type="button" className="voltar-menu" onClick={() => {
+      const suave = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: 0, behavior: suave ? "smooth" : "auto" });
+      document.querySelector<HTMLElement>(".top .nav a")?.focus({ preventScroll: true });
+    }}><span aria-hidden="true">↑</span> Menu</button>
   );
 }
 
