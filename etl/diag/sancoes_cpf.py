@@ -35,7 +35,18 @@ for cad, regs in listas.items():
                     cont[(cad, k)] += 1
                     ex.setdefault((cad, k), forma(txt[max(0, m.start() - 60):m.end() + 15]))
     print(cad, len(regs), "linhas")
+from sa_etl.util import digits
+c2 = collections.Counter()
+for cad, regs in listas.items():
+    for r in regs:
+        pr = str(r.get("processo") or "")
+        if CPF_NO_TEXTO.search(pr):
+            d = digits(pr)
+            c2[(cad, "pf" if r.get("pf") else "pj", "igual_ao_cpf" if d == r.get("_cpf") else "diferente",
+                "orgao=" + re.sub(r"\d", "9", str(r.get("orgao") or ""))[:60], "fonte=" + str(r.get("tipo") or "")[:40])] += 1
+for k, n in c2.most_common(15):
+    print("processo", k, n)
 for key, n in cont.most_common():
     print(key, n, "exemplo:", ex[key])
 print("total", sum(cont.values()))
-# rodada 3: CEIS e CNEP lidos pela metade também
+# rodada 4: CEIS e CNEP lidos pela metade também
