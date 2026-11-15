@@ -37,7 +37,9 @@ test.describe("jornada", () => {
     const curto = v >= 1e6 ? `R$ ${(v / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`
       : `R$ ${(v / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 0 })} mil`;
     expect(sp(await page.locator(".hero .big").innerText())).toBe(curto);
-    await expect(page.locator(".hero")).toContainText(`${meta.contagens.politicos} deputados federais e senadores`);
+    // Conta só quem usou a cota no ano (não todos da legislatura: em 2026 o site dizia 1087, mas só 658 tinham nota)
+    const noAno = dados("politicos.json").filter((p: { por_ano: Record<string, { total?: number }> }) => (p.por_ano[ANO]?.total || 0) > 0).length;
+    await expect(page.locator(".hero")).toContainText(`os ${noAno} deputados federais e senadores`);
     expect(erros).toEqual([]);
   });
 
@@ -420,6 +422,43 @@ test.describe("jornada", () => {
     await page.goto("./#/corrupcao/punicoes");
     await expect(page.getByTestId("punicoes-faltam")).toContainText("CEIS, CNEP, CEAF");
     await expect(page.locator("table")).toContainText("primeira leitura em andamento (ainda sem dados)");
+  });
+
+  test("políticos: filtros ficam no endereço e limpam com um clique", async ({ page }) => {
+    const erros = vigiar(page);
+    const p = dados("politicos.json")[0] as { uf: string; partido: string };
+    await page.goto(`./#/politicos?uf=${p.uf}`);
+    await expect(page.locator("#filtro-uf")).toHaveValue(p.uf);
+    await page.locator("#filtro-partido").selectOption(p.partido);
+    await expect(page).toHaveURL(new RegExp(`uf=${p.uf}.*partido=${encodeURIComponent(p.partido)}|partido=${encodeURIComponent(p.partido)}.*uf=${p.uf}`));
+    await page.locator("#filtro-nome").fill("nome que não existe");
+    await expect(page.locator(".empty", { hasText: "Ninguém com esses filtros" })).toBeVisible();
+    await page.locator(".empty").getByRole("button", { name: "Limpar filtros" }).click();
+    await expect(page.locator("#filtro-uf")).toHaveValue("");
+    await expect(page.locator("#filtro-nome")).toHaveValue("");
+    await expect(page.locator(".list .person").first()).toBeVisible();
+    expect(erros).toEqual([]);
+  });
+
+  test("partidos: cadeiras contam só quem está no cargo hoje", async ({ page }) => {
+    const erros = vigiar(page);
+    const parts: { casa: string; n: number; n_exercicio?: number }[] = dados("partidos.json");
+    const cadeiras = parts.filter((x) => x.casa === "camara").reduce((a, x) => a + (x.n_exercicio ?? x.n), 0);
+    const hoje = dados("politicos.json").filter((x: { casa: string; em_exercicio?: boolean }) => x.casa === "camara" && x.em_exercicio !== false).length;
+    expect(cadeiras).toBe(hoje);
+    await page.goto("./#/partidos");
+    await expect(page.locator(".card", { hasText: "Câmara" }).first()).toContainText(String(cadeiras));
+    expect(erros).toEqual([]);
+  });
+
+  test("página longa: botão Menu volta ao topo", async ({ page }) => {
+    vigiar(page);
+    await page.goto("./#/politicos");
+    await expect(page.locator(".list .person").first()).toBeVisible();
+    await expect(page.locator(".voltar-menu")).toHaveCount(0);
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.locator(".voltar-menu").click();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(5);
   });
 
   test("sem rolagem lateral no celular", async ({ page }, info) => {

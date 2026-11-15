@@ -169,7 +169,28 @@ export interface Empresa extends Omit<EmpresaResumo, "emendas" | "governo" | "re
  *  "lista" (lista oficial do Senado ou resumo do mês na Câmara). */
 export type NotaEmpresa = [string, string, string, number, string, string?, string?];
 export interface PartidoAno { n: number; cota: number; cota_por_membro: number; custo_total: number; custo_por_membro: number }
-export interface Partido { casa: Casa; sigla: string; n: number; posicao: number | null; alinhamento_governo: number | null; fidelidade: number | null; total: number; por_ano: Record<string, PartidoAno> }
+export interface Partido { casa: Casa; sigla: string; n: number; n_exercicio?: number; posicao: number | null; alinhamento_governo: number | null; fidelidade: number | null; total: number; por_ano: Record<string, PartidoAno> }
+/** Nome por extenso das siglas de proposição da Câmara e do Senado, para o filtro de tipo (quem não conhece a sigla
+    entende o que escolhe). Sigla sem nome aqui aparece sozinha. */
+export const TIPO_PROPOSICAO: Record<string, string> = {
+  PEC: "proposta de emenda à Constituição", PL: "projeto de lei", PLP: "projeto de lei complementar", MPV: "medida provisória",
+  PDL: "projeto de decreto legislativo", PDC: "projeto de decreto legislativo", PLC: "projeto de lei da Câmara, no Senado",
+  PLS: "projeto de lei do Senado", PRC: "projeto de resolução da Câmara", PRS: "projeto de resolução do Senado",
+  REQ: "requerimento", RQS: "requerimento no Senado", REC: "recurso", MSC: "mensagem do Executivo",
+  SCD: "mudanças da Câmara a projeto do Senado",
+};
+export const nomeTipo = (sigla: string) => (TIPO_PROPOSICAO[sigla] ? `${sigla}: ${TIPO_PROPOSICAO[sigla]}` : sigla);
+
+/** Cadeiras do partido hoje (quem está no cargo). n conta também quem já saiu do cargo nesta legislatura; arquivos
+    antigos, sem n_exercicio, usam n. */
+export const cadeiras = (p: Partido): number => p.n_exercicio ?? p.n;
+/** Completa n_exercicio pela lista de parlamentares quando o arquivo de partidos ainda não traz o campo (coleta antiga). */
+export function comCadeiras(partidos: Partido[], pols: { casa: string; partido: string; em_exercicio?: boolean }[] | null): Partido[] {
+  if (!pols || partidos.every((p) => p.n_exercicio != null)) return partidos;
+  const hoje: Record<string, number> = {};
+  pols.forEach((p) => { if (p.em_exercicio !== false) hoje[`${p.casa}|${p.partido}`] = (hoje[`${p.casa}|${p.partido}`] || 0) + 1; });
+  return partidos.map((p) => (p.n_exercicio != null ? p : { ...p, n_exercicio: hoje[`${p.casa}|${p.sigla}`] || 0 }));
+}
 /* Página da cidade (Minas Nossa): dados do TSE desde 1996 */
 export interface PessoaEleita { nome: string; partido: string; partido_hoje: string; mudou: string | null; votos?: number; pct?: number | null }
 export interface Candidato { turno?: number; nome: string; partido: string; votos: number; pct: number | null; eleito: boolean }

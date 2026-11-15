@@ -195,6 +195,13 @@ def validar(saida: Path, minimos: dict | None = None, anterior: dict | None = No
         membros = [p for p in pols if p["casa"] == pt["casa"] and p["partido"] == pt["sigla"]]
         if pt["n"] != len(membros) or not _perto(pt["total"], sum(p["total"] for p in membros), len(membros)):
             r.erro(f"Partido {pt['casa']}/{pt['sigla']}: número de membros ou total não bate com os parlamentares")
+        if "n_exercicio" in pt and pt["n_exercicio"] != sum(1 for p in membros if p.get("em_exercicio") is not False):
+            r.erro(f"Partido {pt['casa']}/{pt['sigla']}: cadeiras (n_exercicio) não batem com quem está no cargo hoje")
+    # Cadeiras: a soma das bancadas não passa do tamanho da Casa (513 deputados, 81 senadores; CF, arts. 45 e 46)
+    for casa, vagas in (("camara", 513), ("senado", 81)):
+        soma = sum(pt.get("n_exercicio", 0) for pt in parts if pt["casa"] == casa)
+        if soma > vagas:
+            r.erro(f"Partidos da casa {casa}: {soma} cadeiras somadas, mais que as {vagas} vagas")
 
     # ---------------- votações
     vids = Counter(v["id"] for v in vots)

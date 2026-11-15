@@ -289,3 +289,18 @@ export async function carregar(base) {
     meta, verif, metaMg,
   };
 }
+
+// ------------------------------------------------------------------ sem a API do GitHub
+
+// Quando o GitHub recusa a consulta (limite de 60 por hora sem login, comum em rede compartilhada), o painel ainda
+// sabe a data dos dados no ar: ela está nos arquivos publicados no próprio site, que não têm limite. Antes, nesse caso,
+// o painel mostrava só "Sem dados".
+export function semApi(meta, metaMg, agora = Date.now()) {
+  const um = (nome, href, m) => {
+    if (!m?.atualizado_em) return { nome, href, data: null, dias: null, avisos: [] };
+    const dia = new Date(`${String(m.atualizado_em).slice(0, 10)}T12:00:00-03:00`).getTime();
+    const dias = Math.max(0, Math.floor((agora - dia) / 86400000));
+    return { nome, href, data: String(m.atualizado_em).slice(0, 10), dias, avisos: (m.avisos || []).map((a) => (typeof a === "string" ? a : a?.texto || a?.mensagem || JSON.stringify(a))) };
+  };
+  return [um("Segredos Abertos (Brasil)", "../", meta), um("Minas Nossa", "../mg/", metaMg)];
+}

@@ -120,7 +120,7 @@ footer{color:var(--muted);font-size:13px;margin-top:20px}
 <div id="dica" role="tooltip"></div>
 <script type="module">
 import {
-  carregar, saude, calendario, ultimaVezOk, dataHora, haQuanto, duracaoTexto, proximaAgendada, PARTES, ACTIONS,
+  carregar, saude, calendario, ultimaVezOk, dataHora, haQuanto, duracaoTexto, proximaAgendada, PARTES, ACTIONS, semApi,
 } from "./painel.js";
 
 const $ = (s) => document.querySelector(s);
@@ -140,8 +140,11 @@ const estado = (e, texto) => `<span class="estado ${esc(e)}"><i aria-hidden="tru
 const SITU_VERIF = { conferido: "ok", explicado: "ok", divergente: "erro", parcial: "aviso", nao_conferido: "aviso", sem_segunda_fonte: "nao_rodou" };
 const ROT_VERIF = { conferido: "Conferido", explicado: "Diferenças explicadas", divergente: "Divergente", parcial: "Parcial", nao_conferido: "Não conferido", sem_segunda_fonte: "Sem segunda fonte" };
 
-function lerCache() {
-  try { const c = JSON.parse(localStorage.getItem(CHAVE)); return c && Date.now() - new Date(c.lido_em) < VALIDADE ? c : null; } catch { return null; }
+function lerCache(qualquerIdade = false) {
+  try { const c = JSON.parse(localStorage.getItem(CHAVE)); return c && (qualquerIdade || Date.now() - new Date(c.lido_em) < VALIDADE) ? c : null; } catch { return null; }
+}
+async function arquivo(caminho) {
+  try { const r = await fetch(new URL(caminho, BASE), { cache: "no-store" }); return r.ok ? await r.json() : null; } catch { return null; }
 }
 function guardar(d) { try { localStorage.setItem(CHAVE, JSON.stringify(d)); } catch { /* sem armazenamento: só não guarda */ } }
 
@@ -154,10 +157,25 @@ async function iniciar(forcar = false) {
     $("#lido").textContent = `Lido ${haQuanto(d.lido_em)} (${dataHora(d.lido_em)})`;
   } catch (e) {
     const volta = e.volta ? ` Tente de novo depois de ${dataHora(new Date(e.volta).toISOString())}.` : " Tente de novo em alguns minutos.";
-    $("#painel").innerHTML = `<section class="erro-carga"><h2>Não consegui ler a situação no GitHub</h2>
-      <p>${e.limite ? "O GitHub limita a 60 consultas por hora sem login, e esse limite acabou para a sua conexão." : `Erro: ${esc(e.message)}.`}${volta}</p>
-      <p>Enquanto isso, a lista completa está em ${link(ACTIONS, "GitHub › Actions")}.</p></section>`;
-    $("#lido").textContent = "Sem dados";
+    const motivo = e.limite ? "O GitHub limita a 60 consultas por hora sem login, e esse limite acabou para a sua conexão." : `Erro: ${esc(e.message)}.`;
+    // Leitura anterior guardada neste navegador: mostra ela, com a hora, em vez de deixar o painel vazio
+    const velho = lerCache(true);
+    if (velho) {
+      desenhar(velho);
+      $("#painel").insertAdjacentHTML("afterbegin", `<section class="erro-carga"><p><b>Esta é a leitura de ${esc(haQuanto(velho.lido_em))} (${esc(dataHora(velho.lido_em))}).</b> ${motivo}${volta}</p></section>`);
+      $("#lido").textContent = `Lido ${haQuanto(velho.lido_em)}`;
+      return;
+    }
+    // Sem leitura guardada: a data dos dados no ar vem dos arquivos publicados no site, que não dependem do GitHub
+    const [meta, metaMg] = await Promise.all([arquivo("data/meta.json"), arquivo("mg/data/meta.json")]);
+    const sites = semApi(meta, metaMg).map((x) => `<div class="site"><h3><a href="${esc(x.href)}">${esc(x.nome)}</a></h3>
+      <p>${x.data ? `Dados no ar coletados em <b>${esc(x.data.split("-").reverse().join("/"))}</b> (${x.dias === 0 ? "hoje" : x.dias === 1 ? "ontem" : `há ${x.dias} dias`}).` : "Data dos dados não encontrada."}</p>
+      ${x.avisos.length ? `<details><summary>${x.avisos.length} ${x.avisos.length === 1 ? "aviso" : "avisos"} da coleta</summary><ul>${x.avisos.map((a) => `<li>${esc(a)}</li>`).join("")}</ul></details>` : ""}</div>`).join("");
+    $("#painel").innerHTML = `<section class="erro-carga"><h2>Não consegui ler as execuções no GitHub</h2>
+      <p>${motivo}${volta}</p>
+      <p>Enquanto isso, a lista completa está em ${link(ACTIONS, "GitHub › Actions")}.</p></section>
+      <section><h2>O que está no ar</h2><div class="sites">${sites}</div></section>`;
+    $("#lido").textContent = "GitHub sem resposta";
   }
 }
 

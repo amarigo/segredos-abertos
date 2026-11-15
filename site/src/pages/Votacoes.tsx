@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, NavLink, useSearchParams } from "react-router-dom";
 import { Abrir, Colunas, Explain, Loading, OndeVer, ResultadoChip, useData } from "../components/ui";
-import { MESES_LONGOS, TEMAS, casaNome, dataBR, descricaoCurta, proposicaoNome, tipoVotacao, type VotacaoResumo } from "../data";
+import { MESES_LONGOS, TEMAS, nomeTipo, casaNome, dataBR, descricaoCurta, proposicaoNome, tipoVotacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 import { MG } from "../recorte";
 import { AvisosFim } from "../components/Selo";
@@ -66,7 +66,7 @@ export default function Votacoes() {
           <option value="">Câmara e Senado</option><option value="camara">Câmara</option><option value="senado">Senado</option>
         </select>
         <select id="filtro-tipo" aria-label="Tipo" value={tipo} onChange={(e) => setTipo(e.target.value)}>
-          <option value="">Todos os tipos</option>{tipos.map((t) => <option key={t}>{t}</option>)}
+          <option value="">Todos os tipos</option>{tipos.map((t) => <option key={t} value={t}>{nomeTipo(t)}</option>)}
         </select>
       </div>
       <div className="filtros">

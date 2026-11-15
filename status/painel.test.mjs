@@ -138,3 +138,14 @@ test("próxima coleta agendada e durações", () => {
   assert.equal(duracaoTexto(46.2), "46 min");
   assert.equal(duracaoTexto(75), "1 h 15 min");
 });
+
+test("sem a API do GitHub: data dos dados no ar pelos arquivos publicados", async () => {
+  const { semApi } = await import("./painel.js");
+  const agora = new Date("2026-11-15T19:00:00Z").getTime();
+  const [br, mg] = semApi({ atualizado_em: "2026-11-11", avisos: ["Fonte X fora do ar"] }, null, agora);
+  assert.equal(br.data, "2026-11-11");
+  assert.equal(br.dias, 4);
+  assert.deepEqual(br.avisos, ["Fonte X fora do ar"]);
+  assert.equal(mg.data, null);
+  assert.equal(semApi({ atualizado_em: "2026-11-15" }, null, agora)[0].dias, 0);
+});

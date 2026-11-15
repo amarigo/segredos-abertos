@@ -71,6 +71,8 @@ DEFEITOS = {
     "renúncia na empresa": lambda s: _mudar(s, f"e/{_com(s, 'renuncia')}.json", lambda x: x["renuncia"].update(total=1)),
     "gasto de quem ficou fora da lista": lambda s: _mudar(s, "meta.json", lambda x: x.update(fora_da_lista={
         "cota da Câmara": {"parlamentares": 1, "linhas": 3, "valor": 900.0, "exemplos": ["dep-220659"]}})),
+    "cadeiras do partido": lambda s: _mudar(s, "partidos.json", lambda x: x[0].update(n_exercicio=x[0]["n_exercicio"] + 1)),
+    "cadeiras demais na casa": lambda s: _mudar(s, "partidos.json", lambda x: [p.update(n_exercicio=600) for p in x if p["casa"] == "camara"][:0] or None),
     "arquivo faltando": lambda s: (s / "partidos.json").unlink(),
     "JSON quebrado": lambda s: (s / "votacoes.json").write_text("[{", encoding="utf-8"),
     "nome de arquivo": lambda s: shutil.copy(s / "meta.json", s / "p" / "x.y.json"),
