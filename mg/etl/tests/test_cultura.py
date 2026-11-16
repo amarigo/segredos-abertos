@@ -56,6 +56,12 @@ class Fake:
             {"nome": "FULANO DE TAL", "cgccpf": CPF, "municipio": "Itajubá", "UF": "MG", "tipo_pessoa": "fisica", "total_doado": 5000},
             {"nome": "OUTRA LTDA", "cgccpf": "33000167000101", "municipio": "Itajuba", "UF": "MG", "tipo_pessoa": "juridica", "total_doado": 95000},
         ]
+        # doações de cada incentivador, pela data do recibo (somam o total_doado da lista)
+        self.doacoes = {
+            "11222333000181": [{"valor": 600000, "data_recibo": "2024-05-10"}, {"valor": 400000, "data_recibo": "2025-03-02"}],
+            CPF: [{"valor": 5000, "data_recibo": "2025-12-20"}],
+            "33000167000101": [{"valor": 95000, "data_recibo": "2024-11-30"}],
+        }
         self.projetos = [
             {"PRONAC": "230001", "nome": "Festival de Inverno", "proponente": "Associação Cultural", "municipio": "Itajubá", "UF": "MG",
              "ano_projeto": "23", "area": "Música", "segmento": "Música popular", "valor_captado": 300000},
@@ -88,6 +94,11 @@ class Fake:
             if url.endswith("/itens"):
                 return resp([{"numeroItem": 1, "temResultado": seq in self.resultados}])
             return resp(self.resultados.get(seq, []))
+        if url.startswith(cultura.SALIC_API) and url.endswith("/doacoes"):
+            doc = url.rsplit("/", 2)[1]
+            dados = self.doacoes.get(doc, [])
+            off, lim = params["offset"], params["limit"]
+            return resp({"_embedded": {"doacoes": dados[off: off + lim]}, "total": len(dados)})
         if url.startswith(cultura.SALIC_API):
             campo = url.rsplit("/", 1)[1]
             dados = self.incentivadores if campo == "incentivadores" else self.projetos
@@ -229,6 +240,48 @@ def test_lei_rouanet_por_regiao(fake, tmp_path):
     assert "Fulano" not in json.dumps(r) and CPF not in json.dumps(r), "pessoa física só entra na soma"
     pr = r["projetos"]
     assert pr["total"] == 1_000_000 and {x["ano"] for x in pr["por_ano"]} == {2023, 2024}
+
+
+def test_lei_rouanet_por_ano_pelo_recibo_das_doacoes(fake, tmp_path):
+    """O total_doado não diz o ano: a divisão sai das doações de cada incentivador, pelo ano do recibo."""
+    cid = cultura.Cidades(cultura.municipios(tmp_path), cultura.populacao(tmp_path)[0])
+    inc = cultura.coletar_rouanet(tmp_path, 5, HOJE, cid)["incentivadores"]
+    assert inc["por_ano"] == [{"ano": 2024, "valor": 695000, "n": 2}, {"ano": 2025, "valor": 405000, "n": 2}]
+    assert sum(x["valor"] for x in inc["por_ano"]) == inc["total"]
+    assert inc["cobertura_anos"] == {"lidos": 3, "de": 3, "valor": 1_100_000, "fracao": 1.0}
+    a2024 = next(x for x in inc["por_ano_regioes"] if x["ano"] == 2024)["regioes"]
+    assert a2024 == [{"regiao": "Belo Horizonte", "valor": 600000}, {"regiao": "Pouso Alegre", "valor": 95000}]
+    assert CPF not in (tmp_path / "salic" / "doacoes-mg.json.gz").read_bytes().decode("latin1"), "o cache guarda só um resumo do número"
+    # na execução seguinte, quem não mudou de total não é lido de novo
+    fake.chamadas.clear()
+    cultura.coletar_rouanet(tmp_path, 5, HOJE, cid)
+    assert not [u for u in fake.chamadas if u.endswith("/doacoes")]
+    # quem doou de novo (total mudou) é lido de novo
+    fake.incentivadores[2]["total_doado"] = 100000
+    fake.doacoes["33000167000101"].append({"valor": 5000, "data_recibo": "2026-01-15"})
+    fake.chamadas.clear()
+    inc = cultura.coletar_rouanet(tmp_path, 5, HOJE + dt.timedelta(days=8), cid)["incentivadores"]
+    assert [u for u in fake.chamadas if u.endswith("/doacoes")] == [f"{cultura.SALIC_API}/incentivadores/33000167000101/doacoes"]
+    assert {x["ano"]: x["valor"] for x in inc["por_ano"]}[2026] == 5000
+
+
+def test_lei_rouanet_por_ano_aos_poucos_mostra_a_cobertura(fake, tmp_path, monkeypatch):
+    """Sem tempo para todos: lê os maiores primeiro e o site diz quanto do valor já está dividido por ano."""
+    cid = cultura.Cidades(cultura.municipios(tmp_path), cultura.populacao(tmp_path)[0])
+    pasta = tmp_path / "salic"
+    inc_ok, _ = cultura._salic_lista("incentivadores", {"UF": "MG"}, cultura.Relogio(5), pasta / "incentivadores-mg.json.gz", HOJE, "incentivadores")
+    rel = cultura.Relogio(5)
+    restam = iter([True, False])  # só um pedido de doações cabe no tempo
+
+    def checar():
+        if not next(restam, False):
+            raise cultura.SemTempo()
+    monkeypatch.setattr(rel, "checar", checar)
+    doacoes, completo = cultura.ler_doacoes(inc_ok, rel, pasta / "doacoes-mg.json.gz")
+    assert not completo and len(doacoes) == 1
+    inc = cultura.resumir_rouanet(inc_ok, [], cid, doacoes)["incentivadores"]
+    assert inc["cobertura_anos"]["lidos"] == 1 and inc["cobertura_anos"]["fracao"] == round(1_000_000 / 1_100_000, 4)
+    assert sum(x["valor"] for x in inc["por_ano"]) == 1_000_000, "o maior doador vem primeiro"
 
 
 # ---------------------------------------------------------------- montagem e caos

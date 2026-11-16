@@ -44,8 +44,23 @@ test.describe("jornada", () => {
     await expect(page.locator("main")).toContainText(`${c.populacao.toLocaleString("pt-BR")} habitantes`);
     await expect(page.locator("main")).toContainText(cult.rouanet.incentivadores.regioes[0].regiao);
     await page.locator("#busca-cultura").fill(cult.contratos.artistas[0].nome.slice(0, 8));
-    await expect(page.locator("main table").last()).toContainText(cult.contratos.artistas[0].nome);
+    // a tabela de cada contratação (os gráficos também têm uma tabela escondida, para leitores de tela)
+    await expect(page.locator("main table").filter({ hasText: "Evento e artista" })).toContainText(cult.contratos.artistas[0].nome);
     expect(await page.locator("main").innerText()).not.toMatch(CPF);
+    expect(erros).toEqual([]);
+  });
+
+  test("shows e cultura: Lei Rouanet ano a ano, com as regiões do ano escolhido", async ({ page }) => {
+    const erros = vigiar(page);
+    const inc = dados("estado/cultura.json").rouanet.incentivadores;
+    const ano = inc.por_ano[inc.por_ano.length - 1];
+    await page.goto("./#/cultura");
+    await expect(page.getByRole("heading", { name: "Ano a ano" })).toBeVisible();
+    await page.getByRole("button", { name: `Escolher ${ano.ano}` }).first().click();
+    const titulo = page.getByRole("heading", { name: `Imposto destinado em ${ano.ano}, por região` });
+    await expect(titulo).toBeVisible();
+    await page.getByText("Tabela por ano").click();
+    await expect(page.locator("main table").filter({ hasText: "Imposto destinado" }).first()).toContainText(`${ano.ano}`);
     expect(erros).toEqual([]);
   });
 

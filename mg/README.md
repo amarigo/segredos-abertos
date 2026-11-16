@@ -20,7 +20,7 @@ O recorte de Minas Gerais do Segredos Abertos, publicado em https://amarigo.gith
   poucos (`MINUTOS` por execução); enquanto um ano não termina, o site avisa. Fornecedor pessoa física aparece sem nome e sem CPF.
 - `etl/mg_etl/cultura.py`: página "Shows e cultura". Contratação de artistas por prefeituras e pelo estado (API do PNCP,
   só o amparo legal do art. 74, II da Lei 14.133, com quem recebeu), emendas Pix com show ou evento (dos arquivos do
-  Transferegov já gerados pelo coletor nacional, com o parlamentar que indicou), Lei Rouanet por região de MG (API do SALIC)
+  Transferegov já gerados pelo coletor nacional, com o parlamentar que indicou), Lei Rouanet por região de MG e por ano (API do SALIC; o ano vem do recibo de cada doação)
   e população de cada cidade (IBGE). PNCP e SALIC são lidos aos poucos; o que falta continua na execução seguinte.
 - `etl/mg_etl/fontes.py`: funções comuns; `sem_cpf` apaga qualquer número com cara de CPF de textos livres (nome de fornecedor, motivo de viagem).
 - `etl/mg_etl/validar.py`: a conferência antes de publicar.

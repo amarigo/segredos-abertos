@@ -19,6 +19,8 @@ interface PlanoPix { ano: number; cidade: string; cod: number | null; regiao: st
   partido: string; emenda: string; plano: string; objeto: string; area: string; valor: number; gasto: number; palavras: string[];
   pagamentos_artistas: { data: string; nome: string; cnpj: string; descricao: string; valor: number }[] }
 interface Parlamentar { nome: string; politico: string | null; partido: string; valor: number; gasto: number; n: number; cidades: string[] }
+interface AnoValor { ano: number; valor: number; n: number }
+interface AnoRegioes { ano: number; regioes: { regiao: string; valor: number }[] }
 interface Cultura {
   atualizado: string;
   populacao: { fonte: string; api: string; ano: string; cidades: number } | null;
@@ -28,8 +30,9 @@ interface Cultura {
     parlamentares: Parlamentar[]; artistas: Artista[]; planos: PlanoPix[] } | null;
   rouanet: { fonte: string; api: string; completo: boolean;
     incentivadores: { total: number; n: number; n_pessoas: number; pessoas: number; regioes: Regiao[]; cidades: CidadeValor[];
-      empresas: { nome: string; cnpj: string; cidade: string; valor: number }[] };
-    projetos: { total: number; n: number; regioes: Regiao[]; cidades: CidadeValor[]; por_ano: { ano: number; valor: number; n: number }[];
+      empresas: { nome: string; cnpj: string; cidade: string; valor: number }[];
+      por_ano?: AnoValor[]; por_ano_regioes?: AnoRegioes[]; cobertura_anos?: { lidos: number; de: number; valor: number; fracao: number } };
+    projetos: { total: number; n: number; regioes: Regiao[]; cidades: CidadeValor[]; por_ano: AnoValor[]; por_ano_regioes?: AnoRegioes[];
       maiores: { pronac: string; nome: string; proponente: string; cidade: string; ano: number | null; area: string; segmento: string; valor: number; url: string }[] };
   } | null;
 }
@@ -209,8 +212,13 @@ function Pix({ p }: { p: Cultura["pix"] }) {
 }
 
 function Rouanet({ r }: { r: Cultura["rouanet"] }) {
+  const [ano, setAno] = useState("");
   if (!r) return <section><h2>Lei Rouanet em Minas</h2><div className="empty">A API da Lei Rouanet (SALIC, do Ministério da Cultura) não respondeu e ainda não temos uma leitura guardada. Veja nos <a href="https://dados.cultura.gov.br/dataset/incentivos-da-lei-rouanet" target="_blank" rel="noreferrer">dados abertos do Ministério da Cultura ↗</a>.</div></section>;
   const inc = r.incentivadores, pr = r.projetos;
+  const incAnos = inc.por_ano ?? [], cob = inc.cobertura_anos;
+  const anos = [...new Set([...incAnos.map((x) => x.ano), ...pr.por_ano.map((x) => x.ano)])].sort((a, b) => a - b);
+  const doAno = (lista: AnoRegioes[] | undefined) => (lista ?? []).find((x) => `${x.ano}` === ano)?.regioes ?? [];
+  const escolher = (a: string) => setAno((atual) => (atual === a ? "" : a));
   return (
     <section>
       <h2>Lei Rouanet em Minas, por região</h2>
@@ -234,8 +242,43 @@ function Rouanet({ r }: { r: Cultura["rouanet"] }) {
             nota: [`${x.n} projetos`, porHab(x.por_habitante)].filter(Boolean).join(" · ") }))} />
         </div>
       </div>
-      {pr.por_ano.length > 1 && <Colunas rotulo="Captação dos projetos feitos em Minas, pelo ano do projeto" partes={[{ nome: "Captado", cor: "var(--s1)" }]}
-        itens={pr.por_ano.map((x) => ({ label: `${x.ano}`, valores: [x.valor] }))} />}
+      {anos.length > 0 && <>
+        <h3>Ano a ano</h3>
+        <p className="muted small">Imposto destinado: pelo ano do recibo de cada doação, que é quando o imposto deixou de ser recolhido.
+          Projetos: pelo ano em que o projeto foi apresentado ao Ministério da Cultura. Clique num ano para ver as regiões só daquele ano.</p>
+        {cob && cob.fracao < 1 && <p className="alert small">A divisão por ano do imposto destinado ainda está sendo lida no SALIC, doador por doador:
+          por enquanto cobre {numero(cob.lidos)} de {numero(cob.de)} incentivadores, {Math.floor(cob.fracao * 100)}% do valor ({reaisCurto(cob.valor)} de {reaisCurto(inc.total)}).
+          O resto entra nas próximas atualizações.</p>}
+        {/* Duas medidas diferentes: um gráfico para cada, sem somar uma com a outra */}
+        {incAnos.length > 0 && <><h4>Imposto destinado por quem é de Minas, pelo ano do recibo</h4>
+          <Colunas rotulo="Imposto destinado à Lei Rouanet por quem é de Minas, por ano" ativo={ano || undefined} onEscolher={escolher}
+            partes={[{ nome: "Imposto destinado", cor: "var(--s2)" }]} itens={incAnos.map((x) => ({ label: `${x.ano}`, valores: [x.valor] }))} /></>}
+        {pr.por_ano.length > 0 && <><h4>Captado pelos projetos feitos em Minas, pelo ano do projeto</h4>
+          <Colunas rotulo="Captação dos projetos da Lei Rouanet feitos em Minas, por ano do projeto" ativo={ano || undefined} onEscolher={escolher}
+            partes={[{ nome: "Captado", cor: "var(--s1)" }]} itens={pr.por_ano.map((x) => ({ label: `${x.ano}`, valores: [x.valor] }))} /></>}
+        <Abrir titulo="Tabela por ano">
+          <div className="table-wrap"><table>
+            <thead><tr><th>Ano</th><th className="r">Imposto destinado</th><th className="r">Incentivadores</th><th className="r">Captado por projetos</th><th className="r">Projetos</th></tr></thead>
+            <tbody>{[...anos].reverse().map((a) => {
+              const i = incAnos.find((x) => x.ano === a), p = pr.por_ano.find((x) => x.ano === a);
+              return <tr key={a}><td>{a}</td><td className="r num">{i ? reais(i.valor) : "—"}</td><td className="r num">{i ? numero(i.n) : "—"}</td>
+                <td className="r num">{p ? reais(p.valor) : "—"}</td><td className="r num">{p ? numero(p.n) : "—"}</td></tr>;
+            })}</tbody>
+          </table></div>
+        </Abrir>
+        {ano && <div className="grid grid-2">
+          <div>
+            <h3>Imposto destinado em {ano}, por região</h3>
+            {doAno(inc.por_ano_regioes).length ? <Barras itens={doAno(inc.por_ano_regioes).map((x) => ({ label: x.regiao, valor: x.valor, cor: "var(--s2)" }))} />
+              : <p className="muted small">Sem doações lidas neste ano.</p>}
+          </div>
+          <div>
+            <h3>Captado pelos projetos de {ano}, por região</h3>
+            {doAno(pr.por_ano_regioes).length ? <Barras itens={doAno(pr.por_ano_regioes).map((x) => ({ label: x.regiao, valor: x.valor, cor: "var(--s1)" }))} />
+              : <p className="muted small">Sem projetos deste ano.</p>}
+          </div>
+        </div>}
+      </>}
       <Abrir titulo="Por cidade: imposto destinado e população">
         <div className="table-wrap"><table>
           <thead><tr><th>Cidade</th><th>Região</th><th className="r">Habitantes</th><th className="r">Imposto destinado</th><th className="r">Por habitante</th></tr></thead>

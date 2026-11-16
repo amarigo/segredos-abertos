@@ -599,7 +599,8 @@ class FakeEstado:
             linhas = {"incentivadores": [{"nome": "EMPRESA SIMULADA SA", "cgccpf": "11222333000181", "municipio": "Itajubá",
                                           "UF": "MG", "tipo_pessoa": "juridica", "total_doado": 120000}],
                       "projetos": [{"PRONAC": "250001", "nome": "Festival Simulado", "proponente": "Associação Teste",
-                                    "municipio": "Itajubá", "UF": "MG", "ano_projeto": "25", "valor_captado": 80000}]}.get(campo, [])
+                                    "municipio": "Itajubá", "UF": "MG", "ano_projeto": "25", "valor_captado": 80000}],
+                      "doacoes": [{"valor": 70000, "data_recibo": "2024-06-01"}, {"valor": 50000, "data_recibo": "2025-06-01"}]}.get(campo, [])
             if int(q.get("offset", 0)) > 0:
                 linhas = []
             return 200, json.dumps({"_embedded": {campo: linhas}, "total": 1}).encode(), "application/json"
