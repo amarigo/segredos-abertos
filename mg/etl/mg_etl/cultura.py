@@ -24,6 +24,10 @@ Quatro fontes oficiais, todas por API:
      Lei Rouanet, somado pela cidade de quem destinou. Em projetos do art. 18 o desconto no imposto é de 100%; nos
      do art. 26, de 30% a 80%. Por isso o site diz "até".
    - /projetos?UF=MG: projetos culturais realizados em MG e quanto captaram.
+   - /incentivadores/{id}/doacoes: cada doação de quem é de MG, com a data do recibo. O total_doado da lista não diz
+     o ano; é daqui que sai a divisão por ano (o ano do recibo é o ano em que o imposto deixou de ser recolhido).
+     Um pedido por incentivador: a leitura vai aos poucos, dos maiores para os menores, e cada doador lido fica
+     guardado; só é lido de novo quando o total_doado dele muda. O site mostra quanto do valor já está dividido.
 
 4. População: API de agregados do IBGE (estimativa da população, tabela 6579, variável 9324) e a lista de
    municípios com as regiões intermediárias e imediatas (API de localidades do IBGE).
@@ -42,6 +46,7 @@ import re
 import time
 from collections import defaultdict
 from pathlib import Path
+from urllib.parse import urlparse
 
 from sa_etl.util import avisar, com_copia, digits, get, norm_name, to_float, write_json
 
@@ -515,6 +520,7 @@ SALIC_FONTE = "https://dados.cultura.gov.br/dataset/incentivos-da-lei-rouanet"
 SALIC_PROJETO = "https://salic.cultura.gov.br/projeto/#/{pronac}"
 SALIC_TAM = 100  # o máximo da API
 SALIC_VALIDADE_DIAS = 7
+SALIC_HOST = "api.salic.cultura.gov.br"
 
 
 def _salic_lista(caminho: str, filtros: dict, rel: Relogio, f: Path, hoje: dt.date, campo: str) -> tuple[list[dict], bool]:
@@ -549,6 +555,78 @@ def _salic_lista(caminho: str, filtros: dict, rel: Relogio, f: Path, hoje: dt.da
     return linhas, True
 
 
+def _chave_doador(x: dict) -> str:
+    """Chave do doador no cache: um resumo do CPF ou CNPJ, para o número não ficar guardado à toa."""
+    import hashlib
+    return hashlib.sha256(str(x.get("cgccpf") or x.get("nome") or "").encode()).hexdigest()[:20]
+
+
+def _url_doacoes(x: dict) -> str | None:
+    """O endereço das doações vem no próprio item da lista (_links.doacoes); sem ele, montamos pelo cgccpf."""
+    link = ((x.get("_links") or {}).get("doacoes") or "")
+    link = link.get("href", "") if isinstance(link, dict) else str(link)
+    if link:
+        u = urlparse(link if "://" in link else f"https://{SALIC_HOST}{link}")
+        return f"https://{SALIC_HOST}{u.path}" if u.netloc in (SALIC_HOST, "") else None
+    doc = digits(x.get("cgccpf"))
+    return f"{SALIC_API}/incentivadores/{doc}/doacoes" if doc else None
+
+
+def _ano_recibo(d: dict) -> int | None:
+    m = re.match(r"(\d{4})-\d{2}-\d{2}", str(d.get("data_recibo") or ""))
+    return int(m.group(1)) if m else None
+
+
+def ler_doacoes(inc: list[dict], rel: Relogio, f: Path) -> tuple[dict, bool]:
+    """Doações de cada incentivador de MG, somadas por ano do recibo: {chave: {"total": total_doado, "anos": {ano: valor}}}.
+
+    Lê dos maiores para os menores e guarda cada doador lido. Devolve também se todos já estão lidos."""
+    guardado = (_ler_gz(f) or {}).get("doadores") or {}
+    pend = sorted((x for x in inc if str(x.get("UF") or "").upper() == UF and to_float(x.get("total_doado")) > 0),
+                  key=lambda x: -to_float(x.get("total_doado")))
+    vistos, mudou, falta = set(), 0, False
+    try:
+        for x in pend:
+            k = _chave_doador(x)
+            if k in vistos:
+                continue
+            vistos.add(k)
+            total = round(to_float(x.get("total_doado")), 2)
+            if k in guardado and guardado[k].get("total") == total:
+                continue
+            url = _url_doacoes(x)
+            if not url:
+                continue
+            anos: dict = defaultdict(float)
+            offset = 0
+            while True:
+                rel.checar()
+                r = get(url, params={"limit": SALIC_TAM, "offset": offset, "format": "json"}, timeout=90)
+                corpo = r.json() if r.content.strip() else {}
+                pagina = ((corpo if isinstance(corpo, dict) else {}).get("_embedded") or {}).get("doacoes")
+                if not isinstance(pagina, list):
+                    raise RuntimeError("SALIC: resposta sem a lista '_embedded.doacoes'")
+                for d in pagina:
+                    a = _ano_recibo(d)
+                    if a:
+                        anos[str(a)] += to_float(d.get("valor"))
+                offset += SALIC_TAM
+                if not pagina or offset >= int(corpo.get("total") or 0):
+                    break
+            guardado[k] = {"total": total, "anos": {a: round(v, 2) for a, v in anos.items()}}
+            mudou += 1
+            if mudou % 25 == 0:
+                _gravar_gz(f, {"doadores": guardado})
+    except SemTempo:
+        falta = True
+    except Exception as e:  # noqa: BLE001
+        log.warning("SALIC doações: %s", str(e)[:200])
+        falta = True
+    if mudou:
+        _gravar_gz(f, {"doadores": guardado})
+    return guardado, not falta
+
+
 def coletar_rouanet(cache: Path, minutos: float, hoje: dt.date, cid: Cidades) -> dict | None:
     rel = Relogio(minutos)
     pasta = cache / "salic"
@@ -561,7 +639,8 @@ def coletar_rouanet(cache: Path, minutos: float, hoje: dt.date, cid: Cidades) ->
         proj, proj_ok = (_ler_gz(pasta / "projetos-mg.json.gz") or {}).get("linhas") or [], False
     if not inc and not proj and not (inc_ok and proj_ok):  # fonte fora do ar e nenhuma leitura guardada
         return None
-    return {**resumir_rouanet(inc, proj, cid), "completo": inc_ok and proj_ok}
+    doacoes, _ = ler_doacoes(inc, rel, pasta / "doacoes-mg.json.gz")
+    return {**resumir_rouanet(inc, proj, cid, doacoes), "completo": inc_ok and proj_ok}
 
 
 def _grupos(itens: list[tuple[int | None, str, float]], cid: Cidades) -> tuple[list[dict], list[dict]]:
@@ -588,8 +667,19 @@ def _grupos(itens: list[tuple[int | None, str, float]], cid: Cidades) -> tuple[l
     return regioes, cidades
 
 
-def resumir_rouanet(inc: list[dict], proj: list[dict], cid: Cidades) -> dict:
+def _por_ano(por_ano: dict, por_ano_reg: dict) -> tuple[list[dict], list[dict]]:
+    anos = [{"ano": a, "valor": round(x[0], 2), "n": x[1]} for a, x in sorted(por_ano.items())]
+    regs = [{"ano": a, "regioes": [{"regiao": g, "valor": round(v, 2)} for g, v in sorted(por_ano_reg[a].items(), key=lambda kv: -kv[1])]}
+            for a in sorted(por_ano_reg)]
+    return anos, regs
+
+
+def resumir_rouanet(inc: list[dict], proj: list[dict], cid: Cidades, doacoes: dict | None = None) -> dict:
+    """doacoes: o que ler_doacoes guardou. Com elas, o imposto destinado também sai dividido pelo ano do recibo."""
+    doacoes = doacoes or {}
     itens_inc, empresas, n_pf, v_pf = [], [], 0, 0.0
+    ano_inc, ano_reg_inc = defaultdict(lambda: [0.0, 0]), defaultdict(lambda: defaultdict(float))
+    lidos, valor_lido = 0, 0.0
     vistos: set = set()
     for x in inc:
         k = x.get("cgccpf") or json.dumps(x, sort_keys=True)
@@ -603,6 +693,15 @@ def resumir_rouanet(inc: list[dict], proj: list[dict], cid: Cidades) -> dict:
             continue
         nome_mun = x.get("municipio") or ""
         itens_inc.append((cid.codigo(nome_mun), nome_mun, v))
+        dd = doacoes.get(_chave_doador(x))
+        if dd and dd.get("total") == round(v, 2):  # só a leitura que bate com o total de hoje
+            lidos += 1
+            valor_lido += v
+            regiao = cid.info(cid.codigo(nome_mun), nome_mun)["regiao"] or "Não informado"
+            for a, va in dd["anos"].items():
+                ano_inc[int(a)][0] += va
+                ano_inc[int(a)][1] += 1
+                ano_reg_inc[int(a)][regiao] += va
         doc = digits(x.get("cgccpf"))
         pf = str(x.get("tipo_pessoa") or "").lower().startswith("f") or len(doc) != 14
         if pf:  # pessoa física: só entra na soma, sem nome nem número
@@ -613,6 +712,7 @@ def resumir_rouanet(inc: list[dict], proj: list[dict], cid: Cidades) -> dict:
                              "valor": round(v, 2)})
     reg_inc, cid_inc = _grupos(itens_inc, cid)
     itens_proj, por_ano, maiores = [], defaultdict(lambda: [0.0, 0]), []
+    ano_reg_proj: dict = defaultdict(lambda: defaultdict(float))
     vistos = set()
     for p in proj:
         k = p.get("PRONAC") or json.dumps(p, sort_keys=True)
@@ -632,19 +732,28 @@ def resumir_rouanet(inc: list[dict], proj: list[dict], cid: Cidades) -> dict:
         if ano:
             por_ano[ano][0] += v
             por_ano[ano][1] += 1
+            ano_reg_proj[ano][cid.info(cod, nome_mun)["regiao"] or "Não informado"] += v
         maiores.append({"pronac": str(p.get("PRONAC") or ""), "nome": " ".join(str(p.get("nome") or "").split()),
                         "proponente": fontes.sem_cpf(fontes.bonito(p.get("proponente") or "")), "cidade": cid.info(cod, nome_mun)["nome"],
                         "ano": ano, "area": p.get("area") or "", "segmento": p.get("segmento") or "", "valor": round(v, 2),
                         "url": SALIC_PROJETO.format(pronac=p.get("PRONAC")) if p.get("PRONAC") else ""})
     maiores.sort(key=lambda x: -x["valor"])
     reg_proj, cid_proj = _grupos(itens_proj, cid)
+    total_inc = round(sum(v for *_, v in itens_inc), 2)
+    inc_anos, inc_anos_reg = _por_ano(ano_inc, ano_reg_inc)
+    _, proj_anos_reg = _por_ano(por_ano, ano_reg_proj)
     return {
         "fonte": SALIC_FONTE, "api": SALIC_API,
-        "incentivadores": {"total": round(sum(v for *_, v in itens_inc), 2), "n": len(itens_inc), "n_pessoas": n_pf,
+        "incentivadores": {"total": total_inc, "n": len(itens_inc), "n_pessoas": n_pf,
                            "pessoas": round(v_pf, 2), "regioes": reg_inc, "cidades": cid_inc,
+                           # por ano do recibo da doação; só dos incentivadores cujas doações já foram lidas (cobertura)
+                           "por_ano": inc_anos, "por_ano_regioes": inc_anos_reg,
+                           "cobertura_anos": {"lidos": lidos, "de": len(itens_inc), "valor": round(valor_lido, 2),
+                                              "fracao": round(valor_lido / total_inc, 4) if total_inc else 0.0},
                            "empresas": sorted(empresas, key=lambda e: -e["valor"])[:50]},
         "projetos": {"total": round(sum(v for *_, v in itens_proj), 2), "n": len(itens_proj), "regioes": reg_proj, "cidades": cid_proj,
                      "por_ano": [{"ano": a, "valor": round(x[0], 2), "n": x[1]} for a, x in sorted(por_ano.items())],
+                     "por_ano_regioes": proj_anos_reg,
                      "maiores": maiores[:100]},
     }
 
@@ -705,7 +814,7 @@ def gravar(saida: Path, resumo: dict, contratos_ano: dict[int, list]) -> None:
     write_json(saida / "estado" / "cultura.json", resumo)
 
 
-def coletar(nacional: Path, saida: Path, cache: Path, ids_mg: set[str], minutos_pncp: float = 8, minutos_salic: float = 4,
+def coletar(nacional: Path, saida: Path, cache: Path, ids_mg: set[str], minutos_pncp: float = 8, minutos_salic: float = 6,
             hoje: dt.date | None = None) -> dict:
     """Grava estado/cultura.json (resumo) e estado/cultura/contratos-{ano}.json (cada contratação, por ano).
     Cada fonte é independente: a que falhar fica None e o site diz isso."""
@@ -741,6 +850,10 @@ def coletar(nacional: Path, saida: Path, cache: Path, ids_mg: set[str], minutos_
     elif not rouanet["completo"]:
         avisar("Shows e cultura: a leitura da Lei Rouanet continua na próxima atualização; os números são da última leitura completa",
                tentar_de_novo=False)
+    if rouanet and rouanet["incentivadores"]["cobertura_anos"]["fracao"] < 1:
+        cob = rouanet["incentivadores"]["cobertura_anos"]
+        avisar(f"Shows e cultura: a divisão por ano da Lei Rouanet cobre {cob['fracao']:.0%} do valor; as doações dos outros "
+               "incentivadores continuam sendo lidas nas próximas atualizações", tentar_de_novo=False)
 
     contratos_ano: dict[int, list] = {}
     if pncp:

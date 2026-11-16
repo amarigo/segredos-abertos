@@ -272,6 +272,13 @@ def conferir_cultura(saida: Path, r: Resultado) -> None:
         x = ro.get(k) or {}
         if x and not _perto(sum(g["valor"] for g in x.get("regioes") or []), x.get("total", 0), len(x.get("regioes") or [])):
             r.erro(f"Shows e cultura: Lei Rouanet ({k}) por região não soma o total")
+        for ano in x.get("por_ano_regioes") or []:
+            soma = next((y["valor"] for y in x.get("por_ano") or [] if y["ano"] == ano["ano"]), 0)
+            if not _perto(sum(g["valor"] for g in ano["regioes"]), soma, len(ano["regioes"])):
+                r.erro(f"Shows e cultura: Lei Rouanet ({k}) {ano['ano']} por região não soma o total do ano")
+    cob = (ro.get("incentivadores") or {}).get("cobertura_anos") or {}
+    if cob and not 0 <= cob.get("fracao", 0) <= 1:
+        r.erro("Shows e cultura: Lei Rouanet com cobertura por ano fora de 0 a 100%")
 
 
 def conferir_cidades(saida: Path, r: Resultado, min_mandatos: int) -> None:
