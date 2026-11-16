@@ -105,6 +105,11 @@ diferenças sem motivo numa seção (com 20 ou mais conferidos) devolve código 
 assim mesmo: `--ignorar-barreira`, ou a opção `ignorar_barreira` ao rodar o workflow à mão). Empresas com diferença
 saem do cache de CNPJ; o cache vence em 30 dias.
 
+A API de despesas da Câmara mudou em 15/11/2026: passou a mandar o líquido com o sinal trocado em boa parte das notas e
+a listar as notas sem data. `verificar.liquido` usa o sinal só nas passagens RPA e SIGEPA (os únicos tipos negativos no
+arquivo anual) e `verificar.com_data` tira as notas sem data dos dois lados; com isso, 36 meses sorteados de 2013, 2016 e
+2024 bateram com o arquivo anual. Teste: `test_verificar::test_api_com_sinal_trocado_no_liquido_ainda_confere`.
+
 | Seção | Número do site (fonte da coleta) | Conferido com |
 |---|---|---|
 | Cota | total do mês de cada deputado (arquivo anual) | API da Câmara, `/deputados/{id}/despesas` |

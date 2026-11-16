@@ -244,6 +244,38 @@ def legislaturas(ano: int, mes: int) -> list[int]:
     return [legislatura(ano, mes)]
 
 
+# Os únicos tipos de nota com valor negativo no arquivo anual da Câmara (bilhete devolvido ou remarcado). A
+# "PASSAGEM AÉREA - REEMBOLSO" (o deputado comprou e a Câmara devolveu) é sempre positiva, e a API também troca o
+# sinal dela (84610652, deputado 160592, 03/2016).
+PODE_SER_NEGATIVA = re.compile(r"PASSAGEM A[ÉE]REA - (RPA|SIGEPA)", re.I)
+
+
+def liquido(x: dict) -> float:
+    """Valor líquido de uma nota da API /deputados/{id}/despesas, com o sinal que a nota tem no arquivo oficial.
+
+    Desde a coleta de 15/11/2026 a API manda o sinal trocado em boa parte das notas (na de 11/11 ainda vinha certo):
+    - valorDocumento 6.000,00 e valorLiquido -6.000,00 (André Fufuca, 08/2023:
+      https://dadosabertos.camara.leg.br/api/v2/deputados/178882/despesas?idLegislatura=57&ano=2023&mes=8);
+    - às vezes os dois negativos: telefonia -2.822,74 e serviços postais -3.195,03 em 08/2009 (deputado 141387), que no
+      arquivo anual da Câmara (camara.leg.br/cotas/Ano-2009.csv.zip) são positivos.
+    A soma do mês ficava negativa, e a verificação barrava a publicação com o site certo (igual à página oficial do
+    deputado e ao arquivo anual). No arquivo anual, só passagem aérea tem valor negativo (bilhete devolvido): em 2009,
+    7.558 linhas negativas de passagem e 2 de telefonia; em 2024, 10.887 de passagem e 858 da complementação do
+    auxílio-moradia, que não tem data e não entra na comparação. Por isso: passagem RPA e SIGEPA ficam com o sinal da API; nas outras
+    notas vale o líquido sem sinal. (Documento menos glosa não serve: quando a cota do mês acaba, o líquido é menor que
+    o documento sem glosa nenhuma, ex.: 20.350,00 e líquido 3.843,92, deputado 133373 em 12/2018.) O que a verificação
+    continua conferindo: que as notas existem na API e quanto vale cada uma."""
+    liq = to_float(x.get("valorLiquido"))
+    return liq if PODE_SER_NEGATIVA.search(str(x.get("tipoDespesa") or "")) else abs(liq)
+
+
+def com_data(linhas: list[dict]) -> list[dict]:
+    """Só as notas com data. Desde 15/11/2026 a API também lista as notas sem data do arquivo anual (telefonia paga pela
+    Câmara, imóvel funcional, complementação do auxílio-moradia), que antes não vinham; o site já tira essas notas do
+    lado dele (fora_api, sem_data). Tirando dos dois lados, a conta fica igual com a API antiga e com a nova."""
+    return [x for x in linhas if "dataDocumento" not in x or x.get("dataDocumento")]
+
+
 class DespesasCamara:
     """Despesas de um deputado num mês, pela API da Câmara (com cache, para as duas checagens da cota)."""
 
@@ -322,7 +354,7 @@ def cota_camara(saida: Path, pols: list[dict], rng: random.Random, prazo: Prazo,
         except Exception as e:  # noqa: BLE001
             c_mes.falhou(f"{pid} {mes:02d}/{ano}: API da Câmara não respondeu ({str(e)[:100]})")
             continue
-        oficial = round(sum(to_float(x.get("valorLiquido")) for x in linhas), 2)
+        oficial = round(sum(liquido(x) for x in com_data(linhas)), 2)
         item = {"o_que": f"{detalhes[pid].get('nome', pid)}, {mes:02d}/{ano}", "politico": pid,
                 "site": nosso, "oficial": oficial, "fonte": api.url(_num(pid), ano, mes)}
         if not linhas and abs(nosso) > 0.01:
@@ -348,7 +380,7 @@ def cota_camara(saida: Path, pols: list[dict], rng: random.Random, prazo: Prazo,
             c_emp.falhou(f"{x['politico']} {x['mes']:02d}/{x['ano']}: API da Câmara não respondeu ({str(e)[:100]})")
             continue
         dela = [y for y in linhas if digits(y.get("cnpjCpfFornecedor")) == cnpj]
-        oficial = round(sum(to_float(y.get("valorLiquido")) for y in dela), 2)
+        oficial = round(sum(liquido(y) for y in com_data(dela)), 2)
         item = {"o_que": f"{nome or cnpj} recebeu de {x.get('nome', x['politico'])} em {x['mes']:02d}/{x['ano']}",
                 "cnpj": cnpj, "politico": x["politico"], "site": nosso, "oficial": oficial,
                 "fonte": api.url(_num(x["politico"]), x["ano"], x["mes"])}
@@ -491,7 +523,7 @@ def historico_camara(saida: Path, rng: random.Random, prazo: Prazo, hoje: dt.dat
         except Exception as e:  # noqa: BLE001
             c.falhou(f"{p['id']} {mes:02d}/{ano}: API da Câmara não respondeu ({str(e)[:100]})")
             continue
-        oficial = round(sum(to_float(x.get("valorLiquido")) for x in linhas), 2)
+        oficial = round(sum(liquido(x) for x in com_data(linhas)), 2)
         item = {"o_que": f"{p.get('nome', p['id'])}, {mes:02d}/{ano}", "politico": p["id"], "site": nosso,
                 "oficial": oficial, "fonte": api.url(_num(p["id"]), ano, mes)}
         if not linhas:

@@ -77,6 +77,11 @@ def _com_placar_oficial(s: Path) -> None:
     (s / "votacoes.json").write_text(json.dumps(lista, ensure_ascii=False), encoding="utf-8")
 
 
+def _tipo(valor: float) -> str:
+    """No arquivo oficial da Câmara, só passagem aérea tem valor negativo (bilhete devolvido)."""
+    return "PASSAGEM AÉREA - SIGEPA" if valor < 0 else "TELEFONIA"
+
+
 class Oficial:
     """Responde no lugar das APIs oficiais usadas na verificação, a partir dos próprios arquivos do site (ou seja,
     tudo bate). Cada teste estraga uma parte para ver a verificação pegar."""
@@ -90,6 +95,7 @@ class Oficial:
         self.senado_total_diferente = 0.0
         self.presenca_faltando = False
         self.socio_saiu = False  # a pessoa deixou de ser sócia (nas duas cópias da base da Receita)
+        self.sinal_trocado = False  # como a API real desde nov/2026: valorLiquido com o sinal trocado
         self.presentes: dict[int, set[int]] = defaultdict(set)  # evento -> deputados com presença no calendário do site
         for f in (s / "p" / "agenda").glob("dep-*.json"):
             for x in _ler(f)["dias"].values():
@@ -101,7 +107,7 @@ class Oficial:
             for x in _ler(f).get("por_mes") or []:
                 if x["politico"].startswith("dep-"):
                     k = (x["politico"].removeprefix("dep-"), x["ano"], x["mes"])
-                    self.mes[k].append({"cnpjCpfFornecedor": f.stem, "valorLiquido": x["valor"]})
+                    self.mes[k].append({"cnpjCpfFornecedor": f.stem, "valorLiquido": x["valor"], "tipoDespesa": _tipo(x["valor"])})
                     por_cnpj[k] += x["valor"]
         for p in _ler(s / "politicos.json"):
             if p["casa"] != "camara":
@@ -111,7 +117,7 @@ class Oficial:
                     k = (p["id"].removeprefix("dep-"), int(ano), m["mes"])
                     resto = round(m["valor"] - por_cnpj[k], 2)
                     if abs(resto) > 0.001:
-                        self.mes[k].append({"cnpjCpfFornecedor": "", "valorLiquido": resto})
+                        self.mes[k].append({"cnpjCpfFornecedor": "", "valorLiquido": resto, "tipoDespesa": _tipo(resto)})
 
     def __call__(self, url, params=None, headers=None, timeout=None, **kw):
         self.pedidos.append(url)
@@ -122,7 +128,12 @@ class Oficial:
             k = (m.group(1), int(m.group(2)), int(m.group(3)))
             # Como a API real desde nov/2026: sem idLegislatura, responde sem nenhuma despesa
             sem_leg = f"idLegislatura={vf.legislatura(k[1], k[2])}" not in url
-            return {"dados": [] if self.despesas_vazias or sem_leg else self.mes.get(k, []), "links": []}
+            dados = [] if self.despesas_vazias or sem_leg else self.mes.get(k, [])
+            if self.sinal_trocado:
+                dados = [x if x["valorLiquido"] < 0 else {**x, "valorDocumento": x["valorLiquido"], "valorGlosa": 0.0,
+                                                           "valorLiquido": -x["valorLiquido"]} for x in dados]
+                dados.append({"tipoDespesa": "TELEFONIA", "dataDocumento": None, "valorLiquido": -12.34})  # sem data
+            return {"dados": dados, "links": []}
         if m := re.search(r"/votacoes/([^/]+)/votos$", url):
             d = _ler(self.s / "v" / f"cd-{m.group(1)}.json")
             dados = [{"tipoVoto": x["voto"], "deputado_": {"id": int(x["politico"].removeprefix("dep-"))}} for x in d["votos"]]
@@ -236,6 +247,35 @@ def test_sem_diferenca_relatorio_diz_que_nao_ha():
                                                     "nao_conferidos": [], "motivo": ""}]}
     assert "Nenhuma diferença sem motivo conhecido" in vf.revisao_manual_md(v)
     assert vf.revisao_manual_linhas(v) == []
+
+
+def test_api_com_sinal_trocado_no_liquido_ainda_confere(saida):
+    """Desde 15/11/2026 a API da Câmara manda o líquido com o sinal trocado em muitas notas que não são passagem, e
+    passou a listar as notas sem data. A conta tem de continuar batendo e a publicação não pode ficar barrada."""
+    of = Oficial(saida)
+    of.sinal_trocado = True
+    v = _rodar(saida, of)
+    for cid in ("cota_camara_mes", "cota_camara_empresa"):
+        c = _checagem(v, cid)
+        assert c["status"] == "conferido" and c["divergentes"] == 0, (cid, c)
+
+
+def test_liquido_de_cada_nota():
+    # casos reais da API em 15/11/2026, com o valor do arquivo anual da Câmara
+    assert vf.liquido({"tipoDespesa": "LOCAÇÃO", "valorDocumento": 6000.0, "valorGlosa": 0.0, "valorLiquido": -6000.0}) == 6000.0
+    assert vf.liquido({"tipoDespesa": "COMBUSTÍVEIS", "valorDocumento": 3502.47, "valorGlosa": 109.65, "valorLiquido": -3392.82}) == 3392.82
+    assert vf.liquido({"tipoDespesa": "TELEFONIA", "valorDocumento": -2822.74, "valorGlosa": 0.0, "valorLiquido": -2822.74}) == 2822.74
+    # cota do mês no fim: líquido menor que o documento, sem glosa
+    assert vf.liquido({"tipoDespesa": "DIVULGAÇÃO", "valorDocumento": 20350.0, "valorGlosa": 0.0, "valorLiquido": -3843.92}) == 3843.92
+    # passagem devolvida é negativa de verdade
+    assert vf.liquido({"tipoDespesa": "PASSAGEM AÉREA - SIGEPA", "valorDocumento": -1808.37, "valorLiquido": -1808.37}) == -1808.37
+    assert vf.liquido({"tipoDespesa": "PASSAGEM AÉREA - RPA", "valorLiquido": 934.48}) == 934.48
+    assert vf.liquido({"tipoDespesa": "PASSAGEM AÉREA - RPA", "valorLiquido": -596.63}) == -596.63
+    # reembolso de passagem é sempre positivo no arquivo anual; a API também troca o sinal dele
+    assert vf.liquido({"tipoDespesa": "PASSAGEM AÉREA - REEMBOLSO", "valorLiquido": -866.16}) == 866.16
+    # nota sem data (telefonia paga pela Câmara) fica fora dos dois lados
+    assert vf.com_data([{"dataDocumento": None, "valorLiquido": 2.54}, {"dataDocumento": "2024-11-07T00:00:00"}, {}]) == [
+        {"dataDocumento": "2024-11-07T00:00:00"}, {}]
 
 
 def test_api_sem_dados_nunca_vira_conferido(saida):
