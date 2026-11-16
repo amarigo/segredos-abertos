@@ -277,8 +277,8 @@ def test_lei_rouanet_por_ano_aos_poucos_mostra_a_cobertura(fake, tmp_path, monke
         if not next(restam, False):
             raise cultura.SemTempo()
     monkeypatch.setattr(rel, "checar", checar)
-    doacoes, completo = cultura.ler_doacoes(inc_ok, rel, pasta / "doacoes-mg.json.gz")
-    assert not completo and len(doacoes) == 1
+    doacoes, completo, erro = cultura.ler_doacoes(inc_ok, rel, pasta / "doacoes-mg.json.gz")
+    assert not completo and len(doacoes) == 1 and not erro
     inc = cultura.resumir_rouanet(inc_ok, [], cid, doacoes)["incentivadores"]
     assert inc["cobertura_anos"]["lidos"] == 1 and inc["cobertura_anos"]["fracao"] == round(1_000_000 / 1_100_000, 4)
     assert sum(x["valor"] for x in inc["por_ano"]) == 1_000_000, "o maior doador vem primeiro"
@@ -354,3 +354,30 @@ def test_parte_que_nao_passa_na_conferencia_fica_de_fora_sem_travar(tmp_path, mo
     d = json.loads((tmp_path / "estado" / "cultura.json").read_text(encoding="utf-8"))
     assert d["contratos"] is None and d["pix"]["total"] == 10.0
     assert any("contratações de artistas" in a for a in util.AVISOS)
+
+
+def test_doacoes_andam_mesmo_com_a_lista_sem_tempo(fake, tmp_path, monkeypatch):
+    """A lista de incentivadores pode gastar todo o tempo dela: as doações têm um tempo próprio e andam assim mesmo,
+    com a última lista completa."""
+    cid = cultura.Cidades(cultura.municipios(tmp_path), cultura.populacao(tmp_path)[0])
+    cultura._salic_lista("incentivadores", {"UF": "MG", "sort": "total_doado:desc"}, cultura.Relogio(5),
+                         tmp_path / "salic" / "incentivadores-mg.json.gz", HOJE, "incentivadores")
+    # a lista venceu (8 dias) e a leitura nova não cabe no tempo dela (0 minuto)
+    r = cultura.coletar_rouanet(tmp_path, 0, HOJE + dt.timedelta(days=8), cid, minutos_doacoes=5)
+    assert not r["completo"] and r["incentivadores"]["cobertura_anos"]["fracao"] == 1.0
+
+
+def test_doador_com_erro_e_pulado_e_o_site_diz_o_motivo(fake, tmp_path):
+    cid = cultura.Cidades(cultura.municipios(tmp_path), cultura.populacao(tmp_path)[0])
+    del fake.doacoes["11222333000181"]
+    orig = fake.get
+
+    def get(url, params=None, **kw):
+        if url.endswith("/11222333000181/doacoes"):
+            return resp({"erro": "formato inesperado"})
+        return orig(url, params=params, **kw)
+    fake.get = get
+    cultura.get = get
+    inc = cultura.coletar_rouanet(tmp_path, 5, HOJE, cid)["incentivadores"]
+    assert inc["cobertura_anos"]["lidos"] == 2, "os outros doadores foram lidos"
+    assert any("doações de cada incentivador" in a and "_embedded.doacoes" in a for a in util.AVISOS)
