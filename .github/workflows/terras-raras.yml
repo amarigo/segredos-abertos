@@ -16,6 +16,13 @@ on:
     paths: ["terras-raras/**", ".github/workflows/terras-raras.yml"]
   pull_request:
     paths: ["terras-raras/**", ".github/workflows/terras-raras.yml"]
+  # Depois de cada "Dados e site" que deu certo no main: aquela execução pode ter montado a página com planilhas mais
+  # velhas (começou antes do último push daqui) e publicado por cima. Aqui a página do main volta para o ar, por cima
+  # daquela cópia nova do site. Se nada mudou, não publica de novo.
+  workflow_run:
+    workflows: ["Dados e site"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       ignorar_queda:
@@ -26,14 +33,19 @@ on:
 permissions:
   contents: read
 
-# No main, entra na mesma fila de "Dados e site": as duas nunca publicam ao mesmo tempo, e uma não apaga a outra
-# com uma cópia mais velha. Nos PRs, um push novo cancela o anterior.
+# Fila própria, separada da de "Dados e site". Com uma fila só, o GitHub guarda só uma execução esperando: um push de
+# Terras Raras cancelava a coleta nacional que estava na fila (aconteceu em 17/11/2026), e o contrário também. As duas
+# podem publicar em qualquer ordem porque: (1) aqui o resto do site vem sempre da última cópia do "Dados e site", nunca
+# de uma cópia publicada por este workflow; (2) depois de cada "Dados e site" este workflow roda de novo (workflow_run
+# acima) e põe no ar a página do main por cima da cópia nova. Nos PRs, um push novo cancela o anterior.
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('terras-raras-{0}', github.ref) || 'dados-refs/heads/main' }}
+  group: terras-raras-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   conferir:
+    # Depois do "Dados e site", só quando ele deu certo (se falhou, nada novo foi ao ar)
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -85,13 +97,14 @@ jobs:
         run: |
           set -euo pipefail
           # Pacotes "github-pages" do main ainda guardados, do mais novo para o mais velho. Vale o primeiro de uma
-          # execução que terminou com sucesso (ou seja, que foi publicada).
+          # execução do "Dados e site" que terminou com sucesso (ou seja, que foi publicada). Nunca uma cópia feita por
+          # este workflow: assim o resto do site é sempre o da última coleta nacional publicada.
           gh api "repos/$REPO/actions/artifacts?name=github-pages&per_page=100" \
             --jq '.artifacts | map(select(.expired == false and .workflow_run.head_branch == "main")) | sort_by(.created_at) | reverse | .[] | "\(.id) \(.workflow_run.id) \(.created_at)"' \
             > pacotes.txt
           ESCOLHIDO=""
           while read -r ART RUN QUANDO; do
-            if [ "$(gh api "repos/$REPO/actions/runs/$RUN" --jq .conclusion)" = "success" ]; then
+            if [ "$(gh api "repos/$REPO/actions/runs/$RUN" --jq '"\(.path) \(.conclusion)"')" = ".github/workflows/dados-e-site.yml success" ]; then
               ESCOLHIDO="$ART"; echo "Cópia do site: pacote $ART da execução $RUN, de $QUANDO" | tee -a "$GITHUB_STEP_SUMMARY"; break
             fi
           done < pacotes.txt
@@ -112,16 +125,38 @@ jobs:
           name: terras-raras-pagina
           path: novo
       - name: Trocar só a página de Terras Raras
+        id: trocar
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENTO: ${{ github.event_name }}
+          DADOS_FIM: ${{ github.event.workflow_run.updated_at }}
+          ESTA: ${{ github.run_id }}
         run: |
+          set -euo pipefail
+          # Depois do "Dados e site": se ele já publicou esta mesma página e nenhuma publicação daqui veio depois dele,
+          # o site no ar já está certo; não publica de novo.
+          if [ "$EVENTO" = "workflow_run" ] && cmp -s novo/index.html dist/terras-raras/index.html; then
+            ULTIMA=$(gh api "repos/$REPO/actions/workflows/terras-raras.yml/runs?branch=main&status=success&per_page=10" \
+              --jq "[.workflow_runs[] | select(.id != $ESTA) | .updated_at] | first // \"\"")
+            if [ -z "$ULTIMA" ] || [[ "$ULTIMA" < "$DADOS_FIM" ]]; then
+              echo "O \"Dados e site\" já publicou a página de Terras Raras do main; nada a fazer." | tee -a "$GITHUB_STEP_SUMMARY"
+              echo "pular=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
           cp novo/index.html dist/terras-raras/index.html
           echo "Página nova de Terras Raras no lugar da anterior; o resto do site fica igual ao publicado." >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - if: steps.trocar.outputs.pular != 'true'
+        uses: actions/configure-pages@v5
+      - if: steps.trocar.outputs.pular != 'true'
+        uses: actions/upload-pages-artifact@v3
         with:
           path: dist
           retention-days: 7
       # Mesma segunda tentativa do "Dados e site": às vezes o Pages fica parado em "syncing_files".
       - id: deploy
+        if: steps.trocar.outputs.pular != 'true'
         uses: actions/deploy-pages@v4
         continue-on-error: true
       - name: Publicação falhou; esperar antes de tentar de novo

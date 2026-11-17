@@ -39,7 +39,9 @@ Ao usar a opção 2 ou 3, deixe escrito no código por que a API não serviu.
 - Todo dia às **3h17 de Brasília** (`cron: "17 6 * * *"`, UTC) o workflow "Dados e site" roda os testes, coleta,
   confere, verifica com a segunda fonte, monta todos os sites e publica. Também roda a cada push no `main`.
 - Terras Raras não espera a coleta: [`terras-raras.yml`](.github/workflows/terras-raras.yml) publica só essa página a
-  cada push que mexa em `terras-raras/` (e "Dados e site" não roda para esses pushes).
+  cada push que mexa em `terras-raras/` (e "Dados e site" não roda para esses pushes). Tem fila própria, para não
+  cancelar a coleta que espera na fila, e roda de novo depois de cada "Dados e site" que deu certo, para pôr no ar a
+  página do main caso a coleta tenha montado uma mais velha.
 - Se uma fonte oficial falhar, a coleta usa a última cópia boa, mostra aviso com a data dela, e
   [`tentar-de-novo.yml`](.github/workflows/tentar-de-novo.yml) tenta de novo a cada 2 horas até tudo responder.
 - Para atualizar na hora: Actions > Dados e site > Run workflow (branch `main`). Opções `ignorar_queda` e
