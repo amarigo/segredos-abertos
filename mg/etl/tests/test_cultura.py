@@ -381,3 +381,50 @@ def test_doador_com_erro_e_pulado_e_o_site_diz_o_motivo(fake, tmp_path):
     inc = cultura.coletar_rouanet(tmp_path, 5, HOJE, cid)["incentivadores"]
     assert inc["cobertura_anos"]["lidos"] == 2, "os outros doadores foram lidos"
     assert any("doações de cada incentivador" in a and "_embedded.doacoes" in a for a in util.AVISOS)
+
+
+def _erro_404(url):
+    r = resp({"message": "Not Found"}, 404)
+    r.url = url
+    return requests.HTTPError(f"404 Client Error: Not Found for url: {url}", response=r)
+
+
+def test_link_de_doacoes_com_404_tenta_o_cnpj_e_lembra_a_forma(fake, tmp_path):
+    """Em 16/11/2026 o link _links.doacoes da lista respondeu 404: tentamos as outras formas do endereço e a que
+    funcionou vai primeiro para os próximos doadores."""
+    cid = cultura.Cidades(cultura.municipios(tmp_path), cultura.populacao(tmp_path)[0])
+    for i, x in enumerate(fake.incentivadores):
+        x["_links"] = {"self": f"https://api.salic.cultura.gov.br/api/v1/incentivadores/abc{i}",
+                       "doacoes": f"https://api.salic.cultura.gov.br/api/v1/incentivadores/def{i}/doacoes"}
+    orig = fake.get
+
+    def get(url, params=None, **kw):
+        if "/incentivadores/abc" in url or "/incentivadores/def" in url:
+            fake.chamadas.append(url)
+            raise _erro_404(url)
+        return orig(url, params=params, **kw)
+    fake.get = get
+    cultura.get = get
+    inc = cultura.coletar_rouanet(tmp_path, 5, HOJE, cid)["incentivadores"]
+    assert inc["cobertura_anos"]["fracao"] == 1.0
+    assert {a["ano"]: a["valor"] for a in inc["por_ano"]} == {2024: 695000.0, 2025: 405000.0}
+    falhas = [u for u in fake.chamadas if "/incentivadores/abc" in u or "/incentivadores/def" in u]
+    assert len(falhas) == 2, "só o primeiro doador tenta o link quebrado; os outros vão direto pelo CNPJ/CPF"
+    assert not any("doações de cada incentivador" in a for a in util.AVISOS)
+
+
+def test_404_em_todas_as_formas_avisa_sem_mostrar_o_cpf(fake, tmp_path):
+    cid = cultura.Cidades(cultura.municipios(tmp_path), cultura.populacao(tmp_path)[0])
+    orig = fake.get
+
+    def get(url, params=None, **kw):
+        if "/doacoes" in url:
+            raise _erro_404(url)
+        return orig(url, params=params, **kw)
+    fake.get = get
+    cultura.get = get
+    inc = cultura.coletar_rouanet(tmp_path, 5, HOJE, cid)["incentivadores"]
+    assert inc["cobertura_anos"]["fracao"] == 0
+    aviso = next(a for a in util.AVISOS if "doações de cada incentivador" in a)
+    assert "HTTP 404 em todas as" in aviso and "CNPJ/CPF" in aviso
+    assert CPF not in aviso and "11222333000181" not in aviso
