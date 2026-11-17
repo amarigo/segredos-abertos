@@ -79,3 +79,13 @@ test("resumo geral e textos dos status", () => {
   assert.ok(r.pessoas > 100 && r.condenados > 20);
   for (const s of ORDEM) assert.ok(STATUS[s].nome && STATUS[s].um && STATUS[s].explica);
 });
+
+test("campo da linha do placar é o do partido de hoje, sem depender da ordem dos casos", () => {
+  const linhas = placar(CASOS, ORDEM);
+  const linhasAoContrario = placar([...CASOS].reverse(), ORDEM);
+  for (const l of linhas) assert.equal(linhasAoContrario.find((x) => x.partido === l.partido)!.campo, l.campo, l.partido);
+  const campo = (p: string) => linhas.find((l) => l.partido === p)?.campo;
+  assert.equal(campo("PL"), "Direita");
+  assert.equal(campo("PRD"), "Centro-direita");
+  assert.equal(campo("União"), "Direita");
+});

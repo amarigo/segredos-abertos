@@ -80,6 +80,13 @@ export function Placar() {
         Quantas pessoas de cada partido aparecem nos {CASOS.length} casos, pela situação de cada uma na Justiça. Vale o partido <strong>da época dos fatos</strong>, somado com o nome de hoje (PMDB e MDB contam juntos; PR e PL também).
         Escolha abaixo o que entra na conta: por padrão vão de condenados a investigados. Citados e absolvidos ficam de fora, mas dá para incluir.
       </Explain>
+      <p className="small muted" id="campo-partido">
+        <strong>O que é o selo (esquerda, centro, direita):</strong> a posição do partido na régua ideológica, segundo uma pesquisa com
+        cientistas políticos feita em 2018 e publicada em 2023 (<a href={FONTE_IDEOLOGIA.url} target="_blank" rel="noreferrer">{FONTE_IDEOLOGIA.nome}</a>).
+        Não é uma avaliação do partido, não é calculado pelo site e não tem a ver com corrupção. Quem mudou de nome leva a posição da sigla que
+        a pesquisa avaliou (o PL, a do PR; o PRD, a do PTB). O União Brasil nasceu depois da pesquisa, da fusão do DEM (extrema-direita) com o
+        PSL (direita), e o site o põe na direita.
+      </p>
       <fieldset className="placar-filtro">
         <legend className="muted small">O que contar</legend>
         {opcoes.map((s) => (
@@ -97,8 +104,7 @@ export function Placar() {
             <div className="placar-nome">
               <strong><i className="partido-cor" style={{ background: corPartido(l.partido) }} />{l.partido}</strong>
               {l.siglas.some((s) => s !== l.partido) && <span className="muted small"> (na época: {l.siglas.join(", ")})</span>}
-              <div><span className="campo-chip" style={{ borderColor: corCampo(l.campo), color: "var(--ink-2)" }}>{l.campo}</span>
-                {l.nota != null && <span className="muted small"> nota {l.nota.toLocaleString("pt-BR")} de 10</span>}</div>
+              <div><a href="#campo-partido" className="campo-chip" style={{ borderColor: corCampo(l.campo), color: "var(--ink-2)", textDecoration: "none" }} title={`Posição ideológica segundo ${FONTE_IDEOLOGIA.nome}`}>{l.campo}</a></div>
             </div>
             <span className="placar-total num">{l.total}</span>
             <div className="placar-detalhe">
@@ -120,8 +126,8 @@ export function Placar() {
 
       <h3>Por campo político</h3>
       <p className="small muted">
-        Esquerda, centro ou direita segundo a nota de 0 a 10 dada por 519 cientistas políticos na pesquisa de <a href={FONTE_IDEOLOGIA.url} target="_blank" rel="noreferrer">{FONTE_IDEOLOGIA.nome}</a>.
-        É uma fonte independente do site. O MDB tem nota 7,01, no limite entre centro-direita e direita.
+        Esquerda, centro ou direita pela mesma pesquisa com cientistas políticos (<a href={FONTE_IDEOLOGIA.url} target="_blank" rel="noreferrer">{FONTE_IDEOLOGIA.nome}</a>),
+        uma fonte independente do site. O MDB fica no limite entre centro-direita e direita.
       </p>
       <div className="bars">
         {campos.map((c) => (

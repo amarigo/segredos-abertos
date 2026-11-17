@@ -1,5 +1,5 @@
 import type { Caso, Nivel, Status } from "./tipos.ts";
-import { campoPartido, infoPartido, CAMPOS, type Campo } from "./partidos.ts";
+import { campoPartido, infoPartido, CAMPOS, PARTIDOS, type Campo } from "./partidos.ts";
 
 /* Placar por partido: quantas pessoas de cada partido aparecem em cada situação, somando os casos.
    Regras:
@@ -35,7 +35,6 @@ export interface LinhaPlacar {
   partido: string;            // nome de hoje
   siglas: string[];           // siglas da época que entraram na conta
   campo: Campo;
-  nota: number | null;
   por: Record<Status, number>;
   total: number;              // só os status escolhidos
   casos: string[];            // ids dos casos em que o partido aparece (com os status escolhidos)
@@ -51,7 +50,10 @@ export function placar(casos: Caso[], incluir: Status[]): LinhaPlacar[] {
     const hoje = infoPartido(sigla).hoje;
     let l = linhas.get(hoje);
     if (!l) {
-      l = { partido: hoje, siglas: [], campo: campoPartido(sigla), nota: infoPartido(sigla).nota, por: zero(), total: 0, casos: [], maior: null };
+      // O campo da linha é o do partido de hoje, para não depender da ordem dos casos.
+      // Se a pesquisa não avaliou o nome de hoje (ex.: PRD), vale a sigla da época que ela avaliou (PTB).
+      const base = PARTIDOS[hoje] ? hoje : sigla;
+      l = { partido: hoje, siglas: [], campo: campoPartido(base), por: zero(), total: 0, casos: [], maior: null };
       linhas.set(hoje, l);
     }
     if (!l.siglas.includes(sigla)) l.siglas.push(sigla);
