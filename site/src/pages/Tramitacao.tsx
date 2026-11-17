@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { Accordion, Anchor, Badge, Blockquote, Button, Card, Checkbox, Group, NativeSelect, SimpleGrid, Stack, Tabs, Text, TextInput, Title } from "@mantine/core";
 import { Explain, Loading, useData } from "../components/ui";
 import { TEMAS, autorSigla, nomeTipo, casaNome, dataBR, dataHoraBR, linkSeguro, type ArgumentoProjeto, type GrupoProjeto, type NoticiaContra, type Projeto, type Tramitacao, type TramitacaoAlmg } from "../data";
 import { norm } from "./Home";
@@ -41,7 +42,7 @@ function Autores({ p }: { p: Projeto }) {
   const mais = p.n_autores - p.autores.length;
   const origem = linkSeguro(p.url_origem);
   return (
-    <p className="small"><b>Quem propôs: </b>
+    <Text size="sm"><b>Quem propôs: </b>
       {p.autores.map((a, k) => (
         <span key={k}>{k > 0 && ", "}{a.id ? <Link to={`/p/${a.id}`}>{a.nome}</Link> : a.nome}{autorSigla(a)}
           {a.cargo && a.cargo !== "Poder Executivo" && `, ${a.cargo.toLowerCase()}`}</span>
@@ -49,21 +50,26 @@ function Autores({ p }: { p: Projeto }) {
       {mais > 0 && ` e mais ${mais}`}
       {p.veio_da_camara && <> · começou na Câmara, que aprovou e enviou ao Senado{origem && <> (<a href={origem} target="_blank" rel="noreferrer">ver na Câmara ↗</a>)</>}</>}
       {p.veio_do_senado && " · começou no Senado, que aprovou e enviou à Câmara"}
-    </p>
+    </Text>
   );
 }
 
-function Argumento({ a, tudo }: { a: ArgumentoProjeto; tudo: boolean }) {
+/** Frase copiada do documento, sem mudar palavras. A cor da borda diz o lado (a favor ou contra). */
+function Trecho({ cor, children }: { cor: string; children: ReactNode }) {
+  return <Blockquote color={cor} p="xs" pl="sm" fz="sm" fs="italic" className="proj-trecho">{children}</Blockquote>;
+}
+
+function Argumento({ a, tudo, cor }: { a: ArgumentoProjeto; tudo: boolean; cor: string }) {
   const u = linkSeguro(a.url);
   const trechos = tudo ? a.trechos : a.trechos.slice(0, 1);
   return (
-    <div className="proj-arg">
-      <p className="small"><b>{a.quem || "Relator"}</b> · {a.papel}{a.casa && ` · ${a.casa}`}{a.data && `, ${dataBR(a.data)}`}
-        {a.conclusao && <> · concluiu pela <b>{a.conclusao}</b></>}</p>
-      {trechos.map((t, k) => <blockquote key={k} className="proj-trecho">“{t}”</blockquote>)}
-      {a.trechos.length === 0 && <p className="small muted">Sem frase curta que explique o motivo; o argumento está no documento.</p>}
-      {u && <a className="small" href={u} target="_blank" rel="noreferrer">Ler o documento oficial ↗</a>}
-    </div>
+    <Stack gap={4} className="proj-arg">
+      <Text size="sm"><b>{a.quem || "Relator"}</b> · {a.papel}{a.casa && ` · ${a.casa}`}{a.data && `, ${dataBR(a.data)}`}
+        {a.conclusao && <> · concluiu pela <b>{a.conclusao}</b></>}</Text>
+      {trechos.map((t, k) => <Trecho key={k} cor={cor}>“{t}”</Trecho>)}
+      {a.trechos.length === 0 && <Text size="sm" c="dimmed">Sem frase curta que explique o motivo; o argumento está no documento.</Text>}
+      {u && <Anchor size="sm" href={u} target="_blank" rel="noreferrer">Ler o documento oficial ↗</Anchor>}
+    </Stack>
   );
 }
 
@@ -72,14 +78,28 @@ function Noticia({ n, tudo }: { n: NoticiaContra; tudo: boolean }) {
   const u = linkSeguro(n.url);
   const trechos = tudo ? n.trechos : n.trechos.slice(0, 1);
   return (
-    <div className="proj-arg proj-noticia">
-      <p className="small"><span className="status nao-oficial">Notícia · fonte não oficial</span></p>
-      {n.quem && <p className="small">{"Quem fala: "}<b>{n.quem}</b></p>}
-      <p className="small">{"Publicado em "}<b>{n.veiculo}</b>{n.data && `, ${dataBR(n.data)}`}
-        {n.autor && <span className="muted">{` · texto de ${n.autor}`}</span>}</p>
-      {trechos.map((t, k) => <blockquote key={k} className="proj-trecho">{/^[“"]/.test(t) ? t : `“${t}”`}</blockquote>)}
-      {u && <a className="small" href={u} target="_blank" rel="noreferrer">{n.titulo ? `Ler a notícia original: ${n.titulo} ↗` : "Ler a notícia original ↗"}</a>}
-    </div>
+    <Stack gap={4} className="proj-noticia">
+      <Badge color="yellow" variant="light" style={{ alignSelf: "flex-start" }}>Notícia · fonte não oficial</Badge>
+      {n.quem && <Text size="sm">{"Quem fala: "}<b>{n.quem}</b></Text>}
+      <Text size="sm">{"Publicado em "}<b>{n.veiculo}</b>{n.data && `, ${dataBR(n.data)}`}
+        {n.autor && <Text span c="dimmed" inherit>{` · texto de ${n.autor}`}</Text>}</Text>
+      {trechos.map((t, k) => <Trecho key={k} cor="gray">{/^[“"]/.test(t) ? t : `“${t}”`}</Trecho>)}
+      {u && <Anchor size="sm" href={u} target="_blank" rel="noreferrer">{n.titulo ? `Ler a notícia original: ${n.titulo} ↗` : "Ler a notícia original ↗"}</Anchor>}
+    </Stack>
+  );
+}
+
+/** Contagem do título do item recolhido: quantos a favor e quantos contra, sem abrir. */
+function DebateResumo({ p }: { p: Projeto }) {
+  const d = p.debate!;
+  const nots = d.contra.length ? [] : d.noticias_contra || [];
+  return (
+    <Group gap="4px 12px" wrap="wrap" align="baseline" component="span" style={{ display: "inline-flex" }}>
+      <Text span fw={700}>O que dizem a favor e contra</Text>
+      <Text span size="sm"><Text span inherit c="var(--sim-ink)" fw={700}>{`${d.favor.length} a favor`}</Text>{" · "}
+        <Text span inherit c="var(--nao-ink)" fw={700}>{`${d.contra.length} contra`}</Text>
+        {nots.length > 0 && <>{" · "}<Text span inherit c="var(--nao-ink)" fw={700}>{`${nots.length} contra em notícias`}</Text></>}</Text>
+    </Group>
   );
 }
 
@@ -91,39 +111,34 @@ export function Debate({ p }: { p: Projeto }) {
   if (!d) return null;
   const nots = d.contra.length ? [] : d.noticias_contra || [];
   const temMais = [...d.favor, ...d.contra, ...nots].some((a) => a.trechos.length > 1) || d.favor.length > 2 || d.contra.length > 2 || nots.length > 2;
-  const lado = (titulo: string, cls: string, xs: ArgumentoProjeto[], vazio: string, extra?: ReactNode) => (
-    <div className={`proj-lado ${cls}`}>
-      <h4>{titulo} <span className="muted small">({xs.length})</span></h4>
+  const lado = (titulo: string, cls: string, cor: string, corTitulo: string, xs: ArgumentoProjeto[], vazio: string, extra?: ReactNode) => (
+    <Stack gap="sm" className={`proj-lado ${cls}`}>
+      <Title order={4} size="h5" c={corTitulo}>{titulo} <Text span size="sm" c="dimmed">({xs.length})</Text></Title>
       {xs.length === 0
-        ? <p className="small muted">{vazio}</p>
-        : (tudo ? xs : xs.slice(0, 2)).map((a, k) => <Argumento key={k} a={a} tudo={tudo} />)}
+        ? <Text size="sm" c="dimmed">{vazio}</Text>
+        : (tudo ? xs : xs.slice(0, 2)).map((a, k) => <Argumento key={k} a={a} tudo={tudo} cor={cor} />)}
       {extra}
-    </div>
+    </Stack>
   );
   // Sem documento oficial contra: o que achamos em notícias (ou o aviso de que procuramos e não achamos)
   const emNoticias = !d.contra.length && d.noticias_buscadas_em ? (
     nots.length > 0 ? (
       <>
-        <p className="small"><b>{`Em notícias (${nots.length})`}</b>{": como nenhum documento oficial é contra, procuramos quem fala contra na imprensa."}</p>
+        <Text size="sm"><b>{`Em notícias (${nots.length})`}</b>{": como nenhum documento oficial é contra, procuramos quem fala contra na imprensa."}</Text>
         {(tudo ? nots : nots.slice(0, 2)).map((n, k) => <Noticia key={k} n={n} tudo={tudo} />)}
-        <p className="small muted">Notícia não é documento oficial. A frase foi copiada da notícia sem mudar palavras e escolhida automaticamente; confira o contexto no link.</p>
+        <Text size="sm" c="dimmed">Notícia não é documento oficial. A frase foi copiada da notícia sem mudar palavras e escolhida automaticamente; confira o contexto no link.</Text>
       </>
-    ) : <p className="small muted">{`Também procuramos em notícias (em ${dataBR(d.noticias_buscadas_em)}) e não achamos ninguém falando contra esta proposta pelo número dela.`}</p>
+    ) : <Text size="sm" c="dimmed">{`Também procuramos em notícias (em ${dataBR(d.noticias_buscadas_em)}) e não achamos ninguém falando contra esta proposta pelo número dela.`}</Text>
   ) : null;
   return (
-    <details className="proj-debate recolhe">
-      <summary>
-        <h4 className="proj-debate-tit">O que dizem a favor e contra</h4>
-        <span className="recolhe-dica small"><span className="proj-conta favor">{`${d.favor.length} a favor`}</span> · <span className="proj-conta contra">{`${d.contra.length} contra`}</span>
-          {nots.length > 0 && <> · <span className="proj-conta contra">{`${nots.length} contra em notícias`}</span></>}</span>
-      </summary>
-      <div className="proj-lados">
-        {lado("A favor", "favor", d.favor, "Ainda não há documento oficial a favor nesta proposta (justificação do autor ou parecer pela aprovação).")}
-        {lado("Contra", "contra", d.contra, "Ninguém registrou documento oficial contra até agora (parecer pela rejeição ou voto em separado). Pode haver quem discorde sem ter posto isso por escrito.", emNoticias)}
-      </div>
-      {temMais && <button className="link small" onClick={() => setTudo(!tudo)}>{tudo ? "Mostrar menos" : "Ver todos os trechos"}</button>}
-      <p className="small muted">Frases copiadas dos documentos oficiais, sem mudar palavras: a justificação de quem propôs, o parecer dos relatores e os votos em separado. Escolhemos as frases que falam do efeito e do motivo; o documento completo está no link.</p>
-    </details>
+    <Stack gap="sm">
+      <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg" verticalSpacing="md">
+        {lado("A favor", "favor", "var(--sim)", "var(--sim-ink)", d.favor, "Ainda não há documento oficial a favor nesta proposta (justificação do autor ou parecer pela aprovação).")}
+        {lado("Contra", "contra", "var(--nao)", "var(--nao-ink)", d.contra, "Ninguém registrou documento oficial contra até agora (parecer pela rejeição ou voto em separado). Pode haver quem discorde sem ter posto isso por escrito.", emNoticias)}
+      </SimpleGrid>
+      {temMais && <Button variant="subtle" size="compact-sm" style={{ alignSelf: "flex-start" }} onClick={() => setTudo(!tudo)}>{tudo ? "Mostrar menos" : "Ver todos os trechos"}</Button>}
+      <Text size="sm" c="dimmed">Frases copiadas dos documentos oficiais, sem mudar palavras: a justificação de quem propôs, o parecer dos relatores e os votos em separado. Escolhemos as frases que falam do efeito e do motivo; o documento completo está no link.</Text>
+    </Stack>
   );
 }
 
@@ -132,60 +147,79 @@ function proximoAlmg(p: Projeto): string {
   return `Situação oficial: ${p.situacao || "sem informação"}${onde ? ` (${onde})` : ""}. A ALMG não publica nos dados abertos a data da próxima votação; veja a agenda na página do projeto.`;
 }
 
+/** Texto oficial e o resto do detalhe da proposta: ementa, situação, regime, temas e últimos passos. */
+function MaisDetalhes({ p }: { p: Projeto }) {
+  const texto = linkSeguro(p.texto);
+  return (
+    <Stack gap="xs" fz="sm">
+      {p.resumo && <Text inherit><b>Ementa oficial: </b>{p.ementa}</Text>}
+      {p.resumo_oficial && p.resumo_oficial !== p.ementa && <Text inherit><b>Resumo da ALMG: </b>{p.resumo_oficial}</Text>}
+      {p.o_que_e && <Text inherit><b>O que significa {p.sigla}: </b>{p.o_que_e}</Text>}
+      {p.situacao && <Text inherit><b>Situação oficial: </b>{p.situacao}{p.onde && ` · ${p.onde}`}{p.atualizada && ` (desde ${dataBR(p.atualizada)})`}</Text>}
+      {p.regime && <Text inherit><b>Regime: </b>{p.regime}</Text>}
+      {p.tranca_pauta && !p.suspenso && <Text inherit>A partir de {dataBR(p.tranca_pauta)}, se ainda não tiver sido votada, ela <b>tranca a pauta</b>: a Casa onde está não pode votar outros projetos de lei antes dela.</Text>}
+      {p.temas && p.temas.length > 0 && <Text inherit><b>Temas: </b>{p.temas.join(" · ")}</Text>}
+      {p.passos && p.passos.length > 0 && (
+        <div><b>Últimos passos</b>
+          <ul style={{ margin: "4px 0 0" }}>{p.passos.map((x, k) => <li key={k}>{dataBR(x.data)} · {x.onde}: {x.texto}</li>)}</ul>
+        </div>
+      )}
+      {texto && <Anchor inherit href={texto} target="_blank" rel="noreferrer">Ler o texto completo da proposta ↗</Anchor>}
+    </Stack>
+  );
+}
+
 export function CartaoProjeto({ p }: { p: Projeto }) {
   const titulo = p.resumo || p.ementa;
   const oficial = linkSeguro(p.url);
-  const texto = linkSeguro(p.texto);
   const casa = CASA_NOME[p.casa] || p.casa;
   return (
-    <article className="card proj" id={p.id}>
-      <div className="row" style={{ gap: 8 }}>
-        <span className="chip">{p.nome}</span>
-        {p.grupos.includes("pauta") && <span className="status verde">Na pauta</span>}
-        {p.sigla === "MPV" && p.prazo && !p.suspenso && <span className="status amarelo">Prazo: {dataBR(p.prazo)}</span>}
-        {p.suspenso && <span className="status">Prazo suspenso</span>}
-        {p.do_estado && <span className="status">Autor de MG</span>}
-        <span className="small muted">{casa}{p.apresentada && ` · apresentada em ${dataBR(p.apresentada)}`}</span>
-      </div>
-      <h3 className="proj-titulo">{titulo}</h3>
-      <Autores p={p} />
-      <Etapas p={p} />
-      <p className="proj-prox"><b>Próximo passo: </b>{p.casa === "almg" ? proximoAlmg(p) : p.proximo}</p>
-      {p.pauta && p.pauta.length > 0 && (
-        <ul className="small proj-pauta">
-          {p.pauta.map((x, k) => {
-            const u = linkSeguro(x.url);
-            return (
-              <li key={k}><b>{dataHoraBR(x.data)}</b> · {u ? <a href={u} target="_blank" rel="noreferrer">{x.onde}</a> : x.onde}
-                {x.urgencia && " · pedido de urgência"}{x.relator && ` · relator: ${x.relator}`}
-                {x.parecer && <div className="muted">Parecer: {x.parecer}</div>}</li>
-            );
-          })}
-        </ul>
-      )}
-      <Debate p={p} />
-      <details className="small">
-        <summary>Texto oficial e mais detalhes</summary>
-        <div className="proj-col" style={{ marginTop: 8 }}>
-          {p.resumo && <p><b>Ementa oficial: </b>{p.ementa}</p>}
-          {p.resumo_oficial && p.resumo_oficial !== p.ementa && <p><b>Resumo da ALMG: </b>{p.resumo_oficial}</p>}
-          {p.o_que_e && <p><b>O que significa {p.sigla}: </b>{p.o_que_e}</p>}
-          {p.situacao && <p><b>Situação oficial: </b>{p.situacao}{p.onde && ` · ${p.onde}`}{p.atualizada && ` (desde ${dataBR(p.atualizada)})`}</p>}
-          {p.regime && <p><b>Regime: </b>{p.regime}</p>}
-          {p.tranca_pauta && !p.suspenso && <p>A partir de {dataBR(p.tranca_pauta)}, se ainda não tiver sido votada, ela <b>tranca a pauta</b>: a Casa onde está não pode votar outros projetos de lei antes dela.</p>}
-          {p.temas && p.temas.length > 0 && <p><b>Temas: </b>{p.temas.join(" · ")}</p>}
-          {p.passos && p.passos.length > 0 && (
-            <div><b>Últimos passos</b>
-              <ul>{p.passos.map((x, k) => <li key={k}>{dataBR(x.data)} · {x.onde}: {x.texto}</li>)}</ul>
-            </div>
+    <Card withBorder radius="md" padding="md" component="article" className="proj" id={p.id}>
+      <Stack gap="sm">
+        <Group gap="xs" wrap="wrap">
+          <Badge variant="outline" color="gray">{p.nome}</Badge>
+          {p.grupos.includes("pauta") && <Badge variant="light" color="green">Na pauta</Badge>}
+          {p.sigla === "MPV" && p.prazo && !p.suspenso && <Badge variant="light" color="yellow">Prazo: {dataBR(p.prazo)}</Badge>}
+          {p.suspenso && <Badge variant="light" color="gray">Prazo suspenso</Badge>}
+          {p.do_estado && <Badge variant="light" color="gray">Autor de MG</Badge>}
+          <Text size="sm" c="dimmed">{casa}{p.apresentada && ` · apresentada em ${dataBR(p.apresentada)}`}</Text>
+        </Group>
+        <Title order={3} size="h4" className="proj-titulo">{titulo}</Title>
+        <Autores p={p} />
+        <Etapas p={p} />
+        <Card.Section withBorder inheritPadding py="xs" bg="var(--mantine-color-default-hover)">
+          <Text><b>Próximo passo: </b>{p.casa === "almg" ? proximoAlmg(p) : p.proximo}</Text>
+          {p.pauta && p.pauta.length > 0 && (
+            <ul className="proj-pauta">
+              {p.pauta.map((x, k) => {
+                const u = linkSeguro(x.url);
+                return (
+                  <li key={k}><Text size="sm" span><b>{dataHoraBR(x.data)}</b> · {u ? <Anchor inherit href={u} target="_blank" rel="noreferrer">{x.onde}</Anchor> : x.onde}
+                    {x.urgencia && " · pedido de urgência"}{x.relator && ` · relator: ${x.relator}`}</Text>
+                    {x.parecer && <Text size="sm" c="dimmed">Parecer: {x.parecer}</Text>}</li>
+                );
+              })}
+            </ul>
           )}
-          {texto && <p><a href={texto} target="_blank" rel="noreferrer">Ler o texto completo da proposta ↗</a></p>}
-        </div>
-      </details>
-      {oficial && <a className="small" href={oficial} target="_blank" rel="noreferrer">Ver na página oficial {p.casa === "camara" ? "da Câmara" : p.casa === "senado" ? "do Senado" : "da ALMG"} ↗</a>}
-    </article>
+        </Card.Section>
+        <Accordion multiple variant="default" chevronPosition="right">
+          {p.debate && (
+            <Accordion.Item value="debate" className="proj-debate">
+              <Accordion.Control className="proj-debate-abre" px={0}><DebateResumo p={p} /></Accordion.Control>
+              <Accordion.Panel><Debate p={p} /></Accordion.Panel>
+            </Accordion.Item>
+          )}
+          <Accordion.Item value="texto" style={{ borderBottom: 0 }}>
+            <Accordion.Control px={0}><Text span fw={700}>Texto oficial e mais detalhes</Text></Accordion.Control>
+            <Accordion.Panel><MaisDetalhes p={p} /></Accordion.Panel>
+          </Accordion.Item>
+        </Accordion>
+        {oficial && <Anchor size="sm" href={oficial} target="_blank" rel="noreferrer">Ver na página oficial {p.casa === "camara" ? "da Câmara" : p.casa === "senado" ? "do Senado" : "da ALMG"} ↗</Anchor>}
+      </Stack>
+    </Card>
   );
 }
+
 
 export default function TramitacaoPage() {
   const { data, error } = useData<Tramitacao>("tramitacao.json");
@@ -228,7 +262,7 @@ export default function TramitacaoPage() {
 
   return (
     <section>
-      <h1>Projetos em andamento</h1>
+      <Title order={1}>Projetos em andamento</Title>
       <Explain>
         O que está sendo proposto agora no Congresso{MG && " e na Assembleia de Minas"}, quem propôs e qual é o próximo passo.
         Tudo vem das APIs oficiais da Câmara e do Senado{MG && " e dos dados abertos da ALMG"}, atualizado em {dataBR(data.atualizado_em)}.
@@ -237,48 +271,47 @@ export default function TramitacaoPage() {
 
       <CaminhoLei />
 
-      <div className="tabs" role="tablist" aria-label="O que acompanhar">
-        {abas.map((a) => (
-          <button key={a.id} role="tab" aria-selected={aba === a.id} onClick={() => mudarAba(a.id)}>{a.nome} ({conta(a.id)})</button>
-        ))}
-      </div>
-      <p className="small muted">{atual.explica}</p>
+      <Tabs value={aba} onChange={(a) => a && mudarAba(a)} mt="md">
+        <Tabs.List aria-label="O que acompanhar">
+          {abas.map((a) => <Tabs.Tab key={a.id} value={a.id}>{`${a.nome} (${conta(a.id)})`}</Tabs.Tab>)}
+        </Tabs.List>
+      </Tabs>
+      <Text size="sm" c="dimmed" mt="xs">{atual.explica}</Text>
 
-      <div className="search">
-        <input id="busca-projeto" aria-label="Buscar projeto" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Assunto, número ou autor (ex.: PEC 7)" />
+      <Group gap="sm" align="flex-end" wrap="wrap" my="md">
+        <TextInput id="busca-projeto" aria-label="Buscar projeto" value={q} onChange={(e) => setQ(e.currentTarget.value)} placeholder="Assunto, número ou autor (ex.: PEC 7)" style={{ flex: "1 1 240px" }} />
         {aba !== "almg" && (
-          <select aria-label="Casa" value={casa} onChange={(e) => setCasa(e.target.value)}>
-            <option value="">Câmara e Senado</option><option value="camara">Câmara</option><option value="senado">Senado</option>
-          </select>
+          <NativeSelect aria-label="Casa" value={casa} onChange={(e) => setCasa(e.currentTarget.value)}
+            data={[{ value: "", label: "Câmara e Senado" }, { value: "camara", label: "Câmara" }, { value: "senado", label: "Senado" }]} />
         )}
-        <select aria-label="Tipo" value={tipo} onChange={(e) => setTipo(e.target.value)}>
-          <option value="">Todos os tipos</option>{tipos.map((t) => <option key={t} value={t}>{nomeTipo(t)}</option>)}
-        </select>
+        <NativeSelect aria-label="Tipo" value={tipo} onChange={(e) => setTipo(e.currentTarget.value)}
+          data={[{ value: "", label: "Todos os tipos" }, ...tipos.map((t) => ({ value: t, label: nomeTipo(t) }))]} />
         {aba !== "almg" && (
-          <select aria-label="Tema" value={tema} onChange={(e) => setTema(e.target.value)}>
-            <option value="">Todos os temas</option>{TEMAS.map((t) => <option key={t}>{t}</option>)}
-          </select>
+          <NativeSelect aria-label="Tema" value={tema} onChange={(e) => setTema(e.currentTarget.value)}
+            data={[{ value: "", label: "Todos os temas" }, ...TEMAS]} />
         )}
-        {MG && aba !== "almg" && <label className="small row" style={{ gap: 6 }}><input type="checkbox" checked={soMG} onChange={(e) => setSoMG(e.target.checked)} /> Só de autores de Minas</label>}
-      </div>
+        {MG && aba !== "almg" && <Checkbox label="Só de autores de Minas" checked={soMG} onChange={(e) => setSoMG(e.currentTarget.checked)} mb={8} />}
+      </Group>
 
-      <h2>{titulo} <span className="muted small">({lista.length})</span></h2>
+      <Title order={2}>{titulo} <Text span c="dimmed" size="sm">({lista.length})</Text></Title>
       {lista.length === 0 && <div className="empty">{aba === "pauta" ? `Nenhuma proposta marcada para votação nos próximos ${data.dias_pauta} dias com esses filtros.` : "Nenhuma proposta com esses filtros."}</div>}
-      {aba === "pauta"
-        ? porDia.map(([d, ps]) => (
-          <div key={d} className="proj-col">
-            <h3 className="eyebrow">{d ? dataHoraBR(d) : "Sem data"}</h3>
-            {ps.map((p) => <CartaoProjeto key={p.id} p={p} />)}
-          </div>
-        ))
-        : lista.slice(0, limite).map((p) => <CartaoProjeto key={p.id} p={p} />)}
-      {lista.length > limite && <button className="btn" onClick={() => setLimite(limite + 40)}>Mostrar mais ({lista.length - limite} restantes)</button>}
-      <p className="small muted">
+      <Stack gap="md" mt="sm">
+        {aba === "pauta"
+          ? porDia.map(([d, ps]) => (
+            <Stack key={d} gap="sm">
+              <Title order={3} size="h5" c="dimmed">{d ? dataHoraBR(d) : "Sem data"}</Title>
+              {ps.map((p) => <CartaoProjeto key={p.id} p={p} />)}
+            </Stack>
+          ))
+          : lista.slice(0, limite).map((p) => <CartaoProjeto key={p.id} p={p} />)}
+      </Stack>
+      {lista.length > limite && <Button variant="default" mt="md" onClick={() => setLimite(limite + 40)}>{`Mostrar mais (${lista.length - limite} restantes)`}</Button>}
+      <Text size="sm" c="dimmed" mt="md">
         Fontes: <a href="https://dadosabertos.camara.leg.br/swagger/api.html" target="_blank" rel="noreferrer">API da Câmara</a> (eventos, pautas e proposições) e{" "}
         <a href="https://legis.senado.leg.br/dadosabertos/docs/" target="_blank" rel="noreferrer">API do Senado</a> (agenda do Plenário, das comissões e processos)
         {MG && <>, e o <a href="https://dadosabertos.almg.gov.br/" target="_blank" rel="noreferrer">arquivo de proposições da ALMG</a></>}.
         O resumo em linguagem simples troca o número da lei pelo nome conhecido e o juridiquês por palavras do dia a dia; a ementa oficial fica sempre nos detalhes. <Link to="/sobre">Como funciona</Link>.
-      </p>
+      </Text>
       <AvisosFim>
         {faltando.length > 0 && (
           <p className="alert">{faltando.map(([c, s]) => `${casaNome(c as "camara" | "senado")}: ${s === "reserva" ? "a API não respondeu hoje; mostramos a última lista que conseguimos" : "a API não respondeu; essa Casa está faltando"}`).join(". ")}.</p>

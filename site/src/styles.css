@@ -463,12 +463,10 @@ details > summary { cursor: pointer; font-weight: 700; }
 .tabs a.ativa { color: #fff; background: var(--navy); }
 
 /* Projetos em andamento */
-.proj { gap: 10px; }
 .proj-titulo { font-size: 1.08rem; line-height: 1.35; margin: 0; }
-.proj-prox { background: var(--tint); border-radius: var(--raio); padding: 10px 14px; margin: 0; }
 .proj-pauta { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 .proj-como { display: grid; gap: 6px; padding-left: 20px; }
-.proj details summary, details.card summary { cursor: pointer; color: var(--accent); }
+details.card summary { cursor: pointer; color: var(--accent); }
 .proj-etapas { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; padding: 0; margin: 0; counter-reset: etapa; }
 .proj-etapas li { counter-increment: etapa; display: grid; gap: 4px; font-size: .74rem; color: var(--muted); text-align: center; min-width: 0; }
 .proj-etapas li::before { content: counter(etapa); display: block; height: 8px; border-radius: 999px; background: var(--grid); font-size: 0; }
@@ -476,37 +474,17 @@ details > summary { cursor: pointer; font-weight: 700; }
 .proj-etapas li.atual::before { background: var(--hot); }
 .proj-etapas li.atual { color: var(--ink); font-weight: 800; }
 .proj-etapas span { overflow-wrap: anywhere; }
-.proj-col { display: grid; gap: 12px; }
-/* O que dizem a favor e contra (trechos dos documentos oficiais) */
-.proj-debate { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
-.proj-debate-tit { margin: 0; font-size: 1rem; }
-.proj-lados { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
-.proj-lado { display: grid; gap: 12px; align-content: start; border-left: 4px solid var(--outro); padding-left: 12px; }
-.proj-lado.favor { border-color: var(--sim); }
-.proj-lado.contra { border-color: var(--nao); }
-.proj-lado h4 { margin: 0; font-size: .95rem; }
-.proj-lado.favor h4 { color: var(--sim-ink); }
-.proj-lado.contra h4 { color: var(--nao-ink); }
-.proj-arg { display: grid; gap: 4px; }
-.proj-arg p { margin: 0; }
-.proj-trecho { margin: 0; font-size: .92rem; line-height: 1.5; color: var(--ink-2); font-style: italic; }
-.proj-debate button.link { justify-self: start; }
-/* Contra em notícia: separado dos documentos oficiais e marcado como fonte não oficial */
-.proj-noticia { border-top: 1px dashed var(--line); padding-top: 8px; }
-.status.nao-oficial { background: var(--flag-y-bg); color: var(--flag-y); }
-@media (max-width: 699px) { .proj-lados { grid-template-columns: 1fr; } }
 /* Como uma proposta vira lei: desenho e texto lado a lado */
 .caminho { display: grid; gap: 10px; }
-/* Seções recolhíveis (Como uma proposta vira lei; O que dizem a favor e contra): o título é o botão de abrir */
+/* Seção recolhível (Como uma proposta vira lei): o título é o botão de abrir */
 details.recolhe > summary { list-style: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; cursor: pointer; padding-right: 34px; position: relative; min-height: 32px; }
 details.recolhe > summary::-webkit-details-marker { display: none; }
 details.recolhe > summary::after { content: ""; position: absolute; right: 6px; top: 50%; width: 9px; height: 9px; border-right: 2.5px solid var(--accent); border-bottom: 2.5px solid var(--accent); transform: translateY(-70%) rotate(45deg); transition: transform .2s; }
 details.recolhe[open] > summary::after { transform: translateY(-30%) rotate(-135deg); }
-details.recolhe > summary:hover .caminho-tit, details.recolhe > summary:hover .proj-debate-tit { color: var(--accent); }
+details.recolhe > summary:hover .caminho-tit { color: var(--accent); }
 details.recolhe > summary:focus-visible { outline: 3px solid var(--foco); outline-offset: 3px; border-radius: 6px; }
 details.recolhe:not([open]) { gap: 0; }
 details.recolhe[open] > summary { margin-bottom: 4px; }
-.proj-conta.favor { color: var(--sim-ink); font-weight: 700; } .proj-conta.contra { color: var(--nao-ink); font-weight: 700; }
 .caminho-tit { margin: 0; font-size: 1.2rem; }
 .caminho-grade { display: grid; grid-template-columns: minmax(260px, 400px) 1fr; gap: 12px 28px; align-items: center; }
 .caminho-svg { width: 100%; height: auto; max-width: 400px; }
