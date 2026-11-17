@@ -19,9 +19,14 @@ def base():
     d["projetos"] = [{"id": "P01", "municipios_mapa": "Poços de Caldas", "empresas_ids": "E01", "fonte_data": "sem data", **linha}]
     d["numeros"] = [{"id": "N01", "data": "2026-04", "valor_grafico": "2335", "categoria": "Investimento", **linha}]
     d["processos_noticias"] = [
-        {"data": "2026-11-16", "projetos_ids": "P01", **linha},
-        {"data": "2026-11", "projetos_ids": "", **linha},
+        {"data": "2026-11-16", "projetos_ids": "P01", "origem": "nacional", "fonte_url_2": "https://jornal.com.br/x",
+         "origem_2": "nacional", **linha},
+        {"data": "2026-11", "projetos_ids": "", "origem": "nacional", "fonte_url_2": "", "origem_2": "", **linha},
     ]
+    d["numeros"].append({"id": "N02", "data": "2026-11-17", "valor_grafico": "5.7851", "categoria": "Câmbio", **linha})
+    d["perda_processamento"] = [{"id": "L01", "projetos_ids": "P01", "data": "2026-07-31", "producao_t_treo_ano": "12500",
+                                 "cesta_baixa_usd_kg": "47", "cesta_alta_usd_kg": "86", "payability_pct": "70",
+                                 "receita_vida_baixa_usd_mi": "9438", "receita_vida_alta_usd_mi": "17372", **linha}]
     d["propostas"] = [{"id": "R01", "fonte_exemplo": "https://eiti.org/countries", "verificado_em": "2026-11-17"}]
     return d
 
@@ -78,6 +83,33 @@ def test_noticias_fora_de_ordem_barram():
     d = base()
     d["processos_noticias"].reverse()
     assert any("mais nova para a mais antiga" in e for e in c.conferir(d, MUNICIPIOS, HOJE))
+
+
+def test_origem_da_fonte_das_noticias():
+    d = base()
+    d["processos_noticias"][0]["origem_2"] = "estrangeira"  # site .br marcado como estrangeiro
+    d["processos_noticias"][1]["origem"] = "talvez"
+    d["processos_noticias"][1]["fonte_url_2"] = "jornal local"
+    erros = c.conferir(d, MUNICIPIOS, HOJE)
+    assert any("origem_2 diz estrangeira, mas o site é .br" in e for e in erros)
+    assert any("origem 'talvez'" in e for e in erros)
+    assert any("fonte_url_2 'jornal local' não é link" in e for e in erros)
+
+
+def test_conta_da_perda_confere_numeros_e_dolar():
+    d = base()
+    d["perda_processamento"][0]["payability_pct"] = "0,7"
+    d["perda_processamento"][0]["cesta_baixa_usd_kg"] = "90"
+    erros = c.conferir(d, MUNICIPIOS, HOJE)
+    assert any("payability_pct sem número" in e for e in erros)
+    d = base()
+    d["perda_processamento"][0]["payability_pct"] = "100"
+    d["perda_processamento"][0]["cesta_baixa_usd_kg"] = "90"
+    d["numeros"] = d["numeros"][:1]
+    erros = c.conferir(d, MUNICIPIOS, HOJE)
+    assert any("fora de 1 a 99" in e for e in erros)
+    assert any("cenário baixo maior que o alto" in e for e in erros)
+    assert any("falta o dólar do dia" in e for e in erros)
 
 
 def test_queda_grande_em_relacao_ao_site_barra():

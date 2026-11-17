@@ -138,6 +138,9 @@ tbody tr:hover{background:var(--hover)}
 .kpi .l{font-size:13px;color:var(--muted)}
 .kpi .v{font:500 30px/1.15 var(--f-body);font-variant-numeric:tabular-nums;margin:4px 0}
 .kpi .n{font-size:12px;color:var(--muted)}
+details.metodo{padding:14px 16px;margin:0 0 16px;max-width:85ch}
+details.metodo summary{cursor:pointer;font-weight:500}
+details.metodo li{margin:4px 0}
 .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:14px}
 .chart{padding:16px}
 .chart p.d{font-size:13px;color:var(--muted);margin:2px 0 10px}
@@ -496,22 +499,30 @@ function evento(p) {
   return $("div", { class: "ev" + (legal ? " legal" : "") },
     $("time", {}, fmtDate(p.data) + " · " + p.tipo), $("h3", {}, p.titulo), $("p", {}, p.resumo),
     $("div", { class: "chips" }, $("span", { class: "chip" + (legal ? " bad" : "") }, p.status), $("span", { class: "count" }, p.envolvidos)),
-    $("div", { class: "src" }, ext(p.fonte_url)));
+    $("div", { class: "src" }, fonteNoticia(p.fonte_url, p.origem), filled(p.fonte_url_2) ? [" · ", fonteNoticia(p.fonte_url_2, p.origem_2)] : null));
 }
+// Cada fonte com a marca de origem: nacional (site do Brasil) ou estrangeira
+function fonteNoticia(u, origem) {
+  return [ext(u), " ", origem ? $("span", { class: "chip" + (origem === "nacional" ? " p" : "") }, origem === "nacional" ? "fonte nacional" : "fonte estrangeira") : null];
+}
+const temOrigem = (p, o) => p.origem === o || (filled(p.fonte_url_2) && p.origem_2 === o);
 function pNoticias() {
   view.append($("h1", {}, "Notícias e processos"), $("p", { class: "lede" }, "Linha do tempo, da mais recente para a mais antiga. Pontos vermelhos são ações judiciais, recomendações, representações e leis."));
   const inp = $("input", { type: "search", id: "busca-noticias", placeholder: "Buscar (ex.: MPF, Lynas, Araxá)…", "aria-label": "Buscar" });
   const sel = $("select", { id: "f-noticias-tipo" }, $("option", { value: "" }, "Todos os tipos"), [...new Set(DADOS.processos_noticias.map(p => p.tipo))].sort().map(t => $("option", { value: t }, t)));
+  const selOrigem = $("select", { id: "f-noticias-origem", "aria-label": "Origem da fonte" }, [["", "Fontes nacionais e estrangeiras"], ["nacional", "Com fonte nacional"], ["estrangeira", "Com fonte estrangeira"]].map(([v, t]) => $("option", { value: v }, t)));
   const cnt = $("span", { class: "count" }), tl = $("div", { class: "timeline" });
-  view.append($("div", { class: "tools" }, inp, sel), cnt, $("div", { style: "height:10px" }), tl);
+  view.append($("div", { class: "tools" }, inp, sel, selOrigem), cnt, $("div", { style: "height:10px" }), tl);
   const lista = DADOS.processos_noticias.slice().sort((a, b) => b.data.localeCompare(a.data));
-  const r = () => { tl.innerHTML = ""; let n = 0; lista.forEach(p => { if (inp.value && !norm(Object.values(p).join(" ")).includes(norm(inp.value))) return; if (sel.value && p.tipo !== sel.value) return; n++; tl.append(evento(p)); }); cnt.textContent = n + " de " + lista.length; };
-  inp.addEventListener("input", r); sel.addEventListener("change", r); r();
+  const r = () => { tl.innerHTML = ""; let n = 0; lista.forEach(p => { if (inp.value && !norm(Object.values(p).join(" ")).includes(norm(inp.value))) return; if (sel.value && p.tipo !== sel.value) return; if (selOrigem.value && !temOrigem(p, selOrigem.value)) return; n++; tl.append(evento(p)); }); cnt.textContent = n + " de " + lista.length + " · " + lista.filter(p => temOrigem(p, "nacional")).length + " com fonte nacional, " + lista.filter(p => temOrigem(p, "estrangeira")).length + " com fonte estrangeira"; };
+  inp.addEventListener("input", r); sel.addEventListener("change", r); selOrigem.addEventListener("change", r); r();
 }
 
 /* ---------- PAINEL ECONÔMICO ---------- */
 function pPainel() {
   view.append($("h1", {}, "Painel econômico"), $("p", { class: "lede" }, "Quanto dinheiro está em jogo, quem coloca e quanto as empresas esperam ganhar. Valores em reais; investimento e retorno são projeções das empresas."));
+  const perda = perdaProcessamento();
+  if (perda) view.append(perda, $("h2", {}, "Investimentos, compras e retornos"));
   const N = DADOS.numeros.map(r => ({ ...r, v: parseFloat(String(r.valor_grafico).replace(",", ".")) }));
   const selReg = $("select", { id: "f-painel-regiao" }, ["Minas Gerais (todas)", "Sul de Minas", "Alto Paranaíba", "Incluir referência fora de MG"].map(v => $("option", { value: v }, v)));
   const selPais = $("select", { id: "f-painel-pais" }, $("option", { value: "" }, "Todos os países"), [...new Set(N.map(r => r.pais_controlador).filter(p => p && p !== "-" && !/\//.test(p)))].sort().map(v => $("option", { value: v }, v)));
@@ -560,6 +571,56 @@ function pPainel() {
   // Redesenha quando a largura muda (girar o celular, redimensionar a janela)
   let ultima = charts.clientWidth;
   try { new ResizeObserver(() => { if (charts.isConnected && charts.clientWidth !== ultima) { ultima = charts.clientWidth; render(); } }).observe(charts); } catch (e) {}
+}
+
+/* Quanto o Brasil deixa de ganhar por vender o concentrado e não separar os óxidos aqui (perda_processamento.csv).
+   Conta: produção (t/ano) × cesta (US$/kg) × (1 − payability); na vida útil, receita do estudo × (1 − p) ÷ p. */
+function perdaProcessamento() {
+  const P = DADOS.perda_processamento || [];
+  if (!P.length) return null;
+  const cambio = DADOS.numeros.filter(r => r.categoria === "Câmbio").sort((a, b) => b.data.localeCompare(a.data))[0];
+  const dolar = cambio ? parseFloat(cambio.valor_grafico) : NaN;
+  const n = (r, c) => parseFloat(r[c]);
+  const L = P.map(r => {
+    const pago = n(r, "payability_pct") / 100, t = n(r, "producao_t_treo_ano");
+    return { r, pago, anoB: t * n(r, "cesta_baixa_usd_kg") * (1 - pago) / 1000, anoA: t * n(r, "cesta_alta_usd_kg") * (1 - pago) / 1000,
+      vidaB: n(r, "receita_vida_baixa_usd_mi") * (1 - pago) / pago, vidaA: n(r, "receita_vida_alta_usd_mi") * (1 - pago) / pago };
+  });
+  const tot = k => L.reduce((a, l) => a + l[k], 0);
+  const usd = v => v >= 1000 ? "US$ " + (v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " bi" : "US$ " + Math.round(v).toLocaleString("pt-BR") + " mi";
+  const faixa = (a, b, f) => f(a) === f(b) ? f(a) : f(a) + " a " + f(b);
+  const reais = (a, b) => isNaN(dolar) ? "—" : faixa(a * dolar, b * dolar, brl);
+  const nomes = L.map(l => l.r.projeto).join(" e ");
+  const box = $("section", {});
+  box.append($("h2", {}, "Quanto o Brasil deixa de ganhar por não separar as terras raras aqui"),
+    $("p", { class: "muted", style: "max-width:78ch" }, nomes + " vão vender um concentrado (carbonato misto de terras raras, o MREC), que é separado em óxidos fora do Brasil. Quem compra o concentrado paga só uma parte do valor dos óxidos que ele contém; o resto fica com quem separa. Estimativa a partir dos estudos de viabilidade das próprias empresas."));
+  const kp = $("div", { class: "kpis" });
+  [["Por ano, com as minas produzindo", reais(tot("anoB"), tot("anoA")), faixa(tot("anoB"), tot("anoA"), usd) + " · " + nomes],
+   ["Na vida útil das minas", reais(tot("vidaB"), tot("vidaA")), faixa(tot("vidaB"), tot("vidaA"), usd) + " · cerca de 20 a 25 anos"],
+   ["Dólar usado na conta", isNaN(dolar) ? "—" : "R$ " + dolar.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }), cambio ? "PTAX de venda do Banco Central, " + fmtDate(cambio.data) : "sem cotação na planilha"]]
+    .forEach(([l, v, nn]) => kp.append($("div", { class: "kpi paper" }, $("div", { class: "l" }, l), $("div", { class: "v" }, v), $("div", { class: "n" }, nn))));
+  const tb = $("tbody");
+  L.forEach(l => tb.append($("tr", {}, $("td", {}, l.r.projeto), $("td", {}, l.r.estudo + " (" + fmtDate(l.r.data) + ")"),
+    $("td", { class: "num" }, n(l.r, "producao_t_treo_ano").toLocaleString("pt-BR")), $("td", { class: "num" }, l.r.payability_pct + "%"),
+    $("td", { class: "num quebra" }, faixa(l.anoB, l.anoA, usd)), $("td", { class: "num quebra" }, faixa(l.vidaB, l.vidaA, usd)),
+    $("td", {}, l.r.onde_separa), $("td", {}, ext(l.r.fonte_url, "conferido em " + fmtDate(l.r.verificado_em))))));
+  const metodo = $("details", { class: "metodo paper" }, $("summary", {}, "Como a conta é feita (metodologia)"),
+    $("ol", {}, [
+      "Só entram projetos de Minas com estudo de viabilidade definitivo publicado (DFS), porque é ele que traz produção, preços e quanto o comprador paga. Hoje: " + nomes + ".",
+      "Nos estudos, a receita da mina é: produção de óxidos × preço da cesta de óxidos × payability. A payability é a parte do valor dos óxidos que o comprador do concentrado paga à mina: " + L.map(l => l.r.projeto + " " + l.r.payability_pct + "%").join(", ") + ".",
+      "Perda por ano = produção (toneladas de óxidos por ano) × preço da cesta (US$/kg) × (1 − payability). Usamos o preço mais baixo e o mais alto de cada estudo; por isso o resultado é uma faixa. Cenários: " + L.map(l => l.r.projeto + ": " + l.r.cenarios).join("; ") + ".",
+      "Perda na vida útil = receita total da vida da mina no estudo × (1 − payability) ÷ payability.",
+      "Em reais: dólar PTAX de venda do Banco Central" + (cambio ? " de " + fmtDate(cambio.data) : "") + ", atualizado junto com a página."
+    ].map(t => $("li", {}, t))),
+    $("p", {}, $("b", {}, "O que a conta não diz")),
+    $("ul", {}, [
+      "É faturamento, não lucro: parte desse valor paga a própria separação (reagentes, energia, salários). Se a separação fosse feita aqui, esse dinheiro também circularia no Brasil, com empregos e impostos.",
+      "É um piso: não conta as etapas seguintes (metais e ímãs), que valem mais que os óxidos, nem os projetos ainda sem estudo de viabilidade (Tiros, Araxá, Morro do Ferro, Caladão e outros).",
+      "Os preços de terras raras mudam muito. Os da conta são os dos próprios estudos, não uma previsão deste rastreador.",
+      "A conta é refeita a cada atualização da página: estudo novo, comprador novo ou dólar do dia."
+    ].map(t => $("li", {}, t))));
+  box.append(kp, $("div", { class: "paper tablebox" }, $("table", {}, $("thead", {}, $("tr", {}, ["Projeto", "Estudo", "Óxidos (t/ano)", "Parte paga (payability)", "Perda por ano", "Perda na vida útil", "Onde é separado", "Fonte"].map(h => $("th", {}, h)))), tb)), $("div", { style: "height:12px" }), metodo);
+  return box;
 }
 
 /* ---------- APRENDER ---------- */

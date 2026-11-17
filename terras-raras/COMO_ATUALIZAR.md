@@ -43,10 +43,11 @@ Escreva no projeto: **"atualize o tracker de terras raras"**. O Claude pesquisa 
 | `empresas.csv` | Empresas e donos | uma empresa, investidor, comprador, vendedor ou financiador |
 | `projetos.csv` | Projetos | um projeto (mina, refinaria, passivo) |
 | `donos_terra.csv` | Donos da terra | quem tem o direito minerário e quem é dono da superfície em uma área |
-| `numeros.csv` | Painel econômico | um indicador; preencha `valor_grafico` (R$ milhões, ou % para TIR) e `categoria` para entrar nos gráficos |
+| `numeros.csv` | Painel econômico | um indicador; preencha `valor_grafico` (R$ milhões, ou % para TIR) e `categoria` para entrar nos gráficos. A linha de categoria `Câmbio` é o dólar PTAX de venda do Banco Central (`valor_grafico` em R$ por US$), usado na conta da perda |
+| `perda_processamento.csv` | Painel econômico: "Quanto o Brasil deixa de ganhar" | um projeto com estudo de viabilidade definitivo (DFS): produção de óxidos por ano, preço da cesta (cenário baixo e alto), payability e receita da vida útil, copiados do estudo; a página faz a conta e mostra a metodologia |
 | `leis.csv` | Leis | uma lei, PL, norma, decisão municipal |
 | `impactos.csv` | Impactos ambientais | um tipo de impacto com evidência |
-| `processos_noticias.csv` | Processos e notícias | um acontecimento datado (ação, licença, negócio, notícia) |
+| `processos_noticias.csv` | Processos e notícias | um acontecimento datado (ação, licença, negócio, notícia). `origem` = `nacional` (veículo ou órgão do Brasil; site `.br` é sempre nacional) ou `estrangeira`; `fonte_url_2` e `origem_2` guardam uma segunda fonte, de preferência da outra origem |
 | `propostas.csv` | O que pedir aos legisladores | uma proposta com exemplo de outro país; `inspiracao` = `Petróleo` quando a ideia veio do que se fez com o petróleo |
 
 ## Regras simples
@@ -69,7 +70,8 @@ Escreva no projeto: **"atualize o tracker de terras raras"**. O Claude pesquisa 
 - [ ] ASX: SGQ (St George), OCN (Oceana), EQN (Equinox), ENV (Enova)
 - [ ] ANM (Cadastro Mineiro/SIGMINE): novos requerimentos de terras raras em todo MG, com atenção a Alto Paranaíba, Jequitinhonha e Sul de Minas
 - [ ] SGB: resultados do mapeamento do Alto Paranaíba
-- [ ] Imprensa regional (Poços Já, Folha Regional, SulMinasTV, Jornal Mantiqueira) e nacional
+- [ ] Imprensa regional (Poços Já, Folha Regional, SulMinasTV, Jornal Mantiqueira) e nacional (Diário do Comércio, CNN Brasil, Times Brasil, Brasil Mineral, eixos, Agência Minas, Agência Gov). Notícia achada só em site estrangeiro (ASX, Mining Weekly, Small Caps...): procurar a cobertura nacional e pôr em `fonte_url_2`; notícia nacional com anúncio oficial da empresa lá fora: o anúncio pode ser a segunda fonte
+- [ ] Perda por não processar no Brasil: dólar PTAX do dia pela API do Banco Central (`olinda.bcb.gov.br/olinda/servico/PTAX`), na linha `Câmbio` de `numeros.csv`; estudo de viabilidade novo, revisado ou comprador novo de um projeto de MG vira linha ou mudança em `perda_processamento.csv`
 - [ ] Propostas: ideias usadas com o petróleo (no Brasil e no mundo) que servem para terras raras, com fonte oficial; não repetir o que já está em `propostas.csv`
 
 ## Como descobrir quem é dono de quê

@@ -12,7 +12,7 @@ PASTA = Path(__file__).resolve().parent
 SITE = "--site" in sys.argv
 ARGS = [a for a in sys.argv[1:] if a != "--site"]
 URL_SITE = "https://amarigo.github.io/segredos-abertos/terras-raras/"
-TABELAS = ["empresas", "projetos", "licencas", "areas_potencial", "donos_terra", "numeros", "leis", "impactos", "processos_noticias", "propostas"]
+TABELAS = ["empresas", "projetos", "licencas", "areas_potencial", "donos_terra", "numeros", "leis", "impactos", "processos_noticias", "propostas", "perda_processamento"]
 
 def ler(nome):
     with open(PASTA / "dados" / f"{nome}.csv", encoding="utf-8-sig", newline="") as f:
@@ -37,7 +37,7 @@ for t in ("projetos", "areas_potencial"):
 
 # confere se licenças, impactos, donos da terra e notícias apontam para projetos que existem
 ids = {r["id"] for r in dados["projetos"]}
-for t in ("licencas", "impactos", "donos_terra", "processos_noticias"):
+for t in ("licencas", "impactos", "donos_terra", "processos_noticias", "perda_processamento"):
     for n, r in enumerate(dados[t], start=2):
         for i in filter(None, (x.strip() for x in r.get("projetos_ids", "").split(";"))):
             if i not in ids:
