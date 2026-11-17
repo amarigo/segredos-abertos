@@ -288,7 +288,10 @@ jobs:
       - name: "Terras Raras: montar o site em /terras-raras/"
         id: terras
         continue-on-error: true
-        run: python terras-raras/gerar_pagina.py --site site/dist/terras-raras/index.html | tee -a "$GITHUB_STEP_SUMMARY"
+        # pipefail: sem ele o tee esconde um erro do gerador, a etapa sai verde e /terras-raras/ some do site sem aviso.
+        run: |
+          set -o pipefail
+          python terras-raras/gerar_pagina.py --site site/dist/terras-raras/index.html | tee -a "$GITHUB_STEP_SUMMARY"
       # Painel de análises (/analises/): todos os dados acima em tabelas CSV para baixar e em gráficos próprios
       # (Apache ECharts). Só reorganiza os arquivos já coletados; não busca nada novo. Uma falha aqui não trava o site.
       - name: "Análises: montar o painel em /analises/"
