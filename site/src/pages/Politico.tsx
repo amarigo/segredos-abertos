@@ -9,6 +9,8 @@ import {
   MESES_LONGOS, descricaoCurta, tipoVotacao, type AnoDetalhe, type NotasPolitico, type Pessoa,
 } from "../data";
 import { AvisosFim, EmRevisao } from "../components/Selo";
+import { Detalhes, TituloSecao } from "../components/Detalhes";
+import { Badge, Button, Group, Stack, Tabs, Text, Title } from "@mantine/core";
 import { FotoPerfil } from "../components/Foto";
 import { AgendaPolitico } from "../components/Agenda";
 import { CampanhaPolitico } from "../components/Campanha";
@@ -30,41 +32,46 @@ export default function PoliticoPage() {
   const [params, setParams] = useSearchParams();
   const pedida = params.get("aba");
   const aba = pedida === "votos" || pedida === "atuacao" || pedida === "agenda" || pedida === "campanha" ? pedida : "gastos";
-  const setAba = (a: "gastos" | "atuacao" | "votos" | "agenda" | "campanha") => setParams(a !== "gastos" ? { aba: a } : {}, { replace: true });
+  type Aba = "gastos" | "atuacao" | "votos" | "agenda" | "campanha";
+  const setAba = (a: Aba) => setParams(a !== "gastos" ? { aba: a } : {}, { replace: true });
   const { ano } = useAno();
   if (!p) return <Loading error={error} />;
   return (
     <>
-      <section className="profile">
+      <Group component="section" className="profile" align="flex-start" wrap="nowrap" gap="lg">
         <FotoPerfil url={p.foto} nome={p.nome} />
-        <div>
-          <span className="eyebrow">{p.cargo} · {p.uf}</span>
-          <h1>{p.nome}</h1>
-          <div className="tags">
-            <span className="chip">{p.partido}</span>
-            {p.posicao != null && <span className="chip">{p.rotulo}</span>}
-            {p.campo && <span className="chip">{p.campo}</span>}
-            <a className="chip" href={linkSeguro(p.fonte)} target="_blank" rel="noreferrer">Página oficial ↗</a>
-            <Link className="chip" to={`/rede?seguir=${encodeURIComponent(p.id)}`}>Acompanhar na Minha rede</Link>
+        <Stack gap="xs" style={{ minWidth: 0 }}>
+          <Text c="dimmed" size="sm">{p.cargo} · {p.uf}</Text>
+          <Title order={1}>{p.nome}</Title>
+          <Group gap="xs" className="tags">
+            <Badge variant="light" size="lg">{p.partido}</Badge>
+            {p.posicao != null && <Badge variant="light" color="gray" size="lg">{p.rotulo}</Badge>}
+            {p.campo && <Badge variant="light" color="gray" size="lg">{p.campo}</Badge>}
+          </Group>
+          <Group gap="xs">
+            <Button component="a" variant="default" size="xs" href={linkSeguro(p.fonte)} target="_blank" rel="noreferrer">Página oficial ↗</Button>
+            <Button component={Link} variant="default" size="xs" to={`/rede?seguir=${encodeURIComponent(p.id)}`}>Acompanhar na Minha rede</Button>
             <Compartilhar p={p} meta={meta} ano={ano} />
-          </div>
-          {p.em_exercicio === false && <p className="small muted" role="note">
+          </Group>
+          {p.em_exercicio === false && <Text size="sm" c="dimmed" role="note">
             <strong className="fora-cargo">Fora do cargo hoje</strong>
             {p.situacao && <> · <span>{p.situacao.replace(/^Fora do exercício:?\s*/i, "")}</span></>}
             {p.situacao_desde && <> <span>desde</span> {dataBR(p.situacao_desde)}</>}
             <br /><span>Os gastos e votos abaixo são do período em que esteve no cargo nesta legislatura.</span>
-          </p>}
-          {p.outros_nomes?.length ? <p className="small muted"><span>Também aparece nos dados oficiais como</span> {p.outros_nomes.join(", ")}</p> : null}
-        </div>
-      </section>
+          </Text>}
+          {p.outros_nomes?.length ? <Text size="sm" c="dimmed"><span>Também aparece nos dados oficiais como</span> {p.outros_nomes.join(", ")}</Text> : null}
+        </Stack>
+      </Group>
       {!MG && <PunicoesPolitico id={p.id} />}
-      <div className="tabs" role="tablist">
-        <button role="tab" aria-selected={aba === "gastos"} onClick={() => setAba("gastos")}>Gastos e equipe</button>
-        <button role="tab" aria-selected={aba === "agenda"} onClick={() => setAba("agenda")}>Dia a dia</button>
-        <button role="tab" aria-selected={aba === "atuacao"} onClick={() => setAba("atuacao")}>Atuação</button>
-        <button role="tab" aria-selected={aba === "votos"} onClick={() => setAba("votos")}>Votos</button>
-        <button role="tab" aria-selected={aba === "campanha"} onClick={() => setAba("campanha")}>Campanha</button>
-      </div>
+      <Tabs value={aba} onChange={(v) => v && setAba(v as Aba)} aria-label="Partes do perfil">
+        <Tabs.List>
+          <Tabs.Tab value="gastos">Gastos e equipe</Tabs.Tab>
+          <Tabs.Tab value="agenda">Dia a dia</Tabs.Tab>
+          <Tabs.Tab value="atuacao">Atuação</Tabs.Tab>
+          <Tabs.Tab value="votos">Votos</Tabs.Tab>
+          <Tabs.Tab value="campanha">Campanha</Tabs.Tab>
+        </Tabs.List>
+      </Tabs>
       {aba === "gastos" ? <Gastos p={p} meta={meta} /> : aba === "atuacao" ? <AtuacaoPolitico p={p} />
         : aba === "agenda" ? <AgendaPolitico p={p} ano={ano} /> : aba === "campanha" ? <CampanhaPolitico p={p} /> : <Votos p={p} meta={meta} />}
       <AvisosFim secao="cota" assunto={`${p.nome} (${p.cargo}, ${p.partido}-${p.uf}), ${ano}`} resposta>
@@ -136,82 +143,83 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
         </section>
       )}
 
-      <SalarioBeneficios p={p} r={r} ano={ano} />
-      <Equipe p={p} r={r} ano={ano} ma={ma} folga={folga} meses={d.meses_com_nota} />
-
-      <section>
-        <h2>Cota parlamentar</h2>
-        <Explain>Além do salário, cada parlamentar tem uma cota mensal para despesas do mandato. Ele paga e pede reembolso apresentando a nota fiscal.</Explain>
-        <SemNota d={d} ano={ano} />
-        <div className="grid">
-          {(Object.keys(d.grupos) as Grupo[]).map((g) => (
-            <div className="card stat" key={g}>
-              <span className="label"><i style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: COR_GRUPO[g], marginRight: 6 }} />{GRUPO_CURTO[g]}</span>
-              <span className="value">{reais(d.grupos[g])}</span>
-              <span className="hint">{GRUPO_EXPLICA[g]}</span>
+      {/* O detalhe fica recolhido: cada item abre com um clique, e o endereço guarda o que está aberto */}
+      <section aria-label="Detalhes dos gastos">
+        <Detalhes itens={[
+          { id: "salario", titulo: "Salário e benefícios", conteudo: <SalarioBeneficios p={p} r={r} ano={ano} /> },
+          { id: "equipe", titulo: "Equipe do gabinete", conteudo: <Equipe p={p} r={r} ano={ano} ma={ma} folga={folga} meses={d.meses_com_nota} /> },
+          { id: "cota", titulo: `Em que gastou a cota em ${ano}`, conteudo: (
+            <Stack>
+              <Explain>Além do salário, cada parlamentar tem uma cota mensal para despesas do mandato. Ele paga e pede reembolso apresentando a nota fiscal.</Explain>
+              <SemNota d={d} ano={ano} />
+              <div className="grid">
+                {(Object.keys(d.grupos) as Grupo[]).map((g) => (
+                  <div className="card stat" key={g}>
+                    <span className="label"><i style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: COR_GRUPO[g], marginRight: 6 }} />{GRUPO_CURTO[g]}</span>
+                    <span className="value">{reais(d.grupos[g])}</span>
+                    <span className="hint">{GRUPO_EXPLICA[g]}</span>
+                  </div>
+                ))}
+              </div>
+              <Barras rosca={{ titulo: `Cota de ${p.nome} em ${ano}, por tipo de gasto`, total: d.total, paleta: true }} itens={d.categorias.slice(0, todas ? 99 : 8).map((c) => ({ label: c.categoria, valor: c.valor }))} />
+              {d.categorias.length > 8 && <button className="link" onClick={() => setTodas(!todas)}>{todas ? "Mostrar menos" : `Mostrar todas as ${d.categorias.length} categorias`}</button>}
+              <CompararAnos porAno={categoriasAnos} titulo="Como a cota mudou de um ano para outro" anoInicial={ano} limite={8}
+                nota="Cada tipo de gasto da cota, ano a ano. O ano em andamento vai só até a última nota publicada." />
+            </Stack>
+          ) },
+          { id: "fornecedores", titulo: "Quem recebeu o dinheiro da cota e as maiores notas", conteudo: (
+            <div className="grid grid-2 lado-a-lado">
+              <div>
+                <h3>Quem recebeu o dinheiro da cota</h3>
+                <p className="muted small">Empresas e pessoas que emitiram as notas fiscais. Clique numa empresa para ver quem são os donos e se eles têm outras empresas que também recebem de parlamentares.</p>
+                <div className="table-wrap">
+                  <table>
+                    <thead><tr><th>Fornecedor e donos</th><th className="r">Valor</th></tr></thead>
+                    <tbody>
+                      {d.fornecedores.map((f) => (
+                        <tr key={f.doc + f.nome}>
+                          <td>{f.ficha ? <Link to={`/e/${f.doc}`}>{f.nome}</Link> : f.nome}
+                            <div className="muted small mono">{f.tipo === "cnpj" ? cnpjFmt(f.doc) : f.tipo === "cpf" ? `Pessoa física ${f.doc}` : ""}</div>
+                            {f.socios.length > 0 && <div className="small">Sócios: {f.socios.join(", ")}</div>}</td>
+                          <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(f.valor)}<div className="muted small">{f.n} nota{f.n > 1 ? "s" : ""}</div></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div>
+                <h3>Maiores notas fiscais de {ano}</h3>
+                <p className="muted small">As notas de maior valor, cada uma com o link para a nota no site oficial.</p>
+                <div className="table-wrap">
+                  <table>
+                    <thead><tr><th>Fornecedor e tipo de gasto</th><th className="r">Valor</th></tr></thead>
+                    <tbody>
+                      {d.maiores_notas.map((n, i) => (
+                        <tr key={i}>
+                          <td>{/^\d{14}$/.test(n.doc) ? <Link to={`/e/${n.doc}`}>{n.fornecedor}</Link> : n.fornecedor}<div className="small muted">{n.categoria}</div>{n.detalhe && <div className="small">{n.detalhe}</div>}
+                            <div className="small"><span className="num muted">{dataBR(n.data)}</span> · <LinkNota url={n.url} link={n.link || (n.url ? "nota" : "")} /></div></td>
+                          <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(n.valor, true)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
+          ) },
+          { id: "meses", titulo: "Cota mês a mês e nos outros anos", conteudo: (
+            <Stack>
+              <h3>Cota por mês em {ano}</h3>
+              <GastoMensal meses={d.meses} ano={ano} cor="var(--s2)" />
+              <HistoricoPolitico id={p.id} />
+            </Stack>
+          ) },
+          { id: "patrimonio", titulo: "Patrimônio declarado ao TSE", conteudo: <PatrimonioPolitico id={p.id} /> },
+          { id: "notas", titulo: `Todas as notas fiscais de ${ano}${d.n_notas ? ` (${d.n_notas.toLocaleString("pt-BR")})` : ""}`, conteudo: <TodasNotas p={p} d={d} ano={ano} /> },
+          !!d.fora_do_total_oficial?.notas.length && { id: "fora", titulo: `Notas fora do total oficial em ${ano}`, conteudo: <ForaDoTotal d={d} ano={ano} /> },
+        ]} />
       </section>
-
-      <section>
-        <h2>Em que gastou a cota</h2>
-        <Barras rosca={{ titulo: `Cota de ${p.nome} em ${ano}, por tipo de gasto`, total: d.total, paleta: true }} itens={d.categorias.slice(0, todas ? 99 : 8).map((c) => ({ label: c.categoria, valor: c.valor }))} />
-        {d.categorias.length > 8 && <button className="link" onClick={() => setTodas(!todas)}>{todas ? "Mostrar menos" : `Mostrar todas as ${d.categorias.length} categorias`}</button>}
-        <CompararAnos porAno={categoriasAnos} titulo="Como a cota mudou de um ano para outro" anoInicial={ano} limite={8}
-          nota="Cada tipo de gasto da cota, ano a ano. O ano em andamento vai só até a última nota publicada." />
-      </section>
-
-      <section>
-        <div className="grid grid-2 lado-a-lado">
-        <div>
-        <h2>Quem recebeu o dinheiro da cota</h2>
-        <p className="muted small">Empresas e pessoas que emitiram as notas fiscais. Clique numa empresa para ver quem são os donos e se eles têm outras empresas que também recebem de parlamentares.</p>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Fornecedor e donos</th><th className="r">Valor</th></tr></thead>
-            <tbody>
-              {d.fornecedores.map((f) => (
-                <tr key={f.doc + f.nome}>
-                  <td>{f.ficha ? <Link to={`/e/${f.doc}`}>{f.nome}</Link> : f.nome}
-                    <div className="muted small mono">{f.tipo === "cnpj" ? cnpjFmt(f.doc) : f.tipo === "cpf" ? `Pessoa física ${f.doc}` : ""}</div>
-                    {f.socios.length > 0 && <div className="small">Sócios: {f.socios.join(", ")}</div>}</td>
-                  <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(f.valor)}<div className="muted small">{f.n} nota{f.n > 1 ? "s" : ""}</div></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        </div>
-        <div>
-        <h2>Maiores notas fiscais de {ano}</h2>
-        <p className="muted small">As notas de maior valor, cada uma com o link para a nota no site oficial.</p>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Fornecedor e tipo de gasto</th><th className="r">Valor</th></tr></thead>
-            <tbody>
-              {d.maiores_notas.map((n, i) => (
-                <tr key={i}>
-                  <td>{/^\d{14}$/.test(n.doc) ? <Link to={`/e/${n.doc}`}>{n.fornecedor}</Link> : n.fornecedor}<div className="small muted">{n.categoria}</div>{n.detalhe && <div className="small">{n.detalhe}</div>}
-                    <div className="small"><span className="num muted">{dataBR(n.data)}</span> · <LinkNota url={n.url} link={n.link || (n.url ? "nota" : "")} /></div></td>
-                  <td className="r num" style={{ whiteSpace: "nowrap" }}>{reais(n.valor, true)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        </div>
-        </div>
-        <h2>Cota por mês em {ano}</h2>
-        <GastoMensal meses={d.meses} ano={ano} cor="var(--s2)" />
-        <HistoricoPolitico id={p.id} />
-      </section>
-
-      <PatrimonioPolitico id={p.id} />
-
-      <TodasNotas p={p} d={d} ano={ano} />
-
-      <ForaDoTotal d={d} ano={ano} />
     </>
   );
 }
@@ -261,7 +269,7 @@ function ForaDoTotal({ d, ano }: { d: AnoDetalhe; ano: string }) {
   if (!ft || !ft.notas.length) return null;
   return (
     <section data-testid="fora-do-total">
-      <h2>Notas fora do total oficial em {ano}</h2>
+      <TituloSecao>Notas fora do total oficial em {ano}</TituloSecao>
       <Explain>O Senado publica estas {ft.n} nota{ft.n > 1 ? "s" : ""} ({reais(ft.valor)}) sem o tipo de despesa, e o total oficial do senador não as soma. Por isso também não entram no total do site. Mostramos aqui para você conferir.</Explain>
       <div className="table-wrap">
         <table>
@@ -294,7 +302,7 @@ function SalarioBeneficios({ p, r, ano }: { p: Politico; r: Recursos; ano: strin
   if (!linhas.length && !r.outros_gastos?.length) return null;
   return (
     <section>
-      <h2>Salário e benefícios</h2>
+      <TituloSecao>Salário e benefícios</TituloSecao>
       {p.casa === "senado" && <Explain>O salário dos senadores é o mesmo dos deputados federais (R$ 46.366,19 por mês desde fevereiro de 2025). O Senado não publica esse valor junto dos outros gastos, então usamos o subsídio pago aos deputados em cada mês, para o ano inteiro. O Senado informa quais benefícios cada senador usou, sem os valores.</Explain>}
       {linhas.length > 0 && <div className="card kv">{linhas.map(([k, v]) => <Fragment key={k}><span>{k}</span><strong>{v}</strong></Fragment>)}</div>}
       {r.salario_meses && r.salario_meses.length > 0 && <>
@@ -315,14 +323,14 @@ function Equipe({ p, r, ano, ma, folga, meses }: { p: Politico; r: Recursos; ano
   if (!equipe.length && !r.verba_gasto && !r.vinculos?.length) {
     return (
       <section>
-        <h2>Equipe do gabinete</h2>
+        <TituloSecao>Equipe do gabinete</TituloSecao>
         <Explain>Ainda não há dados da equipe para {ano}. A lista oficial está na <a href={linkSeguro(p.fonte)} target="_blank" rel="noreferrer">página do parlamentar</a>.</Explain>
       </section>
     );
   }
   return (
     <section>
-      <h2>Equipe do gabinete</h2>
+      <TituloSecao>Equipe do gabinete</TituloSecao>
       {p.casa === "camara"
         ? <Explain>Cada deputado tem uma verba de gabinete para pagar até 25 secretários parlamentares, em Brasília ou no estado. A Câmara mostra quanto foi gasto por mês, mas não o salário de cada assessor nesta lista.</Explain>
         : <Explain>O Senado mostra quem trabalha no gabinete e a função de cada pessoa. Servidores efetivos são concursados; comissionados são escolhidos pelo senador.</Explain>}
@@ -525,7 +533,7 @@ function TodasNotas({ p, d, ano }: { p: Politico; d: AnoDetalhe; ano: string }) 
   const comListas = Object.keys(p.anos).filter((a) => p.anos[a].n_notas).sort();
   return (
     <section id="todas-notas">
-      <h2>Todas as notas fiscais de {ano}{n_ano ? ` (${n_ano.toLocaleString("pt-BR")})` : ""}</h2>
+      <TituloSecao>Todas as notas fiscais de {ano}{n_ano ? ` (${n_ano.toLocaleString("pt-BR")})` : ""}</TituloSecao>
       <p className="muted small">Cada nota com o tipo de despesa oficial (por exemplo, aluguel de carro, aluguel de escritório, combustível ou divulgação), como a fonte oficial informa, e o link para o documento original.</p>
       {d.n_notas === undefined ? <div className="empty">A lista completa de notas está disponível só para os anos mais recentes{comListas.length ? ` (${comListas.join(", ")})` : ""}. Escolha o ano no topo da página. Acima estão as maiores notas de {ano}.</div>
         : !n_ano ? <div className="empty">Nenhuma nota fiscal publicada para {p.nome} em {ano}.</div>

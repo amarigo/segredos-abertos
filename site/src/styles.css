@@ -127,10 +127,8 @@ a.chip { white-space: normal; border-radius: 14px; }
 .chip.nao { color: var(--nao-ink); border-color: currentColor; }
 
 /* Perfil */
-.profile { display: grid; grid-template-columns: 112px 1fr; gap: 20px; align-items: center; }
-.profile img { width: 112px; height: 112px; border-radius: 50%; object-fit: cover; background: var(--line); border: 4px solid var(--surface); box-shadow: 0 0 0 2px var(--ink); }
-.profile .tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-@media (max-width: 520px) { .profile { grid-template-columns: 72px 1fr; } .profile img { width: 72px; height: 72px; } }
+.profile > img, .profile > :first-child img { width: 112px; height: 112px; border-radius: 50%; object-fit: cover; background: var(--line); flex: none; }
+@media (max-width: 520px) { .profile > img, .profile > :first-child img { width: 72px; height: 72px; } }
 
 /* Abas: pílulas lado a lado */
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px; background: var(--tint); border-radius: 22px; justify-self: start; max-width: 100%; scrollbar-width: none; }

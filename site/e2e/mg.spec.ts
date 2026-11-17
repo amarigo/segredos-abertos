@@ -178,8 +178,10 @@ test.describe("jornada", () => {
     const id: string = dados("campanha-perfis.json").perfis[0];
     const c = dados(`p/campanha/${id}.json`).campanhas[0];
     const pat = dados(`pat/${id}.json`).declaracoes.filter((x: { principal: boolean }) => x.principal).pop();
+    // O patrimônio fica recolhido no perfil: abre com um clique
     await page.goto(`./#/p/${id}`);
-    await expect(page.getByRole("heading", { name: "Patrimônio declarado ao TSE" })).toBeVisible();
+    await page.getByRole("button", { name: "Patrimônio declarado ao TSE" }).click();
+    await expect(page.locator(".patrimonio-politico")).toBeVisible();
     await expect(page.locator(".patrimonio-politico")).toContainText(brl(pat.total));
     await page.getByRole("tab", { name: "Campanha" }).click();
     await expect(page.getByRole("heading", { name: "As contas de cada campanha" })).toBeVisible();

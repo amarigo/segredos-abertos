@@ -123,7 +123,7 @@ export default function HistoricoPage() {
             <thead><tr><th>Parlamentar</th><th>Anos com nota</th><th className="num">Total</th></tr></thead>
             <tbody>{data.maiores[c].slice(0, 20).map((m) => (
               <tr key={m.id}>
-                <td>{comPerfil.has(m.id) ? <Link to={`/p/${m.id}`}>{m.nome}</Link> : <a href={PERFIL_OFICIAL(m.id)} target="_blank" rel="noreferrer">{m.nome} ↗</a>}
+                <td>{comPerfil.has(m.id) ? <Link to={`/p/${m.id}?ver=meses`}>{m.nome}</Link> : <a href={PERFIL_OFICIAL(m.id)} target="_blank" rel="noreferrer">{m.nome} ↗</a>}
                   {(m.partido || m.uf) && <span className="muted small"> {[m.partido, m.uf].filter(Boolean).join("-")}</span>}</td>
                 <td>{m.anos} ({m.de}{m.ate !== m.de ? `–${m.ate}` : ""})</td>
                 <td className="num">{reais(m.total_hoje ?? m.total)}</td>
