@@ -7,7 +7,8 @@ on:
   push:
     branches: [main]
     # Mudança só nas planilhas de Terras Raras não precisa da coleta inteira: terras-raras.yml confere e publica a
-    # página sozinho, em poucos minutos. A coleta diária continua montando o tracker junto com o resto do site.
+    # página sozinho, em poucos minutos, em fila própria. A coleta diária continua montando o tracker junto com o resto
+    # do site; quando ela termina, terras-raras.yml roda de novo e corrige a página se a coleta usou planilhas velhas.
     paths-ignore: ["terras-raras/**", ".github/workflows/terras-raras.yml"]
   pull_request:
   schedule:

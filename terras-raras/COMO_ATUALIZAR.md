@@ -6,8 +6,9 @@ amarigo/segredos-abertos, que é a cópia principal):
 - **Site público:** https://amarigo.github.io/segredos-abertos/terras-raras/. Publicado sozinho pelo GitHub Action
   "Terras Raras" (`.github/workflows/terras-raras.yml`) a cada push no `main` que mexa nesta pasta, em poucos minutos e
   sem depender da coleta nacional: confere as planilhas, monta a página e troca só ela na última cópia publicada do
-  site. A coleta diária ("Dados e site") também monta a página, com a mesma conferência; se as planilhas não passarem,
-  publica de novo a página que estava no ar.
+  site do "Dados e site". A coleta diária ("Dados e site") também monta a página, com a mesma conferência; se as
+  planilhas não passarem, publica de novo a página que estava no ar. Depois de cada coleta publicada, o "Terras Raras"
+  roda de novo e, se a coleta tiver montado a página com planilhas mais velhas, põe a do `main` no ar.
 - **Link privado do Claude:** https://claude.ai/artifact/4kJniSvA8P5jnAx12ShfVP (gerado com `python3 gerar_pagina.py`;
   republicar sempre neste mesmo link).
 
