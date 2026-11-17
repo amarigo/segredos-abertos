@@ -577,14 +577,15 @@ def _ano_recibo(d: dict) -> int | None:
     return int(m.group(1)) if m else None
 
 
-def ler_doacoes(inc: list[dict], rel: Relogio, f: Path) -> tuple[dict, bool]:
+def ler_doacoes(inc: list[dict], rel: Relogio, f: Path) -> tuple[dict, bool, str]:
     """Doações de cada incentivador de MG, somadas por ano do recibo: {chave: {"total": total_doado, "anos": {ano: valor}}}.
 
-    Lê dos maiores para os menores e guarda cada doador lido. Devolve também se todos já estão lidos."""
+    Lê dos maiores para os menores e guarda cada doador lido. Devolve também se todos já estão lidos e, se a API
+    falhou, o motivo (para o aviso do site). Um doador que falha é pulado; 5 falhas seguidas param a leitura."""
     guardado = (_ler_gz(f) or {}).get("doadores") or {}
     pend = sorted((x for x in inc if str(x.get("UF") or "").upper() == UF and to_float(x.get("total_doado")) > 0),
                   key=lambda x: -to_float(x.get("total_doado")))
-    vistos, mudou, falta = set(), 0, False
+    vistos, mudou, falta, erro, seguidas = set(), 0, False, "", 0
     try:
         for x in pend:
             k = _chave_doador(x)
@@ -599,35 +600,46 @@ def ler_doacoes(inc: list[dict], rel: Relogio, f: Path) -> tuple[dict, bool]:
                 continue
             anos: dict = defaultdict(float)
             offset = 0
-            while True:
-                rel.checar()
-                r = get(url, params={"limit": SALIC_TAM, "offset": offset, "format": "json"}, timeout=90)
-                corpo = r.json() if r.content.strip() else {}
-                pagina = ((corpo if isinstance(corpo, dict) else {}).get("_embedded") or {}).get("doacoes")
-                if not isinstance(pagina, list):
-                    raise RuntimeError("SALIC: resposta sem a lista '_embedded.doacoes'")
-                for d in pagina:
-                    a = _ano_recibo(d)
-                    if a:
-                        anos[str(a)] += to_float(d.get("valor"))
-                offset += SALIC_TAM
-                if not pagina or offset >= int(corpo.get("total") or 0):
+            try:
+                while True:
+                    rel.checar()
+                    r = get(url, params={"limit": SALIC_TAM, "offset": offset, "format": "json"}, timeout=90)
+                    corpo = r.json() if r.content.strip() else {}
+                    pagina = ((corpo if isinstance(corpo, dict) else {}).get("_embedded") or {}).get("doacoes")
+                    if not isinstance(pagina, list):
+                        raise RuntimeError("resposta sem a lista '_embedded.doacoes'")
+                    for d in pagina:
+                        a = _ano_recibo(d)
+                        if a:
+                            anos[str(a)] += to_float(d.get("valor"))
+                    offset += SALIC_TAM
+                    if not pagina or offset >= int(corpo.get("total") or 0):
+                        break
+            except SemTempo:
+                raise
+            except Exception as e:  # noqa: BLE001
+                erro, falta = str(e)[:160], True
+                log.warning("SALIC doações: %s", erro)
+                seguidas += 1
+                if seguidas >= 5:
                     break
+                continue
+            seguidas = 0
             guardado[k] = {"total": total, "anos": {a: round(v, 2) for a, v in anos.items()}}
             mudou += 1
             if mudou % 25 == 0:
                 _gravar_gz(f, {"doadores": guardado})
     except SemTempo:
         falta = True
-    except Exception as e:  # noqa: BLE001
-        log.warning("SALIC doações: %s", str(e)[:200])
-        falta = True
     if mudou:
         _gravar_gz(f, {"doadores": guardado})
-    return guardado, not falta
+    log.info("SALIC doações: %d doadores lidos nesta execução, %d guardados", mudou, len(guardado))
+    return guardado, not falta, erro
 
 
-def coletar_rouanet(cache: Path, minutos: float, hoje: dt.date, cid: Cidades) -> dict | None:
+def coletar_rouanet(cache: Path, minutos: float, hoje: dt.date, cid: Cidades, minutos_doacoes: float | None = None) -> dict | None:
+    """As listas e as doações têm cada uma o seu tempo: enquanto a lista ainda está sendo lida, as doações continuam
+    andando com a última lista completa (na primeira execução, a lista gastou o tempo todo e nenhuma doação foi lida)."""
     rel = Relogio(minutos)
     pasta = cache / "salic"
     try:
@@ -639,7 +651,10 @@ def coletar_rouanet(cache: Path, minutos: float, hoje: dt.date, cid: Cidades) ->
         proj, proj_ok = (_ler_gz(pasta / "projetos-mg.json.gz") or {}).get("linhas") or [], False
     if not inc and not proj and not (inc_ok and proj_ok):  # fonte fora do ar e nenhuma leitura guardada
         return None
-    doacoes, _ = ler_doacoes(inc, rel, pasta / "doacoes-mg.json.gz")
+    doacoes, _, erro = ler_doacoes(inc, Relogio(minutos if minutos_doacoes is None else minutos_doacoes), pasta / "doacoes-mg.json.gz")
+    if erro:
+        avisar(f"Shows e cultura: a API do SALIC falhou ao dar as doações de cada incentivador ({erro}); a divisão por ano "
+               "da Lei Rouanet fica com o que já foi lido", tentar_de_novo=False)
     return {**resumir_rouanet(inc, proj, cid, doacoes), "completo": inc_ok and proj_ok}
 
 
@@ -814,7 +829,7 @@ def gravar(saida: Path, resumo: dict, contratos_ano: dict[int, list]) -> None:
     write_json(saida / "estado" / "cultura.json", resumo)
 
 
-def coletar(nacional: Path, saida: Path, cache: Path, ids_mg: set[str], minutos_pncp: float = 8, minutos_salic: float = 6,
+def coletar(nacional: Path, saida: Path, cache: Path, ids_mg: set[str], minutos_pncp: float = 8, minutos_salic: float = 4, minutos_doacoes: float = 5,
             hoje: dt.date | None = None) -> dict:
     """Grava estado/cultura.json (resumo) e estado/cultura/contratos-{ano}.json (cada contratação, por ano).
     Cada fonte é independente: a que falhar fica None e o site diz isso."""
@@ -844,7 +859,7 @@ def coletar(nacional: Path, saida: Path, cache: Path, ids_mg: set[str], minutos_
     elif pncp is not None and not pncp["completo"]:
         avisar("Shows e cultura: a leitura das contratações de artistas no PNCP continua na próxima atualização", tentar_de_novo=False)
     pix = parte("emendas Pix com shows e eventos", lambda: coletar_pix(nacional, cid, ids_mg))
-    rouanet = parte("Lei Rouanet (SALIC)", lambda: coletar_rouanet(cache, minutos_salic, hoje, cid))
+    rouanet = parte("Lei Rouanet (SALIC)", lambda: coletar_rouanet(cache, minutos_salic, hoje, cid, minutos_doacoes))
     if rouanet is None:
         avisar("Shows e cultura: a API da Lei Rouanet (SALIC, Ministério da Cultura) não respondeu e não há cópia guardada")
     elif not rouanet["completo"]:
