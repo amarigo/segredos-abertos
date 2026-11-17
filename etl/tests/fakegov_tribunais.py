@@ -10,6 +10,17 @@ import json
 
 PORTAL = "portal.stf.jus.br"
 SISTEMAS = "sistemas.stf.jus.br"
+DIGITAL = "digital.stf.jus.br"
+# Relatório do relator (PDF): começa com o cabeçalho do processo, como os reais (conferido em 17/11/2026)
+RELATORIOS = {
+    9002: "AÇÃO DIRETA DE INCONSTITUCIONALIDADE 7.001\nSÃO PAULO\nRELATORA : MIN. ANA FICTICIA\nREQTE.(S) : PARTIDO FICTICIO\n"
+          "R E L A T Ó R I O\nA SENHORA MINISTRA ANA FICTICIA (Relatora):\n1. Trata-se de ação direta de inconstitucionalidade,\n"
+          "com pedido de medida cautelar, ajuizada pelo Partido Ficticio em face da Lei n. 1.234, de 5 de maio de 2025, do\n"
+          "Estado de São Paulo, que proíbe o uso de celular nas escolas estaduais.\n2. O requerente sustenta ofensa ao art. 22 da Constituição.",
+    9003: "EMB.DECL. NA ARGUIÇÃO DE DESCUMPRIMENTO DE PRECEITO FUNDAMENTAL 900\nRELATÓRIO\nO SENHOR MINISTRO CARLA FICTICIA (RELATOR):\n"
+          "Trata-se de embargos de declaração opostos contra acórdão que julgou procedente a arguição de descumprimento de\n"
+          "preceito fundamental para suspender o decreto que fechou as bibliotecas municipais.",
+}
 MINISTROS = ["MIN. ANA FICTICIA", "MIN. BRUNO FICTICIO", "MIN. CARLA FICTICIA", "MIN. DANIEL FICTICIO",
              "MIN. ELISA FICTICIA", "MIN. FABIO FICTICIO", "MIN. GABRIELA FICTICIA", "MIN. HUGO FICTICIO",
              "MIN. IARA FICTICIA", "MIN. JOAO FICTICIO", "MIN. LUCIA FICTICIA"]
@@ -56,6 +67,8 @@ def _lj(lid: int, sessao: int, relator: int, votos: list[dict], julgado: bool, r
             "ministroRelator": {"descricao": MINISTROS[relator]}, "julgado": julgado,
             "tipoResultadoJulgamento": {"codigo": 1, "descricao": resultado} if resultado else "",
             "textoDecisao": decisao, "votoRelator": {"link": f"https://{SISTEMAS}/repgeral/votacao?relator={lid}"},
+            "relatorioRelator": {"codigo": str(lid), "descricao": "Relatório",
+                                 "link": f"https://{DIGITAL}/decisoes-monocraticas/api/public/votos/{lid}/conteudo.pdf"} if lid in RELATORIOS else "",
             "ministroVista": "", "ministroDestaque": "", "votos": votos}
 
 
@@ -114,6 +127,10 @@ def rota(host: str, path: str, q: dict) -> tuple[int, bytes, str] | None:
                 col("1T", "Primeira Turma", [i for i, s in SESSAO_DA_LISTA.items() if s == k and i >= 600])]})
     if host == PORTAL and path == "/pauta/services/lista-service.asp":
         return _json(LISTAS.get(int(q.get("lista", 0)), []))
+    if host == DIGITAL and path.startswith("/decisoes-monocraticas/api/public/votos/"):
+        from fakegov_tramitacao import pdf
+        lid = int(path.split("/")[-2])
+        return (200, pdf(RELATORIOS[lid]), "application/pdf") if lid in RELATORIOS else (404, b"", "text/plain")
     if host == SISTEMAS and path == "/repgeral/votacao":
         if "oi" in q:
             if int(q["oi"]) == 7000002:

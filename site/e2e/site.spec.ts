@@ -533,6 +533,27 @@ test("projetos em andamento: pauta, autor, próximo passo e link oficial", async
   expect(erros).toEqual([]);
 });
 
+test("STF: cada julgamento diz o que está em julgamento, com a frase oficial do relatório e o link", async ({ page }) => {
+  const erros = vigiar(page);
+  const trib: { julgamentos: { processo: string; classe: string; objeto?: { texto: string; simples: string; link: string } }[]; classes: Record<string, string> } = dados("tribunais.json");
+  await page.goto("./#/votacoes/tribunais");
+  const com = trib.julgamentos.find((j) => j.objeto?.simples)!;
+  const cartao = page.getByTestId("julgamento").filter({ hasText: com.processo }).first();
+  const quadro = cartao.getByTestId("o-que-se-julga");
+  // a explicação aparece à vista, marcada como explicação, com o link do relatório oficial
+  await expect(quadro).toContainText(com.objeto!.simples);
+  await expect(quadro).toContainText("Explicação do relatório oficial");
+  await expect(quadro.getByRole("link", { name: /Ver o relatório/ })).toHaveAttribute("href", com.objeto!.link);
+  // a frase oficial, sem mudar palavras, fica a um toque
+  await cartao.getByRole("button", { name: /Texto oficial do relatório/ }).click();
+  await expect(cartao).toContainText(com.objeto!.texto);
+  // sem relatório lido: a explicação do tipo de ação e o link do processo
+  const sem = trib.julgamentos.find((j) => !j.objeto)!;
+  const q2 = page.getByTestId("julgamento").filter({ hasText: sem.processo }).first().getByTestId("o-que-se-julga");
+  await expect(q2).toContainText(trib.classes[sem.classe]);
+  expect(erros).toEqual([]);
+});
+
 test("barra dos projetos liga o nacional aos outros sites do Segredos Abertos", async ({ page }) => {
   await page.goto("./");
   const nav = page.getByRole("navigation", { name: "Projetos do Segredos Abertos" });

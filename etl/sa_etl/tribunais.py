@@ -16,6 +16,15 @@ portal chamam para mostrar a pauta e o placar de cada processo (opção 2/3 da r
    `tipoVoto`, `acompanhandoMinistro`, `textos[].link` com a íntegra). Quando há `cadeia`, o incidente certo vem
    de .../repgeral/votacao?oi={incidente}.
 
+5. O que está em julgamento: o relatório do ministro relator (`relatorioRelator.link`, PDF em digital.stf.jus.br),
+   o mesmo documento que o portal mostra na aba "Sessão virtual". Nenhum serviço do STF dá o assunto do processo em
+   texto: o "Assunto" do portal é só uma classificação ("Servidor Público Civil") e a lista de processos não traz
+   ementa. Do relatório copiamos, sem mudar palavras, a primeira frase depois do título, que diz quem pediu, contra
+   qual lei ou ato e por quê ("Trata-se de ação direta de inconstitucionalidade... contra a Lei n. ..."). Ao lado vai
+   a mesma frase com o juridiquês trocado por palavras do dia a dia (`em_palavras_simples`), marcada como explicação.
+   Só nas ações contra leis e atos (ADI, ADC, ADO, ADPF) e nas ACO: em RE e em ação rescisória o relatório pode trazer
+   o nome de pessoas comuns, que o site não mostra. Conferido em 17/11/2026 com 14 relatórios reais.
+
 O que entra: só o Plenário (os 11 ministros), e nele as ações que questionam leis e atos do poder público (ADI, ADC,
 ADO e ADPF, com os recursos dentro delas), tudo o que o STF põe na lista de "controle concentrado" (inclui ações entre
 a União e os estados, ACO) e os recursos extraordinários julgados no mérito (repercussão geral: a decisão vale para
@@ -33,6 +42,7 @@ em toda coleta, porque os votos entram ao longo da semana.
 from __future__ import annotations
 
 import datetime as dt
+import io
 import json
 import logging
 import re
@@ -42,7 +52,8 @@ from typing import Any
 
 import requests
 
-from .util import avisar, get_json, id_seguro, url_segura, write_json
+from . import debate
+from .util import avisar, get, get_json, id_seguro, url_segura, write_json
 
 log = logging.getLogger("sa_etl.tribunais")
 
@@ -80,6 +91,12 @@ MESES = 6        # quantos meses para trás mostrar
 DIAS_RELER = 20  # a sessão encerrada ainda é lida por N dias: o STF publica o resultado e o texto da decisão depois
 PAUSA = 0.4      # segundos entre pedidos ao STF, para não pesar no portal
 TENTATIVAS = 2
+
+# Relatório do relator: em que classes a frase entra (nas outras pode haver nome de pessoa comum) e quanto dela
+CLASSES_RELATORIO = CLASSES_LEI | {"ACO"}
+MAX_OBJETO = 520
+MINUTOS_RELATORIOS = 4
+VERSAO_RELATORIO = 1  # mude quando a forma de recortar a frase mudar (aí os relatórios são lidos de novo)
 
 # O lado de cada voto em relação ao relator
 LADOS = ("relator", "divergencia", "vista", "fora", "outro")
@@ -260,6 +277,7 @@ def julgamento(p: dict, inc: str, item: dict, lj: dict) -> dict | None:
         "votos": votos, "placar": placar, "maioria": "", "situacao": "",
         "link": PROCESSO.format(id=p["incidente"]),
         "fonte": f"{VOTACAO}?sessaoVirtual={inc}",
+        "relatorio": _link(lj.get("relatorioRelator")),
     }
 
 
@@ -337,6 +355,205 @@ def ler_sessao(ini: str, fim: str, limite: float) -> tuple[list[dict], bool, int
                 falhas += 1
     return out, True, falhas
 
+
+
+# ---------------------------------------------------------------- o que está em julgamento (relatório do relator)
+
+_TITULO_RELATORIO = re.compile(r"R\s?E\s?L\s?A\s?T\s?[ÓO]\s?R\s?I\s?O")  # às vezes "R E L A T Ó R I O"
+# "O SENHOR MINISTRO GILMAR MENDES (RELATOR):", "A SENHORA MINISTRA CÁRMEN LÚCIA (Relatora):", às vezes sem espaços
+_QUEM_RELATA = re.compile(r"\b[OA]\s*S\s*E\s*N\s*H\s*O\s*R\s*A?\s*M\s*I\s*N\s*I\s*S\s*T\s*R\s*[OA][^:]{0,90}:\s*", re.I)
+_NUMERO_ITEM = re.compile(r"^\s*1\s*[.)-]\s*")
+_PROXIMO_ITEM = re.compile(r"(?<=[.;:])\s+\d{1,2}(?:\.\d{1,2})*\.\s+(?=[A-ZÁÉÍÓÚÂÊÔ“\"])")
+# Onde a frase passa a copiar outro texto (a ementa do acórdão, a lei inteira): corta ali
+_CORTE = re.compile(r",?\s*(?:assim ementado|com o seguinte teor|nos seguintes termos|in verbis)\b|\bEmenta\s*:", re.I)
+_COLADO = re.compile(r"[A-Za-zÀ-ú]{28,}")  # palavras grudadas: o PDF não guardou os espaços
+
+
+def objeto_do_relatorio(texto: str) -> str:
+    """A primeira frase do relatório, copiada sem mudar palavras: diz o que a ação pede. "" se não der para achar."""
+    t = re.sub(r"\s+", " ", (texto or "").replace("\ufffe", "-").replace("\ufffd", "")).strip()
+    m = _TITULO_RELATORIO.search(t)
+    if not m:
+        return ""
+    t = t[m.end():].lstrip(" :.-–")
+    q = _QUEM_RELATA.search(t[:250])  # às vezes há antes "CONJUNTO ADC 87, ADI 7.582..."
+    if q:
+        t = t[q.end():]
+    t = _NUMERO_ITEM.sub("", t, count=1)
+    t = _PROXIMO_ITEM.split(t[:4000], maxsplit=1)[0]  # "... estaduais. 2. O requerente": o item 2 já é outra coisa
+    fs = debate.frases(t)
+    if not fs:
+        return ""
+    f = fs[0]
+    if len(f) < 140 and len(fs) > 1 and not _CORTE.search(f):
+        f = f"{f} {fs[1]}"
+    c = _CORTE.search(f)
+    cortada = False
+    if c and c.start() >= 60:
+        f, cortada = f[:c.start()].rstrip(" ,;:"), True
+    if len(f) > MAX_OBJETO:
+        f, cortada = f[:MAX_OBJETO].rsplit(" ", 1)[0].rstrip(" ,;:"), True
+    if len(f) < 60 or _COLADO.search(f) or not re.search(r"[a-zà-ú]{3}", f):
+        return ""
+    if not re.search(r"[.!?”\")]$", f):
+        cortada = True  # a frase continua além do que foi lido
+    return f + " […]" if cortada else f
+
+
+# Explicação: o juridiquês trocado por palavras do dia a dia. A frase oficial aparece sempre ao lado, com o link.
+# Tipos de ação e de recurso: o nome oficial fica, e a primeira vez que aparece ganha a explicação entre parênteses.
+_TIPOS = [
+    (r"aç(?:ão|ões) diretas? de inconstitucionalidade por omissão", "ADO: diz que faltou fazer uma lei que a Constituição exige"),
+    (r"aç(?:ão|ões) diretas? de inconstitucionalidade", "ADI: pede que o STF derrube uma lei ou ato por ir contra a Constituição"),
+    (r"arguição de descumprimento de preceito fundamental", "ADPF: diz que uma lei ou ato fere um direito básico da Constituição"),
+    (r"ação declaratória de constitucionalidade", "ADC: pede que o STF confirme que uma lei vale"),
+    (r"ação cível originária", "ACO: briga entre a União e um estado, ou entre estados"),
+    (r"embargos de declaração", "pedido para esclarecer ou corrigir uma decisão já tomada"),
+    (r"agravo (?:regimental|interno)", "recurso aos 11 ministros contra a decisão de um ministro sozinho"),
+    (r"referendo d[ae] medida cautelar", "os 11 ministros confirmam ou não uma decisão urgente de um ministro"),
+]
+_TIPO_QUALQUER = re.compile("|".join(rf"\b({p})\b" for p, _ in _TIPOS), re.I)
+_SIMPLES = [
+    (r"^\s*(?:Trata-se|Cuida-se)\s+d[eo]s?\s+", ""),
+    (r",?\s*com (?:pedidos?|requerimentos?) de medida cautelar\b", ", com pedido de decisão urgente"),
+    (r"\bmedida cautelar\b", "decisão urgente (liminar)"),
+    (r"\binterpôs\b", "apresentou"), (r"\bajuizou\b", "apresentou"), (r"\bpropôs\b", "apresentou"),
+    (r"\b(?:ajuizad|propost|movid|interpost|apresentad|opost)([ao]s?)\b", r"apresentad\1"),
+    (r"\bem (?:face|desfavor) de\b", "contra"), (r"\bem (?:face|desfavor) d([ao]s?)\b", r"contra \1"),
+    (r"\btendo (?:por|como) objeto\b", "contra"),
+    (r"\bdecisão monocrática\b", "decisão de um ministro sozinho"),
+    (r"\bacórdão\b", "decisão"),
+    (r"\bdispositivos\b", "trechos"), (r"\bdispositivo\b", "trecho"),
+    (r"\bnormas impugnadas\b", "normas questionadas"), (r"\bimpugnad([ao]s?)\b", r"questionad\1"), (r"\bimpugna\b", "questiona"),
+    (r"\bjulgou procedente\b", "aceitou"), (r"\bjulgou improcedente\b", "rejeitou"),
+    (r"\b(?:neguei|negou) seguimento (?:à|a)\b", "não aceitou analisar a"), (r"\b(?:neguei|negou) seguimento (?:ao|o)\b", "não aceitou analisar o"),
+    (r"\bnão conheci d([ao])\b", r"não aceitei analisar \1"), (r"\bnão conheceu d([ao])\b", r"não aceitou analisar \1"),
+    (r"\bd[oa] requerente\b", "de quem pediu"), (r"\b(?:o|a) requerente\b", "quem pediu"),
+    (r"\b(?:deste|do) SUPREMO TRIBUNAL FEDERAL\b", "do STF"), (r"\besta Corte\b", "o STF"),
+    (r"\bcom o objetivo de\b", "para"), (r"\bvisando\b", "para"),
+    (r"\bdeclarar a inconstitucionalidade(?:,? (?:formal e material|material|formal),?)? d([aoe]s?)\b", r"derrubar \1"),
+    (r"\b(?:o )?Poder Executivo municipal\b", "a prefeitura"), (r"\b(?:o )?Poder Executivo estadual\b", "o governo do estado"),
+]
+_LEI_CURTA = re.compile(r"\b(Lei Complementar|Lei|Emenda Constitucional)(?: Estadual| Municipal)?\s+n[º°o.]*\s*([\d.]+)"
+                        r"(?:,\s*de\s+\d{1,2}[º°]?\s+de\s+\w+\s+de\s+|/)(\d{4})", re.I)
+
+
+def em_palavras_simples(frase: str) -> str:
+    """A frase oficial com o juridiquês trocado por palavras do dia a dia. "" quando nada mudou."""
+    e = re.sub(r"\s+", " ", frase or "").strip()
+    if not e:
+        return ""
+    orig = e
+    for de, para in _SIMPLES:
+        e = re.sub(de, para, e, flags=re.I)
+    # Só o primeiro tipo que aparece na frase (o que está sendo julgado) ganha a explicação
+    m = _TIPO_QUALQUER.search(e)
+    if m:
+        explica = next(x for (_, x), g in zip(_TIPOS, m.groups()) if g)
+        e = f"{e[:m.end()]} ({explica}){e[m.end():]}"
+    e = _LEI_CURTA.sub(lambda m: f"{m[1].title()} {m[2]}/{m[3]}", e)
+    e = re.sub(r"\s+\d+(?:\.\d+)*\.?$", "", e)  # "1.1." solto no fim
+    e = re.sub(r"\s{2,}", " ", e).strip()
+    if not e:
+        return ""
+    e = e[:1].upper() + e[1:]
+    return "" if e == orig else e
+
+
+def _arq_relatorio(pasta: Path, jid: str) -> Path:
+    return pasta / f"{id_seguro(jid) or 'x'}.json"
+
+
+def ler_relatorio(link: str) -> str:
+    """Baixa o PDF do relatório e devolve a frase do que está em julgamento."""
+    time.sleep(PAUSA)
+    r = get(link, timeout=60, tries=TENTATIVAS, headers={"Accept": "application/pdf,*/*"})
+    raw = r.content
+    if raw[:5] != b"%PDF-" or len(raw) > debate.MAX_BYTES:
+        return ""
+    return objeto_do_relatorio(texto_do_pdf(raw))
+
+
+_CABECALHO = re.compile(r"^(?:[A-Za-z]{2,5}\s*[\d.]+[^/]{0,30}/\s*[A-Z]{2}|\d{1,3})$")
+
+
+def texto_do_pdf(raw: bytes, paginas: int = 8) -> str:
+    """Texto das primeiras páginas (a frase fica logo depois da lista das partes, que em ação com muitos interessados
+    passa de 5 páginas), sem o cabeçalho de cada página
+    ("ADI 8042 MC-REF / DF" e o número da página). Lido com o pdfium: o pypdf gruda as palavras destes PDFs
+    ("Trata-sedeembargos"), conferido em 17/11/2026."""
+    import pypdfium2 as pdfium  # só aqui: o resto da coleta não precisa da biblioteca
+
+    pdf = pdfium.PdfDocument(raw)
+    try:
+        partes = []
+        for i in range(min(paginas, len(pdf))):
+            linhas = [l.strip() for l in pdf[i].get_textpage().get_text_range().splitlines()]
+            if i:
+                while linhas and (not linhas[0] or _CABECALHO.match(linhas[0])):
+                    linhas.pop(0)
+            partes.append("\n".join(linhas))
+        return "\n".join(partes)
+    finally:
+        pdf.close()
+
+
+def link_do_relatorio(j: dict) -> str:
+    """Julgamentos guardados antes desta versão não têm o link: vem do mesmo serviço de votação, pela lista certa."""
+    inc = str(j.get("fonte") or "").rsplit("=", 1)[-1]
+    lid = str(j.get("id") or "").rsplit("-", 1)[-1]
+    if not inc.isdigit():
+        return ""
+    for item in _get(VOTACAO, {"sessaoVirtual": inc}) or []:
+        for lj in item.get("listasJulgamento") or []:
+            if str(lj.get("id")) == lid:
+                return _link(lj.get("relatorioRelator"))
+    return ""
+
+
+def com_objeto(julgamentos: list[dict], cache: Path, minutos: float = MINUTOS_RELATORIOS) -> tuple[list[dict], int]:
+    """Põe em cada julgamento o que está em julgamento ("objeto": frase oficial, explicação e link do relatório).
+    O relatório publicado não muda: cada um é lido uma vez e guardado. Devolve (julgamentos, quantos ficaram para depois)."""
+    pasta = cache / "stf" / "relatorios"
+    pasta.mkdir(parents=True, exist_ok=True)
+    limite = time.monotonic() + minutos * 60
+    faltam = 0
+    out = []
+    for j in julgamentos:
+        j = dict(j)
+        out.append(j)
+        if j.get("classe") not in CLASSES_RELATORIO:
+            j.pop("relatorio", None)
+            continue
+        arq = _arq_relatorio(pasta, j.get("id", ""))
+        d = None
+        if arq.exists():
+            try:
+                d = json.loads(arq.read_text(encoding="utf-8"))
+                if d.get("v") != VERSAO_RELATORIO:
+                    d = None
+            except ValueError:
+                d = None
+        if d is None:
+            if time.monotonic() > limite:
+                j.pop("relatorio", None)
+                faltam += 1
+                continue
+            try:
+                link = url_segura(j.get("relatorio")) or link_do_relatorio(j)
+                frase = ler_relatorio(link) if link else ""
+            except Exception as e:  # noqa: BLE001 - sem o relatório hoje, tenta na próxima coleta
+                log.info("STF: relatório de %s não lido (%s)", j.get("processo"), e)
+                j.pop("relatorio", None)
+                faltam += 1
+                continue
+            d = {"v": VERSAO_RELATORIO, "link": link, "texto": frase}
+            write_json(arq, d)
+        j.pop("relatorio", None)
+        link = url_segura(d.get("link"))
+        if d.get("texto") and link:
+            j["objeto"] = {"texto": d["texto"], "simples": em_palavras_simples(d["texto"]), "link": link}
+    return out, faltam
 
 # ---------------------------------------------------------------- resumo por ministro
 
@@ -431,9 +648,13 @@ def coletar_stf(cache: Path, hoje: dt.date, minutos: float) -> tuple[list[dict],
     return julgamentos, situacao
 
 
-def coletar(saida: Path, cache: Path, hoje: dt.date | None = None, minutos: float = 15) -> dict:
+def coletar(saida: Path, cache: Path, hoje: dt.date | None = None, minutos: float = 15,
+            minutos_relatorios: float = MINUTOS_RELATORIOS) -> dict:
     hoje = hoje or dt.date.today()
     js, sit = coletar_stf(cache / "tribunais", hoje, minutos)
+    js, faltam = com_objeto(js, cache / "tribunais", minutos_relatorios)
+    if faltam:
+        log.info("STF: %d relatórios ficam para a próxima coleta", faltam)
     if sit == "reserva":
         avisar("Julgamentos do STF: o portal do STF não respondeu; mostramos os julgamentos já lidos antes")
     elif sit == "parcial":
@@ -446,7 +667,7 @@ def coletar(saida: Path, cache: Path, hoje: dt.date | None = None, minutos: floa
         "atualizado_em": hoje.isoformat(), "meses": MESES,
         "situacao_fontes": {"stf": sit},
         "fontes": {"stf": {"nome": "Supremo Tribunal Federal, Plenário Virtual", "pagina": PAGINA_SESSOES,
-                           "servicos": [CALENDARIO, LISTA, VOTACAO]}},
+                           "servicos": [CALENDARIO, LISTA, VOTACAO], "relatorios": "https://digital.stf.jus.br/"}},
         "classes": CLASSES,
         "ministros": resumo_ministros(js),
         "julgamentos": js,
