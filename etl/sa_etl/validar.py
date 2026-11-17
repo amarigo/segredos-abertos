@@ -579,6 +579,16 @@ def _conferir_tribunais(saida: Path, r: Resultado) -> None:
             r.erro(f"Julgamento do STF com mais de 11 votos: {j.get('id')} ({len(votos)})")
         if sum((j.get("placar") or {}).values()) != len(votos):
             r.erro(f"Placar do julgamento do STF não bate com os votos: {j.get('id')}")
+        o = j.get("objeto")
+        if o:
+            # O que está em julgamento: frase do relatório oficial, só nas ações contra leis e atos (em RE e ação
+            # rescisória o relatório pode citar pessoas comuns), com o link do relatório e sem CPF
+            if not str(o.get("link") or "").startswith("https://digital.stf.jus.br/"):
+                r.erro(f"Julgamento do STF com resumo sem o link do relatório oficial: {j.get('id')}")
+            if j.get("classe") not in ("ADI", "ADC", "ADO", "ADPF", "ACO"):
+                r.erro(f"Julgamento do STF com frase do relatório numa classe que pode citar pessoas comuns: {j.get('id')}")
+            if not o.get("texto") or any(CPF_EM_TEXTO.search(o.get(k) or "") for k in ("texto", "simples")):
+                r.erro(f"Julgamento do STF com resumo vazio ou com número parecido com CPF: {j.get('id')}")
 
 
 CPF_EM_TEXTO = re.compile(r"(?<!\d)\d{3}\.?\d{3}\.?\d{3}-?\d{2}(?!\d)")

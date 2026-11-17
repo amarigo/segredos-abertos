@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Accordion, Anchor, Badge, Button, Card, Chip, Group, NativeSelect, Paper, SimpleGrid, Stack, Table, Text, TextInput, Title } from "@mantine/core";
+import { Accordion, Anchor, Badge, Blockquote, Button, Card, Chip, Group, NativeSelect, Paper, SimpleGrid, Stack, Table, Text, TextInput, Title } from "@mantine/core";
 import { Explain, Loading, OndeVer, useData } from "../components/ui";
 import { Detalhes, TituloSecao } from "../components/Detalhes";
 import { AvisosFim } from "../components/Selo";
@@ -42,6 +42,25 @@ function situacao(j: Julgamento): { texto: string; cor: string } {
   return { texto: unanime ? "Todos com o relator" : j.maioria === "relator" ? "Relator venceu" : "Divergência venceu", cor: j.maioria === "relator" ? "green" : "red" };
 }
 
+/** O que está em julgamento, em palavras simples. Vem do relatório do relator (a primeira frase, que diz quem pediu,
+ * contra o quê e por quê); a explicação troca o juridiquês e a frase oficial fica um toque abaixo, com o link.
+ * Sem relatório lido (ou em RE e ação rescisória, que podem citar pessoas comuns), fica a explicação do tipo de ação. */
+function OQueSeJulga({ j, explica }: { j: Julgamento; explica?: string }) {
+  const o = j.objeto;
+  return (
+    <Paper bg="var(--mantine-color-default-hover)" p="sm" radius="md" data-testid="o-que-se-julga">
+      <Text size="sm" fw={700}>O que está em julgamento</Text>
+      {o ? <>
+        <Text size="sm" mt={4}>{o.simples || `“${o.texto}”`}</Text>
+        <Text size="xs" c="dimmed" mt={4}>
+          {o.simples ? "Explicação do relatório oficial do ministro relator, com palavras do dia a dia. " : "Trecho do relatório oficial do ministro relator, copiado sem mudar palavras. "}
+          <Anchor inherit href={o.link} target="_blank" rel="noreferrer">Ver o relatório ↗</Anchor>
+        </Text>
+      </> : <Text size="sm" mt={4}>{explica ? `${j.classe}: ${explica}` : j.classe} <Anchor inherit href={j.link} target="_blank" rel="noreferrer">Ver o processo no STF ↗</Anchor></Text>}
+    </Paper>
+  );
+}
+
 function CartaoJulgamento({ j, explica }: { j: Julgamento; explica?: string }) {
   const s = situacao(j);
   const autores = j.partes.filter((p) => /REQTE|AUTOR/i.test(p.tipo)).map((p) => p.nome);
@@ -61,8 +80,18 @@ function CartaoJulgamento({ j, explica }: { j: Julgamento; explica?: string }) {
           {j.vista && <> · Pedido de vista: {j.vista}</>}
           {j.destaque && <> · Destaque (vai ao plenário presencial): {j.destaque}</>}
         </Text>
+        <OQueSeJulga j={j} explica={explica} />
         <Placar j={j} />
         <Accordion multiple chevronPosition="right">
+          {j.objeto?.simples && (
+            <Accordion.Item value="relatorio">
+              <Accordion.Control px={0}><Text span fw={700}>Texto oficial do relatório, sem mudar palavras</Text></Accordion.Control>
+              <Accordion.Panel>
+                <Blockquote color="gray" p="xs" pl="sm" fz="sm" fs="italic">“{j.objeto.texto}”</Blockquote>
+                <Anchor size="sm" href={j.objeto.link} target="_blank" rel="noreferrer">Ler o relatório inteiro do ministro relator (PDF do STF) ↗</Anchor>
+              </Accordion.Panel>
+            </Accordion.Item>
+          )}
           {j.decisao && (
             <Accordion.Item value="decisao">
               <Accordion.Control px={0}><Text span fw={700}>O que o STF decidiu (texto oficial)</Text></Accordion.Control>

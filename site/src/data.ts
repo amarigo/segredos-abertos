@@ -569,6 +569,9 @@ export interface Julgamento {
    * decidido: um lado teve 6 votos ou mais; sem_maioria: terminou sem lado com 6 votos */
   situacao: "em_julgamento" | "vista" | "destaque" | "decidido" | "sem_maioria";
   link: string; fonte: string;
+  /** O que está em julgamento: a primeira frase do relatório do relator, copiada sem mudar palavras (texto), a mesma
+   * frase com palavras do dia a dia (simples, vazio quando nada mudou) e o link do relatório (PDF oficial). */
+  objeto?: { texto: string; simples: string; link: string };
 }
 export interface MinistroResumo { nome: string; tribunal: string; votos: number; relator: number; com_maioria: number; vencido: number; divergencias: number; fora: number }
 export interface Tribunais {
