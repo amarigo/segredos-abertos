@@ -3,9 +3,11 @@ import { Link } from "react-router-dom";
 import { Barras, Explain, Loading, OndeVer, useData } from "../components/ui";
 import { ColunasAnos } from "../components/graficos";
 import { dataBR, reais, reaisCurto, type Patrimonio, type PatrimonioPessoa, type PatrimonioResumo } from "../data";
+import { MG } from "../recorte";
 
 /* Patrimônio declarado ao TSE por cada deputado federal e senador do site (patrimonio.json e pat/{id}.json).
-   Os números vêm prontos do coletor (etl/sa_etl/patrimonio.py); aqui só escolhemos o que mostrar. */
+   Os números vêm prontos do coletor (etl/sa_etl/patrimonio.py); aqui só escolhemos o que mostrar.
+   No Minas Nossa, os mesmos arquivos só com os eleitos por MG (mg/etl/mg_etl/recorte.py). */
 
 type Casa = "camara" | "senado" | "as_duas";
 const NOME_CASA: Record<Casa, string> = { camara: "Câmara", senado: "Senado", as_duas: "Câmara e Senado" };
@@ -34,13 +36,13 @@ export default function PatrimonioPage() {
 
   return (
     <section className="patrimonio">
-      <p className="small"><Link to="/politicos">‹ Políticos</Link></p>
+      <p className="small"><Link to="/politicos">‹ {MG ? "Federais" : "Políticos"}</Link></p>
       <span className="eyebrow">Eleições</span>
-      <h1>Patrimônio declarado ao TSE</h1>
+      <h1>Patrimônio declarado ao TSE{MG ? ": deputados federais e senadores de Minas" : ""}</h1>
       <Aviso />
       <p className="small muted">
         Eleições lidas: {data.anos.join(", ")}. Achamos o registro de candidatura de {ligados.toLocaleString("pt-BR")} dos{" "}
-        {data.total_politicos.toLocaleString("pt-BR")} parlamentares do site{data.sem_registro ? ` (${data.sem_registro} sem registro achado)` : ""}, pelo nome civil e pela data de nascimento.
+        {data.total_politicos.toLocaleString("pt-BR")} {MG ? "deputados federais e senadores eleitos por Minas" : "parlamentares do site"}{data.sem_registro ? ` (${data.sem_registro} sem registro achado)` : ""}, pelo nome civil e pela data de nascimento.
       </p>
       <div className="row graf-controles">
         <div className="toggle" role="group" aria-label="Casa">
@@ -123,7 +125,7 @@ export function PatrimonioPolitico({ id }: { id: string }) {
           </tr>
         ))}</tbody>
       </table></div>
-      <p className="small muted">Valor declarado pela própria pessoa (em geral o do imposto de renda), não o valor de mercado. Valores da época. Ligamos o registro do TSE ao parlamentar pelo nome civil e pela data de nascimento. Fonte: dados abertos do TSE (link em cada ano). Atualizado em {dataBR(data.atualizado)}. <Link to="/patrimonio">Veja todos os parlamentares ›</Link></p>
+      <p className="small muted">Valor declarado pela própria pessoa (em geral o do imposto de renda), não o valor de mercado. Valores da época. Ligamos o registro do TSE ao parlamentar pelo nome civil e pela data de nascimento. Fonte: dados abertos do TSE (link em cada ano). Atualizado em {dataBR(data.atualizado)}. <Link to="/patrimonio">{MG ? "Veja todos os federais de Minas ›" : "Veja todos os parlamentares ›"}</Link></p>
     </section>
   );
 }

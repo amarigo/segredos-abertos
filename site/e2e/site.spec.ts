@@ -838,6 +838,17 @@ test.describe("segurança", () => {
 });
 
 test.describe("caos no navegador", () => {
+  test("campanha: arquivo que não carrega avisa o erro; quem não tem candidatura achada vê isso", async ({ page }) => {
+    vigiar(page);
+    const perfis: string[] = dados("campanha-perfis.json").perfis;
+    await page.route("**/data/p/campanha/dep-1000.json", (r) => r.abort("failed"));
+    await page.goto("./#/p/dep-1000?aba=campanha");
+    await expect(page.locator("main")).toContainText("Não conseguimos carregar as contas de campanha agora");
+    const sem = dados("politicos.json").find((p: { id: string }) => !perfis.includes(p.id));
+    await page.goto(`./#/p/${sem.id}?aba=campanha`);
+    await expect(page.locator("main")).toContainText(`Não achamos nas contas do TSE (2018, 2022 e 2026) uma candidatura de ${sem.nome}`);
+  });
+
   const p = () => pols[1];
 
   test("arquivo que não carrega mostra aviso, não tela em branco", async ({ page }) => {
