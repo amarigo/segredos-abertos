@@ -8,7 +8,7 @@ test("Minha rede: seguir um político, ligar uma fonte e perguntar", async ({ pa
   await expect(page.getByText("Nada novo desde a última visita.")).toBeVisible();
 
   // Mapa do político: foto no centro, blocos em volta; clicar numa empresa abre a ficha com a fonte
-  await page.getByRole("tab", { name: "Rede" }).click();
+  await page.getByRole("tab", { name: "Rede", exact: true }).click();
   await expect(page.locator(".mapa-centro h2")).toHaveText("Deputado Ficticio 00");
   await page.locator(".cartao-obj").first().click();
   await expect(page.locator(".rede-gaveta .rede-painel")).toContainText("Fonte:");
@@ -50,7 +50,7 @@ test("Minha rede: um link segue vários de uma vez (nome com UF e todos os senad
 test("Minha rede: em comum mostra o que dois políticos dividem", async ({ page }) => {
   await page.goto("./#/rede?seguir=dep-1000,dep-1001");
   await expect(page.locator(".rede-seguido")).toHaveCount(2);
-  await page.getByRole("tab", { name: "Rede" }).click();
+  await page.getByRole("tab", { name: "Rede", exact: true }).click();
   await page.getByRole("tab", { name: "Em comum" }).click();
   await expect(page.locator(".estacao")).toHaveCount(2);
   await expect(page.locator(".parada").first()).toBeVisible();

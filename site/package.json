@@ -18,6 +18,8 @@
     "test:e2e:eleicao": "tsc -p tsconfig.e2e.json --noEmit && playwright test -c playwright.eleicao.config.ts"
   },
   "dependencies": {
+    "@mantine/core": "8.3.18",
+    "@mantine/hooks": "8.3.18",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-router-dom": "6.30.6"

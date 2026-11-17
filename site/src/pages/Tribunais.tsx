@@ -4,7 +4,6 @@ import { Abrir, Explain, Loading, OndeVer, useData } from "../components/ui";
 import { AvisosFim } from "../components/Selo";
 import { dataBR, type Julgamento, type LadoVoto, type Tribunais } from "../data";
 import { norm } from "./Home";
-import { VotacoesAbas } from "./Votacoes";
 import { numero } from "../components/graficos";
 
 /* Julgamentos do Plenário do STF: como cada ministro votou nas ações que derrubam ou mantêm leis.
@@ -99,14 +98,13 @@ export default function TribunaisPage() {
     && (!q || norm(`${j.processo} ${j.relator} ${j.decisao} ${j.partes.map((p) => p.nome).join(" ")}`).includes(norm(q)))),
   [data, q, classe, ministro, sit]);
 
-  if (!data) return <section><VotacoesAbas /><Loading error={error} /></section>;
+  if (!data) return <Loading error={error} />;
   const classes = Object.keys(data.classes);
   const faltando = data.situacao_fontes?.stf && data.situacao_fontes.stf !== "ok" ? data.situacao_fontes.stf : "";
   const decididos = data.julgamentos.filter((j) => j.situacao === "decidido").length;
   const filtrado = !!(q || classe || ministro || sit);
   return (
     <section>
-      <VotacoesAbas />
       <h1>Julgamentos do STF</h1>
       <Explain>
         Como cada ministro do Supremo Tribunal Federal votou nas ações que pedem para derrubar ou manter leis e atos do

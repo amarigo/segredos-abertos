@@ -49,19 +49,6 @@ export function useVisivel<E extends Element>(): [(el: E | null) => void, boolea
 export const AnoCtx = createContext<{ ano: string; anos: string[]; setAno: (a: string) => void }>({ ano: "", anos: [], setAno: () => {} });
 export const useAno = () => useContext(AnoCtx);
 
-export function AnoSeletor() {
-  const { ano, anos, setAno } = useAno();
-  if (!anos.length) return null;
-  return (
-    <label className="ano-sel">
-      <span className="muted small">Ano</span>
-      <select id="ano" value={ano} onChange={(e) => setAno(e.target.value)}>
-        {anos.slice().reverse().map((a) => <option key={a} value={a}>{a}</option>)}
-      </select>
-    </label>
-  );
-}
-
 /* Se um arquivo de dados vier com defeito e a página quebrar, mostra um aviso no lugar da tela em branco.
    O resto do site (menu, outras páginas) continua funcionando. */
 export class ErroNaPagina extends Component<{ children: ReactNode }, { erro: boolean }> {

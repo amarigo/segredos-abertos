@@ -327,8 +327,10 @@ test.describe("jornada", () => {
     const ultimo = String(Math.max(...idx.anos));
     const fin = dados(`financas/${ultimo}.json`);
     await page.goto("./");
-    await expect(page.locator("nav.nav a").first()).toHaveText("Arrecadação e gastos");
-    await page.locator("nav.nav a").first().click();
+    // Seção Dinheiro: a primeira aba é Arrecadação e gastos
+    await page.locator("nav.nav a", { hasText: "Dinheiro" }).click();
+    await expect(page.locator(".abas-secao [role=tab]").first()).toHaveText("Arrecadação e gastos");
+    await expect(page.locator(".abas-secao [role=tab]").first()).toHaveAttribute("aria-selected", "true");
     await expect(page.locator(".fin-ano[aria-pressed=true]")).toHaveText(ultimo);
     await expect(page.locator("[data-testid=kpi]")).toHaveCount(fin.kpis.length);
     const vermelhos = fin.kpis.filter((k: { nivel: string }) => k.nivel === "vermelho").length;
@@ -629,17 +631,19 @@ test.describe("idiomas e buscadores", () => {
     await expect(page.getByRole("navigation", { name: "Projetos do Segredos Abertos" })).toBeVisible();
     await page.locator(".linguas").getByRole("link", { name: "EN", exact: true }).click();
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
-    await expect(page.getByRole("navigation", { name: "Segredos Abertos projects" })).toContainText("Projects:");
+    await expect(page.getByRole("navigation", { name: "Segredos Abertos projects" })).toBeVisible();
+    await expect(page.locator("nav.nav")).toContainText("Politicians");
     await expect(page.locator(".linguas").getByRole("link", { name: "ES", exact: true })).toHaveAttribute("href", /lang=es/);
     await page.locator(".linguas").getByRole("link", { name: "ES", exact: true }).click();
     await expect(page.locator("html")).toHaveAttribute("lang", "es");
-    await expect(page.getByRole("navigation", { name: "Proyectos de Segredos Abertos" })).toContainText("Proyectos:");
+    await expect(page.getByRole("navigation", { name: "Proyectos de Segredos Abertos" })).toBeVisible();
+    await expect(page.locator("nav.nav")).toContainText("Votaciones");
     // A escolha fica guardada: abrir de novo sem ?lang= continua em espanhol
     await page.goto("./");
     await expect(page.locator("html")).toHaveAttribute("lang", "es");
     await page.locator(".linguas").getByRole("link", { name: "PT", exact: true }).click();
     await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR");
-    await expect(page.getByRole("navigation", { name: "Projetos do Segredos Abertos" })).toContainText("Projetos:");
+    await expect(page.locator("nav.nav")).toContainText("Votações");
     expect(erros).toEqual([]);
   });
 
@@ -648,7 +652,7 @@ test.describe("idiomas e buscadores", () => {
     const p = pols[0];
     await page.goto(`./?lang=en#/p/${p.id}`);
     await expect(page.locator("h1")).toContainText(p.nome);
-    await expect(page.locator("body")).not.toContainText("Projetos:");
+    await expect(page.locator("nav.nav")).not.toContainText("Votações");
     expect(erros).toEqual([]);
   });
 
@@ -1048,5 +1052,10 @@ test("menu principal: todas as abas à vista, do celular pequeno ao monitor gran
   await page.goto("./");
   await expect(page.locator("nav.nav a").first()).toBeVisible();
   await abasAVista(page, "nav.nav", "a");
-  await abasAVista(page, "nav.projetos .wrap", "a");
+  await abasAVista(page, "nav.projetos", "a");
+  // Abas de cada seção (as páginas dela), com a mesma regra
+  for (const rota of ["#/politicos", "#/votacoes", "#/dinheiro", "#/corrupcao"]) {
+    await page.goto(`./${rota}`);
+    await abasAVista(page, ".abas-secao [role=tablist]", "[role=tab]");
+  }
 });

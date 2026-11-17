@@ -1,24 +1,25 @@
-/* Visual de site público brasileiro (padrão gov.br): faixa azul-escura no topo com fio verde e amarelo, azul gov.br
-   nos links e números, verde nos sobretítulos, botões em pílula e letra Raleway (a base da Rawline do gov.br).
-   Conteúdo em coluna de até 1100px. */
+/* Miolo das páginas que ainda não migraram para os componentes do Mantine. As cores e a letra vêm das variáveis do
+   tema padrão do Mantine (--mantine-*), que já trocam sozinhas entre claro e escuro: assim as páginas antigas e as
+   novas ficam com a mesma cara durante a migração. Ficam aqui só as cores que o Mantine não tem: as séries dos
+   gráficos (paleta validada para daltonismo e contraste), as cores de voto e o mapa. */
 :root {
-  --bg: #f8f8f8;
-  --surface: #ffffff;
-  --ink: #1b2533;
-  --ink-2: #333f4f;
-  --muted: #5f6a7a;
-  --line: #dcdfe5;
-  --navy: #071d41;      /* faixa do topo (azul-escuro gov.br) */
-  --navy-2: #04132e;    /* barra dos projetos */
-  --verde: #168821;     /* verde gov.br */
-  --amarelo: #ffcd07;   /* amarelo gov.br */
-  --hot: #1351b4;       /* destaque: azul gov.br (números grandes, bordas) */
-  --hot-vivo: #ffcd07;  /* destaque sobre a faixa azul */
-  --gold: #ffcd07;      /* ponto dourado do espectro, foco do teclado */
-  --gold-ink: #137a1d;  /* sobretítulos (eyebrow); mais escuro que o verde gov.br para dar 4,5:1 no fundo claro */
-  --accent: #1351b4;    /* links */
-  --grid: #e8ebf0;
-  --tint: #edf5ff;      /* fundo de caixas de explicação (azul bem claro) */
+  --bg: var(--mantine-color-body);
+  --surface: var(--mantine-color-body);
+  --ink: var(--mantine-color-text);
+  --ink-2: var(--mantine-color-text);
+  --muted: var(--mantine-color-dimmed);
+  --line: var(--mantine-color-default-border);
+  --navy: var(--mantine-primary-color-filled);
+  --navy-2: var(--mantine-primary-color-filled);
+  --verde: var(--mantine-color-green-filled);
+  --amarelo: var(--mantine-color-yellow-filled);
+  --hot: var(--mantine-color-text);
+  --hot-vivo: var(--mantine-primary-color-filled);
+  --gold: var(--mantine-color-yellow-filled);
+  --gold-ink: var(--mantine-color-dimmed);
+  --accent: var(--mantine-color-anchor);
+  --grid: var(--mantine-color-default-border);
+  --tint: var(--mantine-color-default-hover);
   /* bandeiras de status: verde (ok), amarelo (atenção), vermelho (alerta) */
   --flag-g: #12701c; --flag-y: #855900; --flag-r: #c01c06;  /* texto sobre os fundos abaixo com 4,5:1 ou mais */
   --flag-g-bg: #e3f5e1; --flag-y-bg: #fff5c2; --flag-r-bg: #fde0db;
@@ -32,56 +33,47 @@
   --q1: #cde2fb; --q2: #86b6ef; --q3: #3987e5; --q4: #1c5cab; --q5: #0d366b;
   --sim: #1baf7a; --nao: #eb6834; --outro: #b9b6ac;
   --sim-ink: #0d7a52; --nao-ink: #b4441a;  /* Sim e Não quando são texto (as cores acima ficam para barras) */
-  --foco: #071d41;      /* anel do teclado no fundo claro (o amarelo some nele) */
+  --foco: var(--mantine-primary-color-filled);
   --esq: #d03b3b; --dir: #2a78d6; --centro: #a9a69c;
   --alert-bg: #fff5c2; --alert-ink: #5c4300;
-  --display: "Raleway", "Rawline", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --body: "Raleway", "Rawline", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: "Raleway", "Rawline", system-ui, sans-serif;
-  --raio: 8px;
+  --display: var(--mantine-font-family-headings);
+  --body: var(--mantine-font-family);
+  --mono: var(--mantine-font-family);
+  --raio: var(--mantine-radius-default);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b1220; --surface: #131c2e; --ink: #eef2f8; --ink-2: #c5cedd; --muted: #93a0b5; --line: #26324a;
-    --navy: #13284f; --navy-2: #020a1a; --verde: #36c35a; --amarelo: #ffcd07; --hot: #5992ed; --hot-vivo: #ffcd07; --gold: #ffcd07; --gold-ink: #36c35a;
-    --accent: #7fb0ff; --grid: #1f2a40; --tint: #16233b;
     --flag-g: #36c35a; --flag-y: #f2c230; --flag-r: #ff6b5a;
     --flag-g-bg: #10301a; --flag-y-bg: #33290a; --flag-r-bg: #3a1512;
     --s1: #3d8ae8; --s2: #d0652a; --s3: #d9559f; --c4: #3fa63f; --c5: #8a70e3; --c6: #b08000; --c7: #16a596; --c8: #ea6458; --c-outros: #4a4f5c; --q1: #1d3a66; --q2: #23589c; --q3: #3987e5; --q4: #6da7ec; --q5: #b7d3f6; --sim: #199e70; --nao: #d95926; --outro: #4a4f5c;
     --esq: #e66767; --dir: #3987e5; --centro: #5c6070; --alert-bg: #33290a; --alert-ink: #ffe28a;
-    --sim-ink: #36c98f; --nao-ink: #ef7a4a; --foco: #ffcd07;
+    --sim-ink: #36c98f; --nao-ink: #ef7a4a;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0b1220; --surface: #131c2e; --ink: #eef2f8; --ink-2: #c5cedd; --muted: #93a0b5; --line: #26324a;
-  --navy: #13284f; --navy-2: #020a1a; --verde: #36c35a; --amarelo: #ffcd07; --hot: #5992ed; --hot-vivo: #ffcd07; --gold: #ffcd07; --gold-ink: #36c35a;
-  --accent: #7fb0ff; --grid: #1f2a40; --tint: #16233b;
   --flag-g: #36c35a; --flag-y: #f2c230; --flag-r: #ff6b5a;
   --flag-g-bg: #10301a; --flag-y-bg: #33290a; --flag-r-bg: #3a1512;
   --s1: #3d8ae8; --s2: #d0652a; --s3: #d9559f; --c4: #3fa63f; --c5: #8a70e3; --c6: #b08000; --c7: #16a596; --c8: #ea6458; --c-outros: #4a4f5c; --q1: #1d3a66; --q2: #23589c; --q3: #3987e5; --q4: #6da7ec; --q5: #b7d3f6; --sim: #199e70; --nao: #d95926; --outro: #4a4f5c;
   --esq: #e66767; --dir: #3987e5; --centro: #5c6070; --alert-bg: #33290a; --alert-ink: #ffe28a;
-    --sim-ink: #36c98f; --nao-ink: #ef7a4a; --foco: #ffcd07;
+    --sim-ink: #36c98f; --nao-ink: #ef7a4a;
   color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
-/* Raleway usa números "antigos" (de alturas diferentes) por padrão: aqui todos ficam da mesma altura */
-html { font-feature-settings: "lnum" 1; }
-body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body); font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; -webkit-font-smoothing: antialiased; }
+
 button, input, select, textarea { font-family: inherit; font-variant-numeric: lining-nums; }
 a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
 a:hover { text-decoration-thickness: 2px; }
 :focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
 /* na faixa azul do topo e no rodapé o amarelo aparece bem */
-.top :focus-visible, .projetos :focus-visible, footer :focus-visible { outline-color: var(--gold); }
 .person:focus-visible { outline-offset: -3px; }
-h1, h2, h3 { font-family: var(--display); line-height: 1.05; text-wrap: balance; margin: 0; }
-h1 { font-size: clamp(1.9rem, 4.6vw, 2.9rem); font-weight: 800; letter-spacing: -.01em; }
-h2 { font-size: clamp(1.35rem, 3vw, 1.7rem); font-weight: 800; }
-h3 { font-size: 1.12rem; font-weight: 700; line-height: 1.2; }
+h1, h2, h3 { font-family: var(--mantine-font-family-headings); line-height: 1.2; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--mantine-h1-font-size); font-weight: 700; }
+h2 { font-size: var(--mantine-h2-font-size); font-weight: 700; }
+h3 { font-size: var(--mantine-h4-font-size); font-weight: 600; }
 p { margin: 0; max-width: 68ch; }
 strong, b { font-weight: 700; }
 .num, .mono { font-family: var(--mono); font-variant-numeric: lining-nums tabular-nums; }
@@ -90,52 +82,18 @@ strong, b { font-weight: 700; }
 
 .wrap { max-width: 1100px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 
-/* Barra dos projetos (Brasil, Minas Nossa, Eleição 2026) */
-.projetos { background: var(--navy-2); color: #b7c3d9; font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; font-weight: 600; }
-/* Barra dos projetos: mesma regra do menu principal (tudo à vista, quebra a linha em vez de rolar de lado) */
-.projetos .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 0 16px; padding-block: 3px; white-space: nowrap; }
-.projetos .wrap > * { flex-shrink: 0; }
-.projetos a { color: #e3e9f4; text-decoration: none; padding: 4px 2px; }
-.projetos a:hover { color: #fff; text-decoration: underline; }
-.projetos a[aria-current="page"] { color: var(--hot-vivo); }
-/* Seletor de língua (PT, EN, ES), no fim da barra dos projetos */
-.linguas { margin-left: auto; display: inline-flex; gap: 2px; padding-left: 12px; }
-.linguas a { padding: 4px 7px; border-radius: 999px; }
-.linguas a[aria-current="true"] { background: #fff; color: var(--navy-2); }
-.linguas a[aria-current="true"]:hover { color: var(--navy-2); text-decoration: none; }
-
-/* Cabeçalho: faixa roxa, marca em caixa alta, menu em pílulas */
-.top { background: var(--navy); color: #fff; z-index: 20; box-shadow: inset 0 -4px 0 var(--amarelo), inset 0 -8px 0 var(--verde); }
-.top .wrap { padding-bottom: 16px !important; }
-@media (min-width: 700px) { .top { position: sticky; top: env(safe-area-inset-top, 0px); } body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--navy); } }
-.top .wrap { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px 24px; padding-block: 14px 10px; }
-.top .nav { grid-column: 1 / -1; grid-row: 2; margin-inline: -14px; }
-.brand { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; font-family: var(--display); font-weight: 900; font-size: 1.3rem; line-height: 1; }
-.brand img { width: 30px; height: 30px; }
-.brand > span > span { color: var(--hot-vivo) !important; }
-/* Regra dos menus principais (vale para todos os sites): todas as abas sempre à vista. Se não couberem numa linha,
-   passam para a de baixo; nunca rolam de lado nem ficam cortadas. Rolando de lado, "Como funciona" e "Minha rede"
-   sumiam no computador, e ninguém via que havia mais abas. Uma aba nova entra sem mexer aqui.
-   Conferido pelo teste "menu principal: todas as abas à vista" (e2e). */
-.nav { display: flex; flex-wrap: wrap; gap: 4px; max-width: 100%; }
-.nav a { white-space: nowrap; color: #e3e9f4; text-decoration: none; padding: 7px 14px; border-radius: 999px; font-weight: 600; font-size: .92rem; border: 1px solid transparent; }
-.nav a:hover { border-color: rgba(255,255,255,.35); color: #fff; }
-.nav a.active { background: #fff; color: var(--navy); }
-/* Celular: pílulas mais compactas, para o menu inteiro caber em poucas linhas */
-@media (max-width: 699px) { .nav { gap: 2px; } .nav a { padding: 8px 10px; font-size: .86rem; } }
-
 main { padding-block: 32px 72px; display: grid; gap: 48px; }
 section { display: grid; gap: 16px; min-width: 0; }
-.eyebrow { font: 700 .78rem/1.2 var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--gold-ink); }
+.eyebrow { font-size: var(--mantine-font-size-sm); color: var(--mantine-color-dimmed); }
 
 /* Herói: sobretítulo, número enorme e texto de apoio */
 .hero { display: grid; gap: 14px; padding-block: 8px 4px; }
-.hero .big { font-family: var(--display); font-size: clamp(2.8rem, 9vw, 5.2rem); font-weight: 900; line-height: 1; color: var(--hot); letter-spacing: -.01em; font-variant-numeric: lining-nums tabular-nums; }
-.hero p { font-size: 1.15rem; color: var(--ink-2); }
+.hero .big { font-size: clamp(2rem, 6vw, 2.75rem); font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+
 
 .search { display: flex; gap: 8px; flex-wrap: wrap; }
-.search input, select { font: inherit; padding: 10px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); min-width: 0; }
-.search input { flex: 1 1 260px; font-size: 1.05rem; padding: 14px 20px; border-radius: 999px; border: 2px solid var(--ink); }
+.search input, select { font: inherit; padding: 8px 12px; border-radius: var(--mantine-radius-default); border: 1px solid var(--line); background: var(--surface); color: var(--ink); min-width: 0; }
+.search input { flex: 1 1 260px; }
 .search input:focus { border-color: var(--accent); }
 
 /* Fichas e grades */
@@ -227,16 +185,10 @@ svg text { fill: var(--muted); font: 11px var(--body); }
 .two { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
 .two > * { min-width: 0; }
 button.link { background: none; border: 0; color: var(--accent); font: inherit; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
-footer { background: var(--navy); color: #c5d0e3; padding-block: 32px 48px; font-size: .88rem; }
-footer a { color: #fff; }
-footer .wrap { display: grid; gap: 6px; }
 @media (prefers-reduced-motion: no-preference) { .fill { transition: width .3s cubic-bezier(.23, 1, .32, 1); } }
 
 /* Seletor de ano no topo */
 .ano-sel { display: flex; align-items: center; gap: 6px; margin-left: auto; grid-row: 1; grid-column: 2; }
-.top .ano-sel .muted { color: #c5d0e3; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; font-size: .72rem; }
-.top .ano-sel select { background: rgba(255,255,255,.1); color: #fff; border: 1.5px solid rgba(255,255,255,.4); border-radius: 999px; padding: 5px 12px; font: inherit; font-weight: 700; }
-.top .ano-sel select option { color: #000; }
 main .ano-sel .muted { color: var(--muted); font-weight: 700; }
 main .ano-sel select { border-radius: 999px; padding: 5px 12px; font-weight: 700; }
 .toggle { display: inline-flex; flex-wrap: wrap; max-width: 100%; gap: 4px; padding: 4px; background: var(--tint); border-radius: 22px; overflow: hidden; }
@@ -480,10 +432,6 @@ tr.atual td { background: color-mix(in srgb, var(--gold) 12%, transparent); }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 22px; border-radius: 999px; background: var(--hot); color: #fff; border: 2px solid var(--hot); font: 700 .95rem/1.1 var(--body); text-decoration: none; cursor: pointer; }
 .btn:hover { filter: brightness(1.08); text-decoration: none; }
 .btn.alt { background: transparent; color: var(--ink); border-color: var(--ink); }
-:root[data-theme="dark"] .btn:not(.alt) { color: #071d41; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn:not(.alt) { color: #071d41; } }
-/* Títulos de seção com um traço rosa curto em cima, como nos painéis de acompanhamento */
-main > section > h2:first-of-type::before { content: ""; display: block; width: 44px; height: 5px; border-radius: 3px; background: linear-gradient(90deg, var(--verde) 0 62%, var(--amarelo) 62% 100%); margin-bottom: 12px; }
 details > summary { cursor: pointer; font-weight: 700; }
 
 /* Selo de verificação (pages/Verificacao.tsx, components/Selo.tsx) */
@@ -586,14 +534,9 @@ details.recolhe[open] > summary { margin-bottom: 4px; }
 /* ===== Acabamento (skills de design: impeccable, taste, Emil Kowalski). Só aparência: nenhum dado muda. ===== */
 /* Superfícies do navegador no padrão do site */
 :root { accent-color: var(--hot); }
-::selection { background: color-mix(in srgb, var(--amarelo) 60%, transparent); color: var(--ink); }
 .table-wrap, .fluxo { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
-/* O topo fixo não cobre o item que recebe o foco do teclado */
-@media (min-width: 700px) { html { scroll-padding-top: 170px; } }
 
 /* Toque: áreas de pelo menos 40px nos links pequenos */
-.projetos a { padding: 10px 4px; }
-.linguas a { padding: 10px 10px; }
 button.chip { min-height: 36px; padding: 6px 14px; cursor: pointer; }
 .chip.cat-nota { white-space: normal; text-transform: none; letter-spacing: 0; text-align: left; font-size: .8rem; margin-bottom: 4px; }
 details > summary { padding-block: 10px; }
@@ -611,7 +554,7 @@ details > summary { padding-block: 10px; }
 
 /* Resposta ao toque: botões, abas e cartões afundam um pouco ao apertar (rápido, com saída suave) */
 @media (prefers-reduced-motion: no-preference) {
-  .btn, .tabs button, .tabs a, .toggle button, button.chip, .nav a {
+  .btn, .tabs button, .tabs a, .toggle button, button.chip {
     transition: transform .16s cubic-bezier(.23, 1, .32, 1), background-color .15s ease, color .15s ease, border-color .15s ease;
   }
   .btn:active, .tabs button:active, .tabs a:active, .toggle button:active, button.chip:active { transform: scale(.97); }
@@ -632,8 +575,6 @@ details > summary { padding-block: 10px; }
 @media (max-width: 560px) { .gm svg { min-width: 540px; } }
 /* Legenda da pizza não espalha os números pela tela inteira */
 .pizza .leg { max-width: 460px; }
-/* Barra dos projetos no celular: o último link não encosta na borda da tela */
-@media (max-width: 699px) { .projetos .wrap::after { content: ""; flex: 0 0 4px; } }
 
 /* ------------------------------------------------------------------ gráficos (components/graficos.tsx) */
 /* Partes de um todo (Rosca em graficos.tsx): número grande, barra dividida e lista. Sem "sticky": antes a rosca grudava
@@ -1239,30 +1180,4 @@ tr.nota-aberta > td { background: var(--tint); }
 .rep-aviso-tse ul { margin: 4px 0; padding-left: 20px; }
 .rep-diferenca p { margin: 6px 0; }
 
-/* ------------------------------------------------------------------ topo compacto no celular e botão "Menu" */
-/* No celular, a barra dos projetos, a marca e o menu ocupavam metade da primeira tela (cerca de 370px em 390px de
-   largura) antes de qualquer número. Todas as abas continuam à vista (regra de site/e2e/menu.ts); só os espaços,
-   o rótulo "Projetos:" e o rótulo "Ano" saem, e a letra da marca diminui um pouco. */
-@media (max-width: 699px) {
-  .projetos .wrap > span:first-child { display: none; }
-  .projetos { font-size: .72rem; letter-spacing: .03em; }
-  .projetos .wrap { gap: 0 12px; padding-block: 0; }
-  .projetos a { padding: 8px 2px; }
-  .linguas a { padding: 8px 8px; }
-  .top .wrap { padding-block: 10px 6px; gap: 6px 10px; padding-bottom: 12px !important; }
-  .brand { font-size: 1.08rem; gap: 8px; }
-  .brand img { width: 24px; height: 24px; }
-  .top .ano-sel .muted { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-}
-.voltar-menu {
-  position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 40;
-  background: var(--navy); color: #fff; border: 2px solid #fff; border-radius: 999px; padding: 10px 16px; min-height: 44px;
-  font: inherit; font-weight: 700; font-size: .9rem; cursor: pointer; box-shadow: 0 4px 14px rgba(7, 29, 65, .35);
-}
-.voltar-menu:hover { background: var(--navy-2); }
-.voltar-menu:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
-@media (prefers-reduced-motion: no-preference) {
-  .voltar-menu { animation: voltar-menu-entra .2s cubic-bezier(.23, 1, .32, 1); }
-  @keyframes voltar-menu-entra { from { opacity: 0; transform: translateY(8px); } }
-}
 @media print { .voltar-menu { display: none; } }
