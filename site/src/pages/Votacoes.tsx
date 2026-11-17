@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Abrir, Colunas, Explain, Loading, OndeVer, ResultadoChip, useData } from "../components/ui";
+import { Button, Chip, Group, NativeSelect, Table, Text, TextInput, Title } from "@mantine/core";
+import { Colunas, Explain, Loading, OndeVer, ResultadoChip, useData } from "../components/ui";
 import { MESES_LONGOS, TEMAS, nomeTipo, casaNome, dataBR, descricaoCurta, proposicaoNome, tipoVotacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 import { MG } from "../recorte";
 import { AvisosFim } from "../components/Selo";
 import { ColunasAnos, Rosca, numero, prepararFatias } from "../components/graficos";
+import { Detalhes } from "../components/Detalhes";
 
 export default function Votacoes() {
   const { data, error } = useData<VotacaoResumo[]>("votacoes.json");
@@ -44,81 +46,77 @@ export default function Votacoes() {
   }, [lista]);
   if (!data) return <Loading error={error} />;
   const fmtN = (v: number) => `${numero(v)} votaç${v === 1 ? "ão" : "ões"}`;
+  const anos = [...new Set(meses.map((m) => m.slice(0, 4)))];
+  const placar = (v: VotacaoResumo) => v.placar_casa || v;
   return (
     <section>
-      <h1>Votações</h1>
+      <Title order={1}>Votações</Title>
       <Explain>Votações nominais do plenário, em que cada parlamentar registra o próprio voto.{MG ? " Sim e Não mostram o placar da Casa inteira; ao lado, como votou a bancada de Minas Gerais." : " Sim e Não mostram o placar oficial da Casa inteira."} PEC é proposta de emenda à Constituição, PL é projeto de lei, MPV é medida provisória e PLP é projeto de lei complementar.</Explain>
-      <div className="search">
-        <input id="busca-votacao" aria-label="Buscar votação" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Assunto ou número (ex.: PEC 45)" />
-        <select id="filtro-casa-v" aria-label="Casa" value={casa} onChange={(e) => setCasa(e.target.value)}>
-          <option value="">Câmara e Senado</option><option value="camara">Câmara</option><option value="senado">Senado</option>
-        </select>
-        <select id="filtro-tipo" aria-label="Tipo" value={tipo} onChange={(e) => setTipo(e.target.value)}>
-          <option value="">Todos os tipos</option>{tipos.map((t) => <option key={t} value={t}>{nomeTipo(t)}</option>)}
-        </select>
-      </div>
-      <div className="filtros">
-        <label className="graf-ano"><span className="muted small">Quando</span>
-          <select id="filtro-mes" aria-label="Mês" value={mes} onChange={(e) => { setMes(e.target.value); setMostrar(200); }}>
-            <option value="">Todos os meses</option>
-            {[...new Set(meses.map((m) => m.slice(0, 4)))].map((a) => (
-              <optgroup key={a} label={a}>
-                <option value={a}>{`Todo o ano de ${a}`}</option>
-                {meses.filter((m) => m.startsWith(a)).map((m) => <option key={m} value={m}>{`${MESES_LONGOS[Number(m.slice(5)) - 1]} de ${a}`}</option>)}
-              </optgroup>
-            ))}
-          </select>
-        </label>
-        <fieldset><legend>Resultado</legend>
-          {([["", "Todas"], ["sim", "Aprovadas (Sim venceu)"], ["nao", "Rejeitadas (Não venceu)"]] as const).map(([k, n]) => (
-            <button key={k} className="fchip" aria-pressed={resultado === k} onClick={() => { setResultado(k); setMostrar(200); }}>{n}</button>
-          ))}
-        </fieldset>
-        {filtrado && <button className="link small" onClick={() => { setQ(""); setCasa(""); setTipo(""); setTema(""); setMes(""); setResultado(""); }}>Limpar filtros ✕</button>}
-      </div>
-      <div className="row" style={{ flexWrap: "wrap", gap: 6, margin: "8px 0" }} role="group" aria-label="Temas">
-        <button className={`chip ${!tema ? "ok" : ""}`} onClick={() => setTema("")}>Todos os temas</button>
-        {TEMAS.filter((t) => contTema[t]).map((t) => (
-          <button key={t} className={`chip ${tema === t ? "ok" : ""}`} aria-pressed={tema === t} onClick={() => setTema(tema === t ? "" : t)}>{t} ({contTema[t]})</button>
-        ))}
-      </div>
-      <p className="muted small">{lista.length} votações{tema ? ` sobre ${tema.toLowerCase()}` : ""}. Os temas são definidos por palavras da ementa. <Link to="/sobre">Entenda</Link>. Para o que ainda vai ser votado, veja <Link to="/votacoes">projetos em andamento</Link>.</p>
-      {lista.length > 0 && (
-        <div className="secao-graficos">
-          <div><h3 className="graf-titulo">Resultado</h3><Rosca fatias={graf.resultado} titulo="Votações aprovadas e rejeitadas" formato={fmtN} centroRotulo="Votações" centro={numero(lista.length)} /></div>
-          <div><h3 className="graf-titulo">O que foi votado</h3><Rosca fatias={graf.tipos} titulo="Votações por tipo de proposta" formato={fmtN} centroRotulo="Votações" centro={numero(lista.length)} /></div>
-          {graf.anos.length > 1 && <div><h3 className="graf-titulo">Votações por ano</h3><ColunasAnos serie={graf.anos} titulo="Votações nominais por ano" formato={numero} /></div>}
-        </div>
-      )}
-      {porMes.length > 1 && <Abrir titulo="Gráfico: votações por mês">
-        <Colunas rotulo="Votações por mês, aprovadas e rejeitadas" fmt={(v) => v.toLocaleString("pt-BR")}
-          partes={[{ nome: "Aprovadas", cor: "var(--sim)" }, { nome: "Rejeitadas", cor: "var(--nao)" }]} itens={porMes} />
-      </Abrir>}
-      <div className="table-wrap">
-        <table>
-          <thead><tr><th>Data</th><th>Casa</th><th>O que foi votado</th><th className="r">Sim</th><th className="r">Não</th>{MG && <th>Bancada de MG</th>}<th>Resultado</th></tr></thead>
-          <tbody>
+      <Group gap="sm" align="flex-end" wrap="wrap" my="md">
+        <TextInput id="busca-votacao" aria-label="Buscar votação" value={q} onChange={(e) => setQ(e.currentTarget.value)} placeholder="Assunto ou número (ex.: PEC 45)" style={{ flex: "1 1 240px" }} />
+        <NativeSelect id="filtro-casa-v" aria-label="Casa" value={casa} onChange={(e) => setCasa(e.currentTarget.value)}
+          data={[{ value: "", label: "Câmara e Senado" }, { value: "camara", label: "Câmara" }, { value: "senado", label: "Senado" }]} />
+        <NativeSelect id="filtro-tipo" aria-label="Tipo" value={tipo} onChange={(e) => setTipo(e.currentTarget.value)}
+          data={[{ value: "", label: "Todos os tipos" }, ...tipos.map((t) => ({ value: t, label: nomeTipo(t) }))]} />
+        <NativeSelect id="filtro-mes" aria-label="Mês" value={mes} onChange={(e) => { setMes(e.currentTarget.value); setMostrar(200); }}
+          data={[{ value: "", label: "Todos os meses" }, ...anos.map((a) => ({ group: a, items: [{ value: a, label: `Todo o ano de ${a}` },
+            ...meses.filter((m) => m.startsWith(a)).map((m) => ({ value: m, label: `${MESES_LONGOS[Number(m.slice(5)) - 1]} de ${a}` }))] }))]} />
+      </Group>
+      <Group gap="sm" wrap="wrap" mb="sm">
+        <Chip.Group multiple={false} value={resultado} onChange={(k) => { setResultado(k as "" | "sim" | "nao"); setMostrar(200); }}>
+          <Group gap={6} role="radiogroup" aria-label="Resultado">
+            {([["", "Todas"], ["sim", "Aprovadas (Sim venceu)"], ["nao", "Rejeitadas (Não venceu)"]] as const).map(([k, n]) => <Chip key={k} value={k} size="sm">{n}</Chip>)}
+          </Group>
+        </Chip.Group>
+        {filtrado && <Button variant="subtle" size="compact-sm" onClick={() => { setQ(""); setCasa(""); setTipo(""); setTema(""); setMes(""); setResultado(""); }}>Limpar filtros ✕</Button>}
+      </Group>
+      <Chip.Group multiple={false} value={tema} onChange={(t) => setTema(t)}>
+        <Group gap={6} role="group" aria-label="Temas" mb="xs">
+          <Chip value="" size="sm" variant="outline">Todos os temas</Chip>
+          {TEMAS.filter((t) => contTema[t]).map((t) => <Chip key={t} value={t} size="sm" variant="outline">{`${t} (${contTema[t]})`}</Chip>)}
+        </Group>
+      </Chip.Group>
+      <Text size="sm" c="dimmed">{lista.length} votações{tema ? ` sobre ${tema.toLowerCase()}` : ""}. Os temas são definidos por palavras da ementa. <Link to="/sobre">Entenda</Link>. Para o que ainda vai ser votado, veja <Link to="/votacoes">projetos em andamento</Link>.</Text>
+      {lista.length > 0 && <Detalhes itens={[{
+        id: "graficos", titulo: "Resultado em gráficos: aprovadas, tipos e votações por ano e por mês",
+        conteudo: <>
+          <div className="secao-graficos">
+            <div><Title order={3} size="h5" className="graf-titulo">Resultado</Title><Rosca fatias={graf.resultado} titulo="Votações aprovadas e rejeitadas" formato={fmtN} centroRotulo="Votações" centro={numero(lista.length)} /></div>
+            <div><Title order={3} size="h5" className="graf-titulo">O que foi votado</Title><Rosca fatias={graf.tipos} titulo="Votações por tipo de proposta" formato={fmtN} centroRotulo="Votações" centro={numero(lista.length)} /></div>
+            {graf.anos.length > 1 && <div><Title order={3} size="h5" className="graf-titulo">Votações por ano</Title><ColunasAnos serie={graf.anos} titulo="Votações nominais por ano" formato={numero} /></div>}
+          </div>
+          {porMes.length > 1 && <>
+            <Title order={3} size="h5" className="graf-titulo">Votações por mês</Title>
+            <Colunas rotulo="Votações por mês, aprovadas e rejeitadas" fmt={(v) => v.toLocaleString("pt-BR")}
+              partes={[{ nome: "Aprovadas", cor: "var(--sim)" }, { nome: "Rejeitadas", cor: "var(--nao)" }]} itens={porMes} />
+          </>}
+        </>,
+      }]} />}
+      <Table.ScrollContainer minWidth={560} mt="md">
+        <Table striped highlightOnHover verticalSpacing="xs">
+          <Table.Thead><Table.Tr><Table.Th>Data</Table.Th><Table.Th>Casa</Table.Th><Table.Th>O que foi votado</Table.Th><Table.Th ta="right">Sim</Table.Th><Table.Th ta="right">Não</Table.Th>{MG && <Table.Th>Bancada de MG</Table.Th>}<Table.Th>Resultado</Table.Th></Table.Tr></Table.Thead>
+          <Table.Tbody>
             {lista.slice(0, mostrar).map((v) => (
-              <tr key={v.id}>
-                <td className="num">{dataBR(v.data)}</td>
-                <td>{casaNome(v.casa)}</td>
-                <td><Link to={`/v/${v.id}`}>{proposicaoNome(v.proposicao) || "Votação"}</Link>{tipoVotacao(v.descricao) && <> <span className="chip">{tipoVotacao(v.descricao)}</span></>}
-                  {descricaoCurta(v.descricao) && <div className="small">{descricaoCurta(v.descricao).slice(0, 220)}</div>}
-                  {v.proposicao?.ementa && <div className="small muted">{v.proposicao.ementa.slice(0, 160)}</div>}
-                  {v.temas && v.temas.length > 0 && <div className="small" style={{ marginTop: 2 }}>{v.temas.join(" · ")}</div>}</td>
-                <td className="r num">{(v.placar_casa || v).sim}</td>
-                <td className="r num">{(v.placar_casa || v).nao}</td>
-                {MG && <td className="small num" style={{ whiteSpace: "nowrap" }}>{v.sim} Sim · {v.nao} Não</td>}
-                <td><ResultadoChip aprovada={v.aprovada} /></td>
-              </tr>
+              <Table.Tr key={v.id}>
+                <Table.Td className="num">{dataBR(v.data)}</Table.Td>
+                <Table.Td>{casaNome(v.casa)}</Table.Td>
+                <Table.Td><Link to={`/v/${v.id}`}>{proposicaoNome(v.proposicao) || "Votação"}</Link>{tipoVotacao(v.descricao) && <> <span className="chip">{tipoVotacao(v.descricao)}</span></>}
+                  {descricaoCurta(v.descricao) && <Text size="sm">{descricaoCurta(v.descricao).slice(0, 220)}</Text>}
+                  {v.proposicao?.ementa && <Text size="sm" c="dimmed">{v.proposicao.ementa.slice(0, 160)}</Text>}
+                  {v.temas && v.temas.length > 0 && <Text size="sm" mt={2}>{v.temas.join(" · ")}</Text>}</Table.Td>
+                <Table.Td ta="right" className="num">{placar(v).sim}</Table.Td>
+                <Table.Td ta="right" className="num">{placar(v).nao}</Table.Td>
+                {MG && <Table.Td className="small num" style={{ whiteSpace: "nowrap" }}>{v.sim} Sim · {v.nao} Não</Table.Td>}
+                <Table.Td><ResultadoChip aprovada={v.aprovada} /></Table.Td>
+              </Table.Tr>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </Table.Tbody>
+        </Table>
+      </Table.ScrollContainer>
       {lista.length > mostrar && (
-        <p className="row" style={{ gap: 12, alignItems: "center" }}><span className="filtros-conta">{`Mostrando ${numero(mostrar)} de ${numero(lista.length)} votações.`}</span>
-          <button className="btn alt" onClick={() => setMostrar((m) => m + 200)}>Mostrar mais 200</button>
-          <button className="link small" onClick={() => setMostrar(lista.length)}>Mostrar todas</button></p>
+        <Group gap="sm" my="sm"><Text size="sm" className="filtros-conta">{`Mostrando ${numero(mostrar)} de ${numero(lista.length)} votações.`}</Text>
+          <Button variant="default" size="xs" onClick={() => setMostrar((m) => m + 200)}>Mostrar mais 200</Button>
+          <Button variant="subtle" size="xs" onClick={() => setMostrar(lista.length)}>Mostrar todas</Button></Group>
       )}
       <OndeVer links={[
         { nome: "Votações na Câmara (dados abertos)", url: "https://dadosabertos.camara.leg.br/swagger/api.html#/Vota%C3%A7%C3%B5es/votos", explica: "o voto de cada deputado" },

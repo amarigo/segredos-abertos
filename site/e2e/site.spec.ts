@@ -503,17 +503,17 @@ test("projetos em andamento: pauta, autor, próximo passo e link oficial", async
   // A favor e contra: trechos dos documentos oficiais, com link
   const deb = cartao.locator(".proj-debate");
   // recolhido, com a contagem dos dois lados no título; abre com um toque
-  await expect(deb.locator("summary")).toContainText("a favor");
+  await expect(deb.locator(".proj-debate-abre")).toContainText("a favor");
   await expect(deb.locator(".proj-lado.favor")).toBeHidden();
-  await deb.locator("summary").click();
+  await deb.locator(".proj-debate-abre").click();
   await expect(deb.locator(".proj-lado.favor")).toContainText("reduz em 60% o risco de morte");
   await expect(deb.locator(".proj-lado.contra")).toContainText("Deputado Ficticio 03");
   await expect(deb.locator(".proj-lado.contra a[href^='https://www.camara.leg.br/']")).toBeVisible();
   // Sem documento oficial contra: quem fala contra em notícias, marcado como fonte não oficial, com link da notícia
   const pl250 = page.locator("article.proj", { hasText: "PL 250/2024" });
   const deb250 = pl250.locator(".proj-debate");
-  await expect(deb250.locator("summary")).toContainText("2 contra em notícias");
-  await deb250.locator("summary").click();
+  await expect(deb250.locator(".proj-debate-abre")).toContainText("2 contra em notícias");
+  await deb250.locator(".proj-debate-abre").click();
   const contra250 = deb250.locator(".proj-lado.contra");
   await expect(contra250).toContainText("Ninguém registrou documento oficial contra");
   await expect(contra250.locator(".proj-noticia").first()).toContainText("Notícia · fonte não oficial");
