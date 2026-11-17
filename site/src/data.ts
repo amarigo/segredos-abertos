@@ -635,7 +635,9 @@ export interface CampanhaEmpresa {
 
 /* Histórico da cota desde 2008 (historico.json e h/{id}.json) */
 export interface HistoricoAno {
-  ano: number; casa: "camara" | "senado"; total: number; total_hoje: number | null; notas: number; parlamentares: number;
+  ano: number; casa: "camara" | "senado"; total: number; total_hoje: number | null;
+  /** null no resumo de um estado (historico-uf/{UF}.json): a coleta não conta as notas de cada pessoa */
+  notas: number | null; parlamentares: number;
   por_parlamentar: number; meses: number[]; meses_fracos: number[]; poucas_notas?: boolean; fora_parlamentares: number;
   categorias: Record<string, number>;
 }
@@ -643,6 +645,8 @@ export interface HistoricoMaior { id: string; nome: string; uf: string; partido:
 export interface Historico {
   atualizado: string; inicio: number; ipca_base: string; fontes: Record<string, string>;
   anos: HistoricoAno[]; maiores: Record<"camara" | "senado", HistoricoMaior[]>;
+  /** Só a bancada de um estado (Minas Nossa: "MG") */
+  uf?: string;
 }
 export interface HistoricoPessoa {
   id: string; casa: "camara" | "senado"; nome: string; total: number; atualizado: string; fontes: Record<string, string>;

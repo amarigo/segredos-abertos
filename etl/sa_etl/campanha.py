@@ -626,6 +626,7 @@ def montar(saida: Path, politicos: list[dict], despesas: list[dict], emps: dict[
     npol = {k: len(v) for k, v in quem_paga.items()}
     lista, por_empresa = [], defaultdict(list)
     n_com = 0
+    com_arquivo: list[str] = []  # quem tem p/campanha/{id}.json: o site separa "sem candidatura" de "não carregou"
     for p in politicos:
         cs = cands.get(p["id"]) or []
         pagos = {x["cnpj"] for x in cota[p["id"]].values()} | {x["cnpj"] for x in emenda[p["id"]].values()}
@@ -634,6 +635,7 @@ def montar(saida: Path, politicos: list[dict], despesas: list[dict], emps: dict[
         if not cs and not lig:
             continue
         n_com += bool(cs)
+        com_arquivo.append(p["id"])
         write_json(saida / "p" / "campanha" / f"{p['id']}.json", {
             "id": p["id"], "atualizado_em": hoje.isoformat(),
             "campanhas": [campanha_publica(c, no_site, contas.get(c["ano"]) or {}) for c in cs],
@@ -664,9 +666,20 @@ def montar(saida: Path, politicos: list[dict], despesas: list[dict], emps: dict[
                             "comuns": sum(1 for x in lista if x.get("comum"))},
               "ligacoes": lista}
     write_json(saida / "campanha.json", resumo)
+    write_json(saida / ARQUIVO_PERFIS, perfis(com_arquivo, hoje.isoformat()))
     log.info("Campanha: %d de %d parlamentares com contas achadas; %d ligações com o mandato (%s)", n_com, len(politicos),
              len(lista), resumo["contagens"])
     return resumo
+
+
+# Lista pequena de quem tem a aba Campanha (p/campanha/{id}.json). campanha.json tem a mesma informação, mas pesa 2 MB.
+# Sem ela, o site só sabia que o arquivo não veio (HTTP 404) e dizia "não achamos a candidatura" mesmo quando o
+# arquivo faltava por erro na publicação (aconteceu no Minas Nossa até 17/11/2026).
+ARQUIVO_PERFIS = "campanha-perfis.json"
+
+
+def perfis(ids: Iterable[str], atualizado_em: str) -> dict:
+    return {"atualizado_em": atualizado_em, "perfis": sorted(set(ids))}
 
 
 def coletar(saida: Path, cache: Path, dados: dict, anos: Iterable[int] = ANOS, hoje: dt.date | None = None) -> dict | None:

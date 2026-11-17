@@ -171,10 +171,17 @@ function UmaCampanha({ c }: { c: Campanha }) {
   );
 }
 
+/* A lista de quem tem a aba (campanha-perfis.json) separa "sem candidatura achada" de "o arquivo não carregou".
+   Antes, qualquer falha virava "não achamos a candidatura": foi o que o Minas Nossa mostrou para todos até 17/11/2026,
+   quando os arquivos de campanha não eram copiados para /mg/. */
 export function CampanhaPolitico({ p }: { p: Politico }) {
-  const { data: d, error } = useData<Dados>(`p/campanha/${p.id}.json`);
+  const { data: lista, error: erroLista } = useData<{ perfis: string[] }>("campanha-perfis.json");
+  const tem = lista ? lista.perfis.includes(p.id) : false;
+  const { data: d, error } = useData<Dados>(tem ? `p/campanha/${p.id}.json` : null);
   const [sel, setSel] = useState<number | null>(null);
-  if (error) return <div className="empty">Não achamos nas contas do TSE (2018, 2022 e 2026) uma candidatura de {p.nome}. Suplentes de senador, por exemplo, entram nas contas do titular da chapa.</div>;
+  if (erroLista || error) return <div className="empty" role="alert">Não conseguimos carregar as contas de campanha agora. Tente de novo daqui a pouco; se continuar, avise pelo link no fim da página.</div>;
+  if (!lista) return <Loading />;
+  if (!tem) return <div className="empty">Não achamos nas contas do TSE (2018, 2022 e 2026) uma candidatura de {p.nome}. Suplentes de senador, por exemplo, entram nas contas do titular da chapa.</div>;
   if (!d) return <Loading />;
   const c = d.campanhas.find((x) => x.ano === sel) || d.campanhas[0];
   return (

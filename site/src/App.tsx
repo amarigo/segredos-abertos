@@ -89,8 +89,8 @@ export default function App() {
           <Route path="/v/:id" element={<VotacaoPage />} />
           <Route path="/partidos" element={<Partidos />} />
           {!MG && <Route path="/gabinetes" element={<GabinetesPage />} />}
-          {!MG && <Route path="/historico" element={<HistoricoPage />} />}
-          {!MG && <Route path="/patrimonio" element={<PatrimonioPage />} />}
+          <Route path="/historico" element={<HistoricoPage />} />
+          <Route path="/patrimonio" element={<PatrimonioPage />} />
           {!MG && <Route path="/dinheiro" element={<Financas />} />}
           {!MG && <Route path="/emendas" element={<Emendas />} />}
           {!MG && <Route path="/incentivos" element={<Incentivos />} />}

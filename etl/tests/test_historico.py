@@ -50,7 +50,9 @@ def _resumos():
 
 def test_montar_grava_totais_que_a_validacao_aceita(tmp_path):
     idx = {f"2015{m:02d}": 100.0 for m in range(1, 13)} | {f"2016{m:02d}": 110.0 for m in range(1, 13)}
-    out = historico.montar(_resumos(), idx, tmp_path, hoje=dt.date(2026, 11, 10))
+    resumos = _resumos()
+    assert historico.dar_uf_senado(resumos, {"sen-5": "MG"}) == 0
+    out = historico.montar(resumos, idx, tmp_path, hoje=dt.date(2026, 11, 10))
     cam15 = next(x for x in out["anos"] if x["ano"] == 2015 and x["casa"] == "camara")
     assert cam15["total"] == 18000 and cam15["parlamentares"] == 2 and cam15["por_parlamentar"] == 9000
     assert cam15["total_hoje"] == 19800  # 10% de inflação até o último mês com IPCA
@@ -61,7 +63,52 @@ def test_montar_grava_totais_que_a_validacao_aceita(tmp_path):
     assert out["maiores"]["camara"][0]["id"] == "dep-10"
     r = Resultado()
     _conferir_historico(tmp_path, r)
-    assert r.erros == [] and r.alertas == ["Histórico da cota: 2016 só tem camara"]
+    assert r.erros == [] and r.alertas == ["Histórico da cota: 2016 só tem camara", "Histórico da cota de MG: 2016 só tem camara"]
+    # a bancada de MG: os dois deputados e o senador (o estado do senador veio da lista da legislatura)
+    mg = json.loads((tmp_path / "historico-uf" / "MG.json").read_text())
+    assert mg["uf"] == "MG" and mg["fontes"] == out["fontes"]
+    sen15 = next(x for x in mg["anos"] if x["ano"] == 2015 and x["casa"] == "senado")
+    assert sen15["total"] == 100 and sen15["parlamentares"] == 1 and sen15["categorias"] == {"Aluguel": 100}
+    assert next(x for x in mg["anos"] if x["ano"] == 2015 and x["casa"] == "camara")["total_hoje"] == 19800
+    assert mg["maiores"]["senado"][0]["id"] == "sen-5"
+
+
+def test_bancada_so_com_os_anos_no_estado_e_parlamentar_sem_estado_avisa(tmp_path):
+    """Quem foi eleito por outro estado entra só nos anos daquele estado; senador sem estado sai dos estados e a
+    conferência avisa (não some calado)."""
+    r1 = historico.resumir_camara([_linha("10", 1, 100)] + [{**_linha("11", 1, 40), "sgUF": "SP"}], 2015)
+    r2 = historico.resumir_camara([{**_linha("10", 1, 70, ano=2016), "sgUF": "SP"}], 2016)
+    r3 = historico.resumir_senado([{"ano": 2015, "mes": 1, "codSenador": 5, "nomeSenador": "B", "tipoDespesa": "Aluguel",
+                                    "valorReembolsado": 9}], 2015)
+    resumos = json.loads(json.dumps([r1, r2, r3]))
+    assert historico.dar_uf_senado(resumos, {}) == 1
+    historico.montar(resumos, {}, tmp_path)
+    mg = json.loads((tmp_path / "historico-uf" / "MG.json").read_text())
+    assert [(x["ano"], x["casa"], x["total"]) for x in mg["anos"]] == [(2015, "camara", 100)]
+    assert mg["maiores"]["camara"] == [{**mg["maiores"]["camara"][0], "id": "dep-10", "total": 100, "anos": 1}]
+    r = Resultado()
+    _conferir_historico(tmp_path, r)
+    assert r.erros == []
+    assert "Histórico senado 2015: 9.00 reais de parlamentares sem estado (fora dos estados)" in r.alertas
+
+
+def test_estado_dos_senadores_pela_lista_da_legislatura(tmp_path, monkeypatch):
+    pedidos = []
+
+    def get_json(url, params=None, **kw):
+        pedidos.append(url)
+        leg = int(url.rsplit("/", 1)[1].removesuffix(".json"))
+        return {"ListaParlamentarLegislatura": {"Parlamentares": {"Parlamentar": [
+            {"IdentificacaoParlamentar": {"CodigoParlamentar": "5", "UfParlamentar": "SP"},
+             "Mandatos": {"Mandato": [{"UfParlamentar": "MG", "PrimeiraLegislaturaDoMandato": {"NumeroLegislatura": str(leg)}}]}},
+            {"IdentificacaoParlamentar": {"CodigoParlamentar": "7", "UfParlamentar": "BA"}},
+            {"IdentificacaoParlamentar": {"NomeParlamentar": "sem código", "UfParlamentar": "AL"}}]}}}
+    monkeypatch.setattr(historico, "get_json", get_json)
+    ufs = historico.ufs_senadores(tmp_path, [2015, 2016], hoje=dt.date(2026, 11, 10))
+    assert ufs == {"sen-5": "MG", "sen-7": "BA"}  # a UF do mandato vale mais que a de hoje
+    assert len(pedidos) == 2  # 54ª (2011-2015) e 55ª (2015-2019)
+    historico.ufs_senadores(tmp_path, [2015, 2016], hoje=dt.date(2026, 11, 10))
+    assert len(pedidos) == 2  # legislatura passada: a cópia vale 30 dias
 
 
 def test_validacao_acusa_total_que_nao_bate(tmp_path):

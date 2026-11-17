@@ -172,6 +172,54 @@ test.describe("jornada", () => {
     }
   });
 
+  test("federal de MG: aba Campanha com as contas do TSE, patrimônio e cota desde 2008 no perfil", async ({ page }) => {
+    // Até 17/11/2026 o recorte de MG não copiava p/campanha/: a aba dizia "não achamos a candidatura" para todos
+    const erros = vigiar(page);
+    const id: string = dados("campanha-perfis.json").perfis[0];
+    const c = dados(`p/campanha/${id}.json`).campanhas[0];
+    const pat = dados(`pat/${id}.json`).declaracoes.filter((x: { principal: boolean }) => x.principal).pop();
+    await page.goto(`./#/p/${id}`);
+    // o detalhe do perfil fica recolhido: abre a parte do patrimônio
+    await page.getByRole("button", { name: /Patrimônio declarado ao TSE/ }).click();
+    await expect(page.locator(".patrimonio-politico")).toBeVisible();
+    await expect(page.locator(".patrimonio-politico")).toContainText(brl(pat.total));
+    await page.getByRole("tab", { name: "Campanha" }).click();
+    await expect(page.getByRole("heading", { name: "As contas de cada campanha" })).toBeVisible();
+    await expect(page.locator("main")).toContainText(brl(c.receitas.total));
+    await expect(page.locator("main")).not.toContainText("Não achamos nas contas do TSE");
+    expect(erros).toEqual([]);
+  });
+
+  test("federal sem candidatura achada diz isso, sem confundir com erro", async ({ page }) => {
+    vigiar(page);
+    const perfis: string[] = dados("campanha-perfis.json").perfis;
+    const sem = dados("politicos.json").find((p: { id: string }) => !perfis.includes(p.id));
+    await page.goto(`./#/p/${sem.id}?aba=campanha`);
+    await expect(page.locator("main")).toContainText(`Não achamos nas contas do TSE (2018, 2022 e 2026) uma candidatura de ${sem.nome}`);
+  });
+
+  test("patrimônio declarado e cota desde 2008: só os eleitos por Minas, com fonte e data", async ({ page }) => {
+    const erros = vigiar(page);
+    const pat = dados("patrimonio.json");
+    const hist = dados("historico.json");
+    const ufs = new Map(dados("politicos.json").map((p: { id: string; uf: string }) => [p.id, p.uf]));
+    expect(pat.politicos.length).toBeGreaterThan(0);
+    expect(pat.politicos.every((p: { id: string }) => ufs.get(p.id) === "MG")).toBe(true);
+    await page.goto("./#/politicos");
+    await page.getByRole("link", { name: /Patrimônio declarado ao TSE por cada deputado federal e senador de Minas/ }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Patrimônio declarado ao TSE: deputados federais e senadores de Minas");
+    await expect(page.locator("main")).toContainText(`dos ${pat.total_politicos} deputados federais e senadores eleitos por Minas`);
+    await expect(page.locator("main")).toContainText(`Atualizado em ${pat.atualizado.split("-").reverse().join("/")}`);
+    await expect(page.locator("main table").first().locator("tbody tr")).toHaveCount(pat.politicos.length);
+    await page.goto("./#/historico");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(`A cota parlamentar desde ${hist.inicio}: a bancada de Minas`);
+    await expect(page.getByRole("heading", { name: "Gasto total por ano: deputados federais e senadores de MG" })).toBeVisible();
+    const total = hist.anos.reduce((s: number, x: { total: number; total_hoje: number | null }) => s + (x.total_hoje ?? x.total), 0);
+    await expect(page.locator("main")).toContainText(brl(total));
+    await expect(page.getByRole("link", { name: /arquivo anual da cota da Câmara/ })).toHaveAttribute("href", /^https:\/\/www\.camara\.leg\.br\//);
+    expect(erros).toEqual([]);
+  });
+
   test("a página das emendas federais do site nacional fica fora do Minas Nossa", async ({ page }) => {
     vigiar(page);
     await page.goto("./#/emendas");
@@ -582,6 +630,15 @@ test.describe("caos no navegador", () => {
     await page.goto("./#/cidade/itajuba");
     await expect(page.locator("main")).toContainText("Não foi possível carregar");
     await expect(page.getByRole("navigation", { name: "Principal" })).toBeVisible();
+  });
+
+  test("arquivo de campanha que não carrega avisa o erro, sem dizer que não houve candidatura", async ({ page }) => {
+    vigiar(page);
+    const id: string = dados("campanha-perfis.json").perfis[0];
+    await page.route(`**/data/p/campanha/${id}.json`, (r) => r.fulfill({ status: 404, body: "" }));
+    await page.goto(`./#/p/${id}?aba=campanha`);
+    await expect(page.locator("main")).toContainText("Não conseguimos carregar as contas de campanha agora");
+    await expect(page.locator("main")).not.toContainText("Não achamos nas contas do TSE");
   });
 
   test("arquivo da cidade cortado ou com formato errado não derruba o site", async ({ page }) => {
