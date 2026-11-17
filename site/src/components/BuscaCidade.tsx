@@ -1,3 +1,4 @@
+import { TextInput } from "@mantine/core";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MG } from "../recorte";
@@ -82,10 +83,9 @@ export function BuscaCidade({ rotulo, id = "busca-cidade", autoFocus = false }: 
   const ir = (ue: string) => { guardar(ue); nav(`/quem/${ue}`); };
   return (
     <div className="rep-busca">
-      <form className="search" role="search" onSubmit={(e) => { e.preventDefault(); if (achadas[0]) ir(achadas[0][0]); }}>
-        <label htmlFor={id} className="muted small" style={{ flexBasis: "100%" }}>{rotulo}</label>
-        <input id={id} value={q} autoFocus={autoFocus} autoComplete="off" placeholder={MG ? "Ex.: Itajubá" : "Ex.: Campinas ou Recife PE"}
-          onFocus={() => setAtivo(true)} onChange={(e) => { setAtivo(true); setQ(e.target.value); }}
+      <form role="search" onSubmit={(e) => { e.preventDefault(); if (achadas[0]) ir(achadas[0][0]); }}>
+        <TextInput id={id} label={rotulo} size="md" value={q} autoFocus={autoFocus} autoComplete="off" placeholder={MG ? "Ex.: Itajubá" : "Ex.: Campinas ou Recife PE"}
+          onFocus={() => setAtivo(true)} onChange={(e) => { setAtivo(true); setQ(e.currentTarget.value); }}
           aria-describedby={`${id}-ajuda`} />
       </form>
       <span id={`${id}-ajuda`} className="sr-only">Digite pelo menos duas letras; a lista de cidades aparece embaixo.</span>

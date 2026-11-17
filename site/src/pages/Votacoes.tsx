@@ -1,22 +1,11 @@
 import { useMemo, useState } from "react";
-import { Link, NavLink, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Abrir, Colunas, Explain, Loading, OndeVer, ResultadoChip, useData } from "../components/ui";
 import { MESES_LONGOS, TEMAS, nomeTipo, casaNome, dataBR, descricaoCurta, proposicaoNome, tipoVotacao, type VotacaoResumo } from "../data";
 import { norm } from "./Home";
 import { MG } from "../recorte";
 import { AvisosFim } from "../components/Selo";
 import { ColunasAnos, Rosca, numero, prepararFatias } from "../components/graficos";
-
-/** As partes da seção de votações: o que está em andamento, o que já foi votado no Congresso e os julgamentos do STF. */
-export function VotacoesAbas() {
-  return (
-    <nav className="tabs" aria-label="Votações">
-      <NavLink end to="/votacoes" className={({ isActive }) => (isActive ? "ativa" : "")}>Projetos em andamento</NavLink>
-      <NavLink to="/votacoes/ja-votadas" className={({ isActive }) => (isActive ? "ativa" : "")}>Já votadas</NavLink>
-      {!MG && <NavLink to="/votacoes/tribunais" className={({ isActive }) => (isActive ? "ativa" : "")}>Julgamentos do STF</NavLink>}
-    </nav>
-  );
-}
 
 export default function Votacoes() {
   const { data, error } = useData<VotacaoResumo[]>("votacoes.json");
@@ -57,7 +46,6 @@ export default function Votacoes() {
   const fmtN = (v: number) => `${numero(v)} votaç${v === 1 ? "ão" : "ões"}`;
   return (
     <section>
-      <VotacoesAbas />
       <h1>Votações</h1>
       <Explain>Votações nominais do plenário, em que cada parlamentar registra o próprio voto.{MG ? " Sim e Não mostram o placar da Casa inteira; ao lado, como votou a bancada de Minas Gerais." : " Sim e Não mostram o placar oficial da Casa inteira."} PEC é proposta de emenda à Constituição, PL é projeto de lei, MPV é medida provisória e PLP é projeto de lei complementar.</Explain>
       <div className="search">

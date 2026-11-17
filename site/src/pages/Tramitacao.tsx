@@ -4,7 +4,6 @@ import { Explain, Loading, useData } from "../components/ui";
 import { TEMAS, autorSigla, nomeTipo, casaNome, dataBR, dataHoraBR, linkSeguro, type ArgumentoProjeto, type GrupoProjeto, type NoticiaContra, type Projeto, type Tramitacao, type TramitacaoAlmg } from "../data";
 import { norm } from "./Home";
 import { MG } from "../recorte";
-import { VotacoesAbas } from "./Votacoes";
 import { AvisosFim } from "../components/Selo";
 import CaminhoLei from "../components/CaminhoLei";
 
@@ -213,7 +212,7 @@ export default function TramitacaoPage() {
   [base, casa, tipo, tema, soMG, q]);
   const conta = (id: string) => id === "almg" ? (almg?.itens.length || 0) : (data?.itens || []).filter((p) => p.grupos.includes(id as GrupoProjeto)).length;
 
-  if (!data) return <section><VotacoesAbas /><Loading error={error} /></section>;
+  if (!data) return <Loading error={error} />;
   const atual = abas.find((a) => a.id === aba) || abas[0];
   const titulo = aba === "nova" ? `Apresentadas nos últimos ${data.dias_novas} dias` : atual.nome;
   // Na pauta: agrupado por dia da primeira reunião em que aparece
@@ -229,7 +228,6 @@ export default function TramitacaoPage() {
 
   return (
     <section>
-      <VotacoesAbas />
       <h1>Projetos em andamento</h1>
       <Explain>
         O que está sendo proposto agora no Congresso{MG && " e na Assembleia de Minas"}, quem propôs e qual é o próximo passo.

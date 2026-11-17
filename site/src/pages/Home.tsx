@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Barras, COR_GRUPO, Explain, Loading, useAno, useData } from "../components/ui";
-import { basePeriodo, comCadeiras, corPartido, cotaNoAno, nomePeriodo, GRUPO_CURTO, GRUPO_EXPLICA, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
+import { basePeriodo, dataBR, comCadeiras, corPartido, cotaNoAno, nomePeriodo, GRUPO_CURTO, GRUPO_EXPLICA, reais, reaisCurto, type EmpresaResumo, type Grupo, type Meta, type Partido, type Resumo } from "../data";
 import { GastoPartidos } from "./Partidos";
 import { MG, SITE } from "../recorte";
+import { SECOES } from "../menu";
+import { Accordion, Alert, Anchor, Badge, Card, Group, List, Paper, SimpleGrid, Stack, Text, TextInput, Title } from "@mantine/core";
 import type { CidadeResumo } from "../data";
 import { AvisosFim, SelosResumo } from "../components/Selo";
 import { Kpi, MapaAnos } from "../components/graficos";
@@ -67,140 +69,164 @@ export default function Home() {
   // Quem usou a cota no ano escolhido. meta.contagens.politicos conta todos da legislatura, inclusive quem saiu antes
   // do ano: em 2026 a frase dizia "os 1087 ... pediram em 2026", mas só 658 tinham nota no ano.
   const nNoAno = (pols || []).filter((p) => totalAno(p) > 0).length;
-  const nHoje = (pols || []).filter((p) => p.em_exercicio !== false).length;
   const minhaCidade = cidadeGuardada();
+  const fonte = <>Fonte: {SITE.fontes.replace(/^Dados oficiais d[ao]s? /, "")}. Atualizado em {dataBR(meta.atualizado_em)}.</>;
+  // Cartões das seções: um caminho claro para cada pergunta (a última seção, "Como funciona", fica no menu e no rodapé)
+  const tarefas = SECOES.filter((s) => s.id !== "sobre");
   return (
-    <>
-      <section className="porta" aria-labelledby="porta-titulo">
-        <h2 id="porta-titulo">Quem representa você?</h2>
-        <p className="small">Digite a sua cidade e veja todos os eleitos por ela, do vereador ao presidente: partido, o que cada cargo faz e, de quem está em Brasília, quanto gasta e como vota.</p>
-        <BuscaCidade rotulo="Sua cidade" id="busca-cidade" />
-        {minhaCidade && <p className="small" style={{ margin: "8px 0 0" }}><Link to={`/quem/${minhaCidade}`}>Ver de novo a última cidade que você procurou</Link></p>}
-      </section>
-      <section className="hero">
-        <span className="eyebrow">Cota parlamentar · {ano}</span>
-        <h1 className="big">{reaisCurto(meta.total_por_ano?.[ano] || 0)}</h1>
-        <p>foi o que {nNoAno ? `os ${nNoAno.toLocaleString("pt-BR")}` : "os"} {SITE.quem} pediram de reembolso com dinheiro público em {ano}.{meta.custo_por_ano?.[ano] ? <> Somando salários e equipe dos gabinetes, o custo conhecido chega a <strong>{reaisCurto(meta.custo_por_ano[ano])}</strong>.</> : null} Veja quanto cada um gastou, com quais empresas, quem são os donos dessas empresas e como cada um vota.</p>
-        <form className="search" role="search" onSubmit={(e) => { e.preventDefault(); if (resultados[0]) nav(`/p/${resultados[0].id}`); }}>
-          <label htmlFor="busca" className="muted small" style={{ flexBasis: "100%" }}>{SITE.busca}</label>
-          <input id="busca" value={q} onChange={(e) => setQ(e.target.value)} placeholder={SITE.buscaExemplo} autoComplete="off" />
-        </form>
-        {resultados.length > 0 && (
-          <div className="list">{resultados.map((p) => <PessoaLinha key={p.id} p={p} />)}</div>
-        )}
-      </section>
+    <Stack gap="xl">
+      <Stack gap="xs">
+        <Title order={1}>{MG ? "O dinheiro público de Minas, fácil de entender" : "O dinheiro público, fácil de entender"}</Title>
+        <Text c="dimmed" size="lg">Quanto cada político gasta, com quais empresas e como vota. Tudo com o link da fonte oficial.</Text>
+      </Stack>
 
-      <section>
-        <div className="grid">
-          <Kpi rotulo={`Cota parlamentar em ${ano}`} valor={meta.total_por_ano?.[ano]} serie={serie(meta.total_por_ano)} ano={ano} dica="reembolsos com nota fiscal"
-            {...comPeriodo((p, a) => p.total[a], (p) => p.total[ano])} />
-          {meta.custo_por_ano?.[ano] ? <Kpi rotulo={`Custo conhecido em ${ano}`} valor={meta.custo_por_ano[ano]} serie={serie(meta.custo_por_ano)} ano={ano} dica="cota, salários e equipe dos gabinetes"
-            anterior={emAndamento ? null : undefined} /> : null}
-          {medias.camara > 0 && <Kpi rotulo="Média por deputado federal" valor={medias.camara} serie={serieMedia("camara")} ano={ano} dica={`cota em ${ano}, média de todos os deputados${MG ? " de MG" : ""} que usaram a cota no ano, inclusive suplentes que ficaram poucos meses`}
-            {...comPeriodo((p, a) => p.medias[a]?.camara, (p) => p.medias[ano]?.camara)} />}
-          {medias.senado > 0 && <Kpi rotulo="Média por senador" valor={medias.senado} serie={serieMedia("senado")} ano={ano} dica={`cota em ${ano}, média de todos os senadores${MG ? " de MG" : ""} que usaram a cota no ano, inclusive suplentes`}
-            {...comPeriodo((p, a) => p.medias[a]?.senado, (p) => p.medias[ano]?.senado)} />}
-        </div>
-        <p className="small muted">{emAndamento
-          ? <>As setas comparam {ano} com o <strong>mesmo período</strong> de {Number(ano) - 1} ({nomePeriodo(meta)} dos dois anos), não com o ano inteiro. As notas de um mês chegam até 3 meses depois, então os últimos meses de {ano} ainda podem subir. O custo conhecido (salários e equipe) não tem o detalhe por mês e fica sem seta.</>
-          : <>A seta compara com o ano anterior inteiro.</>} Troque o ano no topo da página.</p>
-      </section>
+      <Paper withBorder p="lg" component="section" aria-labelledby="porta-titulo">
+        <Stack gap="md">
+          <Title order={2} id="porta-titulo">Quem representa você?</Title>
+          <BuscaCidade rotulo="Sua cidade" id="busca-cidade" />
+          {minhaCidade && <Anchor component={Link} to={`/quem/${minhaCidade}`} size="sm">Ver de novo a última cidade que você procurou</Anchor>}
+          <form role="search" onSubmit={(e) => { e.preventDefault(); if (resultados[0]) nav(`/p/${resultados[0].id}`); }}>
+            <TextInput id="busca" label={SITE.busca} size="md" value={q} onChange={(e) => setQ(e.currentTarget.value)} placeholder={SITE.buscaExemplo} autoComplete="off" />
+          </form>
+          {resultados.length > 0 && (
+            <div className="list">{resultados.map((p) => <PessoaLinha key={p.id} p={p} />)}</div>
+          )}
+        </Stack>
+      </Paper>
 
-      {MG && (
-        <section>
-          <h2>Minas em um só lugar</h2>
-          <Explain>Quem governa o estado, quem faz as leis na Assembleia, para onde vai o dinheiro das emendas e quanto cada um gasta. Tudo com o link da fonte oficial.</Explain>
-          <div className="grid">
-            <Link to="/dinheiro" className="card cidade-card destaque-card"><strong>O dinheiro de Minas</strong><span className="small muted">Em 3 cliques: quanto o estado e cada cidade gastaram, em quê, a comparação entre os anos e quem deixa de pagar imposto.</span></Link>
-            <Link to="/governo" className="card cidade-card"><strong>Governo do estado</strong><span className="small muted">Governador e vice eleitos, quem está no cargo hoje, salários e viagens do governador e dos secretários.</span></Link>
-            <Link to="/assembleia" className="card cidade-card"><strong>Deputados estaduais</strong><span className="small muted">{meta.estado?.deputados_estaduais ? `${meta.estado.deputados_estaduais} deputados: ` : ""}gastos da verba indenizatória nota por nota, projetos apresentados e aprovados.</span></Link>
-            <Link to="/emendas-estaduais" className="card cidade-card"><strong>Emendas estaduais</strong><span className="small muted">Quanto cada deputado estadual indicou do orçamento de Minas, para quais cidades e quem recebeu.</span></Link>
-            <Link to="/cultura" className="card cidade-card"><strong>Shows e cultura</strong><span className="small muted">Quanto as prefeituras gastam com shows e artistas, quem indicou o dinheiro e a Lei Rouanet em cada região, com a população das cidades.</span></Link>
-            <Link to="/painel" className="card cidade-card"><strong>Painel por área</strong><span className="small muted">Saúde, educação, cultura, esporte: quanto as emendas estaduais mandaram para cada área, onde e em quê. Junte áreas e filtre por cidade.</span></Link>
-            <Link to="/politicos" className="card cidade-card"><strong>Deputados federais e senadores</strong><span className="small muted">{nHoje ? `Os ${nHoje} que representam` : "Quem representa"} Minas em Brasília: cota parlamentar, empresas e votos.</span></Link>
-          </div>
-        </section>
-      )}
+      <Paper withBorder p="lg" component="section" className="hero">
+        <Stack gap={4}>
+          <Text size="sm" c="dimmed">Cota parlamentar em {ano}</Text>
+          <Text component="p" className="big">{reaisCurto(meta.total_por_ano?.[ano] || 0)}</Text>
+          <Text>foi o que {nNoAno ? `os ${nNoAno.toLocaleString("pt-BR")}` : "os"} {SITE.quem} pediram de reembolso com dinheiro público em {ano}.{meta.custo_por_ano?.[ano] ? <> Somando salários e equipe dos gabinetes, o custo conhecido chega a <strong>{reaisCurto(meta.custo_por_ano[ano])}</strong>.</> : null}</Text>
+          <Text size="xs" c="dimmed">{fonte}</Text>
+        </Stack>
+      </Paper>
 
-      {MG && cidades && cidades.length > 0 && (
-        <section>
-          <h2>Sua cidade</h2>
-          <Explain>Quem foi prefeito e quais partidos tiveram vereadores desde 1997, para saber de quem cobrar. E o dinheiro: onde a prefeitura gasta e quanto chegou por emendas de deputados e senadores.</Explain>
-          <div className="grid">
-            {cidades.map((c) => (
-              <Link key={c.id} to={`/cidade/${c.id}`} className="card cidade-card">
-                <strong className="cidade-nome">{c.nome}</strong>
-                {c.prefeito && <span className="small"><i className="partido-cor" style={{ background: corPartido(c.prefeito.partido_hoje) }} />Prefeito: {c.prefeito.nome} ({c.prefeito.partido})</span>}
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section>
-        <h2>Para onde vai o dinheiro</h2>
-        <Explain>Além do salário, cada parlamentar tem uma <strong>cota</strong> mensal para pagar despesas do mandato. Ele paga e pede reembolso apresentando a nota fiscal. Separamos esses gastos em três grupos e, dentro de cada um, pelo tipo de gasto: viagens, combustível, divulgação e os outros.</Explain>
-        {meta.temas_por_ano?.[ano]?.length ? <ParaOndeVai temas={meta.temas_por_ano[ano]} ano={ano} /> : <Barras rosca={{ titulo: `Cota parlamentar em ${ano}, pelos três grupos de gasto` }} itens={(Object.keys(grupos) as Grupo[]).map((g) => ({ nome: GRUPO_CURTO[g], label: <strong>{GRUPO_CURTO[g]}</strong>, nota: GRUPO_EXPLICA[g], valor: grupos[g], cor: COR_GRUPO[g] }))} />}
+      <section aria-labelledby="tarefas-titulo">
+        <Title order={2} id="tarefas-titulo" mb="sm">O que você quer saber?</Title>
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+          {tarefas.map((s) => (
+            <Card key={s.id} withBorder component={Link} to={s.paginas[0].rota} padding="lg">
+              <Text fw={600} size="lg">{s.pergunta}</Text>
+              <Group gap={6} mt="xs">{s.paginas.map((p) => <Badge key={p.rota} variant="light" color="gray">{p.nome}</Badge>)}</Group>
+            </Card>
+          ))}
+        </SimpleGrid>
       </section>
 
-      {ufs.size > 1 && (
-        <section>
-          <h2>Quanto gasta, em média, cada parlamentar de cada estado</h2>
-          <Explain>A média de cota por deputado federal e senador de cada estado. Quem mora longe de Brasília gasta mais com passagens, por isso Norte e Nordeste costumam aparecer mais escuros. Toque num estado para ver os parlamentares dele.</Explain>
-          <MapaAnos porAno={porUf} anoInicial={ano} titulo="Média de cota por parlamentar, por estado" onUf={(uf) => nav(`/politicos?uf=${uf}`)} />
-        </section>
-      )}
+      {/* Divulgação progressiva: os outros números da página inicial continuam aqui, um clique abaixo */}
+      <section aria-labelledby="mais-titulo">
+        <Title order={2} id="mais-titulo" mb="sm">Mais números de {ano}</Title>
+        <Accordion variant="separated" multiple>
+          <Accordion.Item value="resumo">
+            <Accordion.Control>Médias e comparação com o ano anterior</Accordion.Control>
+            <Accordion.Panel>
+              <div className="grid">
+                <Kpi rotulo={`Cota parlamentar em ${ano}`} valor={meta.total_por_ano?.[ano]} serie={serie(meta.total_por_ano)} ano={ano} dica="reembolsos com nota fiscal"
+                  {...comPeriodo((p, a) => p.total[a], (p) => p.total[ano])} />
+                {meta.custo_por_ano?.[ano] ? <Kpi rotulo={`Custo conhecido em ${ano}`} valor={meta.custo_por_ano[ano]} serie={serie(meta.custo_por_ano)} ano={ano} dica="cota, salários e equipe dos gabinetes"
+                  anterior={emAndamento ? null : undefined} /> : null}
+                {medias.camara > 0 && <Kpi rotulo="Média por deputado federal" valor={medias.camara} serie={serieMedia("camara")} ano={ano} dica={`cota em ${ano}, média de todos os deputados${MG ? " de MG" : ""} que usaram a cota no ano, inclusive suplentes que ficaram poucos meses`}
+                  {...comPeriodo((p, a) => p.medias[a]?.camara, (p) => p.medias[ano]?.camara)} />}
+                {medias.senado > 0 && <Kpi rotulo="Média por senador" valor={medias.senado} serie={serieMedia("senado")} ano={ano} dica={`cota em ${ano}, média de todos os senadores${MG ? " de MG" : ""} que usaram a cota no ano, inclusive suplentes`}
+                  {...comPeriodo((p, a) => p.medias[a]?.senado, (p) => p.medias[ano]?.senado)} />}
+              </div>
+              <Text size="sm" c="dimmed" mt="sm">{emAndamento
+                ? <>As setas comparam {ano} com o <strong>mesmo período</strong> de {Number(ano) - 1} ({nomePeriodo(meta)} dos dois anos), não com o ano inteiro. As notas de um mês chegam até 3 meses depois, então os últimos meses de {ano} ainda podem subir. O custo conhecido (salários e equipe) não tem o detalhe por mês e fica sem seta.</>
+                : <>A seta compara com o ano anterior inteiro.</>} Troque o ano no topo da página. Média de cota por deputado federal: {reais(medias.camara)} · por senador: {reais(medias.senado)}. {fonte}</Text>
+            </Accordion.Panel>
+          </Accordion.Item>
 
-      <div className="two">
-        <section>
-          <h2>Quem mais gastou em {ano}</h2>
-          <div className="list">{top.map((p) => <PessoaLinha key={p.id} p={p} extra={reaisCurto(totalAno(p))} />)}</div>
-          <Link to="/politicos">Ver todos os políticos</Link>
-        </section>
-        <section>
-          <h2>{empsAno ? `Empresas que mais receberam em ${ano}` : `Empresas que mais receberam (${meta.anos[0]} a ${meta.anos[meta.anos.length - 1]})`}</h2>
-          <div className="list">
-            {topEmps.map(({ e, v }) => (
-              <Link key={e.cnpj} to={`/e/${e.cnpj}`} className="person" style={{ gridTemplateColumns: "1fr auto" }}>
-                <div style={{ minWidth: 0 }}><div className="pname">{e.nome}</div><div className="meta">paga por {v.n_politicos} parlamentar{v.n_politicos > 1 ? "es" : ""}</div></div>
-                <div className="num">{reaisCurto(v.valor)}</div>
-              </Link>
-            ))}
-            {empsAno && emps && !topEmps.length && <div className="empty">Nenhuma empresa recebeu da cota em {ano} até agora.</div>}
-          </div>
-          <Link to="/empresas">Ver todas as empresas</Link>
-        </section>
-      </div>
+          <Accordion.Item value="para-onde">
+            <Accordion.Control>Para onde vai o dinheiro da cota</Accordion.Control>
+            <Accordion.Panel>
+              <Explain>Além do salário, cada parlamentar tem uma <strong>cota</strong> mensal para pagar despesas do mandato. Ele paga e pede reembolso apresentando a nota fiscal. Separamos esses gastos em três grupos e, dentro de cada um, pelo tipo de gasto.</Explain>
+              {meta.temas_por_ano?.[ano]?.length ? <ParaOndeVai temas={meta.temas_por_ano[ano]} ano={ano} /> : <Barras rosca={{ titulo: `Cota parlamentar em ${ano}, pelos três grupos de gasto` }} itens={(Object.keys(grupos) as Grupo[]).map((g) => ({ nome: GRUPO_CURTO[g], label: <strong>{GRUPO_CURTO[g]}</strong>, nota: GRUPO_EXPLICA[g], valor: grupos[g], cor: COR_GRUPO[g] }))} />}
+            </Accordion.Panel>
+          </Accordion.Item>
 
-      {!MG && (
-        <section>
-          <h2>Quem ganha com o dinheiro público</h2>
-          <Explain>Empresas, ONGs e entidades que mais recebem do governo federal, as que deixam de pagar impostos por benefícios fiscais e os parlamentares, partidos e estados que mais mandaram emendas para elas. Com os donos de cada empresa.</Explain>
-          <Link to="/incentivos" className="card cidade-card"><strong>Incentivos e dinheiro para empresas</strong><span className="small muted">Pagamentos, renúncia fiscal e emendas: quem recebeu mais e quem deu mais.</span></Link>
-        </section>
-      )}
-      {partidos && pols && partidos.some((p) => p.casa === "camara") && (
-        <section>
-          <h2>Onde cada partido está, pelos votos</h2>
-          <Explain>Cada partido da Câmara aparece no lado em que fica pelo voto dos seus deputados nas votações nominais. É o mesmo critério para todos. Não usamos o que o partido diz de si, porque nem todos se colocam num lado em documento oficial, como estatuto ou programa. Cada bolha é um partido no seu ponto da régua, do tamanho da bancada; a tabela embaixo lista os partidos de cada lado, também do mais à esquerda para o mais à direita. <Link to="/sobre">Entenda o cálculo</Link>.</Explain>
-          <EspectroPartidos partidos={comCadeiras(partidos, pols).filter((p) => p.casa === "camara")} />
-        </section>
-      )}
-      {partidos && <GastoPartidos partidos={partidos} ano={ano} limite={10} />}
-      <p className="muted small">Média de cota por deputado federal: {reais(medias.camara)} · por senador: {reais(medias.senado)} em {ano}.</p>
+          <Accordion.Item value="ranking">
+            <Accordion.Control>Quem mais gastou e quais empresas mais receberam</Accordion.Control>
+            <Accordion.Panel>
+              <div className="two">
+                <section>
+                  <Title order={3}>Quem mais gastou em {ano}</Title>
+                  <div className="list">{top.map((p) => <PessoaLinha key={p.id} p={p} extra={reaisCurto(totalAno(p))} />)}</div>
+                  <Anchor component={Link} to="/politicos">Ver todos os políticos</Anchor>
+                </section>
+                <section>
+                  <Title order={3}>{empsAno ? `Empresas que mais receberam em ${ano}` : `Empresas que mais receberam (${meta.anos[0]} a ${meta.anos[meta.anos.length - 1]})`}</Title>
+                  <div className="list">
+                    {topEmps.map(({ e, v }) => (
+                      <Link key={e.cnpj} to={`/e/${e.cnpj}`} className="person" style={{ gridTemplateColumns: "1fr auto" }}>
+                        <div style={{ minWidth: 0 }}><div className="pname">{e.nome}</div><div className="meta">paga por {v.n_politicos} parlamentar{v.n_politicos > 1 ? "es" : ""}</div></div>
+                        <div className="num">{reaisCurto(v.valor)}</div>
+                      </Link>
+                    ))}
+                    {empsAno && emps && !topEmps.length && <div className="empty">Nenhuma empresa recebeu da cota em {ano} até agora.</div>}
+                  </div>
+                  <Anchor component={Link} to="/empresas">Ver todas as empresas</Anchor>
+                </section>
+              </div>
+            </Accordion.Panel>
+          </Accordion.Item>
+
+          {ufs.size > 1 && (
+            <Accordion.Item value="estados">
+              <Accordion.Control>Média de gasto por parlamentar em cada estado</Accordion.Control>
+              <Accordion.Panel>
+                <Explain>Quem mora longe de Brasília gasta mais com passagens, por isso Norte e Nordeste costumam aparecer mais escuros. Toque num estado para ver os parlamentares dele.</Explain>
+                <MapaAnos porAno={porUf} anoInicial={ano} titulo="Média de cota por parlamentar, por estado" onUf={(uf) => nav(`/politicos?uf=${uf}`)} />
+              </Accordion.Panel>
+            </Accordion.Item>
+          )}
+
+          {partidos && pols && (
+            <Accordion.Item value="partidos">
+              <Accordion.Control>Partidos: onde cada um está pelos votos e quanto gasta</Accordion.Control>
+              <Accordion.Panel>
+                {partidos.some((p) => p.casa === "camara") && (
+                  <>
+                    <Explain>Cada partido da Câmara aparece no lado em que fica pelo voto dos seus deputados nas votações nominais. É o mesmo critério para todos. <Link to="/sobre">Entenda o cálculo</Link>.</Explain>
+                    <EspectroPartidos partidos={comCadeiras(partidos, pols).filter((p) => p.casa === "camara")} />
+                  </>
+                )}
+                <GastoPartidos partidos={partidos} ano={ano} limite={10} />
+              </Accordion.Panel>
+            </Accordion.Item>
+          )}
+
+          {MG && cidades && cidades.length > 0 && (
+            <Accordion.Item value="cidades">
+              <Accordion.Control>Cidades de Minas: prefeitos e dinheiro</Accordion.Control>
+              <Accordion.Panel>
+                <Explain>Quem foi prefeito e quais partidos tiveram vereadores desde 1997. E o dinheiro: onde a prefeitura gasta e quanto chegou por emendas.</Explain>
+                <div className="grid">
+                  {cidades.map((c) => (
+                    <Link key={c.id} to={`/cidade/${c.id}`} className="card cidade-card">
+                      <strong className="cidade-nome">{c.nome}</strong>
+                      {c.prefeito && <span className="small"><i className="partido-cor" style={{ background: corPartido(c.prefeito.partido_hoje) }} />Prefeito: {c.prefeito.nome} ({c.prefeito.partido})</span>}
+                    </Link>
+                  ))}
+                </div>
+              </Accordion.Panel>
+            </Accordion.Item>
+          )}
+        </Accordion>
+      </section>
+
       <AvisosFim>
         {meta.avisos && meta.avisos.length > 0 && (
-          <div className="alert" role="note">
-            <div>
-              <strong>Dados incompletos nesta atualização.</strong> Alguns sites oficiais não responderam na última coleta:
-              <ul>{meta.avisos.map((a) => <li key={a}>{a}</li>)}</ul>
-              {!MG && <p className="alert-nota">Tentamos de novo sozinhos a cada 2 horas, até todos os sites responderem.</p>}
-            </div>
-          </div>
+          <Alert color="yellow" title="Dados incompletos nesta atualização" role="note">
+            Alguns sites oficiais não responderam na última coleta:
+            <List size="sm" mt={4}>{meta.avisos.map((a) => <List.Item key={a}>{a}</List.Item>)}</List>
+            {!MG && <Text size="sm" mt={4}>Tentamos de novo sozinhos a cada 2 horas, até todos os sites responderem.</Text>}
+          </Alert>
         )}
         {!MG && <SelosResumo />}
       </AvisosFim>
-    </>
+    </Stack>
   );
 }
 

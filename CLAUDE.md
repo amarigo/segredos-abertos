@@ -25,7 +25,7 @@ Ao usar a opção 2 ou 3, deixe escrito no código por que a API não serviu.
 
 - Coleta (ETL): Python 3.12 (`etl/sa_etl`, `mg/etl/mg_etl`, `eleicao2026/etl/el_etl`). Dependências fixas em
   `etl/requirements.txt` (`requests`, `numpy`, `pypdf` para ler o texto dos pareceres). Não há backend nem servidor: o resultado da coleta são arquivos JSON.
-- Site e app: React 18 + TypeScript + Vite (`site/`), instalável no celular como PWA. O Minas Nossa é o mesmo site,
+- Site e app: React 18 + TypeScript + Vite + Mantine 8 (`site/`), instalável no celular como PWA. O Minas Nossa é o mesmo site,
   montado com `--mode mg`. Eleição 2026 (`eleicao2026/site/`), Terras Raras (`terras-raras/gerar_pagina.py`) e o
   painel de status (`status/`) são páginas próprias, sem React.
 - Dados: arquivos JSON gerados em `site/public/data/` e `site/public-mg/data/` (fora do git). Downloads e consultas
@@ -93,15 +93,26 @@ O ponto de entrada da coleta nacional é `etl/sa_etl/build.py`. A tabela complet
   `site/public/i18n/tradutor.js`, com dicionários em `site/public/i18n/en.json` e `es.json` (Eleição 2026:
   `eleicao2026/site/i18n/`). Dados oficiais (nomes, partidos, categorias) não são traduzidos. Código, comentários,
   commits e documentação do repositório são escritos em português, em linguagem simples.
-- Menus (abas principais e barra dos projetos), em todos os sites: todas as abas sempre à vista. Se não couberem numa
-  linha, quebram para a de baixo; nunca rolam de lado nem ficam cortadas. Conferido por `site/e2e/menu.ts`.
+- Menus, em todos os sites: poucas seções no topo, cada uma com uma pergunta clara (Políticos, Votações, Dinheiro,
+  Investigar, Como funciona), definidas em `site/src/menu.ts`. As páginas de cada seção aparecem como abas só quando a
+  pessoa entra nela. Página nova entra numa seção existente, não como seção nova. Todas as abas sempre à vista: se não
+  couberem numa linha, quebram para a de baixo; nunca rolam de lado nem ficam cortadas. Conferido por `site/e2e/menu.ts`.
+- Visual: design system [Mantine](https://mantine.dev) (`@mantine/core`), com o tema padrão e sem customização: use os
+  componentes e as propriedades deles (`Card`, `Paper`, `Tabs`, `Accordion`, `Title`, `Text c="dimmed"`...) em vez de
+  CSS próprio. Casca do site (topo, menu, abas da seção, rodapé) em `site/src/components/Casca.tsx`.
+- Menos carga para quem lê (https://lawsofux.com/articles/2015/design-principles-for-reducing-cognitive-load/): uma
+  ideia principal por tela, o resto recolhido (`Accordion`) a um clique; linguagem simples; o mesmo padrão em todas as
+  páginas. Simplificar é reorganizar: nenhum dado, fonte ou data some do site.
 - Componentes comuns do site em `site/src/components/` (`ui.tsx`: `Barras`, `GastoMensal`, `Espectro`, `VotoBarra`,
-  `LinkNota`, `Explain`...; `Selo.tsx`: selo da verificação). Reaproveite antes de criar um componente só para uma página.
-- Visual: padrão de site público brasileiro (gov.br): faixa azul-escura no topo com fio verde e amarelo, azul gov.br
-  nos links e números, letra Raleway. As cores são variáveis CSS em `site/src/styles.css` (`:root`), incluindo a paleta
-  validada das séries (`--s1`...`--c8`) e as cores de voto (`--sim`, `--nao`). Os gráficos do site são componentes
-  próprios em SVG (`ui.tsx`); o painel de análises usa Apache ECharts (`analises/painel.html`, ajudantes `barras`,
-  `linhas`, `rosca`, `desenhar`). Para mudar o painel, siga a skill `.claude/skills/painel-analises/`.
+  `LinkNota`, `Explain`...; `Selo.tsx`: selo da verificação). Reaproveite (ou use o do Mantine) antes de criar um
+  componente só para uma página.
+- Migração em andamento: páginas antigas ainda usam `site/src/styles.css`, cujas cores e letra já apontam para as
+  variáveis do Mantine (`--mantine-*`). Ao mexer numa página, troque o HTML com classes próprias pelos componentes do
+  Mantine e apague o CSS que ficar sem uso. Ficam fora do Mantine só as cores que ele não tem: a paleta validada das
+  séries dos gráficos (`--s1`...`--c8`), as cores de voto (`--sim`, `--nao`) e o mapa. Os gráficos do site são
+  componentes próprios em SVG (`ui.tsx`, `graficos.tsx`); o painel de análises usa Apache ECharts
+  (`analises/painel.html`, ajudantes `barras`, `linhas`, `rosca`, `desenhar`). Para mudar o painel, siga a skill
+  `.claude/skills/painel-analises/`.
 - Skills do agente (`.claude/skills/`): toda skill passa pelo SkillSpector da NVIDIA antes de entrar e a cada push
   (workflow [`skills-seguranca.yml`](.github/workflows/skills-seguranca.yml)). Como instalar uma skill nova e os achados
   aceitos em [`.claude/skillspector/README.md`](.claude/skillspector/README.md). Fichas de visual de marcas, só para

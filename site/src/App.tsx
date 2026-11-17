@@ -1,8 +1,10 @@
 import { Suspense, lazy, useEffect, useMemo, useState, type ComponentType } from "react";
-import { NavLink, Navigate, Route, Routes, Link, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, Link, useLocation } from "react-router-dom";
+import { Container } from "@mantine/core";
+import { AbasDaSecao, Rodape, Topo, VoltarAoMenu } from "./components/Casca";
 import Home from "./pages/Home";
-import { MG, SITE } from "./recorte";
-import { AnoCtx, AnoSeletor, ErroNaPagina, Loading, useData } from "./components/ui";
+import { MG } from "./recorte";
+import { AnoCtx, ErroNaPagina, Loading, useData } from "./components/ui";
 import { dataBR, type Meta } from "./data";
 
 /* Cada página vira um arquivo separado, baixado só quando a pessoa abre a página: o início carrega bem menos código
@@ -54,51 +56,6 @@ const CasoCorrupcao = pagina(() => import("./pages/CasoCorrupcao"));
 const PunicoesPage = pagina(() => import("./pages/Punicoes"));
 const Representantes = pagina(() => import("./pages/Representantes"));
 
-/* Os projetos do Segredos Abertos, publicados lado a lado no mesmo site (/, /mg/, /eleicao2026/ e /terras-raras/).
-   Links relativos: funcionam no GitHub Pages e numa cópia local de site/dist. */
-const PROJETOS = [
-  { id: "brasil", nome: "Brasil", href: MG ? "../" : "./" },
-  { id: "mg", nome: "Minas Nossa", href: MG ? "./" : "mg/" },
-  { id: "eleicao", nome: "Eleição 2026", href: MG ? "../eleicao2026/" : "eleicao2026/" },
-  { id: "terras", nome: "Terras Raras MG", href: MG ? "../terras-raras/" : "terras-raras/" },
-];
-
-/* Seletor de língua. A tradução é feita por public/i18n/tradutor.js (carregado no index.html), que troca os textos
-   da página pelos do dicionário. Os links levam ao mesmo endereço com ?lang=en ou ?lang=es (o português fica sem). */
-const LINGUAS = [
-  { id: "pt", sigla: "PT", nome: "Português", lang: "pt-BR" },
-  { id: "en", sigla: "EN", nome: "English", lang: "en" },
-  { id: "es", sigla: "ES", nome: "Español", lang: "es" },
-];
-function Linguas() {
-  const i18n = window.SA_I18N;
-  const atual = i18n?.lingua || "pt";
-  return (
-    <span className="linguas" translate="no" role="group" aria-label={atual === "en" ? "Language" : "Idioma"}>
-      {LINGUAS.map((l) => (
-        <a key={l.id} href={i18n ? i18n.endereco(l.id) : "#"} lang={l.lang} hrefLang={l.lang} title={l.nome}
-          aria-current={l.id === atual ? "true" : undefined}
-          onClick={(e) => { if (i18n) { e.preventDefault(); i18n.trocar(l.id); } }}>{l.sigla}</a>
-      ))}
-    </span>
-  );
-}
-
-function Projetos() {
-  const atual = MG ? "mg" : "brasil";
-  return (
-    <nav className="projetos" aria-label="Projetos do Segredos Abertos">
-      <div className="wrap">
-        <span>Projetos:</span>
-        {PROJETOS.map((p) => (
-          <a key={p.id} href={p.href} aria-current={p.id === atual ? "page" : undefined}>{p.nome}</a>
-        ))}
-        <Linguas />
-      </div>
-    </nav>
-  );
-}
-
 export default function App() {
   const { pathname } = useLocation();
   // Chaves: scrollTo pode devolver uma Promise em navegadores novos, e o React trataria isso como limpeza
@@ -112,36 +69,9 @@ export default function App() {
   const setAno = (a: string) => { setEscolhido(a); try { localStorage.setItem("ano", a); } catch { /* sem armazenamento */ } };
   return (
     <AnoCtx.Provider value={{ ano, anos, setAno }}>
-      <Projetos />
-      <header className="top">
-        <div className="wrap">
-          <Link to="/" className="brand"><img src="./icon.svg" alt="" /><span>{SITE.nome} <span style={{ color: "var(--gold)" }}>{SITE.destaque}</span></span></Link>
-          <nav className="nav" aria-label="Principal">
-            {!MG && <NavLink to="/dinheiro">Arrecadação e gastos</NavLink>}
-            {MG && <NavLink to="/dinheiro">Dinheiro</NavLink>}
-            <NavLink to="/quem">Quem me representa</NavLink>
-            {MG && <NavLink to="/governo">Governo</NavLink>}
-            {MG && <NavLink to="/assembleia">Deputados estaduais</NavLink>}
-            <NavLink to="/politicos">{MG ? "Federais" : "Políticos"}</NavLink>
-            {MG && <NavLink to="/cidades">Cidades</NavLink>}
-            {MG && <NavLink to="/emendas-estaduais">Emendas</NavLink>}
-            {MG && <NavLink to="/licitacoes">Licitações</NavLink>}
-            {MG && <NavLink to="/cultura">Shows e cultura</NavLink>}
-            {MG && <NavLink to="/painel">Painel por área</NavLink>}
-            <NavLink to="/empresas">Empresas</NavLink>
-            <NavLink to="/votacoes">Votações</NavLink>
-            <NavLink to="/partidos">Partidos</NavLink>
-            {!MG && <NavLink to="/emendas">Emendas</NavLink>}
-            {!MG && <NavLink to="/incentivos">Incentivos</NavLink>}
-            {!MG && <NavLink to="/corrupcao">Corrupção</NavLink>}
-            <NavLink to="/rede">Minha rede</NavLink>
-            <NavLink to="/sobre">Como funciona</NavLink>
-          </nav>
-          {/* A página de arrecadação e o painel por área têm os próprios anos; corrupção, julgamentos do STF, shows e cultura e quem me representa não dependem do ano escolhido: o seletor só confundiria */}
-          {pathname !== "/dinheiro" && pathname !== "/licitacoes" && !pathname.startsWith("/corrupcao") && pathname !== "/votacoes/tribunais" && pathname !== "/painel" && pathname !== "/cultura" && !pathname.startsWith("/quem") && <AnoSeletor />}
-        </div>
-      </header>
-      <main className="wrap">
+      <Topo />
+      <Container size="lg" component="main" className="wrap">
+        <AbasDaSecao />
         <ErroNaPagina key={pathname}>
         <Suspense fallback={<Loading />}>
         <Routes>
@@ -184,37 +114,10 @@ export default function App() {
         </Routes>
         </Suspense>
         </ErroNaPagina>
-      </main>
-      <footer>
-        <div className="wrap">
-          <span>{SITE.fontes}{meta ? `, atualizados em ${dataBR(meta.atualizado_em)}` : ""}.</span>
-          {MG && <span>O Minas Nossa é a parte de Minas Gerais do <a href={SITE.nacional}>Segredos Abertos Brasil</a>.</span>}
-          {!MG && <span><Link to="/verificacao">Como conferimos os números</Link>.</span>}
-          <span>Projeto independente e sem fins lucrativos. Código aberto em <a href="https://github.com/amarigo/segredos-abertos">GitHub</a>.</span>
-        </div>
-      </footer>
+      </Container>
+      <Rodape atualizado={meta ? dataBR(meta.atualizado_em) : undefined} />
       <VoltarAoMenu />
     </AnoCtx.Provider>
-  );
-}
-
-/** Botão "Menu" que aparece depois de rolar uma página longa. No celular o menu não fica preso no topo (ocuparia
- * meia tela), então numa lista comprida a pessoa precisava rolar tudo de volta para trocar de aba. */
-function VoltarAoMenu() {
-  const [ver, setVer] = useState(false);
-  useEffect(() => {
-    const olhar = () => setVer(window.scrollY > window.innerHeight * 1.5);
-    olhar();
-    window.addEventListener("scroll", olhar, { passive: true });
-    return () => window.removeEventListener("scroll", olhar);
-  }, []);
-  if (!ver) return null;
-  return (
-    <button type="button" className="voltar-menu" onClick={() => {
-      const suave = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      window.scrollTo({ top: 0, behavior: suave ? "smooth" : "auto" });
-      document.querySelector<HTMLElement>(".top .nav a")?.focus({ preventScroll: true });
-    }}><span aria-hidden="true">↑</span> Menu</button>
   );
 }
 

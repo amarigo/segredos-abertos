@@ -70,13 +70,19 @@ test.describe("jornada", () => {
     await expect(page.locator(".brand")).toContainText("Minas Nossa");
     await expect(page).toHaveTitle(/^Minas Nossa/);
     await expect(page.locator(".hero")).toContainText(`${meta.contagens.politicos} deputados federais e senadores de Minas Gerais`);
-    const nav = page.getByRole("navigation", { name: "Principal" });
-    await expect(nav.getByRole("link", { name: "Cidades" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Emendas" })).toHaveAttribute("href", "#/emendas-estaduais");
-    for (const c of cidades) await expect(page.locator("main")).toContainText(c.nome);
-    for (const nome of ["Governo do estado", "Deputados estaduais", "Emendas estaduais"]) {
-      await expect(page.locator("main").getByRole("link", { name: new RegExp(nome) })).toBeVisible();
+    // Cartões das seções: cada um lista as páginas que tem dentro
+    for (const nome of ["Governo", "Deputados estaduais", "Cidades", "Emendas"]) {
+      await expect(page.locator("main .mantine-Card-root").getByText(nome, { exact: true }).first()).toBeVisible();
     }
+    // As cidades ficam um clique abaixo, em "Mais números"
+    await page.getByRole("button", { name: /Cidades de Minas/ }).click();
+    for (const c of cidades) await expect(page.locator("main").getByRole("link", { name: new RegExp(c.nome) }).first()).toBeVisible();
+    // Menu: a seção Dinheiro abre com as abas Estado, Cidades e Emendas estaduais
+    const nav = page.getByRole("navigation", { name: "Principal" });
+    await nav.getByRole("link", { name: "Dinheiro" }).click();
+    await expect(page.getByRole("tab", { name: "Cidades" })).toBeVisible();
+    await page.getByRole("tab", { name: "Emendas" }).click();
+    await expect(page).toHaveURL(/#\/emendas-estaduais$/);
     expect(erros).toEqual([]);
   });
 
@@ -560,7 +566,8 @@ test("barra dos projetos liga o Minas Nossa aos outros sites do Segredos Abertos
 test("Minas Nossa troca para inglês e tem páginas simples para buscadores", async ({ page, request }) => {
   await page.goto("./?lang=en");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.getByRole("navigation", { name: "Segredos Abertos projects" })).toContainText("Projects:");
+  await expect(page.getByRole("navigation", { name: "Segredos Abertos projects" })).toBeVisible();
+  await expect(page.locator("nav.nav")).toContainText("Politicians");
   await expect(page.locator('link[rel=alternate][hreflang="es"]')).toHaveAttribute("href", /\/mg\/\?lang=es/);
   expect((await request.get("./i18n/en.json")).ok()).toBeTruthy();
   expect(await (await request.get("./sitemap-paginas.xml")).text()).toContain("/mg/");
@@ -586,7 +593,7 @@ test.describe("caos no navegador", () => {
     await page.route("**/data/cidades/paraisopolis.json", (r) => r.fulfill({ json: { id: "paraisopolis", nome: "X", executivo: "?" } }));
     await page.goto("./#/cidade/paraisopolis");
     await expect(page.locator("main")).toContainText(/Não foi possível/);
-    await page.getByRole("link", { name: "Cidades" }).click();
+    await page.getByRole("tab", { name: "Cidades" }).click();
     await expect(page.locator("main")).toContainText("Itajubá");
   });
 
@@ -651,7 +658,11 @@ test("menu principal: todas as abas à vista, do celular pequeno ao monitor gran
   await page.goto("./");
   await expect(page.locator("nav.nav a").first()).toBeVisible();
   await abasAVista(page, "nav.nav", "a");
-  await abasAVista(page, "nav.projetos .wrap", "a");
+  await abasAVista(page, "nav.projetos", "a");
+  for (const rota of ["#/politicos", "#/dinheiro"]) {
+    await page.goto(`./${rota}`);
+    await abasAVista(page, ".abas-secao [role=tablist]", "[role=tab]");
+  }
 });
 
 test("quem me representa no Minas Nossa: só cidades de Minas, lidas do site nacional", async ({ page }) => {
