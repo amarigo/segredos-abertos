@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Barras, Explain, Loading, OndeVer, useData } from "../components/ui";
 import { ColunasAnos } from "../components/graficos";
+import { TituloSecao } from "../components/Detalhes";
 import { dataBR, reais, reaisCurto, type Patrimonio, type PatrimonioPessoa, type PatrimonioResumo } from "../data";
 
 /* Patrimônio declarado ao TSE por cada deputado federal e senador do site (patrimonio.json e pat/{id}.json).
@@ -64,7 +65,7 @@ export default function PatrimonioPage() {
         <thead><tr><th>Parlamentar</th><th>Antes</th><th>Depois</th><th className="num">Diferença</th></tr></thead>
         <tbody>{aumentos.map(({ p, dif }) => (
           <tr key={p.id}>
-            <td><Link to={`/p/${p.id}`}>{p.nome}</Link> <span className="muted small">{[p.partido, p.uf].filter(Boolean).join("-")}</span>
+            <td><Link to={`/p/${p.id}?ver=patrimonio`}>{p.nome}</Link> <span className="muted small">{[p.partido, p.uf].filter(Boolean).join("-")}</span>
               {p.salto && <div className="small aviso-salto">Subiu mais de 20 vezes: confira no TSE</div>}</td>
             <td>{reaisCurto(p.anterior!.total)} <span className="muted small">({p.anterior!.ano})</span></td>
             <td>{reaisCurto(p.ultimo.total)} <span className="muted small">({p.ultimo.ano})</span></td>
@@ -86,7 +87,7 @@ export default function PatrimonioPage() {
 function Linha({ p }: { p: PatrimonioResumo }) {
   return (
     <tr>
-      <td><Link to={`/p/${p.id}`}>{p.nome}</Link> <span className="muted small">{[p.partido, p.uf].filter(Boolean).join("-")}</span>
+      <td><Link to={`/p/${p.id}?ver=patrimonio`}>{p.nome}</Link> <span className="muted small">{[p.partido, p.uf].filter(Boolean).join("-")}</span>
         {p.salto && <div className="small aviso-salto">Subiu mais de 20 vezes desde a eleição anterior: confira no TSE</div>}</td>
       <td>{p.ultimo.ano} <span className="muted small">{p.ultimo.cargo}</span></td>
       <td className="num">{reais(p.ultimo.total)}</td>
@@ -96,15 +97,16 @@ function Linha({ p }: { p: PatrimonioResumo }) {
 
 /* No perfil: o patrimônio declarado em cada eleição desde 2014 (quando houver pat/{id}.json). */
 export function PatrimonioPolitico({ id }: { id: string }) {
-  const { data } = useData<PatrimonioPessoa>(`pat/${id}.json`);
-  if (!data || !data.declaracoes.length) return null;
+  const { data, error } = useData<PatrimonioPessoa>(`pat/${id}.json`);
+  if (error || (data && !data.declaracoes.length)) return <p className="small muted">Não encontramos declaração de bens desta pessoa nos arquivos do TSE (eleições desde 2014). <Link to="/patrimonio">Veja todos os patrimônios declarados ›</Link></p>;
+  if (!data) return null;
   const prin = data.declaracoes.filter((d) => d.principal);
   const ult = prin[prin.length - 1];
   const serie: [string, number][] = prin.map((d) => [String(d.ano), d.total]);
   const outras = data.declaracoes.filter((d) => !d.principal);
   return (
     <section className="patrimonio-politico">
-      <h2>Patrimônio declarado ao TSE</h2>
+      <TituloSecao>Patrimônio declarado ao TSE</TituloSecao>
       <p className="small muted">Na eleição de {ult.ano} ({ult.cargo}{ult.local ? `, ${ult.local}` : ""}): <strong className="num">{reais(ult.total)}</strong>{ult.sem_bens ? " (não declarou bens)" : ""}.</p>
       {ult.salto && <p className="small aviso-salto" role="note">O total de {ult.ano} é mais de 20 vezes o da eleição anterior. É o número publicado pelo TSE; pode ser erro de digitação na declaração. <a href={ult.fonte} target="_blank" rel="noreferrer">Confira no TSE ↗</a></p>}
       {serie.length > 1 && <ColunasAnos serie={serie} titulo={`Patrimônio declarado por eleição de ${data.nome}`} formato={reaisCurto} cor="var(--c7)" />}

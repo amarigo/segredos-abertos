@@ -65,9 +65,12 @@ test.describe("jornada", () => {
     const x: { colunas: string[]; notas: (string | number)[][] } = dados(`p/notas/${p.id}-${ANO}.json`);
     expect(x.notas.length).toBe(d.n_notas);
     const iCat = x.colunas.indexOf("categoria"), iValor = x.colunas.indexOf("valor");
+    // As notas ficam recolhidas no perfil; o título do item traz quantas são, e ?ver=notas abre direto
     await page.goto(`./#/p/${p.id}`);
+    await expect(page.locator("#ver-notas")).toContainText(`(${d.n_notas.toLocaleString("pt-BR")})`);
+    await page.getByRole("button", { name: /Todas as notas fiscais/ }).click();
+    await expect(page).toHaveURL(/ver=notas/);
     const sec = page.locator("#todas-notas");
-    await expect(sec.getByRole("heading", { level: 2 })).toContainText(`(${d.n_notas.toLocaleString("pt-BR")})`);
     await expect(sec.locator("tbody tr").first()).toContainText(String(x.notas[0][iCat]));
     const cat = String(x.notas[x.notas.length - 1][iCat]);
     const da = x.notas.filter((n) => n[iCat] === cat);
@@ -105,6 +108,8 @@ test.describe("jornada", () => {
     await expect(primeira).toContainText(maior.nome);
     await expect(primeira).toContainText(sp(brl(maior.ultimo.total)));
     await primeira.getByRole("link", { name: maior.nome }).click();
+    // O link da lista abre o perfil com o patrimônio já aberto (?ver=patrimonio)
+    await expect(page).toHaveURL(/ver=patrimonio/);
     const bloco = page.locator(".patrimonio-politico");
     await expect(bloco).toContainText(sp(brl(maior.ultimo.total)));
     await expect(bloco.getByRole("link", { name: String(maior.ultimo.ano) }).first()).toHaveAttribute("href", /dadosabertos\.tse\.jus\.br/);
@@ -813,7 +818,7 @@ test.describe("segurança", () => {
       x.notas.forEach((n: string[]) => (n[i] = ruim));
       await r.fulfill({ json: x });
     });
-    await page.goto(`./#/p/${p.id}`);
+    await page.goto(`./#/p/${p.id}?ver=notas`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(p.nome);
     await expect(page.locator("#todas-notas tbody tr").first()).toBeVisible();
     expect(await page.locator('a[href^="javascript:" i], img[src^="javascript:" i]').count()).toBe(0);
