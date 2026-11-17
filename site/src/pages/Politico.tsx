@@ -204,10 +204,10 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
         </div>
         <h2>Cota por mês em {ano}</h2>
         <GastoMensal meses={d.meses} ano={ano} cor="var(--s2)" />
-        {!MG && <HistoricoPolitico id={p.id} />}
+        <HistoricoPolitico id={p.id} />
       </section>
 
-      {!MG && <PatrimonioPolitico id={p.id} />}
+      <PatrimonioPolitico id={p.id} />
 
       <TodasNotas p={p} d={d} ano={ano} />
 

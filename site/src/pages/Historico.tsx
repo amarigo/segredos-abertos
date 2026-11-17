@@ -3,9 +3,11 @@ import { Link } from "react-router-dom";
 import { Barras, Explain, Loading, OndeVer, useData } from "../components/ui";
 import { ColunasAnos } from "../components/graficos";
 import { MESES_LONGOS, reais, reaisCurto, type Historico, type HistoricoAno, type HistoricoPessoa, type Resumo } from "../data";
+import { MG } from "../recorte";
 
 /* Histórico da cota parlamentar desde 2008: somas por ano de cada Casa (historico.json) e, no perfil, de cada
-   parlamentar (h/{id}.json). Os valores vêm prontos do coletor; aqui só escolhemos o que mostrar. */
+   parlamentar (h/{id}.json). Os valores vêm prontos do coletor; aqui só escolhemos o que mostrar.
+   No Minas Nossa, historico.json é a bancada de MG (data.uf): só os anos em que cada um tinha mandato por Minas. */
 
 type Casa = "camara" | "senado" | "as_duas";
 const NOME_CASA: Record<Casa, string> = { camara: "Câmara", senado: "Senado", as_duas: "Câmara e Senado" };
@@ -35,6 +37,8 @@ export default function HistoricoPage() {
   const [ano, setAno] = useState("");
   const comPerfil = useMemo(() => new Set((pols || []).map((p) => p.id)), [pols]);
   if (!data) return <Loading error={error} />;
+  const uf = data.uf;
+  const quem = (c: Casa) => uf ? { as_duas: `deputados federais e senadores de ${uf}`, camara: `deputados federais de ${uf}`, senado: `senadores de ${uf}` }[c] : NOME_CASA[c];
 
   const temIpca = data.anos.some((x) => x.total_hoje != null);
   const usarHoje = hoje && temIpca;
@@ -67,12 +71,14 @@ export default function HistoricoPage() {
 
   return (
     <section className="historico">
-      <p className="small"><Link to="/politicos">‹ Políticos</Link></p>
+      <p className="small"><Link to="/politicos">‹ {MG ? "Federais" : "Políticos"}</Link></p>
       <span className="eyebrow">Cota parlamentar</span>
-      <h1>A cota parlamentar desde {data.inicio}</h1>
+      <h1>A cota parlamentar desde {data.inicio}{uf ? `: a bancada de ${uf === "MG" ? "Minas" : uf}` : ""}</h1>
       <Explain>
-        A cota paga, com nota fiscal, gastos do mandato: viagens, escritório, divulgação, combustível. Aqui está quanto a
-        Câmara e o Senado gastaram com ela em cada ano desde {data.inicio}, segundo os arquivos oficiais.
+        A cota paga, com nota fiscal, gastos do mandato: viagens, escritório, divulgação, combustível. Aqui está quanto {uf
+          ? <>os deputados federais e senadores eleitos por {uf === "MG" ? "Minas Gerais" : uf} gastaram</>
+          : <>a Câmara e o Senado gastaram</>} com ela em cada ano desde {data.inicio}, segundo os arquivos oficiais.
+        {uf && <> Cada pessoa conta só nos anos em que tinha mandato pelo estado, inclusive quem já saiu.</>}
         {temIpca && base && <> Em "reais de hoje", cada mês foi corrigido pela inflação (IPCA) até {base}.</>}
       </Explain>
       <div className="row graf-controles">
@@ -86,18 +92,18 @@ export default function HistoricoPage() {
           <button aria-pressed={!usarHoje} onClick={() => setHoje(false)}>Valores da época</button>
         </div>}
       </div>
-      <h2>Gasto total por ano: {NOME_CASA[casa]}</h2>
+      <h2>Gasto total por ano: {uf ? quem(casa) : NOME_CASA[casa]}</h2>
       <p className="small muted">Soma de {anos[0]} a {anos[anos.length - 1]}: <strong className="num">{reais(totalTudo)}</strong>{usarHoje ? " em reais de hoje" : " em valores da época"}. Toque num ano para ver os tipos de despesa.</p>
       <ColunasAnos serie={serie} titulo={`Cota parlamentar por ano, ${NOME_CASA[casa]}`} formato={fmt} parcial={parcial} ano={anoSel} setAno={setAno} cor="var(--s1)" compacta={anos.length > 10} />
       <p className="small muted">Valores em reais{usarHoje ? " de hoje" : " da época"}; "mi" é milhão.</p>
       {parcial.size > 0 && <p className="small muted">* {anoAtual} ainda está em andamento.</p>}
       {(poucas.length > 0 || fracos.length > 0) && <ul className="small muted">
-        {poucas.map((x) => <li key={`p${x.casa}${x.ano}`}>{x.ano}, {NOME_CASA[x.casa]}: o arquivo oficial tem poucas notas neste ano ({x.notas.toLocaleString("pt-BR")} notas, {reais(x.por_parlamentar)} por parlamentar). Não compare com os outros anos.</li>)}
+        {poucas.map((x) => <li key={`p${x.casa}${x.ano}`}>{x.ano}, {NOME_CASA[x.casa]}: o arquivo oficial tem poucas notas neste ano ({x.notas != null && <>{x.notas.toLocaleString("pt-BR")} notas, </>}{reais(x.por_parlamentar)} por parlamentar). Não compare com os outros anos.</li>)}
         {fracos.map((x) => <li key={`f${x.casa}${x.ano}`}>{x.ano}, {NOME_CASA[x.casa]}: poucas notas em {listaMeses(x.meses_fracos)}.</li>)}
       </ul>}
 
       <h2>Média por parlamentar</h2>
-      <Explain>O número de parlamentares muda de ano para ano (suplentes entram quando o titular sai). A média por parlamentar é a soma das notas de cada um dividida por quantos tiveram alguma nota no ano. As notas das lideranças dos partidos ficam fora da média.</Explain>
+      <Explain>O número de parlamentares muda de ano para ano (suplentes entram quando o titular sai). A média por parlamentar é a soma das notas de cada um dividida por quantos tiveram alguma nota no ano. As notas das lideranças dos partidos ficam fora da média.{uf && " Com poucos parlamentares (três senadores por estado), uma pessoa muda bastante a média."}</Explain>
       {porParl.map(({ c, serie: s }) => (
         <div key={c}>
           <h3>{c === "camara" ? "Média por deputado" : "Média por senador"}</h3>
@@ -106,12 +112,12 @@ export default function HistoricoPage() {
       ))}
 
       <h2>Tipos de despesa em {anoSel}</h2>
-      <p className="small muted">{NOME_CASA[casa]}, em valores da época{usarHoje ? " (a correção pela inflação vale para o ano inteiro, não para cada tipo)" : ""}.</p>
+      <p className="small muted">{uf ? quem(casa).replace(/^d/, "D").replace(/^s/, "S") : NOME_CASA[casa]}, em valores da época{usarHoje ? " (a correção pela inflação vale para o ano inteiro, não para cada tipo)" : ""}.</p>
       <Barras itens={Object.entries(cats).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([c, v]) => ({ label: c, valor: v }))} formato={(v) => reais(v)} />
 
       {maiores.map((c) => (
         <div key={c}>
-          <h2>Quem mais gastou somando todos os anos: {NOME_CASA[c]}</h2>
+          <h2>Quem mais gastou somando todos os anos: {uf ? quem(c) : NOME_CASA[c]}</h2>
           <p className="small muted">Soma de todos os anos com nota desde {data.inicio}{data.maiores[c].some((m) => m.total_hoje != null) ? ", em reais de hoje" : ""}. Quem ficou mais tempo no cargo tende a somar mais: veja os anos ao lado.</p>
           <div className="table-wrap"><table>
             <thead><tr><th>Parlamentar</th><th>Anos com nota</th><th className="num">Total</th></tr></thead>
@@ -159,7 +165,7 @@ export function HistoricoPolitico({ id }: { id: string }) {
     <div className="historico-politico">
       <h3>Cota em todos os anos com nota, desde {anos[0]}</h3>
       <ColunasAnos serie={serie} titulo={`Cota parlamentar por ano de ${data.nome}`} formato={anos.length > 10 ? compacto : reaisCurto} parcial={new Set(anos.filter((a) => a === anoAtual))} cor="var(--s2)" compacta={anos.length > 10} />
-      <p className="small muted">{temHoje ? "Em reais de hoje (corrigido pelo IPCA). " : "Em valores da época. "}Soma das notas dos arquivos oficiais de cada ano; nos anos mais recentes, é o mesmo total mostrado acima. {anos.some((a) => data.anos[a].partido) && <>Partido: {partidos(anos.map((a) => [a, data.anos[a].partido]))}. </>}<Link to="/historico">Veja a Câmara e o Senado desde 2008 ›</Link></p>
+      <p className="small muted">{temHoje ? "Em reais de hoje (corrigido pelo IPCA). " : "Em valores da época. "}Soma das notas dos arquivos oficiais de cada ano; nos anos mais recentes, é o mesmo total mostrado acima. {anos.some((a) => data.anos[a].partido) && <>Partido: {partidos(anos.map((a) => [a, data.anos[a].partido]))}. </>}<Link to="/historico">{MG ? "Veja a bancada de Minas desde 2008 ›" : "Veja a Câmara e o Senado desde 2008 ›"}</Link></p>
     </div>
   );
 }

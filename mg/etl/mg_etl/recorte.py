@@ -8,7 +8,15 @@ copiamos só o que é de MG, refazendo as somas que mudam com o recorte:
 - votações: só as em que algum político de MG votou. A lista de votos fica só com os de MG, e o placar da Casa
   inteira vai em "placar_casa", para o site mostrar quem venceu;
 - empresas: só as pagas por políticos de MG, com total, notas e meses refeitos só com esses políticos;
-- partidos e meta.json: refeitos a partir dos políticos de MG.
+- partidos e meta.json: refeitos a partir dos políticos de MG;
+- arquivos de cada político (todas as pastas de p/, como notas, agenda e campanha; o patrimônio em pat/ e a cota
+  desde 2008 em h/): copiados como estão. Pasta nova em p/ entra sozinha: a aba Campanha ficou fora até 17/11/2026
+  porque a cópia listava as pastas uma a uma;
+- campanha: a lista de quem tem a aba e o resumo só com os de MG; fornecedora da campanha só ganha link se tem
+  página no Minas Nossa;
+- patrimônio declarado (patrimonio.json): só os de MG;
+- histórico da cota desde 2008: o resumo da bancada de MG que o nacional já grava (historico-uf/MG.json), com o
+  arquivo de cada parlamentar que teve mandato por MG (inclusive quem já saiu).
 
 O resultado passa pela mesma conferência do nacional (sa_etl.validar), com mínimos de MG.
 """
@@ -43,20 +51,95 @@ def recortar(nacional: Path, saida: Path, uf: str = UF) -> dict:
     anos = [str(a) for a in meta_nac.get("anos", [])]
 
     for p in pols:
-        _copiar(nacional / "p" / f"{p['id']}.json", saida / "p" / f"{p['id']}.json")
-        for f in sorted((nacional / "p" / "notas").glob(f"{p['id']}-*.json")):  # lista completa de notas de cada ano
-            _copiar(f, saida / "p" / "notas" / f.name)
-        for f in sorted((nacional / "p" / "agenda").glob(f"{p['id']}-*.json")):  # calendário dia a dia de cada ano
-            _copiar(f, saida / "p" / "agenda" / f.name)
+        for f in arquivos_do_politico(nacional, p["id"]):
+            _copiar(f, saida / f.relative_to(nacional))
     write_json(saida / "politicos.json", pols)
 
     vots = _votacoes(nacional, saida, ids)
     emps = _empresas(nacional, saida, ids)
+    _campanha(nacional, saida, ids)
+    _patrimonio(nacional, saida, ids, len(pols))
+    _historico(nacional, saida, uf)
     write_json(saida / "partidos.json", partidos(pols, anos))
     _tramitacao(nacional, saida, uf)
     write_json(saida / "meta.json", meta(meta_nac, pols, anos, len(vots), emps))
     log.info("Recorte %s: %d políticos, %d votações, %d empresas", uf, len(pols), len(vots), len(emps))
     return {"politicos": len(pols), "votacoes": len(vots), "empresas": len(emps)}
+
+
+# Pastas com um arquivo por político, fora de p/: patrimônio declarado (pat/) e cota desde 2008 (h/)
+PASTAS_POR_POLITICO = ("pat", "h")
+
+
+def arquivos_do_politico(nacional: Path, pid: str) -> list[Path]:
+    """Todos os arquivos de um político no nacional: p/{id}.json, p/<pasta>/{id}.json e p/<pasta>/{id}-<ano>.json de
+    qualquer pasta de p/, e pat/{id}.json e h/{id}.json."""
+    pastas = [nacional / "p"] + sorted(d for d in (nacional / "p").iterdir() if d.is_dir()) if (nacional / "p").exists() else []
+    pastas += [nacional / x for x in PASTAS_POR_POLITICO]
+    out = []
+    for d in pastas:
+        out += [f for f in [d / f"{pid}.json"] if f.exists()] + sorted(d.glob(f"{pid}-*.json"))
+    return out
+
+
+def _campanha(nacional: Path, saida: Path, ids: set[str]) -> None:
+    """Lista de quem tem a aba Campanha e o resumo geral, só com os políticos de MG. Os arquivos de cada um já vieram
+    com os outros arquivos do político; aqui só o link da fornecedora muda: no Minas Nossa, só tem página a empresa
+    paga por político de MG."""
+    from sa_etl import campanha
+    fl = nacional / campanha.ARQUIVO_PERFIS
+    if not fl.exists():
+        return
+    lista = _ler(fl)
+    write_json(saida / campanha.ARQUIVO_PERFIS, campanha.perfis([i for i in lista.get("perfis") or [] if i in ids],
+                                                                 lista.get("atualizado_em") or ""))
+    no_site = {f.stem for f in (saida / "e").glob("*.json")} if (saida / "e").exists() else set()
+    for f in sorted((saida / "p" / "campanha").glob("*.json")) if (saida / "p" / "campanha").exists() else []:
+        d = _ler(f)
+        for c in d.get("campanhas") or []:
+            for x in c.get("fornecedores") or []:
+                if x.get("pagina") and x.get("doc") not in no_site:
+                    x.pop("pagina")
+        write_json(f, d)
+    fg = nacional / "campanha.json"
+    if fg.exists():
+        g = _ler(fg)
+        lig = [x for x in g.get("ligacoes") or [] if x.get("politico") in ids]
+        n_com = sum(1 for f in (saida / "p" / "campanha").glob("*.json") if _ler(f).get("campanhas"))
+        g.update({"ligacoes": lig, "contagens": {
+            "politicos": len(ids), "com_campanha": n_com, "ligacoes": len(lig),
+            **{t: sum(1 for x in lig if x["tipo"] == t) for t in ("fornecedor", "doador_socio", "politico_socio")},
+            "comuns": sum(1 for x in lig if x.get("comum"))}})
+        write_json(saida / "campanha.json", g)
+
+
+def _patrimonio(nacional: Path, saida: Path, ids: set[str], n_pols: int) -> None:
+    """Patrimônio declarado ao TSE: o resumo só com os de MG (os arquivos pat/{id}.json já vieram com cada político)."""
+    f = nacional / "patrimonio.json"
+    if not f.exists():
+        return
+    d = _ler(f)
+    lista = [p for p in d.get("politicos") or [] if p.get("id") in ids]
+    write_json(saida / "patrimonio.json", {**d, "politicos": lista, "total_politicos": n_pols,
+                                           "sem_registro": n_pols - len(lista)})
+
+
+def _historico(nacional: Path, saida: Path, uf: str) -> None:
+    """Cota desde 2008 da bancada do estado: o resumo do nacional (historico-uf/{UF}.json) vira o historico.json, e
+    vêm junto os arquivos h/{id}.json de todos que tiveram mandato pelo estado, para a conferência refazer as somas e
+    a lista dos que mais gastaram (quem já saiu tem link para a página oficial, não para um perfil)."""
+    f = nacional / "historico-uf" / f"{uf}.json"
+    if not f.exists():
+        return
+    d = _ler(f)
+    write_json(saida / "historico.json", d)
+    for fh in sorted((nacional / "h").glob("*.json")):
+        try:
+            h = _ler(fh)
+        except (OSError, ValueError):
+            continue
+        if any(a.get("uf") == uf for a in (h.get("anos") or {}).values()):
+            _copiar(fh, saida / "h" / fh.name)
 
 
 def _tramitacao(nacional: Path, saida: Path, uf: str) -> None:
@@ -130,6 +213,8 @@ def _empresas(nacional: Path, saida: Path, ids: set[str]) -> list[dict]:
             # empresas vizinhas e outras do mesmo dono podem ter sido pagas só por políticos de outros estados
             "mesmo_endereco": [], "socios": [{**s, "outras_empresas": []} for s in d.get("socios") or []],
             "donos_finais": [{**x, "outras_empresas": []} for x in d.get("donos_finais") or []],
+            # campanhas que a empresa serviu: só as dos políticos de MG (os outros não têm perfil no Minas Nossa)
+            **({"campanha": [x for x in d["campanha"] if x.get("politico") in ids]} if d.get("campanha") else {}),
         })
         por_ano: dict[str, list] = {}
         for x in d["por_mes"]:
