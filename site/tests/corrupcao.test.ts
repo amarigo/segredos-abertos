@@ -79,3 +79,19 @@ test("resumo geral e textos dos status", () => {
   assert.ok(r.pessoas > 100 && r.condenados > 20);
   for (const s of ORDEM) assert.ok(STATUS[s].nome && STATUS[s].um && STATUS[s].explica);
 });
+
+test("nota da linha do placar é a do partido de hoje, sem depender da ordem dos casos", () => {
+  const linhas = placar(CASOS, ORDEM);
+  const linhasAoContrario = placar([...CASOS].reverse(), ORDEM);
+  for (const l of linhas) {
+    const r = linhasAoContrario.find((x) => x.partido === l.partido)!;
+    assert.equal(r.nota, l.nota, l.partido);
+    assert.equal(r.campo, l.campo, l.partido);
+  }
+  const pl = linhas.find((l) => l.partido === "PL");
+  if (pl) { assert.equal(pl.nota, 7.78); assert.equal(pl.nota_de, "PR"); }
+  const uniao = linhas.find((l) => l.partido === "União");
+  if (uniao) { assert.equal(uniao.nota, null); assert.ok(uniao.nota_obs?.includes("DEM")); }
+  const prd = linhas.find((l) => l.partido === "PRD");
+  if (prd) { assert.equal(prd.nota, 6.1); assert.equal(prd.nota_de, "PTB"); }
+});

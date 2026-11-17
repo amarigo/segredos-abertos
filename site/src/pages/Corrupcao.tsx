@@ -80,6 +80,13 @@ export function Placar() {
         Quantas pessoas de cada partido aparecem nos {CASOS.length} casos, pela situação de cada uma na Justiça. Vale o partido <strong>da época dos fatos</strong>, somado com o nome de hoje (PMDB e MDB contam juntos; PR e PL também).
         Escolha abaixo o que entra na conta: por padrão vão de condenados a investigados. Citados e absolvidos ficam de fora, mas dá para incluir.
       </Explain>
+      <p className="small muted" id="nota-partido">
+        <strong>O que é a nota de cada partido:</strong> a posição dele de 0 (extrema-esquerda) a 10 (extrema-direita), pela média
+        das notas dadas por cientistas políticos numa pesquisa feita em 2018 e publicada em 2023 (<a href={FONTE_IDEOLOGIA.url} target="_blank" rel="noreferrer">{FONTE_IDEOLOGIA.nome}</a>).
+        O selo (esquerda, centro, direita...) segue os cortes do mesmo artigo. Não é calculada pelo site nem tem a ver com corrupção.
+        Se a pesquisa avaliou o partido com outro nome, ele aparece entre parênteses. O União Brasil nasceu depois da pesquisa, da fusão do
+        DEM (8,57, extrema-direita) com o PSL (8,11, direita), e fica sem nota; o site o põe na direita, a faixa mais baixa das duas.
+      </p>
       <fieldset className="placar-filtro">
         <legend className="muted small">O que contar</legend>
         {opcoes.map((s) => (
@@ -98,7 +105,8 @@ export function Placar() {
               <strong><i className="partido-cor" style={{ background: corPartido(l.partido) }} />{l.partido}</strong>
               {l.siglas.some((s) => s !== l.partido) && <span className="muted small"> (na época: {l.siglas.join(", ")})</span>}
               <div><span className="campo-chip" style={{ borderColor: corCampo(l.campo), color: "var(--ink-2)" }}>{l.campo}</span>
-                {l.nota != null && <span className="muted small"> nota {l.nota.toLocaleString("pt-BR")} de 10</span>}</div>
+                {l.nota != null && <a href="#nota-partido" className="muted small" title={`Posição de 0 (esquerda) a 10 (direita) segundo ${FONTE_IDEOLOGIA.nome}`}> nota {l.nota.toLocaleString("pt-BR")} de 10{l.nota_de && ` (dada ao ${l.nota_de})`}</a>}
+                {l.nota == null && l.nota_obs && <a href="#nota-partido" className="muted small" title={l.nota_obs}> sem nota própria</a>}</div>
             </div>
             <span className="placar-total num">{l.total}</span>
             <div className="placar-detalhe">

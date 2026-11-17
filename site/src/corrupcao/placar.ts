@@ -1,5 +1,5 @@
 import type { Caso, Nivel, Status } from "./tipos.ts";
-import { campoPartido, infoPartido, CAMPOS, type Campo } from "./partidos.ts";
+import { campoPartido, infoPartido, CAMPOS, PARTIDOS, type Campo } from "./partidos.ts";
 
 /* Placar por partido: quantas pessoas de cada partido aparecem em cada situação, somando os casos.
    Regras:
@@ -36,6 +36,10 @@ export interface LinhaPlacar {
   siglas: string[];           // siglas da época que entraram na conta
   campo: Campo;
   nota: number | null;
+  /** Sigla que a pesquisa avaliou, quando não é o nome de hoje (ex.: PR para o PL) */
+  nota_de?: string;
+  /** Por que não há nota, ou de onde ela vem (ex.: partido criado depois da pesquisa) */
+  nota_obs?: string;
   por: Record<Status, number>;
   total: number;              // só os status escolhidos
   casos: string[];            // ids dos casos em que o partido aparece (com os status escolhidos)
@@ -51,7 +55,17 @@ export function placar(casos: Caso[], incluir: Status[]): LinhaPlacar[] {
     const hoje = infoPartido(sigla).hoje;
     let l = linhas.get(hoje);
     if (!l) {
-      l = { partido: hoje, siglas: [], campo: campoPartido(sigla), nota: infoPartido(sigla).nota, por: zero(), total: 0, casos: [], maior: null };
+      // A nota e o campo da linha são os do partido de hoje, para não dependerem da ordem dos casos.
+      // Se a pesquisa não avaliou o nome de hoje (ex.: PRD), vale a sigla da época que ela avaliou (PTB).
+      const base = PARTIDOS[hoje] ? hoje : sigla;
+      const info = infoPartido(base);
+      const avaliada = info.nota == null ? undefined : info.nota_de || base;
+      l = {
+        partido: hoje, siglas: [], campo: campoPartido(base), nota: info.nota,
+        nota_de: avaliada && avaliada !== hoje ? avaliada : undefined,
+        nota_obs: info.nota == null ? info.obs : undefined,
+        por: zero(), total: 0, casos: [], maior: null,
+      };
       linhas.set(hoje, l);
     }
     if (!l.siglas.includes(sigla)) l.siglas.push(sigla);

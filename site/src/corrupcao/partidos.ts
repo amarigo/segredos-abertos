@@ -54,7 +54,7 @@ export const PARTIDOS: Record<string, InfoPartido> = {
   PSC: { hoje: "PSC", nota: 8.33, obs: "O PSC se juntou ao Podemos em 2023." },
   PFL: { hoje: "União", nota: 8.57, nota_de: "DEM", obs: "O PFL virou DEM em 2007, que se juntou ao PSL e virou União Brasil em 2022." },
   DEM: { hoje: "União", nota: 8.57, obs: "O DEM se juntou ao PSL e virou União Brasil em 2022." },
-  "União": { hoje: "União", nota: null, obs: "O União Brasil nasceu depois da pesquisa, da fusão do DEM (nota 8,57) com o PSL (8,11)." },
+  "União": { hoje: "União", nota: null, obs: "o União Brasil nasceu depois da pesquisa, da fusão do DEM (nota 8,57, extrema-direita) com o PSL (8,11, direita). O site o põe na direita, a faixa mais baixa das duas." },
   PRN: { hoje: "Agir", nota: 7.86, nota_de: "PTC", obs: "O PRN virou PTC em 2000 e Agir em 2022. A pesquisa avaliou a sigla PTC." },
 };
 
