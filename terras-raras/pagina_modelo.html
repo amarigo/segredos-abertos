@@ -578,15 +578,15 @@ function pAprender() {
 /* ---------- PROPOSTAS ---------- */
 function pPropostas() {
   view.append($("h1", {}, "O que podemos pedir aos nossos legisladores"),
-    $("p", { class: "lede" }, "Propostas em linguagem simples para que o lucro e as decisões fiquem com o Brasil e com as comunidades, e para que a conta ambiental não fique só com quem mora perto das minas. Cada uma traz um exemplo de outro país da América Latina ou da África."),
+    $("p", { class: "lede" }, "Propostas em linguagem simples para que o lucro e as decisões fiquem com o Brasil e com as comunidades, e para que a conta ambiental não fique só com quem mora perto das minas. Cada uma traz um exemplo de outro país, da mineração ou do petróleo: o que o mundo (e o próprio Brasil) já fez com o dinheiro do petróleo também serve para as terras raras."),
     $("p", { class: "note" }, "Em todo o mundo o padrão se repete: o minério sai bruto, o lucro vai para fora e a região fica com a água e o solo afetados. Os países que mudaram isso exigiram processar o minério no próprio país, ficaram com uma parte do negócio e deram às comunidades poder de decisão e um fundo próprio."), $("div", { style: "height:14px" }));
   view.append($("div", { class: "props" }, DADOS.propostas.map(p => {
     const b = $("button", { class: "btn", type: "button" }, "Copiar mensagem para legislador");
     const msg = `Prezado(a) legislador(a),\n\nSou morador(a) de Minas Gerais e acompanho os projetos de terras raras no estado. Peço que apoie a seguinte medida: ${p.titulo}.\n\nO que pedimos: ${p.o_que_pedir}\n\nPor quê: ${p.por_que}\n\nExemplo: ${p.exemplo_no_mundo}\n\nBase legal relacionada: ${p.lei_brasileira_relacionada}.\n\nAtenciosamente,`;
     b.addEventListener("click", async () => { try { await navigator.clipboard.writeText(msg); b.textContent = "Mensagem copiada"; setTimeout(() => { b.textContent = "Copiar mensagem para legislador"; }, 2500); } catch (e) { const t = $("textarea", { id: "msg-" + p.id, rows: "8" }); t.value = msg; b.replaceWith(t); t.select(); } });
     return $("article", { class: "prop paper" }, $("h3", {}, p.titulo), $("p", { class: "ask" }, p.o_que_pedir), $("p", { class: "why" }, p.por_que),
-      $("p", { class: "world" }, $("b", {}, "Exemplo: "), p.exemplo_no_mundo, " ", ext(p.fonte_exemplo)),
-      $("div", { class: "chips" }, $("span", { class: "chip p" }, "Quem decide: " + p.quem_decide), $("span", { class: "chip" }, p.lei_brasileira_relacionada)), b);
+      $("p", { class: "world" }, $("b", {}, "Exemplo: "), p.exemplo_no_mundo, " ", ext(p.fonte_exemplo, filled(p.verificado_em) ? "conferido em " + fmtDate(p.verificado_em) : "")),
+      $("div", { class: "chips" }, $("span", { class: "chip p" }, "Quem decide: " + p.quem_decide), $("span", { class: "chip" }, p.lei_brasileira_relacionada), filled(p.inspiracao) ? $("span", { class: "chip" }, "Ideia vinda do " + p.inspiracao.toLowerCase()) : ""), b);
   })));
 }
 

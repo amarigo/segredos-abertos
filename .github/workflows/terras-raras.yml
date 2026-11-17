@@ -1,0 +1,134 @@
+name: Terras Raras
+
+# Publica só a página /terras-raras/, sem esperar a coleta nacional. Antes, o tracker só ia ao ar junto com o site
+# inteiro: de 12/11 a 17/11/2026 a coleta nacional falhou (Ubuntu novo no GitHub, depois a conferência das punições) e
+# as notícias de terras raras ficaram cinco dias fora do site, mesmo prontas no main.
+#
+# Como funciona (o mesmo cuidado do Minas Nossa, que usa a última versão publicada quando a coleta de MG falha):
+#   1. conferir: testes, conferência das planilhas (terras-raras/conferir.py) e comparação com a página no ar
+#      (nenhuma tabela pode perder mais de 20% das linhas). Se algo não bater, nada é publicado.
+#   2. publicar: pega a última cópia do site inteiro publicada pelo GitHub Pages (o pacote "github-pages" de uma
+#      execução que deu certo, guardado 7 dias), troca só terras-raras/index.html e publica de novo.
+# Nada do resto do site muda: dados, páginas e o Minas Nossa continuam exatamente como estavam no ar.
+on:
+  push:
+    branches: [main]
+    paths: ["terras-raras/**", ".github/workflows/terras-raras.yml"]
+  pull_request:
+    paths: ["terras-raras/**", ".github/workflows/terras-raras.yml"]
+  workflow_dispatch:
+    inputs:
+      ignorar_queda:
+        description: "Publicar mesmo se uma tabela perder mais de 20% das linhas (use só se a queda for real)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# No main, entra na mesma fila de "Dados e site": as duas nunca publicam ao mesmo tempo, e uma não apaga a outra
+# com uma cópia mais velha. Nos PRs, um push novo cancela o anterior.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('terras-raras-{0}', github.ref) || 'dados-refs/heads/main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  conferir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install pytest==9.0.3
+      - name: Testes da conferência
+        run: python -m pytest -q terras-raras/tests
+      - name: Página no ar (para comparar)
+        # Se o site não responder, a comparação de quedas é pulada e o resto da conferência continua.
+        run: curl -fsSL --retry 3 -o "$RUNNER_TEMP/anterior.html" https://amarigo.github.io/segredos-abertos/terras-raras/ || true
+      - name: Conferir as planilhas
+        env:
+          IGNORAR_QUEDA: ${{ inputs.ignorar_queda && '--ignorar-queda' || '' }}
+        run: |
+          set -o pipefail
+          python terras-raras/conferir.py --anterior "$RUNNER_TEMP/anterior.html" $IGNORAR_QUEDA | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Montar a página
+        run: |
+          set -o pipefail
+          python terras-raras/gerar_pagina.py --site pagina/index.html | tee -a "$GITHUB_STEP_SUMMARY"
+          if grep -q "^AVISO" "$GITHUB_STEP_SUMMARY"; then echo "::error title=Terras Raras::O gerador avisou um problema"; exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: terras-raras-pagina
+          path: pagina/index.html
+          retention-days: 1
+
+  publicar:
+    needs: conferir
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url }}
+    steps:
+      - name: Última cópia publicada do site inteiro
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Pacotes "github-pages" do main ainda guardados, do mais novo para o mais velho. Vale o primeiro de uma
+          # execução que terminou com sucesso (ou seja, que foi publicada).
+          gh api "repos/$REPO/actions/artifacts?name=github-pages&per_page=100" \
+            --jq '.artifacts | map(select(.expired == false and .workflow_run.head_branch == "main")) | sort_by(.created_at) | reverse | .[] | "\(.id) \(.workflow_run.id) \(.created_at)"' \
+            > pacotes.txt
+          ESCOLHIDO=""
+          while read -r ART RUN QUANDO; do
+            if [ "$(gh api "repos/$REPO/actions/runs/$RUN" --jq .conclusion)" = "success" ]; then
+              ESCOLHIDO="$ART"; echo "Cópia do site: pacote $ART da execução $RUN, de $QUANDO" | tee -a "$GITHUB_STEP_SUMMARY"; break
+            fi
+          done < pacotes.txt
+          if [ -z "$ESCOLHIDO" ]; then
+            echo "::error title=Terras Raras::Nenhuma cópia do site publicada nos últimos 7 dias. Rode Actions > Dados e site > Run workflow; ele publica o tracker junto."
+            exit 1
+          fi
+          gh api "repos/$REPO/actions/artifacts/$ESCOLHIDO/zip" > site.zip
+          unzip -q site.zip -d pacote
+          mkdir dist && tar -xf pacote/artifact.tar -C dist
+          rm -rf site.zip pacote
+          # Confere que é mesmo o site inteiro antes de publicar por cima
+          for f in index.html mg/index.html eleicao2026/index.html terras-raras/index.html; do
+            test -f "dist/$f" || { echo "::error title=Terras Raras::A cópia do site não tem $f; nada publicado"; exit 1; }
+          done
+      - uses: actions/download-artifact@v4
+        with:
+          name: terras-raras-pagina
+          path: novo
+      - name: Trocar só a página de Terras Raras
+        run: |
+          cp novo/index.html dist/terras-raras/index.html
+          echo "Página nova de Terras Raras no lugar da anterior; o resto do site fica igual ao publicado." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+          retention-days: 7
+      # Mesma segunda tentativa do "Dados e site": às vezes o Pages fica parado em "syncing_files".
+      - id: deploy
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Publicação falhou; esperar antes de tentar de novo
+        if: steps.deploy.outcome == 'failure'
+        run: |
+          echo "::warning title=Terras Raras::A primeira tentativa de publicar falhou; tentando de novo."
+          sleep 60
+      - id: deploy2
+        if: steps.deploy.outcome == 'failure'
+        uses: actions/deploy-pages@v4

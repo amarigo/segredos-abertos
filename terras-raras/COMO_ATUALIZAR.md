@@ -3,8 +3,11 @@
 O tracker está em dois lugares, gerados das mesmas planilhas desta pasta (`terras-raras/` no repositório
 amarigo/segredos-abertos, que é a cópia principal):
 
-- **Site público:** https://amarigo.github.io/segredos-abertos/terras-raras/ (montado pelo GitHub Action "Dados e site"
-  a cada push no `main` e todo dia; comando: `python terras-raras/gerar_pagina.py --site site/dist/terras-raras/index.html`).
+- **Site público:** https://amarigo.github.io/segredos-abertos/terras-raras/. Publicado sozinho pelo GitHub Action
+  "Terras Raras" (`.github/workflows/terras-raras.yml`) a cada push no `main` que mexa nesta pasta, em poucos minutos e
+  sem depender da coleta nacional: confere as planilhas, monta a página e troca só ela na última cópia publicada do
+  site. A coleta diária ("Dados e site") também monta a página, com a mesma conferência; se as planilhas não passarem,
+  publica de novo a página que estava no ar.
 - **Link privado do Claude:** https://claude.ai/artifact/4kJniSvA8P5jnAx12ShfVP (gerado com `python3 gerar_pagina.py`;
   republicar sempre neste mesmo link).
 
@@ -25,7 +28,9 @@ Escreva no projeto: **"atualize o tracker de terras raras"**. O Claude pesquisa 
 1. Abra a planilha da seção em `dados/` (Excel ou Google Sheets).
 2. Adicione ou corrija uma linha. **Toda linha precisa de link da fonte e data.**
 3. Salve como **CSV UTF-8** (mesmo nome de arquivo, sem mudar o cabeçalho).
-4. Na pasta do tracker, rode `python3 gerar_pagina.py`. Isso cria `tracker.html` e avisa se algum município não foi encontrado no mapa.
+4. Na pasta do tracker, rode `python3 conferir.py` (a mesma conferência que roda antes de publicar: fonte, datas, ids,
+   municípios do IBGE, números, ordem das notícias e CPF à mostra) e depois `python3 gerar_pagina.py`, que cria
+   `tracker.html`. Testes da conferência: `python3 -m pytest -q tests`.
 5. Faça commit no `main` (o site público se atualiza sozinho) e peça ao Claude para republicar o link privado.
 
 ## O que cada planilha guarda
@@ -41,7 +46,7 @@ Escreva no projeto: **"atualize o tracker de terras raras"**. O Claude pesquisa 
 | `leis.csv` | Leis | uma lei, PL, norma, decisão municipal |
 | `impactos.csv` | Impactos ambientais | um tipo de impacto com evidência |
 | `processos_noticias.csv` | Processos e notícias | um acontecimento datado (ação, licença, negócio, notícia) |
-| `propostas.csv` | O que pedir aos legisladores | uma proposta com exemplo de outro país |
+| `propostas.csv` | O que pedir aos legisladores | uma proposta com exemplo de outro país; `inspiracao` = `Petróleo` quando a ideia veio do que se fez com o petróleo |
 
 ## Regras simples
 - Datas no formato `AAAA-MM-DD` (ou `AAAA-MM` se não souber o dia).
@@ -64,6 +69,7 @@ Escreva no projeto: **"atualize o tracker de terras raras"**. O Claude pesquisa 
 - [ ] ANM (Cadastro Mineiro/SIGMINE): novos requerimentos de terras raras em todo MG, com atenção a Alto Paranaíba, Jequitinhonha e Sul de Minas
 - [ ] SGB: resultados do mapeamento do Alto Paranaíba
 - [ ] Imprensa regional (Poços Já, Folha Regional, SulMinasTV, Jornal Mantiqueira) e nacional
+- [ ] Propostas: ideias usadas com o petróleo (no Brasil e no mundo) que servem para terras raras, com fonte oficial; não repetir o que já está em `propostas.csv`
 
 ## Como descobrir quem é dono de quê
 - **Direito minerário:** ANM, Cadastro Mineiro e SIGMINE (busca por município ou CNPJ).

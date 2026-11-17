@@ -38,6 +38,8 @@ Ao usar a opção 2 ou 3, deixe escrito no código por que a API não serviu.
 
 - Todo dia às **3h17 de Brasília** (`cron: "17 6 * * *"`, UTC) o workflow "Dados e site" roda os testes, coleta,
   confere, verifica com a segunda fonte, monta todos os sites e publica. Também roda a cada push no `main`.
+- Terras Raras não espera a coleta: [`terras-raras.yml`](.github/workflows/terras-raras.yml) publica só essa página a
+  cada push que mexa em `terras-raras/` (e "Dados e site" não roda para esses pushes).
 - Se uma fonte oficial falhar, a coleta usa a última cópia boa, mostra aviso com a data dela, e
   [`tentar-de-novo.yml`](.github/workflows/tentar-de-novo.yml) tenta de novo a cada 2 horas até tudo responder.
 - Para atualizar na hora: Actions > Dados e site > Run workflow (branch `main`). Opções `ignorar_queda` e
@@ -73,7 +75,7 @@ Todas as áreas abaixo são coletadas todo dia, na execução das 3h17 (os dados
 | Licitações e contratações diretas (governo de MG e cada cidade) | API de consulta do PNCP (`pncp.gov.br/api/consulta/v1`: `/contratacoes/publicacao` por UF, município e modalidade; `/contratos` por órgão); a API limita os pedidos (HTTP 429): leitura aos poucos (18 min por execução); cidades ano a ano (o ano atual vale 1 dia), estado só no ano atual, mês a mês (mês atual vale 3 dias, os outros 30) | `mg/etl/mg_etl/pncp.py` |
 | Eleição 2026 | Resultados e boletins de urna do TSE | `eleicao2026/etl/el_etl/` (veja `eleicao2026/README.md`) |
 | Eleitos de 2026 (mandato 2027) | Resultado da eleição estadual no site de resultados do TSE (JSON oficial); conferido com os arquivos de candidatos e de vagas (dados abertos do TSE, via API CKAN); API da Câmara e do Senado para quem já tem mandato. Baixado à mão pelo workflow [`eleitos-2026.yml`](.github/workflows/eleitos-2026.yml), não todo dia | `eleicao2026/etl/el_etl/eleitos.py` |
-| Terras Raras | Sem API que junte os dados: planilhas à mão em `terras-raras/dados/`, cada linha com fonte e data | `terras-raras/gerar_pagina.py` (veja `terras-raras/COMO_ATUALIZAR.md`) |
+| Terras Raras | Sem API que junte os dados: planilhas à mão em `terras-raras/dados/`, cada linha com fonte e data. Conferidas por `terras-raras/conferir.py` e publicadas sozinhas pelo workflow [`terras-raras.yml`](.github/workflows/terras-raras.yml) a cada push que mexa na pasta (troca só a página na última cópia publicada do site) | `terras-raras/gerar_pagina.py` (veja `terras-raras/COMO_ATUALIZAR.md`) |
 
 O ponto de entrada da coleta nacional é `etl/sa_etl/build.py`. A tabela completa com links está no README.
 
@@ -123,7 +125,8 @@ O ponto de entrada da coleta nacional é `etl/sa_etl/build.py`. A tabela complet
 - Coletar dados localmente (precisa de internet):
   `cd etl && pip install -r requirements.txt -r requirements-dev.txt && python -m sa_etl.build --saida ../site/public/data --cache .cache --anos 2025 2026`
 - Rodar o site: `cd site && npm install && npm run dev` (Minas Nossa: `npm run build:mg && npm run preview:mg`)
-- Testes do coletor: `python -m pytest -q etl/tests` (também `mg/etl/tests`, `eleicao2026/etl/tests`, `analises/tests`)
+- Testes do coletor: `python -m pytest -q etl/tests` (também `mg/etl/tests`, `eleicao2026/etl/tests`, `analises/tests`,
+  `terras-raras/tests`)
 - Testes do site: `cd site && npm test`; no navegador: `npm run test:e2e` (e `test:e2e:mg`, `test:e2e:eleicao`),
   depois de gerar dados fictícios com `python etl/tests/gerar_dados_teste.py site/public/data`
 - Conferência dos dados (bloqueia a publicação se algo não bater):
