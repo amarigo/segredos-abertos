@@ -6,6 +6,9 @@ on:
   # testes dos PRs continuam pelo evento pull_request.
   push:
     branches: [main]
+    # Mudança só nas planilhas de Terras Raras não precisa da coleta inteira: terras-raras.yml confere e publica a
+    # página sozinho, em poucos minutos. A coleta diária continua montando o tracker junto com o resto do site.
+    paths-ignore: ["terras-raras/**", ".github/workflows/terras-raras.yml"]
   pull_request:
   schedule:
     # Todo dia às 3h17 de Brasília (6h17 UTC): madrugada é o horário com menos tráfego nas APIs do governo, e elas
@@ -288,10 +291,22 @@ jobs:
       - name: "Terras Raras: montar o site em /terras-raras/"
         id: terras
         continue-on-error: true
-        # pipefail: sem ele o tee esconde um erro do gerador, a etapa sai verde e /terras-raras/ some do site sem aviso.
+        # Confere as planilhas (terras-raras/conferir.py) antes de montar. Se não passarem, publica de novo a página que
+        # está no ar, como o Minas Nossa faz com os dados de MG, e avisa no painel de status.
+        env:
+          IGNORAR_QUEDA: ${{ inputs.ignorar_queda && '--ignorar-queda' || '' }}
         run: |
           set -o pipefail
-          python terras-raras/gerar_pagina.py --site site/dist/terras-raras/index.html | tee -a "$GITHUB_STEP_SUMMARY"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/terras-anterior.html" https://amarigo.github.io/segredos-abertos/terras-raras/ || true
+          if python terras-raras/conferir.py --anterior "$RUNNER_TEMP/terras-anterior.html" $IGNORAR_QUEDA | tee -a "$GITHUB_STEP_SUMMARY"; then
+            python terras-raras/gerar_pagina.py --site site/dist/terras-raras/index.html | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ -s "$RUNNER_TEMP/terras-anterior.html" ]; then
+            mkdir -p site/dist/terras-raras && cp "$RUNNER_TEMP/terras-anterior.html" site/dist/terras-raras/index.html
+            echo "### Terras Raras: planilhas com problema; publicada de novo a página que estava no ar" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          else
+            exit 1
+          fi
       # Painel de análises (/analises/): todos os dados acima em tabelas CSV para baixar e em gráficos próprios
       # (Apache ECharts). Só reorganiza os arquivos já coletados; não busca nada novo. Uma falha aqui não trava o site.
       - name: "Análises: montar o painel em /analises/"
@@ -318,12 +333,14 @@ jobs:
           [ "$MG" != "failure" ] || python etl/anotar.py falhou "Minas Nossa" "A montagem dos dados de MG falhou (veja a etapa 'Minas Nossa: montar os dados de MG')"
           [ "$MG_CONF" != "failure" ] || python etl/anotar.py falhou "Minas Nossa" "A conferência dos dados de MG não passou (veja a etapa 'Minas Nossa: conferir os dados')"
           [ "$ELEICAO" != "failure" ] || python etl/anotar.py falhou "Eleição 2026" "A conferência das urnas com o resultado oficial ou a montagem do site falhou (veja a etapa 'Eleição 2026: conferir e montar')"
-          [ "$TERRAS" != "failure" ] || python etl/anotar.py falhou "Terras Raras" "A página de Terras Raras não foi montada (veja a etapa 'Terras Raras: montar')"
+          [ "$TERRAS" != "failure" ] || python etl/anotar.py falhou "Terras Raras" "As planilhas de Terras Raras não passaram na conferência ou a página não foi montada; ficou a versão que estava no ar (veja a etapa 'Terras Raras: montar')"
           [ "$ANALISES" != "failure" ] || python etl/anotar.py falhou "Análises" "O painel de análises não foi montado (veja a etapa 'Análises: montar o painel')"
           python etl/anotar.py avisos site/public-mg/data/meta.json "Minas Nossa: aviso da coleta" || true
+      # Guardado 7 dias (o padrão é 1): terras-raras.yml usa esta cópia do site para publicar só o tracker.
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist
+          retention-days: 7
       - name: Conferir links das notas
         continue-on-error: true
         run: python etl/conferir_links.py site/public/data etl/.cache | tee -a "$GITHUB_STEP_SUMMARY"

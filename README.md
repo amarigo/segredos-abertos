@@ -106,8 +106,10 @@ Rastreador da mineração de terras raras em Minas Gerais: projetos e áreas com
 donos e países, donos da terra, licenças pendentes, painel com os números econômicos, processos e notícias, leis,
 impactos ambientais e propostas para legisladores. Não existe API oficial que junte esses dados, então eles ficam em
 planilhas CSV escritas à mão em `terras-raras/dados/`, cada linha com o link da fonte e a data em que foi conferida.
+`python terras-raras/conferir.py` confere as planilhas (fonte, datas, ids, municípios, CPF) e
 `python terras-raras/gerar_pagina.py --site site/dist/terras-raras/index.html` monta a página (um único HTML, mapa com
-Leaflet e a malha municipal do IBGE). Dicas do público chegam como issues com a etiqueta `terras-raras`. Como atualizar:
+Leaflet e a malha municipal do IBGE). O workflow `terras-raras.yml` publica só essa página a cada push que mexa na
+pasta, sem esperar a coleta nacional. Dicas do público chegam como issues com a etiqueta `terras-raras`. Como atualizar:
 [terras-raras/COMO_ATUALIZAR.md](terras-raras/COMO_ATUALIZAR.md).
 
 ## Rodar localmente
