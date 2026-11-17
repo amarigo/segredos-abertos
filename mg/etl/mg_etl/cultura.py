@@ -561,20 +561,72 @@ def _chave_doador(x: dict) -> str:
     return hashlib.sha256(str(x.get("cgccpf") or x.get("nome") or "").encode()).hexdigest()[:20]
 
 
-def _url_doacoes(x: dict) -> str | None:
-    """O endereço das doações vem no próprio item da lista (_links.doacoes); sem ele, montamos pelo cgccpf."""
-    link = ((x.get("_links") or {}).get("doacoes") or "")
-    link = link.get("href", "") if isinstance(link, dict) else str(link)
-    if link:
-        u = urlparse(link if "://" in link else f"https://{SALIC_HOST}{link}")
-        return f"https://{SALIC_HOST}{u.path}" if u.netloc in (SALIC_HOST, "") else None
+def _caminho_salic(link) -> str | None:
+    """Caminho de um link da API do SALIC (texto ou {href}), só se for do próprio SALIC."""
+    link = link.get("href", "") if isinstance(link, dict) else str(link or "")
+    if not link:
+        return None
+    u = urlparse(link if "://" in link else f"https://{SALIC_HOST}{link}")
+    return u.path.rstrip("/") if u.netloc in (SALIC_HOST, "") and u.path else None
+
+
+def _urls_doacoes(x: dict) -> list[tuple[str, str]]:
+    """Formas de pedir as doações de um incentivador, na ordem em que tentamos.
+
+    A documentação da API (api.salic.cultura.gov.br/docs) só diz "/incentivadores/{incentivador_id}/doacoes", sem
+    dizer o que é o id. O link _links.doacoes que vem na lista respondeu 404 em 16/11/2026, então tentamos também o
+    id do link _links.self e o próprio CNPJ ou CPF (só os dígitos), com e sem a barra no fim."""
+    links = x.get("_links") or {}
+    base: list[tuple[str, str]] = []
+    c = _caminho_salic(links.get("doacoes"))
+    if c:
+        base.append(("link doacoes", f"https://{SALIC_HOST}{c}"))
+    c = _caminho_salic(links.get("self"))
+    if c and "/incentivadores/" in c:
+        base.append(("id do link self", f"https://{SALIC_HOST}{c}/doacoes"))
     doc = digits(x.get("cgccpf"))
-    return f"{SALIC_API}/incentivadores/{doc}/doacoes" if doc else None
+    if doc:
+        base.append(("CNPJ/CPF", f"{SALIC_API}/incentivadores/{doc}/doacoes"))
+    vistas: list[tuple[str, str]] = []
+    for forma, u in base + [(f + " com barra", u + "/") for f, u in base]:
+        if u not in (v for _, v in vistas):
+            vistas.append((forma, u))
+    return vistas
+
+
+def _sem_ids(texto: str) -> str:
+    """Tira do texto do erro os endereços e números longos (o endereço pode levar o CPF do doador)."""
+    texto = re.sub(r"https?://\S+", "<endereço>", texto)
+    return re.sub(r"\b[0-9a-f]{11,}\b", "<id>", texto)
+
+
+def _e_404(e: Exception) -> bool:
+    r = getattr(e, "response", None)
+    return getattr(r, "status_code", None) == 404 or bool(re.search(r"\b404\b", str(e)))
 
 
 def _ano_recibo(d: dict) -> int | None:
     m = re.match(r"(\d{4})-\d{2}-\d{2}", str(d.get("data_recibo") or ""))
     return int(m.group(1)) if m else None
+
+
+def _somar_doacoes(url: str, rel: Relogio, anos: dict) -> None:
+    """Lê todas as páginas de doações de um endereço e soma o valor por ano do recibo."""
+    offset = 0
+    while True:
+        rel.checar()
+        r = get(url, params={"limit": SALIC_TAM, "offset": offset, "format": "json"}, timeout=90)
+        corpo = r.json() if r.content.strip() else {}
+        pagina = ((corpo if isinstance(corpo, dict) else {}).get("_embedded") or {}).get("doacoes")
+        if not isinstance(pagina, list):
+            raise RuntimeError("resposta sem a lista '_embedded.doacoes'")
+        for d in pagina:
+            a = _ano_recibo(d)
+            if a:
+                anos[str(a)] += to_float(d.get("valor"))
+        offset += SALIC_TAM
+        if not pagina or offset >= int(corpo.get("total") or 0):
+            break
 
 
 def ler_doacoes(inc: list[dict], rel: Relogio, f: Path) -> tuple[dict, bool, str]:
@@ -585,7 +637,7 @@ def ler_doacoes(inc: list[dict], rel: Relogio, f: Path) -> tuple[dict, bool, str
     guardado = (_ler_gz(f) or {}).get("doadores") or {}
     pend = sorted((x for x in inc if str(x.get("UF") or "").upper() == UF and to_float(x.get("total_doado")) > 0),
                   key=lambda x: -to_float(x.get("total_doado")))
-    vistos, mudou, falta, erro, seguidas = set(), 0, False, "", 0
+    vistos, mudou, falta, erro, seguidas, forma_boa = set(), 0, False, "", 0, ""
     try:
         for x in pend:
             k = _chave_doador(x)
@@ -595,30 +647,31 @@ def ler_doacoes(inc: list[dict], rel: Relogio, f: Path) -> tuple[dict, bool, str
             total = round(to_float(x.get("total_doado")), 2)
             if k in guardado and guardado[k].get("total") == total:
                 continue
-            url = _url_doacoes(x)
-            if not url:
+            urls = _urls_doacoes(x)
+            if not urls:
                 continue
+            # a forma que já funcionou com outro doador vai primeiro
+            urls.sort(key=lambda fu: fu[0] != forma_boa)
             anos: dict = defaultdict(float)
-            offset = 0
             try:
-                while True:
-                    rel.checar()
-                    r = get(url, params={"limit": SALIC_TAM, "offset": offset, "format": "json"}, timeout=90)
-                    corpo = r.json() if r.content.strip() else {}
-                    pagina = ((corpo if isinstance(corpo, dict) else {}).get("_embedded") or {}).get("doacoes")
-                    if not isinstance(pagina, list):
-                        raise RuntimeError("resposta sem a lista '_embedded.doacoes'")
-                    for d in pagina:
-                        a = _ano_recibo(d)
-                        if a:
-                            anos[str(a)] += to_float(d.get("valor"))
-                    offset += SALIC_TAM
-                    if not pagina or offset >= int(corpo.get("total") or 0):
+                for i, (forma, url) in enumerate(urls):
+                    anos.clear()
+                    try:
+                        _somar_doacoes(url, rel, anos)
+                        forma_boa = forma
                         break
+                    except SemTempo:
+                        raise
+                    except Exception as e:  # noqa: BLE001
+                        if not _e_404(e) or i == len(urls) - 1:
+                            if _e_404(e):
+                                raise RuntimeError(f"HTTP 404 em todas as {len(urls)} formas de endereço da API "
+                                                   f"({', '.join(f for f, _ in urls)})") from e
+                            raise
             except SemTempo:
                 raise
             except Exception as e:  # noqa: BLE001
-                erro, falta = str(e)[:160], True
+                erro, falta = _sem_ids(str(e))[:240], True
                 log.warning("SALIC doações: %s", erro)
                 seguidas += 1
                 if seguidas >= 5:
@@ -633,7 +686,8 @@ def ler_doacoes(inc: list[dict], rel: Relogio, f: Path) -> tuple[dict, bool, str
         falta = True
     if mudou:
         _gravar_gz(f, {"doadores": guardado})
-    log.info("SALIC doações: %d doadores lidos nesta execução, %d guardados", mudou, len(guardado))
+    log.info("SALIC doações: %d doadores lidos nesta execução, %d guardados (forma do endereço: %s)", mudou, len(guardado),
+             forma_boa or "nenhuma respondeu")
     return guardado, not falta, erro
 
 
