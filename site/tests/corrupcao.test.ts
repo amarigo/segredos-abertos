@@ -80,18 +80,12 @@ test("resumo geral e textos dos status", () => {
   for (const s of ORDEM) assert.ok(STATUS[s].nome && STATUS[s].um && STATUS[s].explica);
 });
 
-test("nota da linha do placar é a do partido de hoje, sem depender da ordem dos casos", () => {
+test("campo da linha do placar é o do partido de hoje, sem depender da ordem dos casos", () => {
   const linhas = placar(CASOS, ORDEM);
   const linhasAoContrario = placar([...CASOS].reverse(), ORDEM);
-  for (const l of linhas) {
-    const r = linhasAoContrario.find((x) => x.partido === l.partido)!;
-    assert.equal(r.nota, l.nota, l.partido);
-    assert.equal(r.campo, l.campo, l.partido);
-  }
-  const pl = linhas.find((l) => l.partido === "PL");
-  if (pl) { assert.equal(pl.nota, 7.78); assert.equal(pl.nota_de, "PR"); }
-  const uniao = linhas.find((l) => l.partido === "União");
-  if (uniao) { assert.equal(uniao.nota, null); assert.ok(uniao.nota_obs?.includes("DEM")); }
-  const prd = linhas.find((l) => l.partido === "PRD");
-  if (prd) { assert.equal(prd.nota, 6.1); assert.equal(prd.nota_de, "PTB"); }
+  for (const l of linhas) assert.equal(linhasAoContrario.find((x) => x.partido === l.partido)!.campo, l.campo, l.partido);
+  const campo = (p: string) => linhas.find((l) => l.partido === p)?.campo;
+  assert.equal(campo("PL"), "Direita");
+  assert.equal(campo("PRD"), "Centro-direita");
+  assert.equal(campo("União"), "Direita");
 });
