@@ -13,7 +13,9 @@ Regras:
 - ids sem repetição; projetos_ids e empresas_ids apontam para linhas que existem;
 - municípios do mapa com o nome do IBGE;
 - numeros.csv: valor_grafico é número (ou vazio) e toda linha tem categoria;
-- notícias da mais nova para a mais antiga;
+- notícias da mais nova para a mais antiga, cada fonte marcada como nacional ou estrangeira (site .br é nacional);
+- perda_processamento.csv: números nos campos da conta, payability entre 1 e 99%, cenário baixo <= alto;
+- numeros.csv tem o dólar do dia (categoria Câmbio), usado para passar a perda para reais;
 - nenhum CPF à mostra.
 """
 from __future__ import annotations
@@ -29,7 +31,7 @@ from pathlib import Path
 
 PASTA = Path(__file__).resolve().parent
 TABELAS = ["empresas", "projetos", "licencas", "areas_potencial", "donos_terra", "numeros", "leis", "impactos",
-           "processos_noticias", "propostas"]
+           "processos_noticias", "propostas", "perda_processamento"]
 COLUNA_FONTE = {"propostas": "fonte_exemplo"}  # nas outras tabelas é fonte_url
 COLUNAS_DATA = ("data", "fonte_data", "data_pedido")
 QUEDA_MAXIMA = 0.20
@@ -37,6 +39,9 @@ DATA_FONTE = re.compile(r"\d{4}(-\d{2}(-\d{2})?)?")
 DATA_CHEIA = re.compile(r"\d{4}-\d{2}-\d{2}")
 CPF = re.compile(r"\b\d{3}\.\d{3}\.\d{3}-\d{2}\b")
 NUMERO = re.compile(r"-?\d+(\.\d+)?")
+ORIGENS = ("nacional", "estrangeira")
+CAMPOS_PERDA = ("producao_t_treo_ano", "cesta_baixa_usd_kg", "cesta_alta_usd_kg", "payability_pct",
+                "receita_vida_baixa_usd_mi", "receita_vida_alta_usd_mi")
 
 
 def ler(pasta: Path, nome: str) -> list[dict]:
@@ -99,6 +104,31 @@ def conferir(dados: dict[str, list[dict]], municipios: set[str], hoje: dt.date) 
                     erros.append(f"{onde}: valor_grafico '{r['valor_grafico']}' não é número")
                 if not r.get("categoria"):
                     erros.append(f"{onde}: sem categoria")
+            if t == "processos_noticias":
+                for col_url, col_or in (("fonte_url", "origem"), ("fonte_url_2", "origem_2")):
+                    u, o = r.get(col_url, ""), r.get(col_or, "")
+                    if col_url == "fonte_url_2" and not u and not o:
+                        continue
+                    if col_url == "fonte_url_2" and not re.match(r"https?://\S+$", u):
+                        erros.append(f"{onde}: fonte_url_2 '{u}' não é link")
+                    if o not in ORIGENS:
+                        erros.append(f"{onde}: {col_or} '{o}' deve ser nacional ou estrangeira")
+                    elif o == "estrangeira" and re.match(r"https?://[^/]+\.br(/|$)", u):
+                        erros.append(f"{onde}: {col_or} diz estrangeira, mas o site é .br")
+            if t == "perda_processamento":
+                v = {c: r.get(c, "") for c in CAMPOS_PERDA}
+                ruins = [c for c, x in v.items() if not NUMERO.fullmatch(x)]
+                if ruins:
+                    erros.append(f"{onde}: {', '.join(ruins)} sem número")
+                else:
+                    x = {c: float(n) for c, n in v.items()}
+                    if not 1 <= x["payability_pct"] <= 99:
+                        erros.append(f"{onde}: payability_pct {v['payability_pct']} fora de 1 a 99")
+                    if x["cesta_baixa_usd_kg"] > x["cesta_alta_usd_kg"] or x["receita_vida_baixa_usd_mi"] > x["receita_vida_alta_usd_mi"]:
+                        erros.append(f"{onde}: cenário baixo maior que o alto")
+    cambio = [r for r in dados["numeros"] if r.get("categoria") == "Câmbio"]
+    if dados["perda_processamento"] and not any(NUMERO.fullmatch(r.get("valor_grafico", "")) and float(r["valor_grafico"]) > 0 for r in cambio):
+        erros.append("numeros.csv: falta o dólar do dia (categoria Câmbio, valor_grafico em R$ por US$)")
     datas = [r.get("data", "") for r in dados["processos_noticias"]]
     for n, (a, b) in enumerate(zip(datas, datas[1:]), start=2):
         if a < b:
