@@ -2,7 +2,7 @@
 
 O recorte de Minas Gerais do Segredos Abertos, publicado em https://amarigo.github.io/segredos-abertos/mg/.
 
-- `etl/mg_etl/recorte.py`: deputados federais e senadores de MG, a partir dos dados nacionais gerados na mesma execução.
+- `etl/mg_etl/recorte.py`: deputados federais e senadores de MG, a partir dos dados nacionais gerados na mesma execução: ficha, notas, agenda, campanha (toda pasta de `p/`), patrimônio declarado (`pat/`, `patrimonio.json`) e a cota desde 2008 da bancada de MG (`historico-uf/MG.json` vira `historico.json`, com os `h/{id}.json` de todos que tiveram mandato por MG).
 - `etl/mg_etl/tse.py` e `cidades.py`: histórico de cada cidade desde 1996 (prefeito, vice, vereadores por partido, como a cidade votou), com os arquivos de dados abertos do TSE.
 - `etl/mg_etl/partidos_hist.py`: o nome de hoje dos partidos que mudaram de nome ou se juntaram a outros.
 - `etl/mg_etl/almg.py`: deputados estaduais da ALMG (todos que tiveram mandato na legislatura: quem está no cargo hoje, pela API

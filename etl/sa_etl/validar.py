@@ -620,6 +620,19 @@ def _conferir_campanha(saida: Path, r: Resultado) -> None:
                 r.erro(f"Campanha {g.stem}: ligação com empresa sem página ({(x.get('empresa') or {}).get('cnpj')})")
     if n_perfis != len(geral.get("ligacoes") or []):
         r.erro(f"Campanha: a lista geral tem {len(geral.get('ligacoes') or [])} ligações e os perfis somam {n_perfis}")
+    # A lista de quem tem a aba (campanha-perfis.json) é o que o site usa para dizer "sem candidatura achada":
+    # um perfil na lista sem o arquivo apareceria como erro de carregamento; um arquivo fora da lista ficaria escondido.
+    pasta = saida / "p" / "campanha"
+    arquivos = {g.stem for g in pasta.glob("*.json")} if pasta.exists() else set()
+    fl = saida / "campanha-perfis.json"
+    if not fl.exists():
+        r.erro("Campanha: falta campanha-perfis.json (a lista de quem tem a aba Campanha)")
+        return
+    lista = set((_ler(fl, r) or {}).get("perfis") or [])
+    if lista - arquivos:
+        r.erro(f"Campanha: na lista, mas sem p/campanha/{{id}}.json: {sorted(lista - arquivos)[:5]}")
+    if arquivos - lista:
+        r.erro(f"Campanha: com p/campanha/{{id}}.json, mas fora da lista: {sorted(arquivos - lista)[:5]}")
 
 
 LINK_SANCAO = re.compile(r"^https://(portaldatransparencia\.gov\.br|contas\.tcu\.gov\.br|conecta-tcu\.apps\.tcu\.gov\.br|certidoes\.apps\.tcu\.gov\.br)/")
@@ -781,38 +794,61 @@ def _conferir_gabinetes(saida: Path, pols: list[dict], r: Resultado) -> None:
 
 def _conferir_historico(saida: Path, r: Resultado) -> None:
     """Histórico da cota: o total de cada Casa em cada ano é a soma dos parlamentares (h/{id}.json) mais as notas sem
-    parlamentar (lideranças), e também a soma dos tipos de despesa; cada ano tem as duas Casas; fontes com link https."""
+    parlamentar (lideranças), e também a soma dos tipos de despesa; cada ano tem as duas Casas; fontes com link https.
+    O resumo de cada estado (historico-uf/{UF}.json; no Minas Nossa, o próprio historico.json, com "uf") passa pela
+    mesma conta, só com os anos em que cada parlamentar era do estado."""
     f = saida / "historico.json"
     if not f.exists():
         r.alerta("Sem o histórico da cota desde 2008 (historico.json)")
         return
     d = _ler(f, r) or {}
-    for k, u in (d.get("fontes") or {}).items():
-        if not str(u).startswith("https://"):
-            r.erro(f"Histórico da cota: fonte sem link https ({k})")
-    soma: dict[tuple[str, str], float] = Counter()
+    soma: dict[tuple[str, str, str], float] = Counter()  # (estado ou "", casa, ano)
     for fp in sorted((saida / "h").glob("*.json")) if (saida / "h").exists() else []:
         p = _ler(fp, r) or {}
         for ano, a in (p.get("anos") or {}).items():
-            soma[(p.get("casa", ""), ano)] += a.get("total") or 0
+            soma[("", p.get("casa", ""), ano)] += a.get("total") or 0
+            soma[(a.get("uf") or "?", p.get("casa", ""), ano)] += a.get("total") or 0
             meses = sum((a.get("por_mes") or {}).values())
             if abs(meses - (a.get("total") or 0)) > 1:
                 r.erro(f"Histórico {fp.stem} {ano}: soma dos meses ({meses:.2f}) diferente do total ({a.get('total')})")
+    _conferir_um_historico(d, soma, r, f"Histórico da cota de {d['uf']}" if d.get("uf") else "Histórico da cota")
+    por_uf: dict[tuple[str, int], float] = Counter()
+    for fu in sorted((saida / "historico-uf").glob("*.json")) if (saida / "historico-uf").exists() else []:
+        du = _ler(fu, r) or {}
+        if du.get("uf") != fu.stem:
+            r.erro(f"Histórico {fu.stem}: o arquivo diz ser de {du.get('uf')!r}")
+            continue
+        _conferir_um_historico(du, soma, r, f"Histórico da cota de {fu.stem}")
+        for x in du.get("anos") or []:
+            por_uf[(x["casa"], x["ano"])] += x["total"]
+    if por_uf and not d.get("uf"):
+        # todo parlamentar com estado: a soma dos estados é o total da Casa sem as lideranças
+        for x in d.get("anos") or []:
+            falta = x["total"] - (x.get("fora_parlamentares") or 0) - por_uf[(x["casa"], x["ano"])]
+            if abs(falta) > 1:
+                r.alerta(f"Histórico {x['casa']} {x['ano']}: {falta:.2f} reais de parlamentares sem estado (fora dos estados)")
+
+
+def _conferir_um_historico(d: dict, soma: dict, r: Resultado, nome: str) -> None:
+    uf = d.get("uf") or ""
+    for k, u in (d.get("fontes") or {}).items():
+        if not str(u).startswith("https://"):
+            r.erro(f"{nome}: fonte sem link https ({k})")
     casas: dict[int, set] = {}
     for x in d.get("anos") or []:
         casas.setdefault(x["ano"], set()).add(x["casa"])
-        esperado = soma[(x["casa"], str(x["ano"]))] + (x.get("fora_parlamentares") or 0)
+        esperado = soma[(uf, x["casa"], str(x["ano"]))] + (x.get("fora_parlamentares") or 0)
         if abs(esperado - x["total"]) > 1:
-            r.erro(f"Histórico {x['casa']} {x['ano']}: total ({x['total']}) diferente da soma dos parlamentares "
+            r.erro(f"{nome} {x['casa']} {x['ano']}: total ({x['total']}) diferente da soma dos parlamentares "
                    f"mais lideranças ({esperado:.2f})")
         cats = sum((x.get("categorias") or {}).values())
         if abs(cats - x["total"]) > 1:
-            r.erro(f"Histórico {x['casa']} {x['ano']}: soma dos tipos de despesa ({cats:.2f}) diferente do total")
+            r.erro(f"{nome} {x['casa']} {x['ano']}: soma dos tipos de despesa ({cats:.2f}) diferente do total")
         if x.get("total_hoje") is not None and x["total"] > 0 and not (0.5 < x["total_hoje"] / x["total"] < 5):
-            r.erro(f"Histórico {x['casa']} {x['ano']}: valor corrigido pela inflação fora do razoável")
+            r.erro(f"{nome} {x['casa']} {x['ano']}: valor corrigido pela inflação fora do razoável")
     for ano, cs in sorted(casas.items()):
         if len(cs) < 2:
-            r.alerta(f"Histórico da cota: {ano} só tem {', '.join(sorted(cs))}")
+            r.alerta(f"{nome}: {ano} só tem {', '.join(sorted(cs))}")
 
 
 CHAVES_PROIBIDAS_TSE = {"cpf", "email", "titulo", "titulo_eleitor", "descricao", "ds_bem"}

@@ -200,3 +200,68 @@ def test_caos_falhas_aleatorias_nunca_publicam_dado_errado(nac, tmp_path, gov_ts
             m = next(m for m in d["executivo"] if m["eleicao"] == ano)
             assert m["vice"] is None
     assert not util.AVISOS or set(util.AVISOS) <= set(meta["avisos"])
+
+
+# ---------------------------------------------------------------- campanha, patrimônio e histórico
+
+def _arquivos_por_politico(nac, ids_mg, id_fora):
+    """Campanha, patrimônio e cota desde 2008 como a coleta nacional grava (campanha.py, patrimonio.py, historico.py)."""
+    from sa_etl import campanha, historico
+    a = ids_mg[0]
+    for i in (a, id_fora):
+        util.write_json(nac / "p" / "campanha" / f"{i}.json", {"id": i, "atualizado_em": "2026-11-17", "campanhas": [], "ligacoes": []})
+        util.write_json(nac / "p" / "pasta-nova" / f"{i}-2025.json", {"id": i})
+        util.write_json(nac / "pat" / f"{i}.json", {"id": i, "nome": i, "atualizado": "2026-11-17", "declaracoes": [
+            {"ano": 2022, "cargo": "Deputado Federal", "total": 10.0, "tipos": [{"tipo": "Casa", "valor": 10.0}],
+             "fonte": "https://dadosabertos.tse.jus.br/dataset/candidatos-2022", "principal": True}]})
+    util.write_json(nac / campanha.ARQUIVO_PERFIS, campanha.perfis([a, id_fora], "2026-11-17"))
+    util.write_json(nac / "campanha.json", {"atualizado_em": "2026-11-17", "anos": {}, "contagens": {}, "ligacoes": []})
+    resumo = {"ultimo": {"ano": 2022, "cargo": "Deputado Federal", "total": 10.0}, "anterior": None, "declaracoes": 1}
+    util.write_json(nac / "patrimonio.json", {"atualizado": "2026-11-17", "anos": [2022], "fontes": {"tse": "https://dadosabertos.tse.jus.br/"},
+                                             "politicos": [{"id": i, "nome": i, **resumo} for i in (a, id_fora)],
+                                             "sem_registro": 0, "total_politicos": 2})
+    linha = lambda pid, uf, v: {"ideCadastro": pid.split("-")[1], "numAno": "2015", "numMes": "3", "vlrLiquido": str(v),
+                                "vlrDocumento": str(v), "txtDescricao": "TELEFONIA", "datEmissao": "2015-03-01",
+                                "txNomeParlamentar": pid, "sgUF": uf, "sgPartido": "PT"}
+    r = json.loads(json.dumps(historico.resumir_camara([linha(a, "MG", 100), linha(id_fora, "SP", 40), linha("dep-77", "MG", 5)], 2015)))
+    historico.montar([r], {}, nac)
+
+
+def test_campanha_patrimonio_e_historico_so_de_mg(nac, tmp_path):
+    """O Minas Nossa dizia "não achamos a candidatura" de todos: o recorte não copiava p/campanha/. Toda pasta de p/,
+    o patrimônio (pat/) e a cota desde 2008 (h/) vêm agora com cada político, e os resumos só com os de MG."""
+    pols = ler(nac, "politicos.json")
+    ids = [p["id"] for p in pols if p["uf"] == "MG" and p["casa"] == "camara"]
+    fora = next(p["id"] for p in pols if p["uf"] != "MG" and p["casa"] == "camara")
+    _arquivos_por_politico(nac, ids, fora)
+    saida = tmp_path / "mg"
+    recorte.recortar(nac, saida)
+    a = ids[0]
+    assert {f.stem for f in (saida / "p" / "campanha").glob("*.json")} == {a}
+    assert {f.name for f in (saida / "p" / "pasta-nova").glob("*.json")} == {f"{a}-2025.json"}
+    assert ler(saida, "campanha-perfis.json")["perfis"] == [a]
+    assert ler(saida, "campanha.json")["contagens"]["politicos"] == len([p for p in pols if p["uf"] == "MG"])
+    pat = ler(saida, "patrimonio.json")
+    n_mg = len([p for p in pols if p["uf"] == "MG"])
+    assert [p["id"] for p in pat["politicos"]] == [a] and pat["total_politicos"] == n_mg and pat["sem_registro"] == n_mg - 1
+    assert {f.stem for f in (saida / "pat").glob("*.json")} == {a}
+    h = ler(saida, "historico.json")
+    assert h["uf"] == "MG" and [(x["casa"], x["total"], x["parlamentares"]) for x in h["anos"]] == [("camara", 105, 2)]
+    # quem já saiu (dep-77) entra na bancada e na conferência; o de SP, não
+    assert {f.stem for f in (saida / "h").glob("*.json")} == {a, "dep-77"}
+    (saida / "cidades.json").write_text("[]", encoding="utf-8")
+    r = V.validar(saida, minimos=MINIMOS_TESTE)
+    assert r.erros == []
+
+
+def test_campanha_sem_a_lista_de_perfis_barra(mg):
+    """Arquivo de campanha sem a lista: o site diria "não carregou" para sempre. A conferência barra."""
+    _, saida = mg
+    (saida / "cidades.json").write_text("[]", encoding="utf-8")
+    util.write_json(saida / "campanha.json", {"ligacoes": []})
+    util.write_json(saida / "p" / "campanha" / "dep-1001.json", {"id": "dep-1001", "campanhas": [], "ligacoes": []})
+    r = V.validar(saida, minimos=MINIMOS_TESTE)
+    assert any("campanha-perfis.json" in e for e in r.erros)
+    util.write_json(saida / "campanha-perfis.json", {"perfis": ["dep-1005"]})
+    r = V.validar(saida, minimos=MINIMOS_TESTE)
+    assert any("sem p/campanha" in e for e in r.erros) and any("fora da lista" in e for e in r.erros)

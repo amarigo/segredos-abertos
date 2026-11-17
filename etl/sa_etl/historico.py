@@ -15,7 +15,12 @@ O resumo de cada ano fica no cache (historico/{casa}-{ano}.json). O arquivo baix
 Anos fechados mudam pouco (nota lançada com atraso): somamos de novo a cada 30 dias. O ano atual e o anterior, a
 cada 20 horas, como na coleta principal.
 
-Grava data/historico.json (totais por ano) e data/h/{id}.json (cada parlamentar, ano a ano).
+Estado de cada parlamentar: a Câmara traz no próprio arquivo (sgUF, nota a nota). A API da cota do Senado não traz;
+vem da lista de senadores de cada legislatura da API do Senado (/senador/lista/legislatura/{n}), a mesma que a coleta
+principal já usa, guardada no cache (30 dias para legislaturas passadas).
+
+Grava data/historico.json (totais por ano), data/h/{id}.json (cada parlamentar, ano a ano) e
+data/historico-uf/{UF}.json (o mesmo resumo de historico.json só com a bancada de cada estado; o Minas Nossa usa o de MG).
 """
 from __future__ import annotations
 
@@ -290,8 +295,95 @@ def meses_fracos(meses: dict[str, float]) -> list[int]:
     return sorted(int(m) for m, v in meses.items() if v < med / 4)
 
 
+def ufs_senadores(cache: Path, lista_anos: list[int], hoje: dt.date | None = None) -> dict[str, str]:
+    """Estado de cada senador ("sen-123" -> "MG") pelas listas das legislaturas da API do Senado.
+
+    A API da cota (CEAPS) não traz o estado. Senador representa um estado só no mandato; se a pessoa voltou por outro
+    estado em outra legislatura, fica o da mais recente. Legislatura que não respondeu e não tem cópia fica sem estado
+    (o senador sai da soma do estado, e a conferência avisa)."""
+    hoje = hoje or dt.date.today()
+    atual = camara.legislatura(hoje.year, hoje.month)
+    out: dict[str, str] = {}
+    for leg in camara.legislaturas(lista_anos):
+        try:
+            data = com_copia(cache / "senado-senadores" / f"legislatura-{leg}.json",
+                             lambda leg=leg: get_json(f"{senado.LEGIS}/senador/lista/legislatura/{leg}.json", params={"exercicio": "S"}),
+                             f"Senadores da {leg}ª legislatura", max_horas=20 if leg >= atual else DIAS_ANO_FECHADO * 24)
+        except Exception as e:  # noqa: BLE001
+            log.warning("Senadores da %dª legislatura indisponíveis (%s)", leg, e)
+            avisar(f"Histórico da cota: a lista de senadores da {leg}ª legislatura não respondeu; esses senadores ficaram sem estado")
+            continue
+        lista = (((data or {}).get("ListaParlamentarLegislatura") or {}).get("Parlamentares") or {}).get("Parlamentar")
+        for p in senado._as_list(lista):
+            ident = p.get("IdentificacaoParlamentar") or {}
+            cod = str(ident.get("CodigoParlamentar") or "").strip()
+            uf = (senado._uf_do_mandato(p, leg) or ident.get("UfParlamentar") or "").strip().upper()
+            if cod.isdigit() and UF.fullmatch(uf):
+                out[senado.pid(cod)] = uf
+    return out
+
+
+def dar_uf_senado(resumos: list[dict], ufs: dict[str, str]) -> int:
+    """Põe o estado em cada senador dos resumos do Senado. Devolve quantos senadores-ano ficaram sem estado."""
+    sem = 0
+    for r in resumos:
+        if r["casa"] != "senado":
+            continue
+        for i, p in r["pessoas"].items():
+            p["uf"] = ufs.get(i) or p.get("uf") or ""
+            sem += not p["uf"]
+    return sem
+
+
+UF = re.compile(r"[A-Z]{2}")
+
+
+def _marcar_poucas_notas(linhas: list[dict]) -> None:
+    for casa in ("camara", "senado"):
+        # ano com bem menos gasto por parlamentar que o normal da Casa (2008 na Câmara): poucas notas no arquivo oficial
+        vals = sorted(x["por_parlamentar"] for x in linhas if x["casa"] == casa and x["por_parlamentar"] > 0)
+        med = vals[len(vals) // 2] if vals else 0
+        for x in linhas:
+            if x["casa"] == casa and med and x["por_parlamentar"] < med / 4:
+                x["poucas_notas"] = True
+
+
+def linhas_por_uf(resumos: list[dict], idx: dict[str, float]) -> dict[str, list[dict]]:
+    """As mesmas linhas de historico.json (uma por ano e Casa), só com os parlamentares de cada estado.
+
+    Notas das lideranças dos partidos não têm estado e ficam de fora; o número de notas não é contado por pessoa
+    (vai null). O valor corrigido pela inflação é feito mês a mês, como o da Casa inteira."""
+    out: dict[str, list[dict]] = defaultdict(list)
+    for r in sorted(resumos, key=lambda x: (x["ano"], x["casa"])):
+        grupos: dict[str, list[dict]] = defaultdict(list)
+        for p in r["pessoas"].values():
+            uf = (p.get("uf") or "").strip().upper()
+            if UF.fullmatch(uf):
+                grupos[uf].append(p)
+        for uf, ps in sorted(grupos.items()):
+            meses: dict[str, float] = defaultdict(float)
+            cats: dict[str, float] = defaultdict(float)
+            for p in ps:
+                for m, v in (p.get("por_mes") or {}).items():
+                    meses[str(int(m))] += v
+                for c, v in (p.get("cat") or {}).items():
+                    cats[c] += v
+            total = round(sum(p["total"] for p in ps), 2)
+            real, _ = corrigido({m: round(v, 2) for m, v in meses.items()}, r["ano"], idx)
+            out[uf].append({
+                "ano": r["ano"], "casa": r["casa"], "total": total, "total_hoje": real, "notas": None,
+                "parlamentares": len(ps), "por_parlamentar": round(total / len(ps), 2),
+                "meses": sorted(int(m) for m in meses), "meses_fracos": meses_fracos(meses),
+                "fora_parlamentares": 0.0,
+                "categorias": {c: round(v, 2) for c, v in sorted(cats.items(), key=lambda x: -x[1]) if abs(v) > 0.005},
+            })
+    for linhas in out.values():
+        _marcar_poucas_notas(linhas)
+    return out
+
+
 def montar(resumos: list[dict], idx: dict[str, float], saida: Path, hoje: dt.date | None = None) -> dict:
-    """Grava historico.json e h/{id}.json. Devolve o conteúdo de historico.json."""
+    """Grava historico.json, h/{id}.json e historico-uf/{UF}.json. Devolve o conteúdo de historico.json."""
     hoje = hoje or dt.date.today()
     linhas = []
     pessoas: dict[str, dict] = {}
@@ -318,13 +410,7 @@ def montar(resumos: list[dict], idx: dict[str, float], saida: Path, hoje: dt.dat
                                         **({"do_site": True} if p.get("do_site") else {}),
                                         # correção aproximada: o fator do ano inteiro da Casa
                                         **({"total_hoje": round(p["total"] * fator, 2)} if fator else {})}
-    for casa in ("camara", "senado"):
-        # ano com bem menos gasto por parlamentar que o normal da Casa (2008 na Câmara): poucas notas no arquivo oficial
-        vals = sorted(x["por_parlamentar"] for x in linhas if x["casa"] == casa and x["por_parlamentar"] > 0)
-        med = vals[len(vals) // 2] if vals else 0
-        for x in linhas:
-            if x["casa"] == casa and med and x["por_parlamentar"] < med / 4:
-                x["poucas_notas"] = True
+    _marcar_poucas_notas(linhas)
     for i, x in pessoas.items():
         tot = sum(a["total"] for a in x["anos"].values())
         write_json(saida / "h" / f"{i}.json", {**x, "total": round(tot, 2), "fontes": FONTES,
@@ -335,6 +421,11 @@ def montar(resumos: list[dict], idx: dict[str, float], saida: Path, hoje: dt.dat
         "maiores": _maiores(pessoas),
     }
     write_json(saida / "historico.json", out)
+    for uf, ls in linhas_por_uf(resumos, idx).items():
+        # quem mais gastou na bancada: só os anos em que a pessoa era do estado
+        daqui = {i: {**x, "anos": {a: v for a, v in x["anos"].items() if v.get("uf") == uf}} for i, x in pessoas.items()}
+        write_json(saida / "historico-uf" / f"{uf}.json", {**out, "uf": uf, "anos": ls,
+                                                           "maiores": _maiores({i: x for i, x in daqui.items() if x["anos"]})})
     log.info("Histórico da cota: %d anos-Casa, %d parlamentares", len(linhas), len(pessoas))
     return out
 
@@ -366,4 +457,7 @@ def coletar(saida: Path, cache: Path, hoje: dt.date | None = None, anos: list[in
         avisar("Histórico da cota: nenhum ano pôde ser lido; a página ficou de fora desta atualização")
         return None
     usar_numeros_do_site(resumos, saida)
+    sem = dar_uf_senado(resumos, ufs_senadores(cache, sorted({r["ano"] for r in resumos}), hoje))
+    if sem:
+        log.warning("Histórico: %d senadores-ano sem estado", sem)
     return montar(resumos, ipca(hoje), saida, hoje)

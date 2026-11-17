@@ -74,8 +74,8 @@ export default function Politicos() {
     <section>
       <h1>Políticos</h1>
       {!MG && <p className="small"><Link to="/gabinetes">Gasto com assessores: compare os estados de forma justa, pela população e pelos salários de cada um ›</Link></p>}
-      {!MG && <p className="small"><Link to="/historico">A cota parlamentar desde 2008: quanto a Câmara e o Senado gastaram em cada ano ›</Link></p>}
-      {!MG && <p className="small"><Link to="/patrimonio">Patrimônio declarado ao TSE por cada deputado e senador, em cada eleição desde 2014 ›</Link></p>}
+      <p className="small"><Link to="/historico">{MG ? "A cota parlamentar desde 2008: quanto os deputados federais e senadores de Minas gastaram em cada ano ›" : "A cota parlamentar desde 2008: quanto a Câmara e o Senado gastaram em cada ano ›"}</Link></p>
+      <p className="small"><Link to="/patrimonio">Patrimônio declarado ao TSE por cada deputado {MG ? "federal e senador de Minas" : "e senador"}, em cada eleição desde 2014 ›</Link></p>
       {!MG && <p className="small"><Link to="/quem">Governadores, assembleias, prefeitos e vereadores eleitos, com o patrimônio declarado ›</Link></p>}
       <div className="secao-graficos">
         {ufs.length > 1 && (

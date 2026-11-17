@@ -208,14 +208,14 @@ function Gastos({ p, meta }: { p: Politico; meta: Meta | null }) {
               </div>
             </div>
           ) },
-          { id: "meses", titulo: `Cota mês a mês${MG ? "" : " e nos outros anos"}`, conteudo: (
+          { id: "meses", titulo: "Cota mês a mês e nos outros anos", conteudo: (
             <Stack>
               <h3>Cota por mês em {ano}</h3>
               <GastoMensal meses={d.meses} ano={ano} cor="var(--s2)" />
-              {!MG && <HistoricoPolitico id={p.id} />}
+              <HistoricoPolitico id={p.id} />
             </Stack>
           ) },
-          !MG && { id: "patrimonio", titulo: "Patrimônio declarado ao TSE", conteudo: <PatrimonioPolitico id={p.id} /> },
+          { id: "patrimonio", titulo: "Patrimônio declarado ao TSE", conteudo: <PatrimonioPolitico id={p.id} /> },
           { id: "notas", titulo: `Todas as notas fiscais de ${ano}${d.n_notas ? ` (${d.n_notas.toLocaleString("pt-BR")})` : ""}`, conteudo: <TodasNotas p={p} d={d} ano={ano} /> },
           !!d.fora_do_total_oficial?.notas.length && { id: "fora", titulo: `Notas fora do total oficial em ${ano}`, conteudo: <ForaDoTotal d={d} ano={ano} /> },
         ]} />
