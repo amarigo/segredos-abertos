@@ -38,8 +38,22 @@ def _as_list(x):
     return x if isinstance(x, list) else [x]
 
 
-def parse_senadores(data: dict) -> list[dict]:
+def _saiu_hoje(p: dict, hoje: str) -> dict:
+    """Período que já terminou, quando a lista atual ainda traz quem saiu do cargo.
+
+    No dia da troca, a lista "em exercício" traz os dois: o titular que voltou e o suplente cujo exercício
+    terminou naquele dia (19/11/2026: Wellington Dias e Jussara Lima, PI, 82 nomes para 81 vagas). Quem não tem
+    nenhum período aberto (sem DataFim) e cujo último período terminou até hoje não está mais no cargo."""
+    ex = [e for e in _as_list(((p.get("Mandato") or {}).get("Exercicios") or {}).get("Exercicio")) if e.get("DataInicio")]
+    if not ex or any(not e.get("DataFim") for e in ex):
+        return {}
+    ult = max(ex, key=lambda e: e["DataFim"])
+    return ult if ult["DataFim"][:10] <= hoje else {}
+
+
+def parse_senadores(data: dict, hoje: str | None = None) -> list[dict]:
     lista = data.get("ListaParlamentarEmExercicio", {}).get("Parlamentares", {}).get("Parlamentar", [])
+    hoje = hoje or dt.date.today().isoformat()
     out = []
     for p in _as_list(lista):
         ident = p.get("IdentificacaoParlamentar", {})
@@ -57,7 +71,15 @@ def parse_senadores(data: dict) -> list[dict]:
             "foto": url_segura(ident.get("UrlFotoParlamentar")),
             "bloco": bloco.get("NomeBloco") or bloco.get("NomeApelido") or "",
             "fonte": url_segura(ident.get("UrlPaginaParlamentar")) or f"https://www25.senado.leg.br/web/senadores/senador/-/perfil/{cod}",
+            "em_exercicio": True,
         })
+        if not out[-1]["uf"]:
+            out[-1]["uf"] = (p.get("Mandato") or {}).get("UfParlamentar") or ""
+        saiu = _saiu_hoje(p, hoje)
+        if saiu:
+            causa = (saiu.get("DescricaoCausaAfastamento") or "").strip()
+            out[-1].update(em_exercicio=False, situacao=f"Fora do exercício: {causa}" if causa else "Fora do exercício",
+                           situacao_desde=saiu["DataFim"][:10])
     return out
 
 
@@ -118,9 +140,10 @@ def senadores(legislaturas: list[int] | None = None, cache: Path | None = None) 
     licenciou, renunciou ou morreu sumia do site, com os gastos e os votos. A lista da legislatura com exercicio=S
     traz todos que estiveram no cargo nela."""
     out = parse_senadores(get_json(f"{LEGIS}/senador/lista/atual.json"))
-    for s in out:
-        s["em_exercicio"] = True
-    log.info("Senado: %d senadores em exercício", len(out))
+    saiu = [s for s in out if not s["em_exercicio"]]
+    log.info("Senado: %d senadores em exercício", len(out) - len(saiu))
+    for s in saiu:
+        log.info("Senado: %s (%s) ainda na lista atual, mas saiu em %s (%s)", s["nome"], s["uf"], s["situacao_desde"], s["situacao"])
     ja = {s["id"] for s in out}
     for leg in legislaturas or []:
         data = com_copia((cache or Path(".cache")) / "senado-senadores" / f"legislatura-{leg}.json",

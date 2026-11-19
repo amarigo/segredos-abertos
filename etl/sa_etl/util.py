@@ -159,6 +159,10 @@ AVISOS: list[str] = []
 # 29/10/2026 e a API que os substitui é lida por um workflow semanal). Continuam no site, mas tentar-de-novo.yml não
 # dispara outra coleta por causa deles: era uma coleta inteira (mais de uma hora) a cada 2 horas, sem nunca resolver.
 SEM_RETENTATIVA: set[str] = set()
+# Por que cada fonte falhou nesta coleta (o erro que a fonte deu), pelo nome da fonte. Vai para meta.json
+# ("motivos_falha"); etl/falhas_seguidas.py conta as falhas seguidas de cada fonte e, depois de 3, abre um aviso no
+# GitHub pedindo um caminho alternativo.
+MOTIVOS_FALHA: dict[str, str] = {}
 
 _BRASILIA = timezone(timedelta(hours=-3))
 
@@ -223,6 +227,7 @@ def com_copia(dest: Path, buscar, descricao: str, max_horas: float = 20) -> Any:
         if not (dest.exists() and dest.stat().st_size > 0):
             raise
         log.warning("%s: fonte fora do ar (%s); usando a cópia de %s", descricao, e, data_do_arquivo(dest))
+        MOTIVOS_FALHA[descricao] = f"{type(e).__name__}: {e}"[:300]
         avisar(f"{descricao}: a fonte oficial não respondeu; usando a cópia de {data_do_arquivo(dest)}")
         return json.loads(dest.read_text(encoding="utf-8"))
     write_json(dest, dados)

@@ -29,7 +29,7 @@ test("situação de cada execução", () => {
 });
 
 test("como a execução começou", () => {
-  assert.equal(comoComecou(run()), "Agendada (todo dia às 3h17)");
+  assert.equal(comoComecou(run()), "Agendada (todo dia às 2h)");
   assert.equal(comoComecou(run({ event: "workflow_dispatch", triggering_actor: { login: "github-actions[bot]" } })), "Tentar de novo (automático)");
   assert.equal(comoComecou(run({ event: "workflow_dispatch", triggering_actor: { login: "amarigo" } })), "Manual");
   assert.equal(comoComecou(run({ event: "push" })), "Mudança no código");
@@ -106,6 +106,17 @@ test("Minas Nossa com continue-on-error: etapa ok na API, mas o aviso marca a pa
   assert.equal(Math.round(mg.duracao), 20);
 });
 
+test("coleta do Brasil falhou, mas a execução publicou com os dados anteriores do Brasil", () => {
+  const ps = partesDaExecucao(jobs([passo(7, "Conferir os dados (se algo não bater, os dados novos do Brasil não vão ao ar)")]),
+    { 12: [{ annotation_level: "failure", title: "Dados do Brasil", message: "Conferência dos dados falhou; os sites foram publicados com os dados do Brasil já conferidos de 2026-11-18" },
+           { annotation_level: "failure", title: "Conferência dos dados", message: "Partidos da casa senado: 82 cadeiras somadas" }] });
+  assert.equal(ps.find((x) => x.id === "conferencia").estado, "erro");
+  const agora = new Date("2026-11-02T18:00:00Z").getTime();
+  const s = saude({ execs: [resumirExecucao(run())], ultimaDetalhe: { partes: ps }, agora });
+  assert.equal(s.nivel, "atencao");
+  assert.equal(s.titulo, "Atenção: dados do Brasil da coleta anterior");
+});
+
 test("saúde geral", () => {
   const agora = new Date("2026-11-02T18:00:00Z").getTime();
   const ok = resumirExecucao(run());
@@ -132,8 +143,8 @@ test("última vez que cada parte funcionou", () => {
 });
 
 test("próxima coleta agendada e durações", () => {
-  assert.equal(proximaAgendada(new Date("2026-11-02T05:00:00Z")), "2026-11-02T06:17:00.000Z");
-  assert.equal(proximaAgendada(new Date("2026-11-02T06:30:00Z")), "2026-11-03T06:17:00.000Z");
+  assert.equal(proximaAgendada(new Date("2026-11-02T04:30:00Z")), "2026-11-02T05:00:00.000Z");
+  assert.equal(proximaAgendada(new Date("2026-11-02T05:30:00Z")), "2026-11-03T05:00:00.000Z");
   assert.equal(duracaoTexto(0.5), "30 s");
   assert.equal(duracaoTexto(46.2), "46 min");
   assert.equal(duracaoTexto(75), "1 h 15 min");

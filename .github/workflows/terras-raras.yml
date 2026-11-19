@@ -44,7 +44,8 @@ concurrency:
 
 jobs:
   conferir:
-    # Depois do "Dados e site", só quando ele deu certo (se falhou, nada novo foi ao ar)
+    # Depois do "Dados e site", só quando ele deu certo (se falhou, nada novo foi ao ar). Uma coleta do Brasil que
+    # falhou não faz a execução falhar: ela publica com os dados anteriores do Brasil e termina com sucesso.
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -90,36 +91,16 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/scripts
       - name: Última cópia publicada do site inteiro
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          # Pacotes "github-pages" do main ainda guardados, do mais novo para o mais velho. Vale o primeiro de uma
-          # execução do "Dados e site" que terminou com sucesso (ou seja, que foi publicada). Nunca uma cópia feita por
-          # este workflow: assim o resto do site é sempre o da última coleta nacional publicada.
-          gh api "repos/$REPO/actions/artifacts?name=github-pages&per_page=100" \
-            --jq '.artifacts | map(select(.expired == false and .workflow_run.head_branch == "main")) | sort_by(.created_at) | reverse | .[] | "\(.id) \(.workflow_run.id) \(.created_at)"' \
-            > pacotes.txt
-          ESCOLHIDO=""
-          while read -r ART RUN QUANDO; do
-            if [ "$(gh api "repos/$REPO/actions/runs/$RUN" --jq '"\(.path) \(.conclusion)"')" = ".github/workflows/dados-e-site.yml success" ]; then
-              ESCOLHIDO="$ART"; echo "Cópia do site: pacote $ART da execução $RUN, de $QUANDO" | tee -a "$GITHUB_STEP_SUMMARY"; break
-            fi
-          done < pacotes.txt
-          if [ -z "$ESCOLHIDO" ]; then
-            echo "::error title=Terras Raras::Nenhuma cópia do site publicada nos últimos 7 dias. Rode Actions > Dados e site > Run workflow; ele publica o tracker junto."
-            exit 1
-          fi
-          gh api "repos/$REPO/actions/artifacts/$ESCOLHIDO/zip" > site.zip
-          unzip -q site.zip -d pacote
-          mkdir dist && tar -xf pacote/artifact.tar -C dist
-          rm -rf site.zip pacote
-          # Confere que é mesmo o site inteiro antes de publicar por cima
-          for f in index.html mg/index.html eleicao2026/index.html terras-raras/index.html; do
-            test -f "dist/$f" || { echo "::error title=Terras Raras::A cópia do site não tem $f; nada publicado"; exit 1; }
-          done
+        # Pacote "github-pages" mais novo de um "Dados e site" cujo job "publicar" deu certo (nunca uma cópia feita
+        # por este workflow): o resto do site é sempre o da última coleta publicada.
+        run: bash .github/scripts/ultima-copia-publicada.sh dist
       - uses: actions/download-artifact@v4
         with:
           name: terras-raras-pagina

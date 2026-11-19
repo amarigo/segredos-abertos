@@ -16,8 +16,8 @@ export const API = `https://api.github.com/repos/${REPO}`;
 export const ACTIONS = `https://github.com/${REPO}/actions`;
 export const FLUXO = "dados-e-site.yml";
 export const FLUXO_REPETIR = "tentar-de-novo.yml";
-export const HORA_AGENDADA_UTC = 6; // cron "17 6 * * *": 3h17 de Brasília (madrugada, menos tráfego nas APIs)
-export const MINUTO_AGENDADO_UTC = 17;
+export const HORA_AGENDADA_UTC = 5; // cron "0 5 * * *": 2h de Brasília (madrugada, menos tráfego nas APIs)
+export const MINUTO_AGENDADO_UTC = 0;
 export const DETALHAR = 6; // quantas execuções recentes são abertas etapa por etapa (cada uma custa 2 consultas)
 const FUSO = "America/Sao_Paulo";
 
@@ -25,7 +25,7 @@ const FUSO = "America/Sao_Paulo";
 // anotações (::error title=...) que explicam o problema daquela parte.
 export const PARTES = [
   { id: "testes", nome: "Testes do código", jobs: /^testes-/ },
-  { id: "coleta", nome: "Coleta dos dados oficiais", job: "coletar", passos: /^Coletar dados oficiais/, titulos: ["Coleta dos dados", "Aviso da coleta"] },
+  { id: "coleta", nome: "Coleta dos dados oficiais", job: "coletar", passos: /^Coletar dados oficiais/, titulos: ["Coleta dos dados", "Aviso da coleta", "Dados do Brasil"] },
   { id: "conferencia", nome: "Conferência dos dados", job: "coletar", passos: /^Conferir os dados/, titulos: ["Conferência dos dados"] },
   { id: "verificacao", nome: "Verificação com a 2ª fonte oficial", job: "coletar", passos: /^Verificação independente/, titulos: ["Verificação com a segunda fonte"] },
   { id: "site", nome: "Site Segredos Abertos", job: "coletar", passos: /npm run build && npm run paginas$/ },
@@ -35,6 +35,9 @@ export const PARTES = [
   { id: "publicar", nome: "Publicação no ar (GitHub Pages)", jobs: /^publicar$/ },
   { id: "seguranca", nome: "Segurança das dependências", jobs: /^seguranca$/ },
 ];
+
+// Partes da coleta do Brasil: se uma delas falha, a execução publica com os dados do Brasil anteriores
+const BRASIL = ["coleta", "conferencia", "verificacao"];
 
 // Avisos automáticos do GitHub que não dizem nada sobre os dados
 const RUIDO = /Node\.js \d+ (is|are) deprecated|ubuntu-latest label|Process completed with exit code|runner-images/i;
@@ -81,7 +84,7 @@ export function proximaAgendada(agora = new Date()) {
 // ------------------------------------------------------------------ execuções
 
 export function comoComecou(run) {
-  if (run.event === "schedule") return "Agendada (todo dia às 3h17)";
+  if (run.event === "schedule") return "Agendada (todo dia às 2h)";
   if (run.event === "push") return "Mudança no código";
   if (run.event === "workflow_dispatch") {
     const quem = run.triggering_actor?.login || run.actor?.login || "";
@@ -205,6 +208,11 @@ export function saude({ execs, ultimaDetalhe, avisosPublicados = [], agora = Dat
     nivel = "atencao"; titulo = "Atenção: a última coleta não publicou";
     frase = `O site continua com os dados de ${dataHora(pub?.fim)} (${haQuanto(pub?.fim, agora)}).`;
     if (horas > 30 && fim?.situacao !== "falhou") titulo = "Atenção: atualização atrasada";
+  } else if (avisos.some((p) => p.estado === "erro" && BRASIL.includes(p.id))) {
+    // Desde 19/11/2026 uma falha só na coleta do Brasil não segura os outros sites: a execução publica o resto com os
+    // dados do Brasil que já estavam no ar e avisa aqui
+    nivel = "atencao"; titulo = "Atenção: dados do Brasil da coleta anterior";
+    frase = `Publicado ${haQuanto(pub.fim, agora)}, mas a coleta do Brasil falhou: os outros sites foram atualizados e os dados do Brasil continuam os da última coleta conferida. Uma nova tentativa é feita sozinha.`;
   } else if (avisos.length || avisosPublicados.length) {
     nivel = "atencao"; titulo = "Funcionando, com avisos";
     const n = avisos.length + avisosPublicados.length;

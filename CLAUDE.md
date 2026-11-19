@@ -36,20 +36,28 @@ Ao usar a opção 2 ou 3, deixe escrito no código por que a API não serviu.
 
 ## Atualização
 
-- Todo dia às **3h17 de Brasília** (`cron: "17 6 * * *"`, UTC) o workflow "Dados e site" roda os testes, coleta,
-  confere, verifica com a segunda fonte, monta todos os sites e publica. Também roda a cada push no `main`.
+- Todo dia às **2h de Brasília** (`cron: "0 5 * * *"`, UTC) o workflow "Dados e site" roda os testes, coleta,
+  confere, verifica com a segunda fonte, monta todos os sites e publica. Também roda a cada push no `main`. O GitHub
+  atrasa agendamentos (em 11/2026, de 7 a 10 horas): [`tentar-de-novo.yml`](.github/workflows/tentar-de-novo.yml) olha
+  a cada 30 minutos e, se a coleta do dia não começou depois das 2h, dispara na hora.
+- Se a coleta, a conferência ou a verificação do Brasil falhar, os outros sites são publicados assim mesmo e os dados
+  do Brasil ficam os que já estavam no ar (conferidos), tirados da última cópia publicada
+  (`.github/scripts/ultima-copia-publicada.sh`); o painel de status mostra o erro e uma nova coleta é disparada.
 - Terras Raras não espera a coleta: [`terras-raras.yml`](.github/workflows/terras-raras.yml) publica só essa página a
   cada push que mexa em `terras-raras/` (e "Dados e site" não roda para esses pushes). Tem fila própria, para não
   cancelar a coleta que espera na fila, e roda de novo depois de cada "Dados e site" que deu certo, para pôr no ar a
   página do main caso a coleta tenha montado uma mais velha.
-- Se uma fonte oficial falhar, a coleta usa a última cópia boa, mostra aviso com a data dela, e
-  [`tentar-de-novo.yml`](.github/workflows/tentar-de-novo.yml) tenta de novo a cada 2 horas até tudo responder.
+- Se uma fonte oficial falhar, a coleta usa a última cópia boa, mostra aviso com a data dela, guarda o motivo
+  (`meta.json`, `motivos_falha`) e `tentar-de-novo.yml` tenta de novo (no máximo uma coleta a cada 2 horas) até tudo
+  responder. Mais de 3 falhas seguidas da mesma fonte (`etl/falhas_seguidas.py`): a coleta abre um aviso no GitHub,
+  "Fonte com falhas seguidas: ...", pedindo um caminho alternativo oficial (`etl/avisar_fontes.py`); fecha sozinho
+  quando a fonte volta.
 - Para atualizar na hora: Actions > Dados e site > Run workflow (branch `main`). Opções `ignorar_queda` e
   `ignorar_barreira` só quando a queda ou a diferença for real e entendida.
 
 ## Fontes de dados
 
-Todas as áreas abaixo são coletadas todo dia, na execução das 3h17 (os dados de origem mudam no ritmo de cada fonte).
+Todas as áreas abaixo são coletadas todo dia, na execução das 2h (os dados de origem mudam no ritmo de cada fonte).
 
 | Área | Fonte (API primeiro) | Coletor |
 |---|---|---|
