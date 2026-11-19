@@ -12,10 +12,13 @@ on:
     paths-ignore: ["terras-raras/**", ".github/workflows/terras-raras.yml"]
   pull_request:
   schedule:
-    # Todo dia às 3h17 de Brasília (6h17 UTC): madrugada é o horário com menos tráfego nas APIs do governo, e elas
-    # deixam de responder menos. O minuto 17 foge do pico de agendamentos do próprio GitHub na hora cheia, que atrasa a
-    # partida. Se mudar aqui, mude também HORA_AGENDADA_UTC e MINUTO_AGENDADO_UTC em status/painel.js.
-    - cron: "17 6 * * *"
+    # Todo dia às 2h de Brasília (5h UTC; o cron do GitHub é sempre em UTC e Brasília não tem horário de verão desde
+    # 2019): madrugada é o horário com menos tráfego nas APIs do governo. O GitHub atrasa os agendamentos quando está
+    # cheio (de 05/11 a 19/11/2026 a coleta das 3h17 só começou entre 9h58 e 13h16): por isso tentar-de-novo.yml olha a
+    # cada 30 minutos e, se a coleta do dia ainda não começou depois das 2h, dispara na hora (workflow_dispatch não
+    # espera a fila dos agendamentos). Se mudar aqui, mude também HORA_AGENDADA_UTC e MINUTO_AGENDADO_UTC em
+    # status/painel.js e em tentar-de-novo.yml.
+    - cron: "0 5 * * *"
   workflow_dispatch:
     inputs:
       ignorar_queda:
@@ -155,6 +158,11 @@ jobs:
     # (1.64) já conhece o 26.04: para mudar de Ubuntu, troque aqui nos dois jobs e confira os testes do navegador no PR.
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    permissions:
+      contents: read
+      actions: read  # para achar a última cópia publicada do site, se a coleta do Brasil falhar
+    outputs:
+      falhas: ${{ steps.falhas.outcome }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -167,7 +175,13 @@ jobs:
           path: etl/.cache
           key: dados-${{ github.run_id }}
           restore-keys: dados-
+      # Coleta, conferência e verificação do Brasil não param a execução: se uma delas falhar, a etapa "Dados do
+      # Brasil: se algo falhou, usar a versão publicada" põe no lugar os dados que já estavam no ar (já conferidos), e o
+      # resto (Minas Nossa, Eleição 2026, Terras Raras, Análises) é publicado com o que tem de novo. Antes, uma falha
+      # só do Brasil (19/11/2026: um suplente que saiu naquele dia contado como 82º senador) segurava todos os sites.
       - name: Coletar dados oficiais
+        id: coleta
+        continue-on-error: true
         working-directory: etl
         env:
           # Chave da API de dados do Portal da Transparência (cadastro grátis em
@@ -181,11 +195,15 @@ jobs:
             exit 1
           }
       - name: Resumo da coleta
+        if: steps.coleta.outcome == 'success'
         run: |
           grep -E "INFO|WARNING|ERROR" etl/coleta.log | cut -c1-240 | tail -n 60
           python etl/resumo.py site/public/data | tee -a "$GITHUB_STEP_SUMMARY"
           python etl/anotar.py avisos site/public/data/meta.json "Aviso da coleta"
-      - name: Conferir os dados (se algo não bater, não publica e o site continua com a versão anterior)
+      - name: Conferir os dados (se algo não bater, os dados novos do Brasil não vão ao ar)
+        id: conferencia
+        if: steps.coleta.outcome == 'success'
+        continue-on-error: true
         working-directory: etl
         env:
           IGNORAR_QUEDA: ${{ inputs.ignorar_queda && '--ignorar-queda' || '' }}
@@ -200,6 +218,9 @@ jobs:
       # Se a verificação quebrar por outro motivo (fonte fora do ar, erro no código), não barra: o site fica sem selo,
       # nunca com um selo de "conferido" falso. Empresas com diferença saem do cache e são consultadas de novo.
       - name: Verificação independente (segunda fonte oficial)
+        id: verificacao
+        if: steps.conferencia.outcome == 'success'
+        continue-on-error: true
         timeout-minutes: 30
         working-directory: etl
         env:
@@ -216,6 +237,51 @@ jobs:
             exit 1
           fi
           [ "$rc" = 0 ] || echo "::warning title=Verificação com a segunda fonte::A verificação não terminou (código $rc); o site publica sem selo de conferido."
+      # Se a coleta, a conferência ou a verificação do Brasil falhou, os dados novos do Brasil não vão ao ar. No lugar
+      # deles entram os que já estavam publicados (conferidos na execução que os publicou), tirados do pacote do site
+      # guardado pelo GitHub (7 dias). O site mostra a data desses dados, o painel de status mostra o erro em vermelho
+      # e tentar-de-novo.yml roda a coleta de novo. Sem cópia nenhuma, a execução falha e nada é publicado, como antes.
+      - name: "Dados do Brasil: se algo falhou, usar a versão publicada"
+        id: nacional
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          COLETA: ${{ steps.coleta.outcome }}
+          CONFERENCIA: ${{ steps.conferencia.outcome }}
+          VERIFICACAO: ${{ steps.verificacao.outcome }}
+        run: |
+          set -euo pipefail
+          if [ "$VERIFICACAO" = "success" ]; then echo "novos=1" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "$COLETA" != "success" ]; then ETAPA="Coleta dos dados oficiais"
+          elif [ "$CONFERENCIA" != "success" ]; then ETAPA="Conferência dos dados"
+          else ETAPA="Verificação com a segunda fonte"; fi
+          echo "novos=0" >> "$GITHUB_OUTPUT"
+          echo "etapa=$ETAPA" >> "$GITHUB_OUTPUT"
+          bash .github/scripts/ultima-copia-publicada.sh "$RUNNER_TEMP/copia"
+          test -f "$RUNNER_TEMP/copia/data/meta.json" || { echo "::error title=Dados do Brasil::A cópia publicada não tem data/meta.json; nada publicado"; exit 1; }
+          rm -rf site/public/data && mkdir -p site/public/data && cp -a "$RUNNER_TEMP/copia/data/." site/public/data/
+          rm -rf "$RUNNER_TEMP/copia"
+          DATA=$(python -c "import json; print(json.load(open('site/public/data/meta.json')).get('atualizado_em', '?'))")
+          echo "::error title=Dados do Brasil::$ETAPA falhou; os sites foram publicados com os dados do Brasil já conferidos de $DATA (o resto está atualizado). A coleta será feita de novo."
+          echo "### Dados do Brasil: $ETAPA falhou; publicados de novo os dados de $DATA" >> "$GITHUB_STEP_SUMMARY"
+      # Conta as falhas seguidas de cada fonte (no cache da coleta). Mais de 3 seguidas: o job "fontes" abre um aviso
+      # no GitHub pedindo um caminho alternativo. Nunca para a execução.
+      - name: Falhas seguidas de cada fonte
+        id: falhas
+        if: always() && steps.coleta.outcome != 'skipped'
+        continue-on-error: true
+        env:
+          ETAPA: ${{ steps.nacional.outputs.etapa }}
+        run: |
+          python etl/falhas_seguidas.py --meta site/public/data/meta.json --estado etl/.cache/falhas-seguidas.json \
+            --saida falhas-fontes.json ${ETAPA:+--etapa "$ETAPA"} | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.falhas.outcome == 'success'
+        continue-on-error: true
+        with:
+          name: falhas-fontes
+          path: falhas-fontes.json
+          retention-days: 7
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -366,6 +432,26 @@ jobs:
         if: always()
         continue-on-error: true
         run: grep -E "Renúncias|Pagamentos gerais|Incentivos" etl/coleta.log | cut -c1-300 | tail -n 40 || true
+
+  # Fontes com mais de 3 falhas seguidas: um aviso (issue) por fonte pedindo um caminho alternativo; fecha quando a
+  # fonte volta. Job separado para a permissão de escrever issues não ficar com a coleta.
+  fontes:
+    needs: coletar
+    if: always() && needs.coletar.outputs.falhas == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: falhas-fontes
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 etl/avisar_fontes.py falhas-fontes.json | tee -a "$GITHUB_STEP_SUMMARY"
 
   publicar:
     needs: coletar

@@ -506,7 +506,8 @@ def montar(dados: dict, saida: Path, anos: list[int], anos_notas: list[int] | No
         "mesmo_periodo": periodo,
         "empresas_por_ano": totais_empresas(lista_emp, anos),
         "atualizado_em": hoje, "anos": anos, "avisos": list(util.AVISOS),
-        "avisos_tentar": util.avisos_para_tentar(), "grupos": GRUPOS, "medias": medias,
+        "avisos_tentar": util.avisos_para_tentar(), "motivos_falha": dict(util.MOTIVOS_FALHA),
+        "grupos": GRUPOS, "medias": medias,
         "medias_casa": medias_casa.medias_da_casa(resumo, meses_periodo),
         "fora_da_lista": dados.get("fora_da_lista") or {},
         "contagens": {"politicos": len(politicos), "despesas": len(despesas), "votacoes": len(votacoes),
@@ -893,8 +894,10 @@ def regravar_avisos(saida: Path) -> None:
         meta = json.loads(f.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return
-    if meta.get("avisos") != util.AVISOS or meta.get("avisos_tentar") != util.avisos_para_tentar():
+    if (meta.get("avisos") != util.AVISOS or meta.get("avisos_tentar") != util.avisos_para_tentar()
+            or meta.get("motivos_falha", {}) != util.MOTIVOS_FALHA):
         meta["avisos"], meta["avisos_tentar"] = list(util.AVISOS), util.avisos_para_tentar()
+        meta["motivos_falha"] = dict(util.MOTIVOS_FALHA)
         write_json(f, meta)
 
 

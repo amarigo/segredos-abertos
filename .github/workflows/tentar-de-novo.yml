@@ -1,13 +1,23 @@
 name: Tentar de novo
 
-# Quando a coleta publicada saiu com aviso de site oficial fora do ar (por exemplo, "Emendas: o Portal da
-# Transparência não respondeu"), roda a coleta de novo a cada 2 horas, até todos os sites responderem.
+# Três trabalhos, olhados a cada 30 minutos:
+#   1. Coleta do dia: o GitHub atrasa os agendamentos quando está cheio (de 05/11 a 19/11/2026 a coleta das 3h17 só
+#      começou entre 9h58 e 13h16 de Brasília). Se depois das 2h de Brasília (5h UTC) a coleta do dia ainda não
+#      começou, dispara na hora (workflow_dispatch não espera a fila dos agendamentos).
+#   2. Fonte que falhou: quando a coleta publicada saiu com aviso de site oficial fora do ar (por exemplo, "Emendas: o
+#      Portal da Transparência não respondeu"), ou os dados do Brasil no ar não são de hoje (a coleta, a conferência ou
+#      a verificação falhou e o site ficou com os dados anteriores), roda a coleta de novo, no máximo uma a cada 2
+#      horas, até tudo responder. O motivo de cada falha fica no registro da coleta e no painel de status; depois de 3
+#      falhas seguidas da mesma fonte, a coleta abre um aviso no GitHub pedindo um caminho alternativo
+#      (etl/falhas_seguidas.py e etl/avisar_fontes.py).
+#   3. Leitura semanal dos pagamentos a empresas (abaixo).
 # A coleta guarda no cache o que já baixou, então a nova tentativa só busca de novo o que faltou.
 #
 # Para atualizar na hora, sem esperar: Actions > "Dados e site" > Run workflow.
 on:
   schedule:
-    - cron: "30 */2 * * *"
+    # Minutos 7 e 37: fogem da hora cheia, quando o GitHub mais atrasa os agendamentos
+    - cron: "7,37 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -18,12 +28,18 @@ concurrency:
   group: tentar-de-novo
   cancel-in-progress: false
 
+env:
+  # Mesmo horário do cron de dados-e-site.yml (2h de Brasília = 5h UTC)
+  HORA_AGENDADA_UTC: "05"
+  # Intervalo mínimo entre duas coletas disparadas por causa de falha (a coleta leva perto de 1 hora)
+  MINUTOS_ENTRE_TENTATIVAS: "120"
+
 jobs:
   verificar:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      # Nunca falha: um problema aqui só adia a tentativa para daqui a 2 horas (e aparece no resumo).
+      # Nunca falha: um problema aqui só adia a tentativa para a próxima verificação (e aparece no resumo).
       - name: Coletar de novo se faltou algum dado
         env:
           GH_TOKEN: ${{ github.token }}
@@ -32,8 +48,50 @@ jobs:
         run: |
           resumo() { echo "$1"; echo "$1" >> "$GITHUB_STEP_SUMMARY"; }
 
+          # Coletas do main (as últimas 20), para saber se há uma rodando e quando foi a última
+          if ! execs=$(gh run list --workflow dados-e-site.yml --branch main --limit 20 --json status,createdAt,event); then
+            resumo "Não consegui ver as coletas; fica para a próxima verificação."
+            exit 0
+          fi
+          # Não atrapalha uma coleta que já está rodando ou esperando na fila
+          if [ "$(jq '[.[] | select(.status != "completed")] | length' <<< "$execs")" != "0" ]; then
+            resumo "Já há uma coleta em andamento ou na fila."
+            exit 0
+          fi
+          disparar() {
+            if gh workflow run dados-e-site.yml --ref main; then resumo "Nova coleta disparada."; else resumo "Não consegui disparar a coleta; fica para a próxima verificação."; fi
+          }
+
+          # 1. Coleta do dia (pushes não contam: podem ter sido antes das 2h com dados de ontem)
+          agora=$(date -u +%s)
+          inicio_dia=$(date -u -d "$(date -u +%Y-%m-%d)T${HORA_AGENDADA_UTC}:00:00Z" +%s)
+          if [ "$agora" -ge "$inicio_dia" ]; then
+            desde=$(date -u -d "@$inicio_dia" +%Y-%m-%dT%H:%M:%SZ)
+            hoje_n=$(jq --arg d "$desde" '[.[] | select(.createdAt >= $d and .event != "pull_request")] | length' <<< "$execs")
+            if [ "$hoje_n" = "0" ]; then
+              resumo "A coleta das 2h de Brasília ainda não começou (o GitHub atrasou o agendamento); disparando agora."
+              disparar
+              exit 0
+            fi
+          fi
+
+          # 2. Fonte que falhou: no máximo uma coleta a cada MINUTOS_ENTRE_TENTATIVAS
+          ultima=$(jq -r '[.[].createdAt] | max // ""' <<< "$execs")
+          if [ -n "$ultima" ] && [ $(( (agora - $(date -u -d "$ultima" +%s)) / 60 )) -lt "$MINUTOS_ENTRE_TENTATIVAS" ]; then
+            resumo "A última coleta começou há menos de $MINUTOS_ENTRE_TENTATIVAS minutos ($ultima); nada a fazer agora."
+            exit 0
+          fi
           if ! meta=$(curl -fsSL --retry 3 --max-time 60 "$META") || ! jq -e 'type == "object"' >/dev/null 2>&1 <<< "$meta"; then
             resumo "Não consegui ler o meta.json publicado; fica para a próxima tentativa."
+            exit 0
+          fi
+          # Dados do Brasil no ar não são de hoje (Brasília), depois da coleta do dia: ela falhou e o site ficou com os
+          # dados anteriores. O motivo está no painel de status (/status/) e no registro da execução.
+          hoje_br=$(TZ=America/Sao_Paulo date +%Y-%m-%d)
+          dados=$(jq -r '.atualizado_em // ""' <<< "$meta" | cut -c1-10)
+          if [ "$agora" -ge "$inicio_dia" ] && [ -n "$dados" ] && [[ "$dados" < "$hoje_br" ]]; then
+            resumo "Os dados do Brasil no ar são de $dados: a coleta de hoje não publicou dados novos (veja o motivo no painel de status). Tentando de novo."
+            disparar
             exit 0
           fi
           # Só os avisos que outra coleta pode resolver ("avisos_tentar"). Os outros (por exemplo, arquivos que o
@@ -45,25 +103,11 @@ jobs:
             [ -z "$fixos" ] || { resumo "Avisos que esperam outro caminho (não adianta coletar de novo):"; while IFS= read -r a; do resumo "- $a"; done <<< "$fixos"; }
             exit 0
           fi
-
-          # Não atrapalha uma coleta que já está rodando (uma nova cancelaria a que está em andamento).
-          if ! rodando=$(gh run list --workflow dados-e-site.yml --branch main --limit 20 --json status \
-                           --jq '[.[] | select(.status != "completed")] | length'); then
-            resumo "Não consegui ver as coletas em andamento; fica para a próxima tentativa."
-            exit 0
-          fi
-          if [ "$rodando" != "0" ]; then
-            resumo "Já há uma coleta em andamento; ela vai tentar de novo os sites que falharam."
-            exit 0
-          fi
-
           resumo "A última coleta publicada saiu com avisos:"
           while IFS= read -r a; do resumo "- $a"; done <<< "$avisos"
-          if gh workflow run dados-e-site.yml --ref main; then
-            resumo "Nova coleta disparada."
-          else
-            resumo "Não consegui disparar a coleta; fica para a próxima tentativa."
-          fi
+          motivos=$(jq -r '(.motivos_falha // {}) | to_entries[] | "- \(.key): \(.value)"' <<< "$meta")
+          [ -z "$motivos" ] || { resumo "Por quê:"; resumo "$motivos"; }
+          disparar
 
       # A leitura semanal dos pagamentos a empresas (pagamentos-empresas.yml) usa a mesma fila da coleta diária. O GitHub
       # guarda só uma execução esperando em cada fila: se outra chega, a que esperava é cancelada sem rodar. Foi o que

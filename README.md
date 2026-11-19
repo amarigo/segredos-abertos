@@ -15,9 +15,11 @@ analises/     Painel de análises: todos os dados em gráficos e em tabelas CSV 
 
 Um GitHub Action roda todo dia: baixa os dados, gera os JSON em `site/public/data/`, monta o site e publica no GitHub Pages.
 
-Se algum site oficial não responder, a coleta usa a última cópia que tem, mostra um aviso no site com a data dessa
-cópia e tenta de novo sozinha a cada 2 horas ([`tentar-de-novo.yml`](.github/workflows/tentar-de-novo.yml)) até
-todos os sites responderem.
+A coleta roda todo dia às 2h de Brasília. Se algum site oficial não responder, a coleta usa a última cópia que tem,
+mostra um aviso no site com a data dessa cópia, guarda o motivo e tenta de novo sozinha
+([`tentar-de-novo.yml`](.github/workflows/tentar-de-novo.yml)) até todos os sites responderem. Depois de mais de 3
+falhas seguidas da mesma fonte, abre um aviso no GitHub para procurar um caminho alternativo. Se a coleta do Brasil
+inteira falhar, os outros sites são publicados assim mesmo e o Brasil fica com os últimos dados conferidos.
 
 **Atualizar na hora:** abra [Actions > Dados e site](https://github.com/amarigo/segredos-abertos/actions/workflows/dados-e-site.yml),
 clique em **Run workflow** e confirme com o branch `main`. Em cerca de 30 a 60 minutos o site é publicado de novo.

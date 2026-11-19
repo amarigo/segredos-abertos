@@ -184,7 +184,7 @@ function Novidades({ base, mudar, politicos, votacoes, meta, seguir, irPara }: {
     <section>
       <EscolherPolitico politicos={politicos} rotulo="Seguir um político" excluir={Object.keys(base.seguidos)} onEscolher={seguir} />
       <p className="small muted">
-        Os dados oficiais do site são atualizados todo dia às 3h17{meta?.atualizado_em ? ` (última vez: ${dataBR(meta.atualizado_em)})` : ""}.
+        Os dados oficiais do site são atualizados todo dia às 2h{meta?.atualizado_em ? ` (última vez: ${dataBR(meta.atualizado_em)})` : ""}.
         As novidades aparecem aqui quando você abre esta página, comparando com a última vez que você marcou como visto.
       </p>
       {!seguidos.length && <div className="empty">Você ainda não segue ninguém. Procure um nome acima ou use o botão "Acompanhar na Minha rede" na página de um político.</div>}

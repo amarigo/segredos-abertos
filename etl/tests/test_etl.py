@@ -603,3 +603,29 @@ def test_legislaturas_dos_anos():
     assert camara.legislaturas([2025, 2026]) == [57]
     assert camara.legislaturas([2023]) == [56, 57]
     assert camara.legislaturas([2026, 2027]) == [57, 58]
+
+
+def test_suplente_que_saiu_hoje_nao_conta_como_cadeira():
+    """No dia da troca a lista "em exercício" do Senado traz titular e suplente (19/11/2026, PI: 82 para 81 vagas)."""
+    def sen(cod, nome, uf_ident, exercicios):
+        ident = {"CodigoParlamentar": cod, "NomeParlamentar": nome, "SiglaPartidoParlamentar": "PSD"}
+        if uf_ident:
+            ident["UfParlamentar"] = uf_ident
+        return {"IdentificacaoParlamentar": ident,
+                "Mandato": {"UfParlamentar": "PI", "Exercicios": {"Exercicio": exercicios}}}
+    data = {"ListaParlamentarEmExercicio": {"Parlamentares": {"Parlamentar": [
+        sen("5016", "Titular", "PI", [{"DataInicio": "2026-11-19"},
+                                      {"DataInicio": "2026-04-28", "DataFim": "2026-05-06"}]),
+        sen("6369", "Suplente", None, [{"DataInicio": "2026-05-06", "DataFim": "2026-11-19",
+                                        "DescricaoCausaAfastamento": "Retorno do titular"}]),
+        sen("1", "Sem períodos", "SP", None),
+    ]}}}
+    out = {s["nome"]: s for s in senado.parse_senadores(data, hoje="2026-11-19")}
+    assert out["Titular"]["em_exercicio"] is True
+    assert out["Sem períodos"]["em_exercicio"] is True
+    sup = out["Suplente"]
+    assert sup["em_exercicio"] is False and sup["uf"] == "PI"
+    assert sup["situacao"] == "Fora do exercício: Retorno do titular" and sup["situacao_desde"] == "2026-11-19"
+    # Período que termina no futuro (ainda não saiu): continua no cargo
+    out = {s["nome"]: s for s in senado.parse_senadores(data, hoje="2026-11-18")}
+    assert out["Suplente"]["em_exercicio"] is True
