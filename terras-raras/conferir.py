@@ -15,6 +15,8 @@ Regras:
 - numeros.csv: valor_grafico é número (ou vazio) e toda linha tem categoria;
 - notícias da mais nova para a mais antiga, cada fonte marcada como nacional ou estrangeira (site .br é nacional);
 - perda_processamento.csv: números nos campos da conta, payability entre 1 e 99%, cenário baixo <= alto;
+- fluxos.csv (rota do minério): latitude e longitude do destino (e do porto, se houver) são números válidos;
+- indicadores.csv (dicionário): todo indicador tem nome, definição, conta e planilhas que existem;
 - numeros.csv tem o dólar do dia (categoria Câmbio), usado para passar a perda para reais;
 - nenhum CPF à mostra.
 """
@@ -31,7 +33,7 @@ from pathlib import Path
 
 PASTA = Path(__file__).resolve().parent
 TABELAS = ["empresas", "projetos", "licencas", "areas_potencial", "donos_terra", "numeros", "leis", "impactos",
-           "processos_noticias", "propostas", "perda_processamento"]
+           "processos_noticias", "propostas", "perda_processamento", "fluxos", "indicadores"]
 COLUNA_FONTE = {"propostas": "fonte_exemplo"}  # nas outras tabelas é fonte_url
 COLUNAS_DATA = ("data", "fonte_data", "data_pedido")
 QUEDA_MAXIMA = 0.20
@@ -126,6 +128,23 @@ def conferir(dados: dict[str, list[dict]], municipios: set[str], hoje: dt.date) 
                         erros.append(f"{onde}: payability_pct {v['payability_pct']} fora de 1 a 99")
                     if x["cesta_baixa_usd_kg"] > x["cesta_alta_usd_kg"] or x["receita_vida_baixa_usd_mi"] > x["receita_vida_alta_usd_mi"]:
                         erros.append(f"{onde}: cenário baixo maior que o alto")
+    for n, r in enumerate(dados.get("fluxos", []), start=2):
+        onde = f"fluxos.csv, linha {n}"
+        pares = [("lat", "lon")] + ([("porto_lat", "porto_lon")] if r.get("porto") else [])
+        for la, lo in pares:
+            a, b = r.get(la, ""), r.get(lo, "")
+            if not (NUMERO.fullmatch(a) and NUMERO.fullmatch(b) and -90 <= float(a) <= 90 and -180 <= float(b) <= 180):
+                erros.append(f"{onde}: {la}/{lo} '{a}', '{b}' não são coordenadas válidas")
+        if not r.get("situacao"):
+            erros.append(f"{onde}: sem situação do acordo")
+    for n, r in enumerate(dados.get("indicadores", []), start=2):
+        onde = f"indicadores.csv, linha {n}"
+        for col in ("indicador", "definicao", "conta", "tabela"):
+            if not r.get(col):
+                erros.append(f"{onde}: sem {col}")
+        for t in lista(r.get("tabela", "")):
+            if t != "todas" and t not in TABELAS:
+                erros.append(f"{onde}: planilha '{t}' não existe")
     cambio = [r for r in dados["numeros"] if r.get("categoria") == "Câmbio"]
     if dados["perda_processamento"] and not any(NUMERO.fullmatch(r.get("valor_grafico", "")) and float(r["valor_grafico"]) > 0 for r in cambio):
         erros.append("numeros.csv: falta o dólar do dia (categoria Câmbio, valor_grafico em R$ por US$)")

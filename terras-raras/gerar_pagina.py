@@ -12,7 +12,7 @@ PASTA = Path(__file__).resolve().parent
 SITE = "--site" in sys.argv
 ARGS = [a for a in sys.argv[1:] if a != "--site"]
 URL_SITE = "https://amarigo.github.io/segredos-abertos/terras-raras/"
-TABELAS = ["empresas", "projetos", "licencas", "areas_potencial", "donos_terra", "numeros", "leis", "impactos", "processos_noticias", "propostas", "perda_processamento"]
+TABELAS = ["empresas", "projetos", "licencas", "areas_potencial", "donos_terra", "numeros", "leis", "impactos", "processos_noticias", "propostas", "perda_processamento", "fluxos", "indicadores"]
 
 def ler(nome):
     with open(PASTA / "dados" / f"{nome}.csv", encoding="utf-8-sig", newline="") as f:
@@ -26,6 +26,8 @@ dados = {t: ler(t) for t in TABELAS}
 datas = [l.get("verificado_em", "") for t in dados.values() for l in t if l.get("verificado_em")]
 dados["atualizado_em"] = max(datas) if datas else ""
 dados["geo"] = json.loads((PASTA / "geo" / "mg.json").read_text(encoding="utf-8"))
+# Mapa-múndi da rota do minério: terra do Natural Earth (domínio público), já projetada em SVG (geo/mundo.json)
+dados["mundo"] = json.loads((PASTA / "geo" / "mundo.json").read_text(encoding="utf-8"))
 
 # confere se os municípios escritos nas planilhas existem no mapa
 nomes = {norm(f["properties"]["n"]) for f in dados["geo"]["municipios"]["features"]}
@@ -37,13 +39,20 @@ for t in ("projetos", "areas_potencial"):
 
 # confere se licenças, impactos, donos da terra e notícias apontam para projetos que existem
 ids = {r["id"] for r in dados["projetos"]}
-for t in ("licencas", "impactos", "donos_terra", "processos_noticias", "perda_processamento"):
+for t in ("licencas", "impactos", "donos_terra", "processos_noticias", "perda_processamento", "fluxos"):
     for n, r in enumerate(dados[t], start=2):
         for i in filter(None, (x.strip() for x in r.get("projetos_ids", "").split(";"))):
             if i not in ids:
                 print(f"AVISO: projeto '{i}' ({t}.csv, linha {n}) não existe em projetos.csv")
 
 modelo = (PASTA / "pagina_modelo.html").read_text(encoding="utf-8")
+
+# Cada número da página aponta para a sua definição no dicionário (indicadores.csv): ind("I01"), "dados-i01" etc.
+definidos = {r["id"] for r in dados["indicadores"]}
+usados = set(re.findall(r'ind\("(I\d+)"\)|item\("(I\d+)"', modelo))
+faltando = sorted({i for par in usados for i in par if i} - definidos)
+if faltando:
+    sys.exit(f"ERRO: indicadores usados na página sem definição em dados/indicadores.csv: {', '.join(faltando)}")
 leaflet_css = (PASTA / "geo" / "leaflet.css").read_text(encoding="utf-8")
 json_txt = json.dumps(dados, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 html = modelo.replace("/*__LEAFLET_CSS__*/", leaflet_css).replace("/*__DADOS__*/", json_txt)

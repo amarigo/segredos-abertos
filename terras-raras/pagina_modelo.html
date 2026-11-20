@@ -1,117 +1,168 @@
 <title>Terras Raras em Minas</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>/*__LEAFLET_CSS__*/</style>
 <style>
-/* Layout: app de mapa no estilo de trackers cidadãos (barra superior azul-material, mapa primeiro, navegação região → município → projeto → empresa). */
+/* Layout: terminal de dados + reportagem. Faixa escura de indicadores no topo (como um painel de mercado),
+   história em capítulos na abertura, ferramentas (mapa, dinheiro, dados) com filtros ao lado. Cor de destaque:
+   o violeta dos sais de neodímio, o elemento dos ímãs; a argila (ocre) marca o que vai para fora. */
 :root{
-  --bg:#fafafa; --surface:#ffffff; --ink:rgba(0,0,0,.87); --muted:rgba(0,0,0,.6); --line:#e0e0e0; --hover:#f5f5f5;
-  --primary:#1976d2; --primary-soft:#e3f2fd; --on-primary:#ffffff;
-  --warn:#9a5f12; --warn-soft:#fff3e0; --bad:#c62828; --bad-soft:#ffebee; --good:#2e7d32; --good-soft:#e8f5e9;
-  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --sn:#9aa19d; --sx:#5b605d; --mapbg:#eef1f4; --muni:#ffffff;
-  --f-body:"Roboto", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --f-mono:"Roboto Mono", ui-monospace, Menlo, monospace;
-  --shadow:0 1px 3px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.08);
+  --bg:#f5f4f7; --surface:#ffffff; --surface-2:#efedf3; --ink:#1c1a24; --muted:#5e5a6b; --line:#dcd8e4; --hover:#f0eef5;
+  --accent:#5b3f9e; --accent-soft:#ebe5f7; --on-accent:#ffffff;
+  --clay:#a4581c; --clay-soft:#f7eadf;
+  --bad:#b42318; --bad-soft:#fdecea; --warn:#8a5a00; --warn-soft:#fff3d6; --good:#17703c; --good-soft:#e4f3e9;
+  --band:#211d2c; --band-ink:#efecf6; --band-muted:#aaa4bd; --band-line:#3a3548;
+  --s1:#3d6fd6; --s2:#c45a1f; --s3:#188a64; --sn:#8f8b99; --sx:#55515e;
+  --mapbg:#e9e7ee; --muni:#ffffff; --sea:#e6e9f1; --land:#d6d2de;
+  --f-display:"Archivo", "Arial Narrow", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --shadow:0 1px 2px rgba(28,26,36,.06),0 1px 3px rgba(28,26,36,.08);
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#121212; --surface:#1e1e1e; --ink:rgba(255,255,255,.9); --muted:rgba(255,255,255,.62); --line:#333; --hover:#262626;
-  --primary:#90caf9; --primary-soft:#1a2a3a; --on-primary:#0d2137;
-  --warn:#ffb74d; --warn-soft:#3a2c18; --bad:#ef9a9a; --bad-soft:#3b2020; --good:#a5d6a7; --good-soft:#1e3320;
-  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --sn:#6c736f; --sx:#a3aaa6; --mapbg:#171a1d; --muni:#24282c; --shadow:0 1px 3px rgba(0,0,0,.5); color-scheme:dark}}
+  --bg:#121118; --surface:#1b1a23; --surface-2:#23212d; --ink:#ece9f3; --muted:#a7a2b6; --line:#34313f; --hover:#262431;
+  --accent:#b9a4ee; --accent-soft:#2a2440; --on-accent:#17131f; --clay:#e39a5f; --clay-soft:#3a2a1d;
+  --bad:#f19a92; --bad-soft:#3b1f1d; --warn:#f1c06b; --warn-soft:#3a2f18; --good:#8fd3a6; --good-soft:#1b3325;
+  --band:#0c0b10; --band-ink:#ece9f3; --band-muted:#9c97ad; --band-line:#2a2733;
+  --s1:#6b9af0; --s2:#e57f45; --s3:#3cbf8f; --sn:#77738a; --sx:#b3aec2;
+  --mapbg:#17161d; --muni:#24222c; --sea:#15161d; --land:#2e2b38; --shadow:0 1px 3px rgba(0,0,0,.5); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#121212; --surface:#1e1e1e; --ink:rgba(255,255,255,.9); --muted:rgba(255,255,255,.62); --line:#333; --hover:#262626;
-  --primary:#90caf9; --primary-soft:#1a2a3a; --on-primary:#0d2137;
-  --warn:#ffb74d; --warn-soft:#3a2c18; --bad:#ef9a9a; --bad-soft:#3b2020; --good:#a5d6a7; --good-soft:#1e3320;
-  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --sn:#6c736f; --sx:#a3aaa6; --mapbg:#171a1d; --muni:#24282c; --shadow:0 1px 3px rgba(0,0,0,.5); color-scheme:dark}
+  --bg:#121118; --surface:#1b1a23; --surface-2:#23212d; --ink:#ece9f3; --muted:#a7a2b6; --line:#34313f; --hover:#262431;
+  --accent:#b9a4ee; --accent-soft:#2a2440; --on-accent:#17131f; --clay:#e39a5f; --clay-soft:#3a2a1d;
+  --bad:#f19a92; --bad-soft:#3b1f1d; --warn:#f1c06b; --warn-soft:#3a2f18; --good:#8fd3a6; --good-soft:#1b3325;
+  --band:#0c0b10; --band-ink:#ece9f3; --band-muted:#9c97ad; --band-line:#2a2733;
+  --s1:#6b9af0; --s2:#e57f45; --s3:#3cbf8f; --sn:#77738a; --sx:#b3aec2;
+  --mapbg:#17161d; --muni:#24222c; --sea:#15161d; --land:#2e2b38; --shadow:0 1px 3px rgba(0,0,0,.5); color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--f-body)}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:1001;background:var(--surface)}
-.wrap{max-width:1200px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-a{color:var(--primary);text-decoration:none}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:var(--accent);text-decoration:none}
 a:hover{text-decoration:underline}
-a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 /* barra superior */
-header.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:1000;background:var(--surface);box-shadow:var(--shadow)}
-header.bar .wrap{display:flex;align-items:center;column-gap:18px;row-gap:0;min-height:56px;flex-wrap:wrap;padding-top:8px}
-.brand{display:flex;align-items:center;gap:10px;font:700 18px var(--f-body);color:var(--ink);white-space:nowrap}
+header.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:1000;background:var(--surface);border-bottom:1px solid var(--line)}
+header.bar .wrap{display:flex;align-items:center;column-gap:18px;flex-wrap:wrap;padding-top:8px}
+.brand{display:flex;align-items:center;gap:10px;font:700 17px/1.1 var(--f-display);font-stretch:110%;color:var(--ink);white-space:nowrap;padding-block:4px}
 .brand:hover{text-decoration:none}
-.brand .logo{width:28px;height:28px;border-radius:6px;background:var(--primary);display:grid;place-items:center;color:var(--on-primary);font:700 12px var(--f-mono)}
+/* elemento da tabela periódica: o neodímio dos ímãs */
+.el{display:inline-grid;grid-template-rows:auto 1fr;width:34px;height:34px;border:1.5px solid var(--accent);border-radius:3px;color:var(--accent);padding:1px 3px;line-height:1}
+.el small{font:500 8px var(--f-mono)}
+.el b{font:800 15px var(--f-display);align-self:center;justify-self:center}
 /* Menu: todas as abas sempre à vista; se não couberem numa linha, passam para a de baixo (mesma regra do site) */
 nav.menu{display:flex;flex-wrap:wrap;gap:2px;flex:1 1 100%;min-width:0;padding-bottom:6px;margin-inline:-10px}
-.brand{padding-block:4px}
-nav.menu a{flex:none;color:var(--muted);font:500 14px var(--f-body);padding:8px 10px;border-radius:4px;text-transform:none}
+nav.menu a{flex:none;color:var(--muted);font:500 14px var(--f-body);padding:7px 10px;border-radius:4px}
 nav.menu a:hover{background:var(--hover);text-decoration:none;color:var(--ink)}
-nav.menu a.on{color:var(--primary);background:var(--primary-soft)}
-nav.menu a.cta{color:var(--on-primary);background:var(--primary)}
+nav.menu a.on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--accent);border-radius:0}
+nav.menu a.cta{color:var(--on-accent);background:var(--accent)}
+/* faixa de indicadores (estilo painel de mercado) */
+.band{background:var(--band);color:var(--band-ink)}
+.ticker{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,178px),1fr));gap:0}
+.tk{display:grid;gap:1px;padding:10px 14px 11px;border-left:1px solid var(--band-line);color:var(--band-ink);min-width:0}
+.tk:hover{background:rgba(255,255,255,.04);text-decoration:none}
+.tk .l{font:500 11px/1.3 var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--band-muted)}
+.tk .v{font:600 19px/1.25 var(--f-mono);font-variant-numeric:tabular-nums;color:var(--band-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tk .d{font-size:12px;color:var(--band-muted)}
+.tk .v .up{color:var(--clay)}
+.band .meta{display:flex;flex-wrap:wrap;gap:4px 16px;font:12px var(--f-mono);color:var(--band-muted);padding-block:6px;border-top:1px solid var(--band-line)}
+.live{display:inline-flex;align-items:center;gap:6px}
+.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--good)}
+.live.velho::before{background:var(--warn)}
 main{padding-block:28px 64px}
 .crumbs{font-size:13px;color:var(--muted);margin-bottom:6px}
 .crumbs a{color:var(--muted)}
-h1{font:700 clamp(28px,4.4vw,40px)/1.15 var(--f-body);margin:0 0 8px;letter-spacing:-.01em;text-wrap:balance}
-h2{font:500 22px/1.25 var(--f-body);margin:32px 0 10px;text-wrap:balance}
-h3{font:500 17px/1.3 var(--f-body);margin:0}
-.lede{font-size:17px;color:var(--muted);max-width:75ch;margin:0 0 6px}
-.lede b{color:var(--ink);font-weight:500}
+.eyebrow{font:500 12px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 8px}
+h1{font:800 clamp(30px,5vw,52px)/1.05 var(--f-display);font-stretch:112%;margin:0 0 12px;letter-spacing:-.015em;text-wrap:balance;max-width:22ch}
+h1.small{font-size:clamp(26px,3.6vw,38px);max-width:30ch}
+h2{font:700 clamp(22px,2.6vw,28px)/1.15 var(--f-display);font-stretch:108%;margin:40px 0 10px;text-wrap:balance}
+h3{font:600 17px/1.3 var(--f-body);margin:0}
+.lede{font-size:18px;color:var(--muted);max-width:68ch;margin:0 0 6px}
+.lede b{color:var(--ink);font-weight:600}
 .muted{color:var(--muted)}
-.paper{background:var(--surface);border-radius:8px;box-shadow:var(--shadow);min-width:0}
-.counts{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}
-.chip{display:inline-flex;align-items:center;gap:6px;font:500 13px/1.2 var(--f-body);padding:5px 10px;border-radius:16px;background:var(--hover);color:var(--ink);border:1px solid var(--line)}
-.chip .dot{width:9px;height:9px}
-.chip.p{background:var(--primary-soft);border-color:transparent;color:var(--primary)}
+.paper{background:var(--surface);border:1px solid var(--line);border-radius:6px;min-width:0}
+.chip{display:inline-flex;align-items:center;gap:6px;font:500 12.5px/1.2 var(--f-body);padding:4px 9px;border-radius:12px;background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
+.chip.p{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
 .chip.warn{background:var(--warn-soft);border-color:transparent;color:var(--warn)}
 .chip.bad{background:var(--bad-soft);border-color:transparent;color:var(--bad)}
 .chip.ok{background:var(--good-soft);border-color:transparent;color:var(--good)}
+.chip.clay{background:var(--clay-soft);border-color:transparent;color:var(--clay)}
 .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
+.i{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid currentColor;font:600 10px var(--f-mono);color:var(--muted);vertical-align:2px;margin-left:4px;text-decoration:none!important}
+.i:hover{color:var(--accent)}
+/* capítulos da história */
+.hero{padding-block:8px 6px}
+.chapter{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:28px;align-items:start;padding-block:36px;border-top:1px solid var(--line)}
+.chapter.flip{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}
+.chapter.full{grid-template-columns:1fr}
+@media (min-width:901px){.chapter.flip .txt{order:2}}
+@media (max-width:900px){.chapter,.chapter.flip{grid-template-columns:1fr;gap:18px}}
+.chapter .txt{display:grid;gap:10px;align-content:start;min-width:0}
+.chapter .txt p{margin:0;max-width:62ch}
+.chapter h2{margin:0}
+.cap{font:500 12px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.big{font:700 clamp(34px,5vw,54px)/1 var(--f-display);font-stretch:105%;font-variant-numeric:tabular-nums;color:var(--clay);margin:4px 0}
+.big.ac{color:var(--accent)}
+.more{font-weight:500}
 /* mapa */
-.maparea{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:0;margin-top:20px;overflow:hidden}
-@media (max-width:880px){.maparea{grid-template-columns:1fr}}
+.maparea{display:grid;grid-template-columns:minmax(0,1fr) 340px;overflow:hidden}
+@media (max-width:900px){.maparea{grid-template-columns:1fr}}
 #slot-mapa{min-width:0}
 #mapa-mg{height:min(620px,70vh);min-height:380px;background:var(--mapbg)}
+.compacto #mapa-mg{height:min(460px,60vh);min-height:340px}
 .leaflet-container{background:var(--mapbg);font:13px var(--f-body)}
 .leaflet-top,.leaflet-bottom{z-index:500}
 .leaflet-tooltip{background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:var(--shadow);font:13px var(--f-body)}
 .leaflet-tooltip-top:before{border-top-color:var(--line)}
 .leaflet-bar a{background:var(--surface);color:var(--ink);border-bottom-color:var(--line)}
 .side{border-left:1px solid var(--line);padding:16px;display:grid;gap:14px;align-content:start;max-height:min(620px,70vh);overflow:auto;min-width:0}
-@media (max-width:880px){.side{border-left:0;border-top:1px solid var(--line);max-height:none}}
+.compacto .side{max-height:min(460px,60vh)}
+@media (max-width:900px){.side,.compacto .side{border-left:0;border-top:1px solid var(--line);max-height:none}}
 .legend{display:grid;gap:4px}
 .legend label{display:flex;gap:8px;align-items:center;cursor:pointer;font-size:14px;padding:3px 0}
 .legend .sw{width:14px;height:14px;border-radius:3px;flex:none}
+.escala{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;font:11px var(--f-mono);color:var(--muted)}
+.escala span{height:12px;border-radius:2px}
+.rank{display:grid;gap:2px;margin:0;padding:0;list-style:none;counter-reset:r}
+.rank li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;font-size:14px;padding:4px 0;border-bottom:1px solid var(--line)}
+.rank button{all:unset;cursor:pointer;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank button:focus-visible{outline:2px solid var(--accent)}
+.rank .bar{height:6px;border-radius:3px;background:var(--accent);margin-top:3px}
 .lbl{font:500 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 select,input[type=search],input[type=text],input[type=url],textarea{font:14px var(--f-body);padding:9px 11px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink);max-width:100%;width:100%}
 label.sel{display:grid;gap:4px;min-width:0}
 .btns{display:flex;flex-wrap:wrap;gap:6px}
-.btn{font:500 13px var(--f-body);padding:7px 12px;border-radius:4px;border:1px solid var(--line);background:var(--surface);color:var(--primary);cursor:pointer;letter-spacing:.02em}
-.btn:hover{background:var(--primary-soft)}
-.btn.solid{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.btn{font:500 13px var(--f-body);padding:7px 12px;border-radius:4px;border:1px solid var(--line);background:var(--surface);color:var(--accent);cursor:pointer}
+.btn:hover{background:var(--accent-soft)}
+.btn.solid{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{font:500 12px var(--f-mono);padding:6px 10px;border:0;background:var(--surface);color:var(--muted);cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
 .item{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:3px}
-/* listas estilo diretório */
+details.help{padding:10px 12px}
+details.help summary{cursor:pointer;font-weight:500}
+details.help ol{margin:8px 0 0;padding-left:18px;font-size:14px}
+/* listas */
 .dir{columns:3 260px;column-gap:28px;margin:0;padding:0;list-style:none}
 .dir li{break-inside:avoid;padding:6px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}
 .dir li .n{color:var(--muted);font:13px var(--f-mono);white-space:nowrap}
-.group{margin-bottom:18px}
-.group h3{font-size:16px;margin-bottom:4px}
-.group ul{margin:0;padding-left:18px}
-.group li{padding:2px 0}
-.group li small{color:var(--muted)}
-/* ficha de projeto */
 .sheet{display:grid;grid-template-columns:minmax(150px,220px) minmax(0,1fr);margin:0}
 .sheet dt{padding:12px 16px;color:var(--muted);font-size:14px;border-bottom:1px solid var(--line)}
 .sheet dd{padding:12px 16px;margin:0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
 .sheet dt:last-of-type,.sheet dd:last-of-type{border-bottom:0}
 @media (max-width:560px){.sheet{grid-template-columns:1fr}.sheet dt{border-bottom:0;padding-bottom:0}}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
-@media (max-width:880px){.two{grid-template-columns:1fr}}
+@media (max-width:900px){.two{grid-template-columns:1fr}}
 .pad{padding:16px}
 .src{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
-/* cartões e tabelas */
 .tools{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:14px}
 .tools > *{flex:1 1 180px}
 .tools input[type=search]{flex:2 1 240px}
 .count{font:13px var(--f-mono);color:var(--muted)}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
-@media (max-width:420px){.cards{grid-template-columns:1fr}}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:14px}
 .card{padding:16px;display:flex;flex-direction:column;gap:8px}
 .card dl{margin:0;display:grid;gap:4px}
 .card dt{font:500 11px/1.3 var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
@@ -120,49 +171,96 @@ label.sel{display:grid;gap:4px;min-width:0}
 .tablebox{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:14px}
 th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font:500 12px var(--f-body);color:var(--muted);white-space:nowrap}
-td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+th{font:500 11px var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);white-space:nowrap;background:var(--surface-2)}
+td.num{white-space:nowrap}
 td.num.quebra{white-space:normal;min-width:14ch;overflow-wrap:break-word}
 tr:last-child td{border-bottom:0}
 tbody tr:hover{background:var(--hover)}
+tr.alvo{background:var(--accent-soft)}
 .timeline{display:grid;border-left:2px solid var(--line);margin-left:6px}
 .ev{position:relative;padding:0 0 18px 20px;min-width:0}
-.ev::before{content:"";position:absolute;left:-7px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--primary)}
+.ev::before{content:"";position:absolute;left:-7px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--accent)}
 .ev.legal::before{border-color:var(--bad);background:var(--bad)}
 .ev time{font:13px var(--f-mono);color:var(--muted)}
 .ev h3{margin:2px 0 4px;font-size:16px}
 .ev p{margin:0 0 4px;max-width:78ch}
-/* painel econômico */
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:16px}
-.kpi{padding:16px}
+/* números e gráficos */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:12px;margin-bottom:16px}
+.kpi{padding:14px 16px}
 .kpi .l{font-size:13px;color:var(--muted)}
-.kpi .v{font:500 30px/1.15 var(--f-body);font-variant-numeric:tabular-nums;margin:4px 0}
+.kpi .v{font:600 26px/1.15 var(--f-mono);font-variant-numeric:tabular-nums;margin:4px 0}
 .kpi .n{font-size:12px;color:var(--muted)}
+.kpi.destaque{border-color:var(--clay);background:var(--clay-soft)}
+.kpi.destaque .v{color:var(--clay)}
 details.metodo{padding:14px 16px;margin:0 0 16px;max-width:85ch}
-details.metodo summary{cursor:pointer;font-weight:500}
+details.metodo summary{cursor:pointer;font-weight:600}
 details.metodo li{margin:4px 0}
 .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:14px}
 .chart{padding:16px}
 .chart p.d{font-size:13px;color:var(--muted);margin:2px 0 10px}
-.chart svg{display:block;width:100%;height:auto;overflow:visible}
-.chart svg text{fill:var(--ink);font:12px var(--f-body)}
-.chart svg text.v{font:500 12px var(--f-mono)}
+.chart svg,.flow .mapa svg,.spark svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{fill:var(--ink);font:12px var(--f-body)}
+svg text.v{font:500 12px var(--f-mono)}
+svg text.ax{fill:var(--muted);font:11px var(--f-mono)}
 .legend-row{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted);margin-bottom:8px}
 .legend-row span{display:inline-flex;gap:6px;align-items:center}
-.bar:hover{opacity:.85}
-#tip{position:fixed;z-index:2000;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;max-width:280px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.barra:hover{opacity:.82}
+.chart-head{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:6px}
+#tip{position:fixed;z-index:2000;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;max-width:290px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+/* rota do minério */
+.flow{padding:0;overflow:hidden}
+.flow .mapa{background:var(--sea)}
+.flow .terra{fill:var(--land);stroke:none}
+.rota{fill:none;stroke:var(--clay);stroke-linecap:round}
+.rota.fraca{stroke-dasharray:2 9}
+.rota.corre{stroke-dasharray:14 10;animation:corre 1.6s linear infinite}
+.rota.fraca.corre{stroke-dasharray:2 9;animation-duration:2.4s}
+@keyframes corre{to{stroke-dashoffset:-24}}
+@media (prefers-reduced-motion:reduce){.rota.corre{animation:none}}
+.alvo-rota{cursor:pointer}
+.alvo-rota:hover .rota,.alvo-rota.on .rota{stroke:var(--accent)}
+.flow-list{display:grid;gap:0;margin:0;padding:0;list-style:none;border-top:1px solid var(--line)}
+.flow-list li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer}
+.flow-list li:last-child{border-bottom:0}
+.flow-list li.on,.flow-list li:hover{background:var(--hover)}
+.nro{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--clay);color:var(--surface);font:600 12px var(--f-mono)}
+/* simulador */
+.sim{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:0}
+.sim.mini{grid-template-columns:1fr}
+.sim.mini .ctl{border-right:0;border-bottom:1px solid var(--line)}
+@media (max-width:900px){.sim{grid-template-columns:1fr}}
+.sim .ctl{padding:16px;display:grid;gap:16px;border-right:1px solid var(--line);align-content:start}
+@media (max-width:900px){.sim .ctl{border-right:0;border-bottom:1px solid var(--line)}}
+.sim .out{padding:16px;display:grid;gap:10px;align-content:start;min-width:0}
+.rng{display:grid;gap:4px}
+.rng .top{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.rng output{font:600 14px var(--f-mono)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+/* passos de licença */
+.pipe{display:grid;gap:10px}
+.etapa{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:14px;padding:12px 16px;align-items:center}
+@media (max-width:700px){.etapa{grid-template-columns:1fr}}
+.passos{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.passos span{font:11px var(--f-mono);color:var(--muted);border-top:4px solid var(--line);padding-top:4px}
+.passos span.feito{border-color:var(--accent);color:var(--ink)}
+.passos span.agora{border-color:var(--clay);color:var(--clay);font-weight:600}
+/* sinais e frescor */
+.sinais{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.sinais li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;padding:10px 14px}
 /* propostas */
-.props{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
-@media (max-width:420px){.props{grid-template-columns:1fr}}
+.props{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:14px}
 .prop{padding:18px;display:grid;gap:10px}
-.prop h3{font:500 19px/1.25 var(--f-body)}
+.prop h3{font:700 19px/1.25 var(--f-display)}
 .prop .ask{font-size:16px;margin:0}
 .prop .why{color:var(--muted);margin:0}
-.prop .world{background:var(--primary-soft);border-radius:4px;padding:10px 12px;margin:0}
+.prop .world{background:var(--accent-soft);border-radius:4px;padding:10px 12px;margin:0}
 .note{background:var(--warn-soft);border-radius:6px;padding:12px 14px;max-width:85ch}
 .steps{max-width:78ch;padding-left:20px}
 .steps li{margin-bottom:8px}
-code{font:13px var(--f-mono);background:var(--hover);padding:1px 5px;border-radius:3px}
+.linhagem{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;counter-reset:l;margin:0;padding:0;list-style:none}
+.linhagem li{padding:12px 14px;display:grid;gap:4px;font-size:14px}
+.linhagem li b{font:600 13px var(--f-mono)}
+code{font:13px var(--f-mono);background:var(--surface-2);padding:1px 5px;border-radius:3px}
 form.envio{display:grid;gap:14px;max-width:720px;padding:20px}
 .msg{padding:12px 14px;border-radius:6px;background:var(--good-soft);color:var(--good)}
 .msg.err{background:var(--bad-soft);color:var(--bad)}
@@ -172,16 +270,17 @@ footer .wrap{display:grid;gap:8px}
 
 <!--__PROJETOS__-->
 <header class="bar"><div class="wrap">
-  <a class="brand" href="#inicio"><span class="logo">TR</span>Rastreador de Terras Raras · MG</a>
+  <a class="brand" href="#inicio"><span class="el" aria-hidden="true"><small>60</small><b>Nd</b></span>Terras Raras em Minas</a>
   <nav class="menu" id="menu" aria-label="Seções"></nav>
 </div></header>
+<div class="band"><div class="wrap"><div class="ticker" id="ticker" aria-label="Indicadores principais"></div><div class="meta" id="frescor"></div></div></div>
 
 <main><div class="wrap" id="view"></div></main>
 <div id="tip" hidden></div>
 
 <footer><div class="wrap">
-  <div>Projeto cidadão. Dados em planilhas com fonte e data em cada linha · atualizado em <span id="upd"></span>.</div>
-  <div>Mapa: malha municipal do IBGE, simplificada. Valores convertidos para reais com o câmbio das próprias fontes (US$ 1 ≈ R$ 5,20; A$ 1 ≈ R$ 3,55). Informações de empresas são declarações delas. Itens "a verificar" ainda precisam de confirmação em fonte primária.</div>
+  <div>Projeto cidadão. Dados em planilhas abertas, com fonte e data em cada linha · atualizado em <span id="upd"></span> · <a href="#dados">dicionário de indicadores e frescor dos dados</a>.</div>
+  <div>Mapas: malha municipal do IBGE e Natural Earth, simplificadas. Informações de empresas são declarações delas. Itens "a verificar" ainda precisam de confirmação em fonte primária.</div>
 </div></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -193,6 +292,7 @@ const DADOS = /*__DADOS__*/;
 /* ---------- utilitários ---------- */
 const $ = (t, a = {}, ...kids) => { const e = document.createElement(t); for (const [k, v] of Object.entries(a)) { if (k === "class") e.className = v; else if (k === "html") e.innerHTML = v; else if (v != null) e.setAttribute(k, v); } kids.flat(Infinity).forEach(c => c != null && c !== false && e.append(c)); return e; };
 const S = (t, a = {}) => { const e = document.createElementNS("http://www.w3.org/2000/svg", t); for (const [k, v] of Object.entries(a)) e.setAttribute(k, v); return e; };
+const ST = (t, a, txt) => { const e = S(t, a); e.textContent = txt; return e; };
 const ext = (u, d) => { if (!u || !/^https?:/.test(u)) return d || ""; let h = u; try { h = new URL(u).hostname.replace(/^www\./, ""); } catch (e) {} return $("a", { href: u, target: "_blank", rel: "noopener" }, h + (d ? " · " + d : "")); };
 const go = (hash, txt, cls) => $("a", { href: "#" + hash, class: cls }, txt);
 const filled = v => v && v !== "-";
@@ -201,13 +301,26 @@ const split = v => (v || "").split(";").map(s => s.trim()).filter(Boolean);
 const norm = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const slug = s => norm(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const brl = v => v >= 1000 ? "R$ " + (v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " bi" : "R$ " + Math.round(v).toLocaleString("pt-BR") + " mi";
+const nf = (v, d = 1) => v.toLocaleString("pt-BR", { maximumFractionDigits: d });
+const brl = v => v >= 1000 ? "R$ " + nf(v / 1000) + " bi" : "R$ " + Math.round(v).toLocaleString("pt-BR") + " mi";
+const usd = v => v >= 1000 ? "US$ " + nf(v / 1000) + " bi" : "US$ " + Math.round(v).toLocaleString("pt-BR") + " mi";
+const faixa = (a, b, f) => f(a) === f(b) ? f(a) : f(a) + " a " + f(b);
+// Faixa curta para números grandes: "R$ 1,7 a 2,5 bi" (mesma unidade nas duas pontas)
+const faixaCurta = (a, b) => { const bi = a >= 1000 && b >= 1000; if (!bi) return faixa(a, b, brl); const x = nf(a / 1000), y = nf(b / 1000); return x === y ? "R$ " + x + " bi" : "R$ " + x + " a " + y + " bi"; };
 const plural = (n, s, p) => n + " " + (n === 1 ? s : p);
 const statusChip = c => { if (!c) return null; const cls = /^alta|Aguarda|Pendente|Em análise|Não iniciado/.test(c) ? "bad" : /verificar|única|média|acompanhar|negociação/.test(c) ? "warn" : /referência|pesquisa/.test(c) ? "" : "ok"; return $("span", { class: "chip " + cls }, c); };
 const tip = document.getElementById("tip");
-const showTip = (ev, ...kids) => { tip.replaceChildren($("div", {}, kids)); tip.hidden = false; tip.style.left = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8) + "px"; tip.style.top = (ev.clientY + 14) + "px"; };
+const showTip = (ev, ...kids) => { tip.replaceChildren($("div", {}, kids)); tip.hidden = false; tip.style.left = Math.max(8, Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8)) + "px"; tip.style.top = (ev.clientY + 14) + "px"; };
 const hideTip = () => { tip.hidden = true; };
+const HOJE = new Date(); HOJE.setHours(12, 0, 0, 0);
+const parseData = d => { const m = /^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?/.exec(d || ""); return m ? new Date(+m[1], (+m[2] || 1) - 1, +m[3] || 1, 12) : null; };
+const diasDesde = d => { const x = parseData(d); return x ? Math.round((HOJE - x) / 864e5) : NaN; };
+const quando = n => n <= 0 ? "hoje" : n === 1 ? "ontem" : "há " + n + " dias";
 document.getElementById("upd").textContent = fmtDate(DADOS.atualizado_em);
+
+/* ---------- dicionário de indicadores (indicadores.csv): cada número da página aponta para a sua definição ---------- */
+const IND = Object.fromEntries((DADOS.indicadores || []).map(r => [r.id, r]));
+const ind = id => IND[id] ? $("a", { class: "i", href: "#dados-" + id.toLowerCase(), title: IND[id].indicador + ": " + IND[id].definicao, "aria-label": "Definição: " + IND[id].indicador }, "i") : null;
 
 /* ---------- categorias ---------- */
 const CATS = [
@@ -221,8 +334,9 @@ const CATS = [
 const PRIO = ["Licenciamento", "Passivo", "Produção (outro minério)", "Exploração", "Planejado", "Potencial (estudo)"];
 const catColor = c => css((CATS.find(x => x[0] === c) || [, "--sn"])[1]);
 const catLabel = c => (CATS.find(x => x[0] === c) || [, , c])[2];
-const PAISCOR = { "Austrália": "--s1", "Canadá": "--s2", "Estados Unidos": "--s3" };
+const PAISCOR = { "Austrália": "--s1", "Canadá": "--s2", "Estados Unidos": "--s3", "Brasil": "--sx" };
 const paisColor = p => css(PAISCOR[p] || "--sn");
+const pais1 = p => (p || "").split(/ \/|;/)[0].trim();
 
 /* ---------- índices ---------- */
 const MUNI = {}, MESO = {};
@@ -247,43 +361,108 @@ DADOS.areas_potencial.forEach(a => {
   if (!a.munis.length && REG2MESO[a.regiao]) MESO[REG2MESO[a.regiao]].areas.add(a);
 });
 DADOS.empresas.forEach(e => { e.projetos = DADOS.projetos.filter(p => p.emp.includes(e)); });
-// Licenças, impactos, donos da terra e notícias apontam para os projetos pela coluna projetos_ids (ids de projetos.csv).
-const doProjeto = (tabela, p) => DADOS[tabela].filter(r => split(r.projetos_ids).includes(p.id));
+// Licenças, impactos, donos da terra, notícias e rotas apontam para os projetos pela coluna projetos_ids (ids de projetos.csv).
+const doProjeto = (tabela, p) => (DADOS[tabela] || []).filter(r => split(r.projetos_ids).includes(p.id));
 const licDe = p => doProjeto("licencas", p);
 const procDe = p => doProjeto("processos_noticias", p);
 const MUNIS_COM = Object.values(MUNI).filter(m => m.itens.length);
 const MESOS_COM = Object.values(MESO).filter(m => m.projetos.size || m.areas.size).sort((a, b) => (b.projetos.size + b.areas.size) - (a.projetos.size + a.areas.size));
+const NOTICIAS = DADOS.processos_noticias.slice().sort((a, b) => b.data.localeCompare(a.data));
+
+/* ---------- contas (uma só definição para cada indicador; veja indicadores.csv) ---------- */
+const NUM = DADOS.numeros.map(r => ({ ...r, v: parseFloat(String(r.valor_grafico).replace(",", ".")) }));
+const CAMBIO = DADOS.numeros.filter(r => r.categoria === "Câmbio").sort((a, b) => b.data.localeCompare(a.data))[0];
+const DOLAR = CAMBIO ? parseFloat(CAMBIO.valor_grafico) : NaN;
+const somaCat = (c, R = NUM) => R.filter(r => r.categoria === c && !isNaN(r.v) && r.regiao !== "Fora de MG").reduce((a, r) => a + r.v, 0);
+const pendente = l => !/Concedid|Assinado/.test(l.status);
+const LIC_PEND = DADOS.licencas.filter(pendente);
+const PERDA = (() => {
+  const n = (r, c) => parseFloat(r[c]);
+  const L = (DADOS.perda_processamento || []).map(r => {
+    const pago = n(r, "payability_pct") / 100, t = n(r, "producao_t_treo_ano");
+    return { r, pago, t, cb: n(r, "cesta_baixa_usd_kg"), ca: n(r, "cesta_alta_usd_kg"),
+      anoB: t * n(r, "cesta_baixa_usd_kg") * (1 - pago) / 1000, anoA: t * n(r, "cesta_alta_usd_kg") * (1 - pago) / 1000,
+      vidaB: n(r, "receita_vida_baixa_usd_mi") * (1 - pago) / pago, vidaA: n(r, "receita_vida_alta_usd_mi") * (1 - pago) / pago };
+  });
+  const tot = k => L.reduce((a, l) => a + l[k], 0);
+  return { L, anoB: tot("anoB"), anoA: tot("anoA"), vidaB: tot("vidaB"), vidaA: tot("vidaA"), nomes: L.map(l => l.r.projeto).join(" e ") };
+})();
+const reais = (a, b) => isNaN(DOLAR) ? "—" : faixaCurta(a * DOLAR, b * DOLAR);
+const MAIS_NOVA = t => (DADOS[t] || []).map(r => r.verificado_em).filter(Boolean).sort().pop() || "";
+const RECENTES = NOTICIAS.filter(p => diasDesde(p.data) <= 30 && diasDesde(p.data) >= 0 && /^\d{4}-\d{2}-\d{2}/.test(p.data));
+const temOrigem = (p, o) => p.origem === o || (filled(p.fonte_url_2) && p.origem_2 === o);
+const NACIONAIS = NOTICIAS.filter(p => temOrigem(p, "nacional")).length;
+const PAISES = (() => { const c = {}; DADOS.projetos.forEach(p => { const k = pais1(p.pais_do_controlador); c[k] = (c[k] || 0) + 1; }); return Object.entries(c).sort((a, b) => b[1] - a[1]); })();
+
+/* ---------- faixa de indicadores (como um painel de mercado) ---------- */
+function ticker() {
+  const t = document.getElementById("ticker"), dAtual = diasDesde(DADOS.atualizado_em);
+  const item = (id, l, v, d, href) => $("a", { class: "tk", href: "#" + (href || "dados-" + id.toLowerCase()), title: IND[id] ? IND[id].definicao : "" }, $("span", { class: "l" }, l), $("span", { class: "v" }, v), $("span", { class: "d" }, d));
+  t.replaceChildren(
+    item("I01", "Perda por ano", reais(PERDA.anoB, PERDA.anoA).replace(" a ", "–"), "por separar fora do Brasil", "painel"),
+    item("I03", "Dólar PTAX", isNaN(DOLAR) ? "—" : "R$ " + DOLAR.toLocaleString("pt-BR", { minimumFractionDigits: 4 }), CAMBIO ? "Banco Central, " + fmtDate(CAMBIO.data) : ""),
+    item("I04", "Investimento previsto", brl(somaCat("Investimento previsto (capex)")), "declarado pelas empresas", "painel"),
+    item("I09", "Decisões pendentes", String(LIC_PEND.length), "licenças, vendas e ações", "licencas"),
+    item("I15", "Notícias em 30 dias", String(RECENTES.length), NACIONAIS + " de " + NOTICIAS.length + " com fonte nacional", "noticias"),
+    item("I17", "Dados conferidos", quando(dAtual), fmtDate(DADOS.atualizado_em)),
+  );
+  const f = document.getElementById("frescor");
+  f.replaceChildren($("span", { class: "live" + (dAtual > 3 ? " velho" : "") }, dAtual > 3 ? "atualização atrasada" : "atualizado todo dia"), $("span", {}, "fontes: planilhas abertas com link e data em cada linha"), go("dados", "ver frescor de cada planilha →"));
+  f.querySelector("a").style.color = "var(--band-ink)";
+}
 
 /* ---------- menu e rotas ---------- */
-const MENU = [["inicio", "Mapa"], ["painel", "Painel econômico"], ["empresas", "Empresas"], ["licencas", "Licenças"], ["noticias", "Notícias e processos"], ["aprender", "Aprender"], ["propostas", "O que pedir"], ["sobre", "Sobre"], ["enviar", "Enviar informação"]];
+const MENU = [["inicio", "A história"], ["mapa", "Mapa"], ["painel", "Dinheiro"], ["empresas", "Quem é quem"], ["licencas", "Decisões"], ["noticias", "Notícias"], ["aprender", "Leis e impactos"], ["propostas", "O que pedir"], ["dados", "Dados e método"], ["enviar", "Enviar informação"]];
 const menu = document.getElementById("menu");
 MENU.forEach(([id, n]) => menu.append($("a", { href: "#" + id, id: "m-" + id, class: id === "enviar" ? "cta" : null }, n)));
 const view = document.getElementById("view");
 function route() {
   let h = (location.hash || "#inicio").slice(1); try { h = decodeURIComponent(h); } catch (e) {} h = h || "inicio";
   view.innerHTML = ""; hideTip();
-  let base = h.split("-")[0];
-  MENU.forEach(([id]) => document.getElementById("m-" + id).classList.toggle("on", id === base || (id === "inicio" && /^(regiao|municipio|projeto)$/.test(base)) || (id === "empresas" && base === "empresa")));
+  const base = h.split("-")[0];
+  MENU.forEach(([id]) => document.getElementById("m-" + id).classList.toggle("on", id === base || (id === "mapa" && /^(regiao|municipio|projeto)$/.test(base)) || (id === "empresas" && base === "empresa") || (id === "dados" && base === "sobre")));
   const rest = h.slice(base.length + 1);
-  const R = { inicio: pInicio, regiao: () => pRegiao(rest), municipio: () => pMunicipio(rest), projeto: () => pProjeto(rest), empresas: pEmpresas, empresa: () => pEmpresa(rest), painel: pPainel, licencas: pLicencas, noticias: pNoticias, aprender: pAprender, propostas: pPropostas, sobre: pSobre, enviar: pEnviar, potencial: pPotencial };
+  const R = { inicio: pInicio, mapa: pMapa, regiao: () => pRegiao(rest), municipio: () => pMunicipio(rest), projeto: () => pProjeto(rest), empresas: pEmpresas, empresa: () => pEmpresa(rest), painel: pPainel, licencas: pLicencas, noticias: pNoticias, aprender: pAprender, propostas: pPropostas, sobre: () => pDados(""), dados: () => pDados(rest), enviar: pEnviar, potencial: pLicencas };
   (R[base] || pInicio)();
-  window.scrollTo({ top: 0, behavior: "auto" });
+  if (!(base === "dados" && rest)) window.scrollTo({ top: 0, behavior: "auto" });
 }
 addEventListener("hashchange", route);
 const crumbs = (...parts) => $("div", { class: "crumbs" }, parts.map((p, i) => [i ? " › " : "", p]));
 
-/* ---------- mapa (uma instância, movida entre páginas) ---------- */
+/* ---------- mapa de Minas (uma instância, movida entre páginas) ---------- */
+// Indicadores do mapa por município (como num atlas de dados): cada um conta linhas das planilhas ligadas aos projetos do município.
+const projetosDoMuni = m => m.itens.filter(i => i.tipo === "projeto").map(i => i.r);
+const contaLigados = (tabela, filtro = () => true) => m => { const ids = new Set(projetosDoMuni(m).map(p => p.id)); return (DADOS[tabela] || []).filter(r => filtro(r) && split(r.projetos_ids).some(i => ids.has(i))).length; };
+const INDICADORES_MAPA = [
+  { id: "situacao", nome: "Situação dos projetos", desc: "Cor da fase mais avançada no município." },
+  { id: "itens", nome: "Projetos e áreas com potencial", desc: "Quantos projetos e áreas em estudo há no município.", f: m => m.itens.length, un: ["item", "itens"] },
+  { id: "licencas", nome: "Decisões pendentes", desc: "Licenças, aprovações e ações ainda sem decisão nos projetos do município.", f: contaLigados("licencas", pendente), un: ["decisão", "decisões"] },
+  { id: "impactos", nome: "Impactos de gravidade alta", desc: "Impactos classificados como de gravidade alta nos projetos do município.", f: contaLigados("impactos", r => r.gravidade === "alta"), un: ["impacto", "impactos"] },
+  { id: "noticias", nome: "Notícias e processos", desc: "Notícias, ações e decisões ligadas aos projetos do município.", f: contaLigados("processos_noticias"), un: ["registro", "registros"] },
+];
+const hex = c => { const m = /^#?([0-9a-f]{6})$/i.exec(c.trim()); return m ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)) : [128, 128, 128]; };
+const mix = (a, b, t) => { const A = hex(a), B = hex(b); return "#" + A.map((x, i) => Math.round(x + (B[i] - x) * t).toString(16).padStart(2, "0")).join(""); };
+const PASSOS = [.2, .4, .6, .8, 1];
 const MAP = (() => {
   const el = $("div", { id: "mapa-mg", role: "region", "aria-label": "Mapa interativo de Minas Gerais" });
   const ativos = new Set(CATS.map(c => c[0]));
-  let map, muniLayer, mesoLayer, mkLayer, onSelect = () => {}, pais = "";
+  let map, muniLayer, mesoLayer, mkLayer, onSelect = () => {}, pais = "", modo = "situacao", maxv = 1;
   const projVis = p => ativos.has(p.categoria) && (!pais || p.pais_do_controlador === pais);
   const itemVis = i => i.tipo === "area" ? ativos.has("Potencial (estudo)") && !pais : projVis(i.r);
-  const estilo = f => { const vis = f.properties.itens.filter(itemVis); const c = vis.length ? PRIO.find(x => vis.some(i => i.cat === x)) : null; return { color: css("--line"), weight: .5, fillColor: c ? catColor(c) : css("--muni"), fillOpacity: c ? .6 : 1 }; };
+  const indAtual = () => INDICADORES_MAPA.find(x => x.id === modo);
+  const corValor = v => v ? mix(css("--muni"), css("--accent"), PASSOS.find(p => v / maxv <= p) || 1) : css("--muni");
+  const estilo = f => {
+    const p = f.properties;
+    if (modo !== "situacao") { const v = indAtual().f(p); return { color: css("--line"), weight: .5, fillColor: corValor(v), fillOpacity: 1 }; }
+    const vis = p.itens.filter(itemVis); const c = vis.length ? PRIO.find(x => vis.some(i => i.cat === x)) : null;
+    return { color: css("--line"), weight: .5, fillColor: c ? catColor(c) : css("--muni"), fillOpacity: c ? .6 : 1 };
+  };
   function draw() {
     if (!map) return;
+    if (modo !== "situacao") maxv = Math.max(1, ...MUNIS_COM.map(indAtual().f));
     muniLayer.setStyle(estilo); mesoLayer.setStyle({ color: css("--sx"), weight: 1.3, fill: false, opacity: .6 });
-    mkLayer.clearLayers(); const pos = {};
+    mkLayer.clearLayers(); if (modo !== "situacao") return;
+    const pos = {};
     DADOS.projetos.filter(projVis).forEach(p => {
       let ll, aprox = false;
       if (p.munis[0]) ll = [p.munis[0].lat, p.munis[0].lon];
@@ -302,7 +481,7 @@ const MAP = (() => {
     muniLayer = L.geoJSON(DADOS.geo.municipios, { style: estilo, onEachFeature: (f, l) => {
       l.on("click", () => onSelect({ muni: f.properties }));
       l.on("mouseover", () => l.setStyle({ weight: 2, color: css("--ink") })); l.on("mouseout", () => muniLayer.resetStyle(l));
-      l.bindTooltip($("span", {}, f.properties.n + (f.properties.itens.length ? ` · ${plural(f.properties.itens.length, "item", "itens")}` : "")), { sticky: true });
+      l.bindTooltip(() => { const p = f.properties, x = indAtual(); return p.n + (x.f ? " · " + plural(x.f(p), ...x.un) : p.itens.length ? " · " + plural(p.itens.length, "item", "itens") : ""); }, { sticky: true });
     } }).addTo(map);
     mesoLayer = L.geoJSON(DADOS.geo.mesorregioes, { interactive: false }).addTo(map);
     mkLayer = L.layerGroup().addTo(map);
@@ -316,42 +495,71 @@ const MAP = (() => {
       slot.append(el); onSelect = select || (() => {});
       setTimeout(() => { init(); if (!map) return; map.invalidateSize(); map.fitBounds(bounds || muniLayer.getBounds(), { padding: [10, 10] }); }, 0);
     },
-    setPais(p) { pais = p; draw(); }, get pais() { return pais; }, draw,
+    setPais(p) { pais = p; draw(); }, get pais() { return pais; },
+    setModo(m) { modo = m; draw(); }, get modo() { return modo; }, get maxv() { return maxv; }, corValor, draw,
     boundsOf: geo => (typeof L === "undefined" ? null : L.geoJSON(geo).getBounds()),
-    focus(ll) { if (map) map.setView(ll, 9); },
+    focus(m) { if (map) map.setView([m.lat, m.lon], 8); },
     ok: () => typeof L !== "undefined",
   };
 })();
 
-function mapaComPainel({ bounds, painelInicial }) {
-  const area = $("div", { class: "maparea paper" });
+function mapaComPainel({ bounds, painelInicial, compacto, escolherIndicador }) {
+  const area = $("div", { class: "maparea paper" + (compacto ? " compacto" : "") });
   const slot = $("div", { id: "slot-mapa" });
   const side = $("aside", { class: "side", "aria-live": "polite" });
   area.append(slot, side);
   const info = $("div", { style: "display:grid;gap:10px" });
-  const legenda = $("div", { class: "legend" }, CATS.filter(c => c[0] !== "Planejado").map(([c, v, rot]) => {
-    const cb = $("input", { type: "checkbox", id: "cat-" + slug(c) }); cb.checked = MAP.ativos.has(c);
-    cb.addEventListener("change", () => { const f = cb.checked ? "add" : "delete"; MAP.ativos[f](c); if (c === "Exploração") MAP.ativos[f]("Planejado"); MAP.draw(); });
-    return $("label", {}, cb, $("span", { class: "sw", style: `background:var(${v})` }), rot);
-  }));
+  const legenda = $("div", {}), ranking = $("div", {});
   const selPais = $("select", { id: "f-mapa-pais" }, $("option", { value: "" }, "Todos os países"), [...new Set(DADOS.projetos.map(p => p.pais_do_controlador))].sort().map(v => $("option", { value: v }, v)));
   selPais.value = MAP.pais; selPais.addEventListener("change", () => MAP.setPais(selPais.value));
-  side.append($("div", { class: "lbl" }, "Legenda"), legenda, $("label", { class: "sel" }, $("span", { class: "lbl" }, "Quem controla o projeto"), selPais), info);
+  const filtroPais = $("label", { class: "sel" }, $("span", { class: "lbl" }, "Quem controla o projeto"), selPais);
+  if (!escolherIndicador && MAP.modo !== "situacao") MAP.setModo("situacao");
+  const desenhaLegenda = () => {
+    const x = INDICADORES_MAPA.find(i => i.id === MAP.modo);
+    legenda.replaceChildren(); ranking.replaceChildren();
+    filtroPais.hidden = MAP.modo !== "situacao";
+    if (MAP.modo === "situacao") {
+      legenda.append($("div", { class: "lbl" }, "Legenda"), $("div", { class: "legend" }, CATS.filter(c => c[0] !== "Planejado").map(([c, v, rot]) => {
+        const cb = $("input", { type: "checkbox", id: "cat-" + slug(c) }); cb.checked = MAP.ativos.has(c);
+        cb.addEventListener("change", () => { const f = cb.checked ? "add" : "delete"; MAP.ativos[f](c); if (c === "Exploração") MAP.ativos[f]("Planejado"); MAP.draw(); });
+        return $("label", {}, cb, $("span", { class: "sw", style: `background:var(${v})` }), rot);
+      })));
+      return;
+    }
+    const lista = MUNIS_COM.map(m => [m, x.f(m)]).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1] || a[0].n.localeCompare(b[0].n, "pt"));
+    const max = MAP.maxv;
+    legenda.append($("div", { class: "lbl" }, x.nome), $("p", { class: "muted", style: "margin:2px 0 6px;font-size:13px" }, x.desc),
+      $("div", { class: "escala" }, PASSOS.map(p => $("span", { style: "background:" + MAP.corValor(p * max) }))),
+      $("div", { class: "escala" }, PASSOS.map((p, i) => $("div", {}, i === 0 ? "1" : i === 4 ? String(max) : ""))));
+    ranking.append($("div", { class: "lbl" }, "Ranking dos municípios"), lista.length ? $("ol", { class: "rank" }, lista.slice(0, 12).map(([m, v]) => {
+      const b = $("button", { type: "button" }, m.n); b.addEventListener("click", () => { MAP.focus(m); mostrar({ muni: m }); });
+      return $("li", {}, $("div", {}, b, $("div", { class: "bar", style: `width:${Math.max(4, 100 * v / max)}%` })), $("span", { class: "num" }, String(v)));
+    })) : $("p", { class: "muted", style: "margin:0" }, "Nenhum município com esse indicador."));
+  };
+  const blocos = [];
+  if (escolherIndicador) {
+    const sel = $("select", { id: "f-mapa-indicador" }, INDICADORES_MAPA.map(x => $("option", { value: x.id }, x.nome)));
+    sel.value = MAP.modo; sel.addEventListener("change", () => { MAP.setModo(sel.value); desenhaLegenda(); });
+    blocos.push($("label", { class: "sel" }, $("span", { class: "lbl" }, "O que mostrar no mapa"), sel));
+  }
+  side.append(...blocos, legenda, filtroPais, ranking, info);
   const mostrar = sel => {
     info.innerHTML = "";
     if (sel.projeto) { info.append(cardProjetoMini(sel.projeto)); return; }
-    const m = sel.muni;
-    info.append($("div", { class: "item" }, $("h3", {}, go("municipio-" + m.slug, m.n)), $("span", { class: "muted" }, m.meso)));
+    const m = sel.muni, x = INDICADORES_MAPA.find(i => i.id === MAP.modo);
+    info.append($("div", { class: "item" }, $("h3", {}, go("municipio-" + m.slug, m.n)), $("span", { class: "muted" }, m.meso + (x.f ? " · " + plural(x.f(m), ...x.un) : ""))));
     if (!m.itens.length) info.append($("p", { class: "muted", style: "margin:0" }, "Nada mapeado neste município ainda."));
     m.itens.forEach(i => info.append(i.tipo === "projeto" ? cardProjetoMini(i.r) : $("div", { class: "item" }, $("div", { class: "chips" }, $("span", { class: "dot", style: `background:${catColor("Potencial (estudo)")}` }), $("b", {}, i.r.area)), $("small", { class: "muted" }, i.r.situacao), ext(i.r.fonte_url))));
+    info.scrollIntoView({ block: "nearest", behavior: "smooth" });
   };
   if (painelInicial) info.append(painelInicial);
   if (!MAP.ok()) side.prepend($("p", { class: "note" }, "O mapa não carregou neste navegador. Use as listas abaixo."));
   MAP.mount(slot, { bounds, select: mostrar });
+  desenhaLegenda();
   return area;
 }
 function cardProjetoMini(p) {
-  const lic = licDe(p);
+  const lic = licDe(p).filter(pendente);
   return $("div", { class: "item" },
     $("div", { class: "chips" }, $("span", { class: "dot", style: `background:${catColor(p.categoria)}` }), $("b", {}, go("projeto-" + p.id.toLowerCase(), p.projeto))),
     $("small", { class: "muted" }, `${p.empresa} · ${p.pais_do_controlador}`),
@@ -359,31 +567,139 @@ function cardProjetoMini(p) {
     lic.length ? $("div", { class: "chips" }, lic.map(l => $("span", { class: "chip bad" }, l.o_que_esta_pendente.replace(/\s*\(.*\)/, "") + ": " + l.status))) : null);
 }
 
-/* ---------- INÍCIO ---------- */
+/* ---------- gráficos em SVG ---------- */
+function largura(box, min = 280) { return Math.max(min, Math.round((box.clientWidth || 560) - 32)); }
+function hbar(titulo, desc, rows, { fmt, colorBy, legenda, nota, indicador, W }) {
+  const box = $("div", { class: "chart paper" }, $("h3", {}, titulo, indicador ? ind(indicador) : null), $("p", { class: "d" }, desc));
+  if (legenda && legenda.length > 1) box.append($("div", { class: "legend-row" }, legenda.map(([n, c]) => $("span", {}, $("span", { class: "dot", style: `background:${c}` }), n))));
+  if (!rows.length) { box.append($("p", { class: "count" }, "Sem dados para este filtro.")); return box; }
+  const estreito = W < 420, lw = estreito ? 112 : 150, maxl = estreito ? 15 : 22, rh = 30, bh = 18, padR = estreito ? 74 : 84, H = rows.length * rh + 6, max = Math.max(...rows.map(r => r.value)) || 1;
+  const svg = S("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": titulo });
+  svg.append(S("line", { x1: lw, x2: lw, y1: 0, y2: H, stroke: css("--line"), "stroke-width": 1 }));
+  rows.forEach((r, i) => {
+    const y = i * rh + 4, w = Math.max(6, (W - lw - padR) * r.value / max);
+    svg.append(ST("text", { x: lw - 8, y: y + bh / 2 + 4, "text-anchor": "end" }, r.label.length > maxl ? r.label.slice(0, maxl - 1) + "…" : r.label));
+    const pth = S("path", { class: "barra", fill: colorBy(r), d: `M${lw},${y} h${w - 3} a3,3 0 0 1 3,3 v${bh - 6} a3,3 0 0 1 -3,3 h${-(w - 3)} z` });
+    pth.addEventListener("mousemove", ev => showTip(ev, $("b", {}, r.label), $("br"), fmt(r.value), r.tip ? [$("br"), r.tip] : null)); pth.addEventListener("mouseleave", hideTip);
+    svg.append(pth, ST("text", { x: lw + w + 6, y: y + bh / 2 + 4, class: "v" }, fmt(r.value)));
+  });
+  box.append(svg); if (nota) box.append($("p", { class: "d", style: "margin:10px 0 0" }, nota)); return box;
+}
+// Barras empilhadas numa linha só (ex.: projetos por país)
+function pilha(partes, { total, fmt = String }) {
+  const W = 600, H = 40, soma = total || partes.reduce((a, p) => a + p.value, 0) || 1; let x = 0;
+  const svg = S("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": partes.map(p => p.label + " " + fmt(p.value)).join(", ") });
+  partes.forEach(p => { const w = W * p.value / soma; const r = S("rect", { x: x + 1, y: 0, width: Math.max(1, w - 2), height: H, rx: 3, fill: p.color }); r.addEventListener("mousemove", ev => showTip(ev, $("b", {}, p.label), $("br"), fmt(p.value))); r.addEventListener("mouseleave", hideTip); svg.append(r); x += w; });
+  return $("div", { class: "spark" }, svg, $("div", { class: "legend-row", style: "margin-top:8px" }, partes.map(p => $("span", {}, $("span", { class: "dot", style: `background:${p.color}` }), p.label + " · " + fmt(p.value)))));
+}
+
+/* ---------- rota do minério (mapa-múndi com as rotas do concentrado, fluxos.csv) ---------- */
+function mapaFluxos() {
+  const F = DADOS.fluxos || [], M = DADOS.mundo; if (!F.length || !M) return null;
+  const [L0, L1] = M.lon, [, B1] = M.lat, k = M.largura / (L1 - L0);
+  const xy = (lat, lon) => [(lon - L0) * k, (B1 - lat) * k];
+  const svg = S("svg", { viewBox: `0 0 ${M.largura} ${M.altura}`, role: "img", "aria-label": "Mapa-múndi com as rotas do concentrado de terras raras de Minas Gerais para os compradores" });
+  svg.append(S("rect", { x: 0, y: 0, width: M.largura, height: M.altura, fill: css("--sea") }), S("path", { class: "terra", d: M.terra, fill: css("--land") }));
+  const detalhe = $("div", { class: "pad", "aria-live": "polite", style: "border-top:1px solid var(--line)" });
+  const lis = [];
+  const destinos = {};
+  const escolher = i => {
+    svg.querySelectorAll(".alvo-rota").forEach((g, j) => g.classList.toggle("on", j === i)); lis.forEach((li, j) => li.classList.toggle("on", j === i));
+    const f = F[i], p = DADOS.projetos.find(x => split(f.projetos_ids).includes(x.id));
+    detalhe.replaceChildren($("div", { class: "chips" }, $("span", { class: "nro" }, String(i + 1)), $("b", {}, f.projeto + " → " + f.comprador), $("span", { class: "chip " + (/vinculante$/.test(f.situacao) && !/não/.test(f.situacao) ? "clay" : "warn") }, f.situacao)),
+      $("p", { style: "margin:8px 0 4px" }, `Produto: ${f.produto}. Parte: ${f.parte}. Destino: ${f.pais_destino} (${f.local_no_mapa}).` + (f.porto ? ` Sai pelo porto de ${f.porto}.` : "")),
+      $("div", { class: "src" }, "Fonte: ", ext(f.fonte_url, "conferido em " + fmtDate(f.verificado_em)), p ? [" · ", go("projeto-" + p.id.toLowerCase(), "ficha do " + p.projeto)] : null));
+  };
+  F.forEach((f, i) => {
+    const p = DADOS.projetos.find(x => split(f.projetos_ids).includes(x.id)), m = p && p.munis[0];
+    if (!m) return;
+    const o = xy(m.lat, m.lon), d = xy(+f.lat, +f.lon), porto = f.porto ? xy(+f.porto_lat, +f.porto_lon) : null, ini = porto || o;
+    const dx = d[0] - ini[0], dist = Math.hypot(dx, d[1] - ini[1]), cx = (ini[0] + d[0]) / 2, cy = Math.min(ini[1], d[1]) - dist * .28 - i * 6;
+    const caminho = (porto ? `M${o[0]},${o[1]} L${porto[0]},${porto[1]} ` : `M${o[0]},${o[1]} `) + `Q${cx},${cy} ${d[0]},${d[1]}`;
+    const fraca = /não vinculante|memorando/.test(f.situacao);
+    const g = S("g", { class: "alvo-rota", tabindex: "0", role: "button", "aria-label": `${i + 1}: ${f.projeto} para ${f.comprador}, ${f.pais_destino}, ${f.situacao}` });
+    g.append(S("path", { d: caminho, fill: "none", stroke: "transparent", "stroke-width": 16 }), S("path", { class: "rota corre" + (fraca ? " fraca" : ""), d: caminho, "stroke-width": fraca ? 2.5 : 4, fill: "none" }));
+    const chave = f.lat + "," + f.lon, n = destinos[chave] = (destinos[chave] || 0) + 1;
+    g.append(S("circle", { cx: d[0], cy: d[1] - (n - 1) * 26, r: 11, fill: css("--clay") }), ST("text", { x: d[0], y: d[1] - (n - 1) * 26 + 4, "text-anchor": "middle", style: "fill:var(--surface);font:600 12px var(--f-mono)" }, String(i + 1)));
+    g.addEventListener("click", () => escolher(i)); g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); escolher(i); } });
+    svg.append(g);
+    const li = $("li", { tabindex: "0" }, $("span", { class: "nro" }, String(i + 1)), $("div", {}, $("b", {}, f.comprador), " · ", f.pais_destino, $("br"), $("small", { class: "muted" }, f.projeto + " · " + f.situacao)));
+    li.addEventListener("click", () => escolher(i)); li.addEventListener("keydown", e => { if (e.key === "Enter") escolher(i); });
+    lis.push(li);
+  });
+  const mg = DADOS.projetos.find(p => p.munis[0] && split(F[0].projetos_ids).includes(p.id));
+  if (mg) { const o = xy(mg.munis[0].lat, mg.munis[0].lon); svg.append(S("circle", { cx: o[0], cy: o[1], r: 7, fill: css("--accent"), stroke: css("--surface"), "stroke-width": 2 }), ST("text", { x: o[0] + 12, y: o[1] + 22, style: "font:600 13px var(--f-body)" }, "Minas Gerais")); }
+  const amostra = (w, dash) => { const s = S("svg", { width: 26, height: 8, viewBox: "0 0 26 8", "aria-hidden": "true" }); s.append(S("line", { x1: 2, x2: 24, y1: 4, y2: 4, stroke: css("--clay"), "stroke-width": w, "stroke-dasharray": dash, "stroke-linecap": "round" })); return s; };
+  const box = $("div", { class: "flow paper" }, $("div", { class: "mapa" }, svg),
+    $("div", { class: "legend-row pad", style: "margin:0;padding-block:10px" }, $("span", {}, amostra(4, ""), "linha cheia: contrato fechado"), $("span", {}, amostra(2.5, "2 6"), "linha pontilhada: memorando ou acordo sem obrigação")),
+    $("ul", { class: "flow-list" }, lis), detalhe);
+  if (lis.length) escolher(0);
+  return box;
+}
+
+/* ---------- A HISTÓRIA (início) ---------- */
+function capitulo(n, titulo, textos, visual, { flip, full } = {}) {
+  const txt = $("div", { class: "txt" }, $("div", { class: "cap" }, "Capítulo " + n), $("h2", {}, titulo), textos);
+  return $("section", { class: "chapter" + (flip ? " flip" : "") + (full ? " full" : "") }, txt, visual);
+}
 function pInicio() {
   const nProj = DADOS.projetos.length, nArea = DADOS.areas_potencial.length;
-  const pend = DADOS.licencas.filter(l => !/Concedid|Assinado/.test(l.status)).length;
-  const paises = new Set(DADOS.projetos.map(p => p.pais_do_controlador.split(" /")[0]));
-  view.append(
-    $("h1", {}, "Rastreador de Terras Raras de Minas Gerais"),
-    $("p", { class: "lede" }, "Mapa interativo e rastreador de ", $("b", {}, plural(nProj, "projeto", "projetos")), " de terras raras e ", $("b", {}, plural(nArea, "área com potencial", "áreas com potencial")), " em ", $("b", {}, MUNIS_COM.length + " municípios"), " mineiros."),
-    $("p", { class: "lede" }, "Empresas, donos, países, investimento, licenças, água, impactos, leis e fontes."),
-    $("div", { class: "counts" },
-      $("span", { class: "chip" }, $("span", { class: "dot", style: `background:${catColor("Licenciamento")}` }), plural(DADOS.projetos.filter(p => p.categoria === "Licenciamento").length, "pedindo licença", "pedindo licença")),
-      $("span", { class: "chip" }, $("span", { class: "dot", style: `background:${catColor("Exploração")}` }), DADOS.projetos.filter(p => /Exploração|Planejado/.test(p.categoria)).length + " em exploração"),
-      $("span", { class: "chip" }, $("span", { class: "dot", style: `background:${catColor("Potencial (estudo)")}` }), nArea + " áreas em estudo"),
-      $("a", { class: "chip bad", href: "#licencas" }, plural(pend, "licença pendente", "licenças pendentes")),
-      $("span", { class: "chip p" }, "controladores de " + plural(paises.size, "país", "países"))),
-    mapaComPainel({ painelInicial: $("p", { class: "muted", style: "margin:0;font-size:14px" }, "Clique num município ou num círculo para ver os projetos, as empresas e as licenças pendentes.") }),
-  );
-  view.append($("h2", {}, "Navegue pelo mapa por região"));
-  view.append($("ul", { class: "dir" }, MESOS_COM.map(m => $("li", {}, go("regiao-" + m.slug, m.nome), $("span", { class: "n" }, [m.projetos.size ? plural(m.projetos.size, "projeto", "projetos") : null, m.areas.size ? plural(m.areas.size, "área", "áreas") : null].filter(Boolean).join(" · "))))));
-  view.append($("h2", {}, "Todos os projetos"));
-  view.append(tabelaProjetos(DADOS.projetos));
-  view.append($("h2", {}, "Últimas notícias e processos"));
-  const tl = $("div", { class: "timeline" });
-  DADOS.processos_noticias.slice().sort((a, b) => b.data.localeCompare(a.data)).slice(0, 5).forEach(p => tl.append(evento(p)));
-  view.append(tl, $("p", {}, go("noticias", "Ver todas as notícias e processos →")));
+  const lic = DADOS.projetos.filter(p => p.categoria === "Licenciamento");
+  view.append($("section", { class: "hero" },
+    $("p", { class: "eyebrow" }, "Rastreador cidadão · Minas Gerais"),
+    $("h1", {}, "As terras raras de Minas vão sair do chão. Quanto do valor fica no Brasil?"),
+    $("p", { class: "lede" }, "Os ímãs de carros elétricos, turbinas e celulares dependem de neodímio, praseodímio, disprósio e térbio. Minas tem ", $("b", {}, plural(nProj, "projeto", "projetos")), " e ", $("b", {}, plural(nArea, "área em estudo", "áreas em estudo")), " em ", $("b", {}, MUNIS_COM.length + " municípios"), ". Esta página segue quem controla, quanto dinheiro entra, para onde vai o minério e o que ainda pode ser decidido aqui."),
+    $("div", { class: "chips", style: "margin-top:14px" }, ["Nd 60", "Pr 59", "Dy 66", "Tb 65"].map(e => $("span", { class: "chip p mono" }, e)), $("span", { class: "muted", style: "font-size:13px" }, "os quatro elementos dos ímãs"))));
+
+  // 1. O que há debaixo do chão
+  view.append(capitulo(1, "O que há debaixo do chão",
+    [$("p", {}, `As argilas do planalto de Poços de Caldas e os complexos do Alto Paranaíba concentram os projetos. ${plural(lic.length, "projeto já pede", "projetos já pedem")} licença ambiental: ${lic.map(p => p.projeto.replace(/\s*\(.*\)/, "")).join(", ")}.`),
+      $("p", { class: "muted" }, "Clique num município ou num círculo para ver o que existe ali."), go("mapa", "Explorar o mapa com outros indicadores →", "more")],
+    mapaComPainel({ compacto: true, painelInicial: $("p", { class: "muted", style: "margin:0;font-size:14px" }, "Clique no mapa para ver projetos, empresas e decisões pendentes.") })));
+
+  // 2. Quem controla
+  const projPais = PAISES.map(([p, n]) => ({ label: p, value: n, color: paisColor(p) }));
+  const est = PAISES.filter(([p]) => p !== "Brasil").reduce((a, [, n]) => a + n, 0);
+  view.append(capitulo(2, "Quem controla os projetos",
+    [$("p", {}, `${est} dos ${nProj} projetos mapeados são controlados por empresas de fora do Brasil, a maioria listada na bolsa da Austrália. A maior compra até agora é a da Meteoric (Caldeira) pela australiana Lynas.`),
+      $("div", { class: "big ac" }, String(PAISES.length), $("span", { style: "font-size:16px;color:var(--muted);font-family:var(--f-body);font-weight:500" }, " países"), ind("I13")),
+      go("empresas", "Ver todas as empresas, donos e acionistas →", "more")],
+    $("div", { class: "paper pad" }, $("h3", {}, "Projetos por país de quem controla"), $("p", { class: "muted", style: "margin:2px 0 12px;font-size:13px" }, "Primeiro país quando há dois controladores."), pilha(projPais, { fmt: v => plural(v, "projeto", "projetos") })), { flip: true }));
+
+  // 3. Para onde vai o minério
+  const fl = mapaFluxos();
+  if (fl) view.append(capitulo(3, "Para onde vai o minério",
+    [$("p", {}, "Os dois projetos mais avançados vão vender um concentrado, o carbonato misto de terras raras. A separação em óxidos, a etapa que vale mais, está prevista fora do Brasil: na França para o Colossus e com compradores da Coreia do Sul e do Canadá para o Caldeira."),
+      $("p", { class: "muted" }, "Toque numa rota para ver o acordo e a fonte."), ind("I21")], fl, { flip: false }));
+
+  // 4. Quanto fica lá fora
+  view.append(capitulo(4, "Quanto o Brasil deixa de ganhar",
+    [$("p", {}, `Quem compra o concentrado paga só uma parte do valor dos óxidos que ele contém. Pelas contas dos próprios estudos de ${PERDA.nomes}, a diferença que fica com quem separa é de:`),
+      $("div", { class: "big" }, reais(PERDA.anoB, PERDA.anoA), ind("I01")), $("p", { class: "muted" }, "por ano, com as minas produzindo; " + reais(PERDA.vidaB, PERDA.vidaA) + " na vida útil."),
+      go("painel", "Simular com outros preços e ver a metodologia →", "more")],
+    simuladorMini(), { flip: true }));
+
+  // 5. O que ainda vai ser decidido
+  view.append(capitulo(5, "O que ainda vai ser decidido",
+    [$("p", {}, `Há ${LIC_PEND.length} decisões pendentes: licenças ambientais na Feam e no Copam, a aprovação da venda da Meteoric pelo novo comitê de minerais críticos (CIMCE), auditoria no TCU e ações na Justiça. É nelas que a sociedade ainda pode participar.`),
+      go("licencas", "Ver todas as decisões e como participar →", "more")],
+    $("div", { class: "pipe" }, LIC_PEND.slice(0, 4).map(etapa))));
+
+  // 6. Os riscos
+  const altos = DADOS.impactos.filter(i => i.gravidade === "alta");
+  view.append(capitulo(6, "Os riscos apontados",
+    [$("p", {}, `Estudos, órgãos de controle e comunidades apontam ${plural(altos.length, "impacto", "impactos")} de gravidade alta: radioatividade dos resíduos, água subterrânea, nitrato e amônia, comunidades tradicionais.`),
+      $("div", { class: "big ac" }, String(altos.length), ind("I14")), go("aprender", "Ver impactos, leis e donos da terra →", "more")],
+    $("div", { class: "cards" }, altos.slice(0, 4).map(i => $("article", { class: "card paper" }, $("h3", {}, i.tema), $("p", { style: "margin:0;font-size:14px" }, i.o_que_se_sabe.length > 220 ? i.o_que_se_sabe.slice(0, 217) + "…" : i.o_que_se_sabe), $("div", { class: "src" }, ext(i.fonte_url, fmtDate(i.fonte_data)))))), { flip: true }));
+
+  // 7. O que podemos pedir
+  view.append(capitulo(7, "O que podemos pedir",
+    [$("p", {}, `${DADOS.propostas.length} propostas em linguagem simples, cada uma com exemplo de outro país, da mineração ou do petróleo: processar aqui, ter parte do negócio, fundo para a região, consulta às comunidades.`),
+      go("propostas", "Ver as propostas e copiar a mensagem para um legislador →", "more"), go("enviar", "Sabe de algo que não está aqui? Envie →", "more")],
+    $("div", { class: "props" }, DADOS.propostas.slice(0, 2).map(p => $("article", { class: "prop paper" }, $("h3", {}, p.titulo), $("p", { class: "ask" }, p.o_que_pedir))))));
+
+  view.append($("section", { class: "chapter full" }, $("div", { class: "txt" }, $("div", { class: "cap" }, "Últimos registros"), $("h2", {}, "Notícias e processos")),
+    $("div", { class: "timeline" }, NOTICIAS.slice(0, 5).map(evento)), $("p", {}, go("noticias", "Ver todas as notícias e processos →", "more"))));
 }
 function tabelaProjetos(lista) {
   const tb = $("tbody");
@@ -395,25 +711,43 @@ function tabelaProjetos(lista) {
   return $("div", { class: "paper tablebox" }, $("table", {}, $("thead", {}, $("tr", {}, ["Projeto", "Município", "Empresa", "País", "Situação"].map(h => $("th", {}, h)))), tb));
 }
 
+/* ---------- MAPA (explorador por indicador) ---------- */
+function pMapa() {
+  view.append($("p", { class: "eyebrow" }, "Mapa interativo"), $("h1", { class: "small" }, "Terras raras município por município"),
+    $("p", { class: "lede" }, "Escolha o que mostrar: a situação dos projetos, as decisões pendentes, os impactos ou as notícias. O ranking ao lado mostra os municípios com mais registros."),
+    mapaComPainel({ escolherIndicador: true, painelInicial: $("p", { class: "muted", style: "margin:0;font-size:14px" }, "Clique num município do mapa ou do ranking.") }),
+    $("details", { class: "help paper", style: "margin-top:12px" }, $("summary", {}, "Como usar o mapa"), $("ol", {}, [
+      "Em \"O que mostrar no mapa\", escolha o indicador. Cores mais fortes indicam mais registros.",
+      "Na situação dos projetos, ligue e desligue cada tipo na legenda e filtre pelo país de quem controla.",
+      "Clique num município (no mapa ou no ranking) para ver os projetos e as áreas. O nome leva à página do município.",
+      "Use os botões + e − para aproximar. A rolagem da página não mexe no mapa.",
+      "Cada número vem das planilhas abertas: veja a definição em Dados e método.",
+    ].map(t => $("li", {}, t)))));
+  view.append($("h2", {}, "Navegue por região"));
+  view.append($("ul", { class: "dir" }, MESOS_COM.map(m => $("li", {}, go("regiao-" + m.slug, m.nome), $("span", { class: "n" }, [m.projetos.size ? plural(m.projetos.size, "projeto", "projetos") : null, m.areas.size ? plural(m.areas.size, "área", "áreas") : null].filter(Boolean).join(" · "))))));
+  view.append($("h2", {}, "Todos os projetos"), tabelaProjetos(DADOS.projetos));
+}
+
 /* ---------- REGIÃO ---------- */
 function pRegiao(s) {
-  const m = MESO_BY_SLUG[s]; if (!m) return pInicio();
+  const m = MESO_BY_SLUG[s]; if (!m) return pMapa();
   const projs = [...m.projetos], areas = [...m.areas], munis = [...m.munis].sort((a, b) => a.n.localeCompare(b.n, "pt"));
-  view.append(crumbs(go("inicio", "Minas Gerais"), m.nome), $("h1", {}, "Mapa de terras raras: " + m.nome),
+  view.append(crumbs(go("mapa", "Minas Gerais"), m.nome), $("h1", { class: "small" }, "Terras raras: " + m.nome),
     $("p", { class: "lede" }, `${plural(projs.length, "projeto", "projetos")} e ${plural(areas.length, "área com potencial", "áreas com potencial")} em ${plural(munis.length, "município", "municípios")}.`),
-    mapaComPainel({ bounds: MAP.boundsOf(m.feat) }));
+    mapaComPainel({ bounds: MAP.boundsOf(m.feat), escolherIndicador: true }));
   if (munis.length) { view.append($("h2", {}, "Municípios com terras raras em " + m.nome)); view.append($("ul", { class: "dir" }, munis.map(x => $("li", {}, go("municipio-" + x.slug, x.n), $("span", { class: "n" }, plural(x.itens.length, "item", "itens")))))); }
   if (projs.length) { view.append($("h2", {}, "Projetos")); view.append(tabelaProjetos(projs)); }
   if (areas.length) { view.append($("h2", {}, "Áreas com potencial apontadas em estudos")); view.append(cardsAreas(areas)); }
 }
 /* ---------- MUNICÍPIO ---------- */
 function pMunicipio(s) {
-  const m = MUNI_BY_SLUG[s]; if (!m) return pInicio();
+  const m = MUNI_BY_SLUG[s]; if (!m) return pMapa();
   const meso = MESO[m.meso];
-  const projs = m.itens.filter(i => i.tipo === "projeto").map(i => i.r), areas = m.itens.filter(i => i.tipo === "area").map(i => i.r);
-  view.append(crumbs(go("inicio", "Minas Gerais"), go("regiao-" + meso.slug, meso.nome), m.n), $("h1", {}, "Terras raras em " + m.n + " (MG)"),
-    $("p", { class: "lede" }, m.itens.length ? `${plural(projs.length, "projeto", "projetos")} e ${plural(areas.length, "área com potencial", "áreas com potencial")} mapeados.` : "Nada mapeado neste município ainda. Se você sabe de algo, envie pela página Enviar informação."),
-    mapaComPainel({ bounds: [[m.lat - .35, m.lon - .45], [m.lat + .35, m.lon + .45]] }));
+  const projs = projetosDoMuni(m), areas = m.itens.filter(i => i.tipo === "area").map(i => i.r);
+  view.append(crumbs(go("mapa", "Minas Gerais"), go("regiao-" + meso.slug, meso.nome), m.n), $("h1", { class: "small" }, "Terras raras em " + m.n + " (MG)"),
+    $("p", { class: "lede" }, m.itens.length ? `${plural(projs.length, "projeto", "projetos")} e ${plural(areas.length, "área com potencial", "áreas com potencial")} mapeados.` : "Nada mapeado neste município ainda. Se você sabe de algo, envie pela página Enviar informação."));
+  if (m.itens.length) view.append($("div", { class: "kpis" }, INDICADORES_MAPA.filter(x => x.f).map(x => $("div", { class: "kpi paper" }, $("div", { class: "l" }, x.nome), $("div", { class: "v" }, String(x.f(m))), $("div", { class: "n" }, x.desc)))));
+  view.append(mapaComPainel({ bounds: [[m.lat - .35, m.lon - .45], [m.lat + .35, m.lon + .45]] }));
   if (projs.length) { view.append($("h2", {}, "Projetos em " + m.n)); view.append(tabelaProjetos(projs)); }
   if (areas.length) { view.append($("h2", {}, "Áreas com potencial")); view.append(cardsAreas(areas)); }
 }
@@ -427,14 +761,19 @@ function cardsAreas(areas) {
 
 /* ---------- PROJETO ---------- */
 function pProjeto(id) {
-  const p = DADOS.projetos.find(x => x.id.toLowerCase() === id); if (!p) return pInicio();
+  const p = DADOS.projetos.find(x => x.id.toLowerCase() === id); if (!p) return pMapa();
   const meso = p.mesos[0] && MESO[p.mesos[0]];
   const lugar = p.munis.length ? p.munis.map(m => m.n).join(", ") : (p.municipios || p.regiao);
   const prod = filled(p.producao_prevista) ? " " + p.producao_prevista.split(";")[0] + "." : "";
-  view.append(crumbs(go("inicio", "Minas Gerais"), meso ? go("regiao-" + meso.slug, meso.nome) : null, p.projeto),
-    $("h1", {}, p.projeto),
+  view.append(crumbs(go("mapa", "Minas Gerais"), meso ? go("regiao-" + meso.slug, meso.nome) : null, p.projeto),
+    $("h1", { class: "small" }, p.projeto),
     $("p", { class: "lede" }, `${p.projeto} é um projeto de terras raras (${catLabel(p.categoria).toLowerCase()}) em ${lugar}, Minas Gerais.${prod} Controlado por ${p.empresa} (${p.pais_do_controlador}).`),
     $("div", { class: "chips", style: "margin-top:10px" }, $("span", { class: "chip" }, $("span", { class: "dot", style: `background:${catColor(p.categoria)}` }), catLabel(p.categoria)), licDe(p).map(l => statusChip(l.o_que_esta_pendente.replace(/\s*\(.*\)/, "") + ": " + l.status))));
+  const perda = PERDA.L.find(l => split(l.r.projetos_ids).includes(p.id));
+  const fl = (DADOS.fluxos || []).filter(f => split(f.projetos_ids).includes(p.id));
+  if (perda || fl.length) view.append($("div", { class: "kpis", style: "margin-top:18px" },
+    perda ? $("div", { class: "kpi paper destaque" }, $("div", { class: "l" }, "Perda estimada por ano", ind("I01")), $("div", { class: "v" }, reais(perda.anoB, perda.anoA)), $("div", { class: "n" }, "separação fora do Brasil · ", go("painel", "ver a conta"))) : null,
+    fl.length ? $("div", { class: "kpi paper" }, $("div", { class: "l" }, "Compradores de fora", ind("I21")), $("div", { class: "v" }, String(fl.length)), $("div", { class: "n" }, fl.map(f => f.comprador + " (" + f.pais_destino + ")").join("; "))) : null));
   const rows = [
     ["Situação", p.fase],
     ["Localização", [p.munis.map((m, i) => [i ? ", " : "", go("municipio-" + m.slug, m.n)]), p.munis.length ? ", " : "", meso ? go("regiao-" + meso.slug, meso.nome) : p.municipios, ", Minas Gerais"]],
@@ -445,7 +784,7 @@ function pProjeto(id) {
   ].filter(([, v]) => v && (typeof v !== "string" || filled(v)));
   view.append($("h2", {}, "Ficha do projeto"), $("dl", { class: "sheet paper" }, rows.map(([k, v]) => [$("dt", {}, k), $("dd", {}, v)])));
   const lic = licDe(p);
-  if (lic.length) { view.append($("h2", {}, "Licenças e aprovações pendentes")); view.append(tabelaLic(lic)); }
+  if (lic.length) { view.append($("h2", {}, "Licenças e aprovações")); view.append(tabelaLic(lic)); }
   const terra = doProjeto("donos_terra", p);
   if (terra.length) { view.append($("h2", {}, "Donos da terra e dos direitos")); view.append($("dl", { class: "sheet paper" }, terra.map(t => [$("dt", {}, t.area_projeto), $("dd", {}, $("div", {}, $("b", {}, "Direito minerário: "), t.quem_tem_o_direito_minerario), $("div", {}, $("b", {}, "Superfície: "), t.quem_e_dono_da_superficie), filled(t.royalty_ou_pagamento_privado) ? $("div", {}, $("b", {}, "Royalty: "), t.royalty_ou_pagamento_privado) : null, $("div", { class: "src" }, ext(t.fonte_url, fmtDate(t.fonte_data))))]))); }
   const imp = doProjeto("impactos", p);
@@ -453,45 +792,61 @@ function pProjeto(id) {
   const pr = procDe(p);
   if (pr.length) { view.append($("h2", {}, "Linha do tempo")); const tl = $("div", { class: "timeline" }); pr.sort((a, b) => b.data.localeCompare(a.data)).forEach(x => tl.append(evento(x))); view.append(tl); }
   view.append($("h2", {}, "Fontes"), $("p", { class: "src" }, ext(p.fonte_url, fmtDate(p.fonte_data)), " · verificado em " + fmtDate(p.verificado_em)));
-  view.append($("p", {}, go(meso ? "regiao-" + meso.slug : "inicio", "Ver no mapa da região →", "btn")));
+  view.append($("p", {}, go(meso ? "regiao-" + meso.slug : "mapa", "Ver no mapa da região →", "btn")));
 }
 
 /* ---------- EMPRESAS ---------- */
 function pEmpresas() {
-  view.append($("h1", {}, "Empresas e investimentos"), $("p", { class: "lede" }, `${DADOS.empresas.length} empresas, investidores, compradores, vendedores e órgãos públicos ligados às terras raras de Minas.`));
-  const inp = $("input", { type: "search", id: "busca-empresas", placeholder: "Buscar empresa ou país…", "aria-label": "Buscar empresa" });
+  view.append($("p", { class: "eyebrow" }, "Quem é quem"), $("h1", { class: "small" }, "Empresas, donos e investidores"), $("p", { class: "lede" }, `${DADOS.empresas.length} empresas, investidores, compradores, vendedores e órgãos públicos ligados às terras raras de Minas. Cada ficha diz de onde vem a informação e se ela já foi confirmada.`));
+  const porPais = {}; DADOS.empresas.forEach(e => { const k = pais1(e.pais_sede.replace(/\s*\(.*\)/, "")); porPais[k] = (porPais[k] || 0) + 1; });
+  const partes = Object.entries(porPais).sort((a, b) => b[1] - a[1]).map(([p, n]) => ({ label: p, value: n, color: paisColor(p) }));
+  view.append($("div", { class: "paper pad", style: "margin-bottom:16px" }, $("h3", {}, "Empresas por país da sede"), $("div", { style: "height:10px" }), pilha(partes, { fmt: v => String(v) })));
+  const inp = $("input", { type: "search", id: "busca-empresas", placeholder: "Buscar empresa, pessoa ou país…", "aria-label": "Buscar empresa" });
   const papeis = [...new Set(DADOS.empresas.map(e => e.papel))].sort();
-  const sel = $("select", { id: "f-empresas-papel" }, $("option", { value: "" }, "Todos os papéis"), papeis.map(v => $("option", { value: v }, v)));
-  const ul = $("ul", { class: "dir" });
-  view.append($("div", { class: "tools" }, inp, sel), ul);
-  const r = () => { ul.innerHTML = ""; DADOS.empresas.slice().sort((a, b) => shortName(a).localeCompare(shortName(b), "pt")).forEach(e => {
-    if (inp.value && !norm(Object.values(e).join(" ")).includes(norm(inp.value))) return; if (sel.value && e.papel !== sel.value) return;
+  const sel = $("select", { id: "f-empresas-papel", "aria-label": "Papel" }, $("option", { value: "" }, "Todos os papéis"), papeis.map(v => $("option", { value: v }, v)));
+  const selConf = $("select", { id: "f-empresas-conf", "aria-label": "Confirmação" }, $("option", { value: "" }, "Confirmadas e a verificar"), [...new Set(DADOS.empresas.map(e => e.confianca))].sort().map(v => $("option", { value: v }, v)));
+  const ul = $("ul", { class: "dir" }), cnt = $("p", { class: "count" });
+  view.append($("div", { class: "tools" }, inp, sel, selConf), cnt, ul);
+  const r = () => { ul.innerHTML = ""; let n = 0; DADOS.empresas.slice().sort((a, b) => shortName(a).localeCompare(shortName(b), "pt")).forEach(e => {
+    if (inp.value && !norm(Object.values(e).join(" ")).includes(norm(inp.value))) return; if (sel.value && e.papel !== sel.value) return; if (selConf.value && e.confianca !== selConf.value) return; n++;
     ul.append($("li", {}, $("span", {}, go("empresa-" + e.id.toLowerCase(), shortName(e)), $("br"), $("small", { class: "muted" }, e.pais_sede + " · " + e.papel)), $("span", { class: "n" }, e.projetos.length ? plural(e.projetos.length, "projeto", "projetos") : "")));
-  }); };
-  inp.addEventListener("input", r); sel.addEventListener("change", r); r();
+  }); cnt.textContent = n + " de " + DADOS.empresas.length; };
+  inp.addEventListener("input", r); sel.addEventListener("change", r); selConf.addEventListener("change", r); r();
 }
 function pEmpresa(id) {
   const e = DADOS.empresas.find(x => x.id.toLowerCase() === id); if (!e) return pEmpresas();
   const regs = new Set(e.projetos.flatMap(p => p.mesos));
-  view.append(crumbs(go("empresas", "Empresas"), shortName(e)), $("h1", {}, shortName(e)),
+  view.append(crumbs(go("empresas", "Quem é quem"), shortName(e)), $("h1", { class: "small" }, shortName(e)),
     $("p", { class: "lede" }, e.projetos.length ? `${plural(e.projetos.length, "projeto de terras raras ligado", "projetos de terras raras ligados")} a ${shortName(e)} em ${plural(regs.size, "região", "regiões")} de Minas Gerais.` : `${e.papel} · ${e.pais_sede}`),
     $("div", { class: "chips", style: "margin-top:10px" }, $("span", { class: "chip p" }, e.papel), $("span", { class: "chip" }, e.pais_sede), filled(e.bolsa_ticker) ? $("span", { class: "chip" }, e.bolsa_ticker) : null, statusChip(e.confianca)));
-  view.append($("h2", {}, "Ficha"), $("dl", { class: "sheet paper" }, [["Nome completo", e.nome], ["Em Minas", e.onde_em_mg], ["Donos e acionistas", e.donos_acionistas_controle], ["Pessoas-chave", e.pessoas_chave], ["Fonte", ext(e.fonte_url, fmtDate(e.fonte_data))]].filter(([, v]) => v && filled(v)).map(([k, v]) => [$("dt", {}, k), $("dd", {}, v)])));
+  view.append($("h2", {}, "Ficha"), $("dl", { class: "sheet paper" }, [["Nome completo", e.nome], ["Em Minas", e.onde_em_mg], ["Donos e acionistas", e.donos_acionistas_controle], ["Pessoas-chave", e.pessoas_chave], ["Fonte", ext(e.fonte_url, fmtDate(e.fonte_data))], ["Conferido em", fmtDate(e.verificado_em)]].filter(([, v]) => v && filled(v)).map(([k, v]) => [$("dt", {}, k), $("dd", {}, v)])));
   if (e.projetos.length) { view.append($("h2", {}, "Projetos")); view.append(tabelaProjetos(e.projetos)); }
 }
 
-/* ---------- LICENÇAS ---------- */
+/* ---------- DECISÕES (licenças) ---------- */
+function etapa(l) {
+  const st = l.status || "";
+  const fase = /Concedid|Assinado/.test(st) ? 3 : /análise|Aguarda|Pendente|negociação|recomendou/i.test(st) ? 2 : 1;
+  const meses = filled(l.data_pedido) ? Math.max(0, Math.round(diasDesde(l.data_pedido) / 30.4)) : null;
+  return $("article", { class: "etapa paper" },
+    $("div", {}, $("b", {}, l.projeto), $("br"), $("span", { style: "font-size:14px" }, l.o_que_esta_pendente), $("br"), $("small", { class: "muted" }, l.orgao)),
+    $("div", { style: "display:grid;gap:6px;min-width:0" },
+      $("div", { class: "passos" }, ["Pedido", "Em análise", "Decisão"].map((t, i) => $("span", { class: i + 1 < fase ? "feito" : i + 1 === fase ? "agora" : "" }, t))),
+      $("small", {}, st + (meses != null && fase < 3 ? ` · esperando há ${plural(meses, "mês", "meses")}` : "")),
+      filled(l.proximo_marco) ? $("small", { class: "muted" }, "Próximo passo: " + l.proximo_marco) : null));
+}
 function tabelaLic(lista) {
   const tb = $("tbody");
-  lista.forEach(l => tb.append($("tr", {}, $("td", {}, l.projeto), $("td", {}, l.o_que_esta_pendente), $("td", {}, l.orgao), $("td", { class: "num quebra" }, l.processo), $("td", {}, statusChip(l.status)), $("td", {}, l.proximo_marco), $("td", {}, ext(l.fonte_url)))));
+  lista.forEach(l => tb.append($("tr", {}, $("td", {}, l.projeto), $("td", {}, l.o_que_esta_pendente), $("td", {}, l.orgao), $("td", { class: "num quebra mono" }, l.processo), $("td", {}, statusChip(l.status)), $("td", {}, l.proximo_marco), $("td", {}, ext(l.fonte_url)))));
   return $("div", { class: "paper tablebox" }, $("table", {}, $("thead", {}, $("tr", {}, ["Projeto", "O que está pendente", "Órgão", "Processo", "Status", "Próximo marco", "Fonte"].map(h => $("th", {}, h)))), tb));
 }
 function pLicencas() {
-  view.append($("h1", {}, "Licenças e aprovações pendentes"), $("p", { class: "lede" }, "O que ainda precisa ser decidido, por qual órgão e com qual processo. É aqui que a sociedade pode participar: audiências públicas, manifestações à Feam e ao Copam e pedidos pela Lei de Acesso à Informação."));
-  view.append(tabelaLic(DADOS.licencas));
+  view.append($("p", { class: "eyebrow" }, "Decisões"), $("h1", { class: "small" }, "O que ainda vai ser decidido"), $("p", { class: "lede" }, "Licenças ambientais, aprovações de venda, auditorias e ações na Justiça. É aqui que a sociedade pode participar: audiências públicas, manifestações à Feam e ao Copam e pedidos pela Lei de Acesso à Informação."),
+    $("div", { class: "kpis" }, [["Decisões pendentes", LIC_PEND.length, "I09"], ["Licenças ambientais em análise", DADOS.licencas.filter(l => /Licença/.test(l.o_que_esta_pendente) && /análise/i.test(l.status)).length, "I09"], ["Ações e auditorias", DADOS.licencas.filter(l => /suspensão|Auditoria|Ação/i.test(l.o_que_esta_pendente)).length, "I09"]].map(([l, v, i]) => $("div", { class: "kpi paper" }, $("div", { class: "l" }, l, ind(i)), $("div", { class: "v" }, String(v))))));
+  view.append($("h2", {}, "Em que etapa está cada decisão"), $("div", { class: "pipe" }, DADOS.licencas.map(etapa)));
+  view.append($("h2", {}, "Tabela completa"), tabelaLic(DADOS.licencas));
   view.append($("h2", {}, "Áreas com potencial que ainda não pediram licença"), $("p", { class: "muted" }, "Lugares onde estudos públicos (Codemge, Serviço Geológico do Brasil) já indicaram terras raras, sem projeto licenciado. São as próximas fronteiras."), cardsAreas(DADOS.areas_potencial));
 }
-function pPotencial() { pLicencas(); }
 
 /* ---------- NOTÍCIAS ---------- */
 function evento(p) {
@@ -505,104 +860,161 @@ function evento(p) {
 function fonteNoticia(u, origem) {
   return [ext(u), " ", origem ? $("span", { class: "chip" + (origem === "nacional" ? " p" : "") }, origem === "nacional" ? "fonte nacional" : "fonte estrangeira") : null];
 }
-const temOrigem = (p, o) => p.origem === o || (filled(p.fonte_url_2) && p.origem_2 === o);
+// Notícias por mês, com os meses fora do comum marcados (acima da média + 2 desvios dos últimos 24 meses)
+function porMes() {
+  const meses = []; const d = new Date(HOJE.getFullYear(), HOJE.getMonth(), 1);
+  for (let i = 23; i >= 0; i--) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1); meses.push(x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0")); }
+  const c = Object.fromEntries(meses.map(m => [m, 0])); NOTICIAS.forEach(p => { const k = p.data.slice(0, 7); if (k in c) c[k]++; });
+  const v = meses.map(m => c[m]), media = v.reduce((a, b) => a + b, 0) / v.length, dp = Math.sqrt(v.reduce((a, b) => a + (b - media) ** 2, 0) / v.length);
+  return { meses, c, media, limite: media + 2 * dp };
+}
+function graficoMeses(onPick, W) {
+  const { meses, c, media, limite } = porMes(), H = 150, pb = 22, pt = 18, max = Math.max(...meses.map(m => c[m]), 1), bw = W / meses.length;
+  const svg = S("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Notícias e processos por mês nos últimos 24 meses" });
+  const y = v => pt + (H - pb - pt) * (1 - v / max);
+  svg.append(S("line", { x1: 0, x2: W, y1: H - pb, y2: H - pb, stroke: css("--line") }), S("line", { x1: 0, x2: W, y1: y(media), y2: y(media), stroke: css("--muted"), "stroke-dasharray": "3 4" }), ST("text", { x: W, y: y(media) - 4, "text-anchor": "end", class: "ax" }, "média " + nf(media)));
+  meses.forEach((m, i) => {
+    const v = c[m], pico = v > limite && v >= 3, x = i * bw + 2, h = (H - pb - pt) * v / max;
+    const r = S("rect", { x, y: H - pb - h, width: Math.max(2, bw - 4), height: Math.max(v ? 2 : 0, h), rx: 2, fill: pico ? css("--clay") : css("--accent"), class: "barra", style: "cursor:pointer" });
+    r.addEventListener("mousemove", ev => showTip(ev, $("b", {}, fmtDate(m)), $("br"), plural(v, "registro", "registros"), pico ? [$("br"), "mês fora do comum (pico)"] : null)); r.addEventListener("mouseleave", hideTip);
+    r.addEventListener("click", () => onPick(m)); svg.append(r);
+    if (pico) svg.append(ST("text", { x: x + (bw - 4) / 2, y: H - pb - h - 4, "text-anchor": "middle", class: "ax", style: "fill:var(--clay)" }, "pico"));
+    if (i % 3 === 0 || i === meses.length - 1) svg.append(ST("text", { x: x + (bw - 4) / 2, y: H - 6, "text-anchor": "middle", class: "ax" }, m.slice(5) + "/" + m.slice(2, 4)));
+  });
+  return svg;
+}
 function pNoticias() {
-  view.append($("h1", {}, "Notícias e processos"), $("p", { class: "lede" }, "Linha do tempo, da mais recente para a mais antiga. Pontos vermelhos são ações judiciais, recomendações, representações e leis."));
+  view.append($("p", { class: "eyebrow" }, "Notícias e processos"), $("h1", { class: "small" }, "Tudo o que aconteceu, com fonte"), $("p", { class: "lede" }, "Da mais recente para a mais antiga. Pontos vermelhos são ações judiciais, recomendações, representações e leis. Cada fonte é marcada como nacional ou estrangeira."));
+  const graf = $("div", { class: "chart paper", style: "margin-bottom:16px" });
   const inp = $("input", { type: "search", id: "busca-noticias", placeholder: "Buscar (ex.: MPF, Lynas, Araxá)…", "aria-label": "Buscar" });
-  const sel = $("select", { id: "f-noticias-tipo" }, $("option", { value: "" }, "Todos os tipos"), [...new Set(DADOS.processos_noticias.map(p => p.tipo))].sort().map(t => $("option", { value: t }, t)));
+  const sel = $("select", { id: "f-noticias-tipo", "aria-label": "Tipo" }, $("option", { value: "" }, "Todos os tipos"), [...new Set(NOTICIAS.map(p => p.tipo))].sort().map(t => $("option", { value: t }, t)));
   const selOrigem = $("select", { id: "f-noticias-origem", "aria-label": "Origem da fonte" }, [["", "Fontes nacionais e estrangeiras"], ["nacional", "Com fonte nacional"], ["estrangeira", "Com fonte estrangeira"]].map(([v, t]) => $("option", { value: v }, t)));
+  const selMes = $("select", { id: "f-noticias-mes", "aria-label": "Mês" }, $("option", { value: "" }, "Todos os meses"), [...new Set(NOTICIAS.map(p => p.data.slice(0, 7)))].map(m => $("option", { value: m }, fmtDate(m))));
   const cnt = $("span", { class: "count" }), tl = $("div", { class: "timeline" });
-  view.append($("div", { class: "tools" }, inp, sel, selOrigem), cnt, $("div", { style: "height:10px" }), tl);
-  const lista = DADOS.processos_noticias.slice().sort((a, b) => b.data.localeCompare(a.data));
-  const r = () => { tl.innerHTML = ""; let n = 0; lista.forEach(p => { if (inp.value && !norm(Object.values(p).join(" ")).includes(norm(inp.value))) return; if (sel.value && p.tipo !== sel.value) return; if (selOrigem.value && !temOrigem(p, selOrigem.value)) return; n++; tl.append(evento(p)); }); cnt.textContent = n + " de " + lista.length + " · " + lista.filter(p => temOrigem(p, "nacional")).length + " com fonte nacional, " + lista.filter(p => temOrigem(p, "estrangeira")).length + " com fonte estrangeira"; };
-  inp.addEventListener("input", r); sel.addEventListener("change", r); selOrigem.addEventListener("change", r); r();
+  view.append(graf, $("div", { class: "tools" }, inp, sel, selOrigem, selMes), cnt, $("div", { style: "height:10px" }), tl);
+  const r = () => { tl.innerHTML = ""; let n = 0; NOTICIAS.forEach(p => { if (inp.value && !norm(Object.values(p).join(" ")).includes(norm(inp.value))) return; if (sel.value && p.tipo !== sel.value) return; if (selOrigem.value && !temOrigem(p, selOrigem.value)) return; if (selMes.value && !p.data.startsWith(selMes.value)) return; n++; tl.append(evento(p)); }); cnt.textContent = n + " de " + NOTICIAS.length + " · " + NACIONAIS + " com fonte nacional, " + NOTICIAS.filter(p => temOrigem(p, "estrangeira")).length + " com fonte estrangeira"; };
+  const desenha = () => { graf.replaceChildren($("div", { class: "chart-head" }, $("h3", {}, "Registros por mês", ind("I15")), $("span", { class: "count" }, "clique numa barra para filtrar")), $("p", { class: "d" }, "Últimos 24 meses. Em ocre, meses fora do comum: acima da média mais duas vezes o desvio padrão."), graficoMeses(m => { if (![...selMes.options].some(o => o.value === m)) return; selMes.value = m; r(); cnt.scrollIntoView({ behavior: "smooth", block: "start" }); }, largura(graf))); };
+  [inp].forEach(x => x.addEventListener("input", r)); [sel, selOrigem, selMes].forEach(x => x.addEventListener("change", r)); r();
+  requestAnimationFrame(desenha);
 }
 
-/* ---------- PAINEL ECONÔMICO ---------- */
+/* ---------- DINHEIRO (painel econômico) ---------- */
+// Simulador: muda preço, parte paga e dólar e refaz a conta da perda (mesma fórmula de I01)
+function simulador({ mini } = {}) {
+  const box = $("div", { class: "paper sim" + (mini ? " mini" : "") });
+  const ctl = $("div", { class: "ctl" }), out = $("div", { class: "out" });
+  const rng = (id, rot, min, max, step, val, fmt) => { const i = $("input", { type: "range", id, min, max, step, value: val, "aria-label": rot }); const o = $("output", { for: id }, fmt(val)); i.addEventListener("input", () => { o.textContent = fmt(+i.value); calc(); }); return [$("label", { class: "rng" }, $("span", { class: "top" }, $("span", {}, rot), o), i), i, o, fmt]; };
+  const [lp, ip] = rng((mini ? "m-" : "") + "sim-preco", "Preço das terras raras (em relação ao estudo)", 50, 200, 5, 100, v => v + "%");
+  const [lq, iq] = rng((mini ? "m-" : "") + "sim-pago", "Parte paga à mina (pontos a mais ou a menos)", -20, 20, 1, 0, v => (v > 0 ? "+" : "") + v + " p.p.");
+  const [ld, idl] = rng((mini ? "m-" : "") + "sim-dolar", "Dólar (R$)", 4, 7.5, .05, isNaN(DOLAR) ? 5.5 : +DOLAR.toFixed(2), v => "R$ " + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  const cenario = $("div", { class: "seg", role: "group", "aria-label": "Cenário de preço do estudo" }, ["baixo", "alto"].map((c, i) => { const b = $("button", { type: "button", "aria-pressed": i === 0 ? "true" : "false" }, "cenário " + c); b.addEventListener("click", () => { cenario.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false")); calc(); }); return b; }));
+  const reset = $("button", { type: "button", class: "btn" }, "Voltar aos valores dos estudos");
+  reset.addEventListener("click", () => { [[ip, 100], [iq, 0], [idl, isNaN(DOLAR) ? 5.5 : +DOLAR.toFixed(2)]].forEach(([i, v]) => { i.value = v; i.dispatchEvent(new Event("input")); }); });
+  ctl.append($("div", { class: "lbl" }, "Simule"), $("div", { style: "display:grid;gap:4px" }, $("span", { style: "font-size:14px" }, "Preço de partida"), cenario), lp, lq, ld, reset);
+  const total = $("div", { class: "big", style: "font-size:clamp(28px,4vw,40px)" }), sub = $("p", { class: "muted", style: "margin:0;font-size:14px" }), barras = $("div", {});
+  out.append($("div", { class: "lbl" }, "Perda estimada por ano, em reais"), total, sub, barras, $("p", { class: "src", style: "margin:0" }, "Simulação com a fórmula do indicador I01. Os valores iniciais são os dos estudos de viabilidade e o dólar do Banco Central de " + (CAMBIO ? fmtDate(CAMBIO.data) : "—") + "."));
+  function calc() {
+    const alto = cenario.querySelectorAll("button")[1].getAttribute("aria-pressed") === "true";
+    const fp = +ip.value / 100, dq = +iq.value / 100, dol = +idl.value;
+    const linhas = PERDA.L.map(l => { const pago = Math.min(.99, Math.max(.01, l.pago + dq)); return { nome: l.r.projeto, v: l.t * (alto ? l.ca : l.cb) * fp * (1 - pago) / 1000 * dol, pago }; });
+    const soma = linhas.reduce((a, l) => a + l.v, 0);
+    total.textContent = brl(soma);
+    sub.textContent = "Base do estudo: " + reais(alto ? PERDA.anoA : PERDA.anoB, alto ? PERDA.anoA : PERDA.anoB) + " por ano. " + linhas.map(l => l.nome + " recebe " + Math.round(l.pago * 100) + "%").join("; ") + ".";
+    const max = Math.max(...linhas.map(l => l.v), 1);
+    barras.replaceChildren(...linhas.map(l => $("div", { style: "display:grid;gap:2px;margin:6px 0" }, $("div", { style: "display:flex;justify-content:space-between;font-size:14px" }, $("span", {}, l.nome), $("span", { class: "mono" }, brl(l.v))), $("div", { style: `height:10px;border-radius:3px;background:var(--clay);width:${Math.max(2, 100 * l.v / max)}%` }))));
+  }
+  box.append(ctl, out); calc();
+  return box;
+}
+const simuladorMini = () => simulador({ mini: true });
+// Dinheiro ao longo do tempo: soma acumulada dos negócios, captações e financiamentos com data (numeros.csv)
+const CATS_DINHEIRO = [["Compra e venda de empresas e áreas", "--s2", "Compra e venda"], ["Capital privado captado", "--s1", "Capital privado"], ["Dinheiro público brasileiro", "--s3", "Dinheiro público do Brasil"], ["Crédito de governos estrangeiros (sinalizado)", "--sx", "Crédito estrangeiro (sinalizado)"]];
+function linhaDoTempoDinheiro(box) {
+  const ev = NUM.filter(r => CATS_DINHEIRO.some(c => c[0] === r.categoria) && !isNaN(r.v) && r.regiao !== "Fora de MG" && parseData(r.data)).map(r => ({ r, d: parseData(r.data) })).sort((a, b) => a.d - b.d);
+  const faixas = [["tudo", "Desde " + (ev[0] ? ev[0].d.getFullYear() : "")], ["12m", "12 meses"], ["ano", String(HOJE.getFullYear())]];
+  let faixaAtual = "tudo";
+  const seg = $("div", { class: "seg", role: "group", "aria-label": "Período" }, faixas.map(([k, t]) => { const b = $("button", { type: "button", "aria-pressed": k === faixaAtual ? "true" : "false" }, t); b.addEventListener("click", () => { faixaAtual = k; seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false")); desenha(); }); return b; }));
+  const area = $("div", {}), resumo = $("p", { class: "d", style: "margin:8px 0 0" });
+  box.append($("div", { class: "chart-head" }, $("h3", {}, "Dinheiro anunciado ao longo do tempo", ind("I05")), seg), $("p", { class: "d" }, "Soma acumulada de compras de empresas e áreas, captações em bolsa e financiamentos com data, só em Minas. Passe o dedo ou o mouse sobre os pontos."),
+    $("div", { class: "legend-row" }, CATS_DINHEIRO.map(([, c, n]) => $("span", {}, $("span", { class: "dot", style: `background:var(${c})` }), n))), area, resumo);
+  function desenha() {
+    const ini = faixaAtual === "12m" ? new Date(HOJE.getFullYear() - 1, HOJE.getMonth(), HOJE.getDate()) : faixaAtual === "ano" ? new Date(HOJE.getFullYear(), 0, 1) : new Date(ev[0].d.getFullYear(), 0, 1);
+    const base = ev.filter(e => e.d < ini).reduce((a, e) => a + e.r.v, 0), vis = ev.filter(e => e.d >= ini);
+    const W = largura(box), H = 230, pl = 64, pr = 12, pt = 12, pb = 26;
+    const t0 = +ini, t1 = +HOJE, x = d => pl + (W - pl - pr) * (d - t0) / (t1 - t0 || 1);
+    let acc = base; const pts = [[x(ini), base]]; vis.forEach(e => { pts.push([x(e.d), acc]); acc += e.r.v; pts.push([x(e.d), acc]); e.acc = acc; }); pts.push([x(HOJE), acc]);
+    const max = Math.max(acc, 1) * 1.08, y = v => pt + (H - pt - pb) * (1 - v / max);
+    const svg = S("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Soma acumulada do dinheiro anunciado: " + brl(acc) });
+    [0, .25, .5, .75, 1].forEach(f => { const v = max / 1.08 * f; svg.append(S("line", { x1: pl, x2: W - pr, y1: y(v), y2: y(v), stroke: css("--line"), "stroke-dasharray": f ? "2 4" : "" }), ST("text", { x: pl - 6, y: y(v) + 4, "text-anchor": "end", class: "ax" }, f ? brl(v).replace("R$ ", "") : "0")); });
+    for (let a = ini.getFullYear(); a <= HOJE.getFullYear(); a++) { const d = new Date(a, 0, 1); if (d >= ini) svg.append(ST("text", { x: x(d), y: H - 6, "text-anchor": "middle", class: "ax" }, String(a))); }
+    const linha = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + "," + y(p[1]).toFixed(1)).join("");
+    svg.append(S("path", { d: linha + `L${x(HOJE)},${y(0)}L${pl},${y(0)}Z`, fill: css("--accent"), opacity: ".1" }), S("path", { d: linha, fill: "none", stroke: css("--accent"), "stroke-width": 2 }));
+    vis.forEach(e => { const c = CATS_DINHEIRO.find(k => k[0] === e.r.categoria); const ci = S("circle", { cx: x(e.d), cy: y(e.acc), r: 5.5, fill: css(c[1]), stroke: css("--surface"), "stroke-width": 1.5, style: "cursor:pointer" }); ci.addEventListener("mousemove", ev2 => showTip(ev2, $("b", {}, e.r.indicador), $("br"), fmtDate(e.r.data) + " · " + brl(e.r.v), $("br"), "acumulado: " + brl(e.acc))); ci.addEventListener("mouseleave", hideTip); ci.addEventListener("click", () => window.open(e.r.fonte_url, "_blank", "noopener")); svg.append(ci); });
+    const fim = S("circle", { cx: x(HOJE), cy: y(acc), r: 4, fill: css("--accent") }); svg.append(fim);
+    area.replaceChildren(svg);
+    resumo.textContent = `${plural(vis.length, "registro", "registros")} no período, somando ${brl(acc - base)}. Total acumulado: ${brl(acc)}.`;
+  }
+  if (ev.length) requestAnimationFrame(desenha); else area.append($("p", { class: "count" }, "Sem dados."));
+  return box;
+}
 function pPainel() {
-  view.append($("h1", {}, "Painel econômico"), $("p", { class: "lede" }, "Quanto dinheiro está em jogo, quem coloca e quanto as empresas esperam ganhar. Valores em reais; investimento e retorno são projeções das empresas."));
-  const perda = perdaProcessamento();
-  if (perda) view.append(perda, $("h2", {}, "Investimentos, compras e retornos"));
-  const N = DADOS.numeros.map(r => ({ ...r, v: parseFloat(String(r.valor_grafico).replace(",", ".")) }));
+  view.append($("p", { class: "eyebrow" }, "Dinheiro"), $("h1", { class: "small" }, "Quanto dinheiro está em jogo e quanto fica lá fora"), $("p", { class: "lede" }, "Perda por separar fora do Brasil, investimento, negócios, captações e retorno prometido. Investimento e retorno são projeções das empresas; a perda é uma conta deste rastreador com os números delas."));
+  view.append(perdaProcessamento());
+  view.append($("h2", {}, "Simule outros cenários"), $("p", { class: "muted", style: "max-width:70ch" }, "Os preços de terras raras mudam muito. Mexa no preço, na parte que o comprador paga e no dólar para ver como a perda muda."), simulador());
+  view.append($("h2", {}, "Dinheiro ao longo do tempo"), linhaDoTempoDinheiro($("div", { class: "chart paper" })));
+  view.append($("h2", {}, "Investimentos, compras e retornos"));
+  const N = NUM;
   const selReg = $("select", { id: "f-painel-regiao" }, ["Minas Gerais (todas)", "Sul de Minas", "Alto Paranaíba", "Incluir referência fora de MG"].map(v => $("option", { value: v }, v)));
   const selPais = $("select", { id: "f-painel-pais" }, $("option", { value: "" }, "Todos os países"), [...new Set(N.map(r => r.pais_controlador).filter(p => p && p !== "-" && !/\//.test(p)))].sort().map(v => $("option", { value: v }, v)));
   const selProj = $("select", { id: "f-painel-proj" }, $("option", { value: "" }, "Todos os projetos"), [...new Set(N.filter(r => !isNaN(r.v)).map(r => r.projeto).filter(p => !/Todos|Brasil|Mundo/.test(p)))].sort().map(v => $("option", { value: v }, v)));
   const kpis = $("div", { class: "kpis" }), charts = $("div", { class: "charts" }), tabela = $("div", {});
-  view.append($("div", { class: "tools" }, $("label", { class: "sel" }, $("span", { class: "lbl" }, "Região"), selReg), $("label", { class: "sel" }, $("span", { class: "lbl" }, "País do controlador"), selPais), $("label", { class: "sel" }, $("span", { class: "lbl" }, "Projeto"), selProj)), kpis, charts, $("h2", {}, "Todos os números"), tabela);
+  view.append($("div", { class: "tools" }, $("label", { class: "sel" }, $("span", { class: "lbl" }, "Região"), selReg), $("label", { class: "sel" }, $("span", { class: "lbl" }, "País do controlador"), selPais), $("label", { class: "sel" }, $("span", { class: "lbl" }, "Projeto"), selProj)), kpis, charts,
+    $("details", { class: "metodo paper", style: "max-width:none;margin-top:20px" }, $("summary", {}, "Todos os números, com fonte e data (" + N.length + " linhas)"), $("p", { class: "muted" }, ext("https://github.com/amarigo/segredos-abertos/blob/main/terras-raras/dados/numeros.csv", "baixar a planilha completa")), tabela));
   const filtra = () => N.filter(r => { const g = selReg.value; if (g === "Sul de Minas" || g === "Alto Paranaíba") { if (r.regiao !== g) return false; } else if (g === "Minas Gerais (todas)" && r.regiao === "Fora de MG") return false; if (selPais.value && r.pais_controlador !== selPais.value) return false; if (selProj.value && r.projeto !== selProj.value) return false; return true; });
-  // Largura de cada gráfico em pixels: uma coluna no celular, duas no computador (veja .charts no CSS).
-  const largura = () => { const w = charts.clientWidth || 520, gap = 14; return Math.round((w >= 2 * 520 + gap ? (w - gap) / 2 : w) - 32); };
+  const larg = () => { const w = charts.clientWidth || 520, gap = 14; return Math.round((w >= 2 * 520 + gap ? (w - gap) / 2 : w) - 32); };
   const soma = (R, c) => R.filter(r => r.categoria === c && !isNaN(r.v)).reduce((a, r) => a + r.v, 0);
-  function hbar(titulo, desc, rows, { fmt, colorBy, legenda, nota }) {
-    const box = $("div", { class: "chart paper" }, $("h3", {}, titulo), $("p", { class: "d" }, desc));
-    if (legenda && legenda.length > 1) box.append($("div", { class: "legend-row" }, legenda.map(([n, c]) => $("span", {}, $("span", { class: "dot", style: `background:${c}` }), n))));
-    if (!rows.length) { box.append($("p", { class: "count" }, "Sem dados para este filtro.")); return box; }
-    const W = largura(), estreito = W < 420, lw = estreito ? 112 : 150, maxl = estreito ? 15 : 22, rh = 30, bh = 18, padR = estreito ? 72 : 80, H = rows.length * rh + 6, max = Math.max(...rows.map(r => r.value)) || 1;
-    const svg = S("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": titulo });
-    svg.append(S("line", { x1: lw, x2: lw, y1: 0, y2: H, stroke: css("--line"), "stroke-width": 1 }));
-    rows.forEach((r, i) => {
-      const y = i * rh + 4, w = Math.max(6, (W - lw - padR) * r.value / max);
-      const t = S("text", { x: lw - 8, y: y + bh / 2 + 4, "text-anchor": "end" }); t.textContent = r.label.length > maxl ? r.label.slice(0, maxl - 1) + "…" : r.label; svg.append(t);
-      const pth = S("path", { class: "bar", fill: colorBy(r), d: `M${lw},${y} h${w - 4} a4,4 0 0 1 4,4 v${bh - 8} a4,4 0 0 1 -4,4 h${-(w - 4)} z` });
-      pth.addEventListener("mousemove", ev => showTip(ev, $("b", {}, r.label), $("br"), fmt(r.value), r.tip ? [$("br"), r.tip] : null)); pth.addEventListener("mouseleave", hideTip);
-      svg.append(pth);
-      const v = S("text", { x: lw + w + 6, y: y + bh / 2 + 4, class: "v" }); v.textContent = fmt(r.value); svg.append(v);
-    });
-    box.append(svg); if (nota) box.append($("p", { class: "d", style: "margin:10px 0 0" }, nota)); return box;
-  }
   const legPais = rows => [...new Set(rows.map(r => r.pais))].map(p => [p, paisColor(p)]);
   function render() {
-    const R = filtra(); kpis.innerHTML = ""; charts.innerHTML = "";
-    [["Investimento previsto", soma(R, "Investimento previsto (capex)"), "capex declarado pelas empresas"], ["Compra e venda de empresas e áreas", soma(R, "Compra e venda de empresas e áreas"), "negócios anunciados ou fechados"], ["Capital privado captado", soma(R, "Capital privado captado"), "ações vendidas em bolsas estrangeiras"], ["Dinheiro público brasileiro", soma(R, "Dinheiro público brasileiro"), "BNDES; não inclui isenções fiscais"]]
-      .forEach(([l, v, n]) => kpis.append($("div", { class: "kpi paper" }, $("div", { class: "l" }, l), $("div", { class: "v" }, v ? brl(v) : "—"), $("div", { class: "n" }, n))));
+    const R = filtra(), W = larg(); kpis.innerHTML = ""; charts.innerHTML = "";
+    [["Investimento previsto", soma(R, "Investimento previsto (capex)"), "capex declarado pelas empresas", "I04"], ["Compra e venda de empresas e áreas", soma(R, "Compra e venda de empresas e áreas"), "negócios anunciados ou fechados", "I05"], ["Capital privado captado", soma(R, "Capital privado captado"), "ações vendidas em bolsas estrangeiras", "I06"], ["Dinheiro público brasileiro", soma(R, "Dinheiro público brasileiro"), "BNDES; não inclui isenções fiscais", "I07"]]
+      .forEach(([l, v, n, i]) => kpis.append($("div", { class: "kpi paper" }, $("div", { class: "l" }, l, ind(i)), $("div", { class: "v" }, v ? brl(v) : "—"), $("div", { class: "n" }, n))));
     const capex = R.filter(r => r.categoria === "Investimento previsto (capex)" && !isNaN(r.v)).map(r => ({ label: r.projeto, value: r.v, pais: r.pais_controlador, tip: r.pais_controlador })).sort((a, b) => b.value - a.value);
-    charts.append(hbar("Investimento previsto por projeto", "Quanto cada empresa diz que vai investir até produzir.", capex, { fmt: brl, colorBy: r => paisColor(r.pais), legenda: legPais(capex) }));
+    charts.append(hbar("Investimento previsto por projeto", "Quanto cada empresa diz que vai investir até produzir.", capex, { W, fmt: brl, colorBy: r => paisColor(r.pais), legenda: legPais(capex), indicador: "I04" }));
     const tir = R.filter(r => r.categoria === "Retorno prometido (TIR %)" && !isNaN(r.v)).map(r => ({ label: r.projeto, value: r.v, tip: "TIR pós-imposto declarada" })).sort((a, b) => b.value - a.value);
-    charts.append(hbar("Retorno prometido aos investidores", "Taxa interna de retorno (TIR) anual declarada nos estudos de viabilidade.", tir, { fmt: v => v.toLocaleString("pt-BR") + "% ao ano", colorBy: () => css("--s1"), nota: "Para comparar: a CFEM, principal compensação que fica com o município e o estado, é 2% da receita bruta." }));
+    charts.append(hbar("Retorno prometido aos investidores", "Taxa interna de retorno (TIR) anual declarada nos estudos de viabilidade.", tir, { W, fmt: v => nf(v) + "% ao ano", colorBy: () => css("--s1"), nota: "Para comparar: a CFEM, principal compensação que fica com o município e o estado, é 2% da receita bruta.", indicador: "I19" }));
     const deals = R.filter(r => r.categoria === "Compra e venda de empresas e áreas" && !isNaN(r.v)).map(r => ({ label: r.projeto + " (" + r.data.slice(0, 4) + ")", value: r.v, pais: r.pais_controlador, tip: r.indicador })).sort((a, b) => b.value - a.value);
-    charts.append(hbar("Compra e venda de empresas e áreas", "Valor de cada negócio de compra de direitos minerários ou empresas.", deals, { fmt: brl, colorBy: r => paisColor(r.pais), legenda: legPais(deals) }));
+    charts.append(hbar("Compra e venda de empresas e áreas", "Valor de cada negócio de compra de direitos minerários ou empresas.", deals, { W, fmt: brl, colorBy: r => paisColor(r.pais), legenda: legPais(deals), indicador: "I05" }));
     const quem = [["Capital privado captado", "Ações (privado)"], ["Crédito de governos estrangeiros (sinalizado)", "Governos estrangeiros"], ["Dinheiro público brasileiro", "BNDES (Brasil)"]].map(([c, l]) => ({ label: l, value: soma(R, c), tip: c })).filter(r => r.value > 0);
-    charts.append(hbar("Quem coloca o dinheiro", "Soma por origem do dinheiro já captado ou sinalizado.", quem, { fmt: brl, colorBy: () => css("--s1"), nota: "Governos estrangeiros inclui apoios ainda não vinculantes (Ex-Im dos EUA e agências da Austrália e do Canadá)." }));
+    charts.append(hbar("Quem coloca o dinheiro", "Soma por origem do dinheiro já captado ou sinalizado.", quem, { W, fmt: brl, colorBy: () => css("--s1"), nota: "Governos estrangeiros inclui apoios ainda não vinculantes (Ex-Im dos EUA e agências da Austrália e do Canadá).", indicador: "I08" }));
     tabela.innerHTML = ""; const tb = $("tbody");
-    R.forEach(n => tb.append($("tr", {}, $("td", {}, n.indicador), $("td", { class: "num quebra" }, n.valor), $("td", {}, n.unidade), $("td", {}, n.projeto), $("td", {}, n.categoria), $("td", { class: "num" }, fmtDate(n.data)), $("td", {}, ext(n.fonte_url)))));
+    R.forEach(n => tb.append($("tr", {}, $("td", {}, n.indicador), $("td", { class: "num quebra mono" }, n.valor), $("td", {}, n.unidade), $("td", {}, n.projeto), $("td", {}, n.categoria), $("td", { class: "num mono" }, fmtDate(n.data)), $("td", {}, ext(n.fonte_url)))));
     tabela.append($("div", { class: "paper tablebox" }, $("table", {}, $("thead", {}, $("tr", {}, ["Indicador", "Valor", "Unidade", "Projeto", "Tipo", "Data", "Fonte"].map(h => $("th", {}, h)))), tb)));
   }
-  [selReg, selPais, selProj].forEach(x => x.addEventListener("change", render)); render();
+  [selReg, selPais, selProj].forEach(x => x.addEventListener("change", render)); requestAnimationFrame(render);
   // Redesenha quando a largura muda (girar o celular, redimensionar a janela)
-  let ultima = charts.clientWidth;
-  try { new ResizeObserver(() => { if (charts.isConnected && charts.clientWidth !== ultima) { ultima = charts.clientWidth; render(); } }).observe(charts); } catch (e) {}
+  let ultima = 0;
+  try { new ResizeObserver(() => { if (charts.isConnected && charts.clientWidth !== ultima) { const primeira = !ultima; ultima = charts.clientWidth; if (!primeira) render(); } }).observe(charts); } catch (e) {}
 }
 
 /* Quanto o Brasil deixa de ganhar por vender o concentrado e não separar os óxidos aqui (perda_processamento.csv).
    Conta: produção (t/ano) × cesta (US$/kg) × (1 − payability); na vida útil, receita do estudo × (1 − p) ÷ p. */
 function perdaProcessamento() {
-  const P = DADOS.perda_processamento || [];
-  if (!P.length) return null;
-  const cambio = DADOS.numeros.filter(r => r.categoria === "Câmbio").sort((a, b) => b.data.localeCompare(a.data))[0];
-  const dolar = cambio ? parseFloat(cambio.valor_grafico) : NaN;
-  const n = (r, c) => parseFloat(r[c]);
-  const L = P.map(r => {
-    const pago = n(r, "payability_pct") / 100, t = n(r, "producao_t_treo_ano");
-    return { r, pago, anoB: t * n(r, "cesta_baixa_usd_kg") * (1 - pago) / 1000, anoA: t * n(r, "cesta_alta_usd_kg") * (1 - pago) / 1000,
-      vidaB: n(r, "receita_vida_baixa_usd_mi") * (1 - pago) / pago, vidaA: n(r, "receita_vida_alta_usd_mi") * (1 - pago) / pago };
-  });
-  const tot = k => L.reduce((a, l) => a + l[k], 0);
-  const usd = v => v >= 1000 ? "US$ " + (v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " bi" : "US$ " + Math.round(v).toLocaleString("pt-BR") + " mi";
-  const faixa = (a, b, f) => f(a) === f(b) ? f(a) : f(a) + " a " + f(b);
-  const reais = (a, b) => isNaN(dolar) ? "—" : faixa(a * dolar, b * dolar, brl);
-  const nomes = L.map(l => l.r.projeto).join(" e ");
+  const L = PERDA.L; if (!L.length) return $("div", {});
+  const nomes = PERDA.nomes;
   const box = $("section", {});
-  box.append($("h2", {}, "Quanto o Brasil deixa de ganhar por não separar as terras raras aqui"),
+  box.append($("h2", { style: "margin-top:24px" }, "Quanto o Brasil deixa de ganhar por não separar as terras raras aqui"),
     $("p", { class: "muted", style: "max-width:78ch" }, nomes + " vão vender um concentrado (carbonato misto de terras raras, o MREC), que é separado em óxidos fora do Brasil. Quem compra o concentrado paga só uma parte do valor dos óxidos que ele contém; o resto fica com quem separa. Estimativa a partir dos estudos de viabilidade das próprias empresas."));
+  const cb = Math.min(...L.map(l => l.cb)), ca = Math.max(...L.map(l => l.ca));
   const kp = $("div", { class: "kpis" });
-  [["Por ano, com as minas produzindo", reais(tot("anoB"), tot("anoA")), faixa(tot("anoB"), tot("anoA"), usd) + " · " + nomes],
-   ["Na vida útil das minas", reais(tot("vidaB"), tot("vidaA")), faixa(tot("vidaB"), tot("vidaA"), usd) + " · cerca de 20 a 25 anos"],
-   ["Dólar usado na conta", isNaN(dolar) ? "—" : "R$ " + dolar.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }), cambio ? "PTAX de venda do Banco Central, " + fmtDate(cambio.data) : "sem cotação na planilha"]]
-    .forEach(([l, v, nn]) => kp.append($("div", { class: "kpi paper" }, $("div", { class: "l" }, l), $("div", { class: "v" }, v), $("div", { class: "n" }, nn))));
-  const tb = $("tbody");
+  [["Por ano, com as minas produzindo", reais(PERDA.anoB, PERDA.anoA), faixa(PERDA.anoB, PERDA.anoA, usd) + " · " + nomes, "I01", true],
+   ["Na vida útil das minas", reais(PERDA.vidaB, PERDA.vidaA), faixa(PERDA.vidaB, PERDA.vidaA, usd) + " · cerca de 20 a 25 anos", "I02"],
+   ["Preço da cesta nos estudos", faixa(cb, ca, v => "US$ " + v) + "/kg", "não é a cotação do dia", "I18"],
+   ["Dólar usado na conta", isNaN(DOLAR) ? "—" : "R$ " + DOLAR.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }), CAMBIO ? "PTAX de venda do Banco Central, " + fmtDate(CAMBIO.data) : "sem cotação na planilha", "I03"]]
+    .forEach(([l, v, nn, i, d]) => kp.append($("div", { class: "kpi paper" + (d ? " destaque" : "") }, $("div", { class: "l" }, l, ind(i)), $("div", { class: "v" }, v), $("div", { class: "n" }, nn))));
+  const tb = $("tbody"), n = (r, c) => parseFloat(r[c]);
   L.forEach(l => tb.append($("tr", {}, $("td", {}, l.r.projeto), $("td", {}, l.r.estudo + " (" + fmtDate(l.r.data) + ")"),
-    $("td", { class: "num" }, n(l.r, "producao_t_treo_ano").toLocaleString("pt-BR")), $("td", { class: "num" }, l.r.payability_pct + "%"),
-    $("td", { class: "num quebra" }, faixa(l.anoB, l.anoA, usd)), $("td", { class: "num quebra" }, faixa(l.vidaB, l.vidaA, usd)),
+    $("td", { class: "num mono" }, n(l.r, "producao_t_treo_ano").toLocaleString("pt-BR")), $("td", { class: "num mono" }, l.r.payability_pct + "%"),
+    $("td", { class: "num quebra mono" }, faixa(l.anoB, l.anoA, usd)), $("td", { class: "num quebra mono" }, faixa(l.vidaB, l.vidaA, usd)),
     $("td", {}, l.r.onde_separa), $("td", {}, ext(l.r.fonte_url, "conferido em " + fmtDate(l.r.verificado_em))))));
   const metodo = $("details", { class: "metodo paper" }, $("summary", {}, "Como a conta é feita (metodologia)"),
     $("ol", {}, [
@@ -610,7 +1022,7 @@ function perdaProcessamento() {
       "Nos estudos, a receita da mina é: produção de óxidos × preço da cesta de óxidos × payability. A payability é a parte do valor dos óxidos que o comprador do concentrado paga à mina: " + L.map(l => l.r.projeto + " " + l.r.payability_pct + "%").join(", ") + ".",
       "Perda por ano = produção (toneladas de óxidos por ano) × preço da cesta (US$/kg) × (1 − payability). Usamos o preço mais baixo e o mais alto de cada estudo; por isso o resultado é uma faixa. Cenários: " + L.map(l => l.r.projeto + ": " + l.r.cenarios).join("; ") + ".",
       "Perda na vida útil = receita total da vida da mina no estudo × (1 − payability) ÷ payability.",
-      "Em reais: dólar PTAX de venda do Banco Central" + (cambio ? " de " + fmtDate(cambio.data) : "") + ", atualizado junto com a página."
+      "Em reais: dólar PTAX de venda do Banco Central" + (CAMBIO ? " de " + fmtDate(CAMBIO.data) : "") + ", atualizado junto com a página."
     ].map(t => $("li", {}, t))),
     $("p", {}, $("b", {}, "O que a conta não diz")),
     $("ul", {}, [
@@ -623,9 +1035,9 @@ function perdaProcessamento() {
   return box;
 }
 
-/* ---------- APRENDER ---------- */
+/* ---------- LEIS E IMPACTOS ---------- */
 function pAprender() {
-  view.append($("h1", {}, "Aprender"), $("p", { class: "lede" }, "Leis que regem a mineração de terras raras, impactos ambientais conhecidos e quem é dono do quê."));
+  view.append($("p", { class: "eyebrow" }, "Leis e impactos"), $("h1", { class: "small" }, "As regras, os riscos e quem é dono do quê"), $("p", { class: "lede" }, "Leis que regem a mineração de terras raras, impactos ambientais conhecidos e quem tem o direito de minerar e a terra."));
   const sec = (t, intro, dados, nome, chips, campos, fonte, data, conf) => {
     view.append($("h2", {}, t), $("p", { class: "muted", style: "max-width:78ch" }, intro));
     view.append($("div", { class: "cards" }, dados.map(r => $("article", { class: "card paper" }, $("h3", {}, r[nome]), $("div", { class: "chips" }, chips.map(k => filled(r[k]) ? $("span", { class: "chip" }, r[k]) : null), conf ? statusChip(r[conf]) : null),
@@ -638,32 +1050,94 @@ function pAprender() {
 
 /* ---------- PROPOSTAS ---------- */
 function pPropostas() {
-  view.append($("h1", {}, "O que podemos pedir aos nossos legisladores"),
+  view.append($("p", { class: "eyebrow" }, "O que pedir"), $("h1", { class: "small" }, "O que podemos pedir aos nossos legisladores"),
     $("p", { class: "lede" }, "Propostas em linguagem simples para que o lucro e as decisões fiquem com o Brasil e com as comunidades, e para que a conta ambiental não fique só com quem mora perto das minas. Cada uma traz um exemplo de outro país, da mineração ou do petróleo: o que o mundo (e o próprio Brasil) já fez com o dinheiro do petróleo também serve para as terras raras."),
     $("p", { class: "note" }, "Em todo o mundo o padrão se repete: o minério sai bruto, o lucro vai para fora e a região fica com a água e o solo afetados. Os países que mudaram isso exigiram processar o minério no próprio país, ficaram com uma parte do negócio e deram às comunidades poder de decisão e um fundo próprio."), $("div", { style: "height:14px" }));
-  view.append($("div", { class: "props" }, DADOS.propostas.map(p => {
+  const insp = [...new Set(DADOS.propostas.map(p => p.inspiracao).filter(Boolean))];
+  const selI = $("select", { id: "f-propostas-insp", "aria-label": "Inspiração" }, $("option", { value: "" }, "Todas as propostas"), insp.map(v => $("option", { value: v }, "Ideias vindas do " + v.toLowerCase())));
+  const grade = $("div", { class: "props" });
+  if (insp.length) view.append($("div", { class: "tools" }, selI));
+  view.append(grade);
+  const r = () => grade.replaceChildren(...DADOS.propostas.filter(p => !selI.value || p.inspiracao === selI.value).map(p => {
     const b = $("button", { class: "btn", type: "button" }, "Copiar mensagem para legislador");
     const msg = `Prezado(a) legislador(a),\n\nSou morador(a) de Minas Gerais e acompanho os projetos de terras raras no estado. Peço que apoie a seguinte medida: ${p.titulo}.\n\nO que pedimos: ${p.o_que_pedir}\n\nPor quê: ${p.por_que}\n\nExemplo: ${p.exemplo_no_mundo}\n\nBase legal relacionada: ${p.lei_brasileira_relacionada}.\n\nAtenciosamente,`;
     b.addEventListener("click", async () => { try { await navigator.clipboard.writeText(msg); b.textContent = "Mensagem copiada"; setTimeout(() => { b.textContent = "Copiar mensagem para legislador"; }, 2500); } catch (e) { const t = $("textarea", { id: "msg-" + p.id, rows: "8" }); t.value = msg; b.replaceWith(t); t.select(); } });
     return $("article", { class: "prop paper" }, $("h3", {}, p.titulo), $("p", { class: "ask" }, p.o_que_pedir), $("p", { class: "why" }, p.por_que),
       $("p", { class: "world" }, $("b", {}, "Exemplo: "), p.exemplo_no_mundo, " ", ext(p.fonte_exemplo, filled(p.verificado_em) ? "conferido em " + fmtDate(p.verificado_em) : "")),
       $("div", { class: "chips" }, $("span", { class: "chip p" }, "Quem decide: " + p.quem_decide), $("span", { class: "chip" }, p.lei_brasileira_relacionada), filled(p.inspiracao) ? $("span", { class: "chip" }, "Ideia vinda do " + p.inspiracao.toLowerCase()) : ""), b);
-  })));
+  }));
+  selI.addEventListener("change", r); r();
 }
 
-/* ---------- SOBRE ---------- */
-function pSobre() {
-  view.append($("h1", {}, "Sobre"), $("p", { class: "lede" }, "Projeto cidadão para mapear quem está tentando lucrar com as terras raras de Minas Gerais: empresas, donos, países, dinheiro, licenças e impactos. O objetivo é que comunidades e legisladores tenham a informação antes das decisões."));
-  view.append($("h2", {}, "De onde vêm os dados"), $("p", { style: "max-width:78ch" }, "Anúncios das empresas nas bolsas (ASX, SEC), processos da Feam/Semad e do Copam, Ministério Público Federal, TCU, Câmara dos Deputados, Assembleia de Minas, Câmaras municipais, Codemge, Serviço Geológico do Brasil e imprensa regional e nacional. Cada linha tem link e data. O mapa usa a malha municipal do IBGE."));
-  view.append($("h2", {}, "Como é atualizado"), $("ol", { class: "steps", html: "<li>Todo dia de manhã uma rotina pesquisa novidades e atualiza as planilhas.</li><li>Informações enviadas pela página <a href=\"#enviar\">Enviar informação</a> são conferidas antes de entrar.</li><li>Itens com uma única fonte ficam marcados como <code>fonte única</code> ou <code>a verificar</code>.</li>" }));
+/* ---------- DADOS E MÉTODO (frescor, sinais, dicionário, busca, linhagem) ---------- */
+const NOME_TABELA = { empresas: "Empresas", projetos: "Projetos", licencas: "Licenças e decisões", areas_potencial: "Áreas com potencial", donos_terra: "Donos da terra", numeros: "Números econômicos", leis: "Leis", impactos: "Impactos", processos_noticias: "Notícias e processos", propostas: "Propostas", perda_processamento: "Conta da perda", fluxos: "Rotas do minério", indicadores: "Dicionário de indicadores" };
+const PAGINA_TABELA = { empresas: r => "empresa-" + (r.id || "").toLowerCase(), projetos: r => "projeto-" + (r.id || "").toLowerCase(), licencas: () => "licencas", areas_potencial: () => "licencas", donos_terra: () => "aprender", numeros: () => "painel", leis: () => "aprender", impactos: () => "aprender", processos_noticias: () => "noticias", propostas: () => "propostas", perda_processamento: () => "painel", fluxos: () => "inicio", indicadores: r => "dados-" + (r.id || "").toLowerCase() };
+const TITULO_LINHA = r => r.projeto && r.comprador ? r.projeto + " → " + r.comprador : r.nome || r.titulo || r.indicador || r.norma || r.tema || r.area || r.area_projeto || r.o_que_esta_pendente || r.projeto || r.id;
+const URL_PLANILHA = t => "https://github.com/amarigo/segredos-abertos/blob/main/terras-raras/dados/" + t + ".csv";
+function frescor() {
+  return Object.keys(NOME_TABELA).filter(t => DADOS[t]).map(t => {
+    const ds = DADOS[t].map(r => r.verificado_em).filter(Boolean).sort();
+    const nova = ds[ds.length - 1] || "", velha = ds[0] || "", d = diasDesde(nova), velhas = ds.filter(x => diasDesde(x) > 30).length;
+    return { t, n: DADOS[t].length, nova, velha, d, velhas, estado: d <= 7 ? "em dia" : d <= 30 ? "atenção" : "atrasada" };
+  });
+}
+function sinais() {
+  const S2 = [];
+  if (CAMBIO && diasDesde(CAMBIO.data) > 4) S2.push(["warn", `O dólar da conta da perda é de ${fmtDate(CAMBIO.data)} (${quando(diasDesde(CAMBIO.data))}).`, "painel"]);
+  frescor().forEach(f => { if (f.velhas) S2.push(["warn", `${NOME_TABELA[f.t]}: ${plural(f.velhas, "linha conferida", "linhas conferidas")} há mais de 30 dias. Conferir de novo com a fonte.`, "dados"]); });
+  const conf = [...DADOS.empresas.map(r => ["empresas", r]), ...DADOS.donos_terra.map(r => ["donos_terra", r])].filter(([, r]) => /verificar|única/.test(r.confianca || ""));
+  if (conf.length) S2.push(["warn", `${plural(conf.length, "item depende", "itens dependem")} de uma fonte só ou ainda precisam de confirmação: ${conf.slice(0, 4).map(([, r]) => TITULO_LINHA(r)).join("; ")}${conf.length > 4 ? "…" : ""}.`, "empresas"]);
+  const { meses, c, limite } = porMes(); meses.filter(m => c[m] > limite && c[m] >= 3).forEach(m => S2.push(["clay", `Pico de notícias em ${fmtDate(m)}: ${c[m]} registros, acima do normal.`, "noticias"]));
+  DADOS.licencas.filter(l => pendente(l) && /análise/i.test(l.status) && filled(l.data_pedido) && diasDesde(l.data_pedido) > 180).forEach(l => S2.push(["bad", `${l.projeto}: ${l.o_que_esta_pendente} em análise há ${plural(Math.round(diasDesde(l.data_pedido) / 30.4), "mês", "meses")}.`, "licencas"]));
+  DADOS.projetos.filter(p => p.categoria === "Licenciamento" && !PERDA.L.some(l => split(l.r.projetos_ids).includes(p.id))).forEach(p => S2.push(["", `${p.projeto} pede licença, mas ainda não tem estudo de viabilidade definitivo na conta da perda.`, "projeto-" + p.id.toLowerCase()]));
+  return S2;
+}
+function pDados(alvo) {
+  view.append($("p", { class: "eyebrow" }, "Dados e método"), $("h1", { class: "small" }, "De onde vem cada número"), $("p", { class: "lede" }, "Tudo nesta página sai de planilhas abertas, uma linha por fato, com link da fonte e data da conferência. Aqui você vê se os dados estão frescos, o que cada indicador quer dizer e como a página é montada."));
+  const F = frescor(), sn = sinais();
+  view.append($("div", { class: "kpis" },
+    $("div", { class: "kpi paper" }, $("div", { class: "l" }, "Última conferência", ind("I17")), $("div", { class: "v" }, quando(diasDesde(DADOS.atualizado_em))), $("div", { class: "n" }, fmtDate(DADOS.atualizado_em))),
+    $("div", { class: "kpi paper" }, $("div", { class: "l" }, "Linhas nas planilhas"), $("div", { class: "v" }, F.reduce((a, f) => a + f.n, 0).toLocaleString("pt-BR")), $("div", { class: "n" }, plural(F.length, "planilha", "planilhas"))),
+    $("div", { class: "kpi paper" }, $("div", { class: "l" }, "Notícias com fonte nacional", ind("I16")), $("div", { class: "v" }, Math.round(100 * NACIONAIS / (NOTICIAS.length || 1)) + "%"), $("div", { class: "n" }, NACIONAIS + " de " + NOTICIAS.length)),
+    $("div", { class: "kpi paper" }, $("div", { class: "l" }, "Sinais para olhar"), $("div", { class: "v" }, String(sn.length)), $("div", { class: "n" }, "calculados a cada visita"))));
+
+  view.append($("h2", {}, "Sinais automáticos"), $("p", { class: "muted", style: "max-width:70ch" }, "A página procura sozinha o que merece atenção: dados velhos, itens com uma fonte só, decisões paradas há muito tempo e meses com notícias fora do comum."),
+    sn.length ? $("ul", { class: "sinais" }, sn.map(([c, t, h]) => $("li", { class: "paper" }, $("span", { class: "chip " + c }, c === "bad" ? "parado" : c === "clay" ? "pico" : c === "warn" ? "conferir" : "lacuna"), $("span", {}, t, " ", go(h, "ver →"))))) : $("p", { class: "muted" }, "Nenhum sinal hoje."));
+
+  const tb = $("tbody");
+  F.forEach(f => tb.append($("tr", {}, $("td", {}, NOME_TABELA[f.t]), $("td", { class: "num mono" }, String(f.n)), $("td", { class: "num mono" }, fmtDate(f.nova)), $("td", {}, $("span", { class: "chip " + (f.estado === "em dia" ? "ok" : f.estado === "atenção" ? "warn" : "bad") }, f.estado + " · " + quando(f.d))), $("td", { class: "num mono" }, f.velhas ? String(f.velhas) : "—"), $("td", {}, ext(URL_PLANILHA(f.t), f.t + ".csv")))));
+  view.append($("h2", {}, "Frescor de cada planilha"), $("div", { class: "paper tablebox" }, $("table", {}, $("thead", {}, $("tr", {}, ["Planilha", "Linhas", "Conferida por último", "Situação", "Linhas com mais de 30 dias", "Baixar"].map(h => $("th", {}, h)))), tb)));
+
+  const busca = $("input", { type: "search", id: "busca-tudo", placeholder: "Ex.: Solvay, CIMCE, Araxá, BNDES…", "aria-label": "Buscar em todas as planilhas" }), res = $("div", {});
+  view.append($("h2", {}, "Buscar em todos os dados"), $("p", { class: "muted" }, "Procura em todas as planilhas ao mesmo tempo e leva à página certa."), $("div", { class: "tools" }, busca), res);
+  const buscar = () => { const q = norm(busca.value.trim()); res.replaceChildren(); if (q.length < 2) return; const achados = [];
+    Object.keys(NOME_TABELA).forEach(t => (DADOS[t] || []).forEach(r => { if (norm(Object.values(r).filter(v => typeof v === "string").join(" ")).includes(q)) achados.push([t, r]); }));
+    res.append($("p", { class: "count" }, plural(achados.length, "resultado", "resultados")), $("ul", { class: "dir" }, achados.slice(0, 60).map(([t, r]) => $("li", {}, $("span", {}, go(PAGINA_TABELA[t](r), TITULO_LINHA(r)), $("br"), $("small", { class: "muted" }, NOME_TABELA[t] + (r.verificado_em ? " · conferido em " + fmtDate(r.verificado_em) : ""))), r.fonte_url ? ext(r.fonte_url) : null)))); };
+  busca.addEventListener("input", buscar);
+
+  const tbI = $("tbody");
+  (DADOS.indicadores || []).forEach(r => tbI.append($("tr", { id: "ind-" + r.id.toLowerCase() }, $("td", { class: "mono" }, r.id), $("td", {}, $("b", {}, r.indicador), $("br"), r.definicao), $("td", {}, r.conta), $("td", {}, r.unidade), $("td", {}, split(r.tabela).map((t, i) => [i ? ", " : "", NOME_TABELA[t] || t])), $("td", {}, r.atualizacao))));
+  view.append($("h2", {}, "Dicionário de indicadores"), $("p", { class: "muted", style: "max-width:70ch" }, "Cada número da página tem uma definição só, usada em todos os lugares. O botão ", $("span", { class: "i", style: "margin:0" }, "i"), " ao lado de um número leva para cá."),
+    $("div", { class: "paper tablebox" }, $("table", {}, $("thead", {}, $("tr", {}, ["Id", "Indicador", "Como é calculado", "Unidade", "Planilhas", "Atualização"].map(h => $("th", {}, h)))), tbI)));
+
+  view.append($("h2", {}, "Como os dados chegam aqui"), $("ol", { class: "linhagem" }, [
+    ["1. Fonte", "Anúncios das empresas nas bolsas, processos da Feam e do Copam, MPF, TCU, Câmara, Assembleia, Banco Central, Codemge, Serviço Geológico e imprensa nacional e estrangeira."],
+    ["2. Planilha", "Cada fato vira uma linha, com link da fonte e data da conferência. Dicas enviadas pela página são conferidas antes de entrar."],
+    ["3. Conferência", "Um programa (conferir.py) barra a publicação se faltar fonte ou data, se um projeto citado não existir ou se uma tabela perder linhas de repente."],
+    ["4. Página", "Outro programa (gerar_pagina.py) junta as planilhas e o mapa do IBGE nesta página. As contas são refeitas no seu navegador."],
+    ["5. Publicação", "Cada mudança é publicada sozinha pelo GitHub Actions, com histórico de tudo o que mudou."],
+  ].map(([t, d]) => $("li", { class: "paper" }, $("b", {}, t), $("span", {}, d)))), $("p", {}, ext("https://github.com/amarigo/segredos-abertos/commits/main/terras-raras/dados", "histórico de mudanças das planilhas"), " · ", ext("https://github.com/amarigo/segredos-abertos/tree/main/terras-raras", "código aberto")));
+
   view.append($("h2", {}, "Onde pesquisar por conta própria"));
   const fontes = [["ANM: Cadastro Mineiro e SIGMINE", "títulos minerários por município e titular", "https://www.gov.br/anm/pt-br"], ["Feam/Semad: processos SEI e pautas do Copam", "licenças LP, LI, LO", "https://www.meioambiente.mg.gov.br/"], ["Codemge: Recursos Minerais de MG", "ocorrências por município", "http://recursomineralmg.codemge.com.br/substancias-minerais/terras-raras/"], ["Serviço Geológico do Brasil", "mapeamentos de potencial", "https://www.sgb.gov.br/"], ["ASX", "anúncios das mineradoras australianas", "https://www.asx.com.au/markets/trade-our-cash-market/announcements"], ["SEC EDGAR", "prospectos de empresas dos EUA", "https://www.sec.gov/edgar/search/"], ["Câmara dos Deputados", "projetos de lei", "https://www.camara.leg.br/"], ["MPF Minas Gerais", "recomendações e inquéritos", "https://www.mpf.mp.br/mg"]];
   view.append($("div", { class: "paper tablebox" }, $("table", {}, $("thead", {}, $("tr", {}, ["Fonte", "Para quê", "Link"].map(h => $("th", {}, h)))), $("tbody", {}, fontes.map(f => $("tr", {}, $("td", {}, f[0]), $("td", {}, f[1]), $("td", {}, ext(f[2]))))))));
+
+  if (alvo) { const tr = document.getElementById("ind-" + alvo); if (tr) { tr.classList.add("alvo"); requestAnimationFrame(() => tr.scrollIntoView({ block: "center" })); } else window.scrollTo({ top: 0 }); }
 }
 
 /* ---------- ENVIAR INFORMAÇÃO ---------- */
 function pEnviar() {
-  view.append($("h1", {}, "Enviar informação"), $("p", { class: "lede" }, "Sabe de um projeto, uma licença, uma audiência, uma compra de terra ou uma notícia que não está aqui? Envie com o link da fonte. Tudo é conferido antes de entrar no mapa."));
+  view.append($("p", { class: "eyebrow" }, "Enviar informação"), $("h1", { class: "small" }, "Sabe de algo que não está aqui?"), $("p", { class: "lede" }, "Um projeto, uma licença, uma audiência, uma compra de terra ou uma notícia. Envie com o link da fonte. Tudo é conferido antes de entrar no mapa."));
   const datalist = $("datalist", { id: "lista-municipios" }, Object.values(MUNI).sort((a, b) => a.n.localeCompare(b.n, "pt")).map(m => $("option", { value: m.n })));
   const f = $("form", { class: "envio paper", novalidate: "" },
     $("label", { class: "sel" }, $("span", { class: "lbl" }, "Tipo"), $("select", { id: "env-tipo", name: "tipo" }, ["Novo projeto ou área", "Licença ou audiência", "Compra de terra ou direitos", "Notícia ou processo", "Correção"].map(v => $("option", {}, v)))),
@@ -705,5 +1179,6 @@ function pEnviar() {
   });
 }
 
+ticker();
 route();
 </script>
