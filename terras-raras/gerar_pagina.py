@@ -85,10 +85,10 @@ if SITE:
               '<link rel="icon" href="../icon.svg">'
               '<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}</style></head><body>')
     # Barra dos projetos do Segredos Abertos (links relativos, como nos outros projetos)
-    projetos = ('<style>nav.projetos{background:#1f2a44;color:#b7c3d9;font:600 12px/1.4 system-ui,sans-serif;'
+    projetos = ('<style>nav.projetos{background:#04132E;color:#b7c3d9;font:600 12px/1.4 Raleway,system-ui,sans-serif;'
                 'text-transform:uppercase;letter-spacing:.06em}nav.projetos .wrap{display:flex;flex-wrap:wrap;gap:.2rem .9rem;'
                 'align-items:center;padding-block:.45rem}nav.projetos a{color:#e3e9f4;text-decoration:none}'
-                'nav.projetos a:hover{color:#fff;text-decoration:underline}nav.projetos a[aria-current="page"]{color:#fff;'
+                'nav.projetos a:hover{color:#fff;text-decoration:underline}nav.projetos a[aria-current="page"]{color:#FFCD07;'
                 'text-decoration:underline;text-underline-offset:3px}</style>'
                 '<nav class="projetos" aria-label="Projetos do Segredos Abertos"><div class="wrap"><span>Projetos:</span>'
                 '<a href="../">Brasil</a><a href="../mg/">Minas Nossa</a><a href="../eleicao2026/">Eleição 2026</a>'
