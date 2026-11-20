@@ -5,4 +5,4 @@ VITE_TITULO=Minas Nossa: gastos e votos dos políticos de Minas Gerais
 VITE_NOME=Minas Nossa
 VITE_DESCRICAO=Quanto gastam e como votam os políticos de Minas Gerais, e quem governou cada cidade. Dados oficiais, explicados de forma simples.
 # Cor da barra do navegador no celular (index.html)
-VITE_COR_TEMA="#00672a"
+VITE_COR_TEMA="#071d41"

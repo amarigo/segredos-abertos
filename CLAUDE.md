@@ -109,11 +109,14 @@ O ponto de entrada da coleta nacional é `etl/sa_etl/build.py`. A tabela complet
   Investigar, Como funciona), definidas em `site/src/menu.ts`. As páginas de cada seção aparecem como abas só quando a
   pessoa entra nela. Página nova entra numa seção existente, não como seção nova. Todas as abas sempre à vista: se não
   couberem numa linha, quebram para a de baixo; nunca rolam de lado nem ficam cortadas. Conferido por `site/e2e/menu.ts`.
-- Visual: design system [Mantine](https://mantine.dev) (`@mantine/core`), com o tema padrão no site nacional. O Minas
-  Nossa usa o estilo do Eleição 2026 (fundo de papel, verde da bandeira, títulos com serifa, faixa verde-amarelo-azul
-  no topo, menu sublinhado, blocos com régua no lugar de caixa): tema do Mantine em `site/src/tema.ts` e o resto em
-  `site/src/tema-eleicao.css`, que só vale com `<html data-estilo="eleicao">`. Use os componentes e as propriedades deles (`Card`, `Paper`, `Tabs`, `Accordion`, `Title`, `Text c="dimmed"`...) em vez de
-  CSS próprio. Casca do site (topo, menu, abas da seção, rodapé) em `site/src/components/Casca.tsx`.
+- Visual: o da Eleição 2026, igual em todos os sites (padrão de site público brasileiro, gov.br): faixa azul-escura no
+  topo com fio verde e amarelo, azul gov.br nos links e botões, botões e menus em pílula, letra Raleway com números
+  alinhados, título da página com o fio verde e amarelo. No site React, design system [Mantine](https://mantine.dev)
+  (`@mantine/core`) com esse visual só no tema (`site/src/tema.ts`: cores, letra e cantos): use os componentes e as
+  propriedades deles (`Card`, `Paper`, `Tabs`, `Accordion`, `Title`, `Text c="dimmed"`...) em vez de CSS próprio.
+  Casca do site (topo, menu, abas da seção, rodapé) em `site/src/components/Casca.tsx`. Terras Raras usa as mesmas
+  cores em `terras-raras/pagina_modelo.html`; a referência é o bloco "Visual do Segredos Abertos" de
+  `eleicao2026/site/corpo.html`.
 - Menos carga para quem lê (https://lawsofux.com/articles/2015/design-principles-for-reducing-cognitive-load/): uma
   ideia principal por tela, o resto recolhido (`Accordion`) a um clique; linguagem simples; o mesmo padrão em todas as
   páginas. Simplificar é reorganizar: nenhum dado, fonte ou data some do site.

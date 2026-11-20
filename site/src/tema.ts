@@ -1,42 +1,56 @@
-/* Tema do Mantine de cada site. O Segredos Abertos nacional usa o tema padrão, sem mudança.
-   O Minas Nossa usa o estilo do Eleição 2026 (eleicao2026/site/corpo.html, "Cores do Brasil"): fundo de papel,
-   tinta verde-escura, títulos com serifa e as cores da bandeira na moldura. As mesmas cores, letras e réguas,
-   passadas para o tema do Mantine; o que o tema não alcança (faixa do topo, abas sublinhadas, blocos sem caixa)
-   fica em tema-eleicao.css. Só a aparência muda: dados, textos e fontes são os mesmos. */
+/* Tema do Mantine com o visual da Eleição 2026 (eleicao2026/site/corpo.html, bloco "Visual do Segredos Abertos"), para
+   os sites ficarem com a mesma cara: padrão de site público brasileiro (gov.br), azul gov.br nos links e botões,
+   faixa azul-escura no topo com fio verde e amarelo, botões em pílula e letra Raleway com números alinhados.
+   Só muda as cores, a letra e os cantos; os componentes continuam os do Mantine. As cores das séries dos gráficos,
+   dos votos e do mapa continuam em styles.css. */
 import { createTheme, type CSSVariablesResolver, type MantineColorsTuple } from "@mantine/core";
-import { MG } from "./recorte";
 
-/* Verde da bandeira, do mais claro ao mais escuro: 7 é o verde da faixa (#009C3B), 9 a tinta (#00672A) */
-const bandeira: MantineColorsTuple = [
-  "#e6f7ec", "#cdeed8", "#9cdcb2", "#67ca89", "#3dbb67", "#22b152", "#0ea646", "#009c3b", "#008433", "#00672a",
+/* azul gov.br: o 6 é o azul dos links e botões no claro (#1351B4), o 4 é o do escuro (#7FB0FF), o 8 é a faixa (#071D41) */
+const gov: MantineColorsTuple = [
+  "#EDF5FF", "#D4E5FF", "#B5D3FF", "#99C1FF", "#7FB0FF", "#4A88E6", "#1351B4", "#0C3F8F", "#071D41", "#04132E",
 ];
 
-/* Tema escuro do Eleição 2026: tons de verde quase preto em vez do cinza-azulado padrão.
-   Mesma ordem do Mantine: 0 texto, 2 texto apagado, 4 linhas, 5 fundo ao passar o mouse, 6 campos, 7 fundo. */
-const escuro: MantineColorsTuple = [
-  "#eaf1ec", "#c9d3cc", "#a3b0a7", "#7c8a81", "#2c3a31", "#223028", "#16241b", "#0e1611", "#0a110d", "#060b08",
+/* fundo escuro azulado da Eleição 2026: no Mantine, 0 é o texto, 2 o texto apagado, 4 a borda, 6 os campos e 7 o fundo */
+const dark: MantineColorsTuple = [
+  "#EEF2F8", "#C9D2E0", "#A9B4C6", "#6B7890", "#26324A", "#1F2B40", "#16233B", "#0B1220", "#08101C", "#050A14",
 ];
 
-export const ESTILO_ELEICAO = MG;
+export const tema = createTheme({
+  primaryColor: "gov",
+  primaryShade: { light: 6, dark: 4 },
+  autoContrast: true,
+  colors: { gov, dark },
+  fontFamily: 'Raleway, Rawline, system-ui, -apple-system, "Segoe UI", sans-serif',
+  headings: { fontFamily: 'Raleway, Rawline, system-ui, sans-serif', fontWeight: "800" },
+  defaultRadius: "md",
+  components: {
+    Button: { defaultProps: { radius: "xl" } },
+    Badge: { defaultProps: { radius: "xl" } },
+    SegmentedControl: { defaultProps: { radius: "xl" } },
+  },
+});
 
-export const tema = ESTILO_ELEICAO
-  ? createTheme({
-    primaryColor: "bandeira",
-    primaryShade: { light: 9, dark: 4 },
-    colors: { bandeira, dark: escuro },
-    fontFamily: '"Atkinson Hyperlegible", Verdana, "Segoe UI", sans-serif',
-    headings: { fontFamily: '"Source Serif 4", Georgia, "Times New Roman", serif', fontWeight: "800" },
-    defaultRadius: "sm",
-    autoContrast: true,
-  })
-  : createTheme({});
-
-/* Fundo de papel, tinta e linhas do Eleição 2026 no tema claro (o escuro já vem da paleta acima) */
-const PAPEL: Record<string, string> = {
-  "--mantine-color-body": "#f6f8f3",
-  "--mantine-color-text": "#13211a",
-  "--mantine-color-dimmed": "#4d5a52",
-  "--mantine-color-default-border": "#d2dcd3",
-  "--mantine-color-default-hover": "#e6f0e7",
-};
-export const variaveis: CSSVariablesResolver = () => ({ variables: {}, light: ESTILO_ELEICAO ? PAPEL : {}, dark: {} });
+/* Fundo, texto e borda do claro iguais aos da Eleição 2026; faixa do topo e seção ativa do menu */
+export const variaveis: CSSVariablesResolver = () => ({
+  variables: {},
+  light: {
+    "--mantine-color-body": "#F8F8F8",
+    "--mantine-color-text": "#1B2533",
+    "--mantine-color-dimmed": "#4F5B6B",
+    "--mantine-color-default-border": "#DCDFE5",
+    "--sa-faixa": "#071D41",
+    "--sa-faixa-2": "#04132E",
+    "--sa-ativo": "#071D41",
+    "--sa-ativo-texto": "#FFFFFF",
+    "--sa-verde": "#168821",
+    "--sa-amarelo": "#FFCD07",
+  },
+  dark: {
+    "--sa-faixa": "#13284F",
+    "--sa-faixa-2": "#04112A",
+    "--sa-ativo": "#7FB0FF",
+    "--sa-ativo-texto": "#0B1220",
+    "--sa-verde": "#36C35A",
+    "--sa-amarelo": "#FFCD07",
+  },
+});
