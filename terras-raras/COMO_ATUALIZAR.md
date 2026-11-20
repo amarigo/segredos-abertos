@@ -48,6 +48,8 @@ Escreva no projeto: **"atualize o tracker de terras raras"**. O Claude pesquisa 
 | `leis.csv` | Leis | uma lei, PL, norma, decisão municipal |
 | `impactos.csv` | Impactos ambientais | um tipo de impacto com evidência |
 | `processos_noticias.csv` | Processos e notícias | um acontecimento datado (ação, licença, negócio, notícia). `origem` = `nacional` (veículo ou órgão do Brasil; site `.br` é sempre nacional) ou `estrangeira`; `fonte_url_2` e `origem_2` guardam uma segunda fonte, de preferência da outra origem |
+| `fluxos.csv` | A história, capítulo "Para onde vai o minério" (mapa-múndi) | um acordo de venda do concentrado de um projeto de MG para um comprador de fora: comprador, país, ponto no mapa (`lat`, `lon`; se não houver o local exato, ponto aproximado do país, dito em `local_no_mapa`), `situacao` (contrato vinculante, memorando, acordo não vinculante) e porto de saída quando a fonte diz |
+| `indicadores.csv` | Dados e método: dicionário de indicadores | um número mostrado na página: definição, conta, unidade e planilhas de onde sai. Todo `ind("Ixx")` da página precisa existir aqui (`gerar_pagina.py` para se faltar). Mudou a conta? Mude a linha aqui junto |
 | `propostas.csv` | O que pedir aos legisladores | uma proposta com exemplo de outro país; `inspiracao` = `Petróleo` quando a ideia veio do que se fez com o petróleo |
 
 ## Regras simples
@@ -71,6 +73,8 @@ Escreva no projeto: **"atualize o tracker de terras raras"**. O Claude pesquisa 
 - [ ] ANM (Cadastro Mineiro/SIGMINE): novos requerimentos de terras raras em todo MG, com atenção a Alto Paranaíba, Jequitinhonha e Sul de Minas
 - [ ] SGB: resultados do mapeamento do Alto Paranaíba
 - [ ] Imprensa regional (Poços Já, Folha Regional, SulMinasTV, Jornal Mantiqueira) e nacional (Diário do Comércio, CNN Brasil, Times Brasil, Brasil Mineral, eixos, Agência Minas, Agência Gov). Notícia achada só em site estrangeiro (ASX, Mining Weekly, Small Caps...): procurar a cobertura nacional e pôr em `fonte_url_2`; notícia nacional com anúncio oficial da empresa lá fora: o anúncio pode ser a segunda fonte
+- [ ] Rota do minério: contrato ou memorando novo de venda do concentrado vira linha em `fluxos.csv`; contrato que passou a vinculante muda `situacao`
+- [ ] Dados e método: a página mostra o frescor de cada planilha e "sinais" (linhas conferidas há mais de 30 dias, itens com uma fonte só); reconfira as linhas apontadas e atualize `verificado_em`
 - [ ] Perda por não processar no Brasil: dólar PTAX do dia pela API do Banco Central (`olinda.bcb.gov.br/olinda/servico/PTAX`), na linha `Câmbio` de `numeros.csv`; estudo de viabilidade novo, revisado ou comprador novo de um projeto de MG vira linha ou mudança em `perda_processamento.csv`
 - [ ] Propostas: ideias usadas com o petróleo (no Brasil e no mundo) que servem para terras raras, com fonte oficial; não repetir o que já está em `propostas.csv`
 

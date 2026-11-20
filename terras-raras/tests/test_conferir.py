@@ -133,3 +133,17 @@ def test_le_os_dados_da_pagina_publicada(tmp_path):
 def test_planilhas_do_repositorio_passam():
     """As planilhas de verdade precisam passar: é a mesma conferência que roda antes de publicar."""
     assert c.main([]) == 0
+
+
+def test_rota_do_minerio_e_dicionario_de_indicadores():
+    d = base()
+    d["fluxos"] = [{"id": "F01", "projetos_ids": "P01", "lat": "46.16", "lon": "-1.15", "porto": "Santos", "porto_lat": "-23.96",
+                    "porto_lon": "", "situacao": "contrato vinculante", **{"fonte_url": "https://exemplo.com/a", "verificado_em": "2026-11-17"}}]
+    d["indicadores"] = [{"id": "I01", "indicador": "Perda", "definicao": "x", "conta": "y", "tabela": "perda_processamento;planilha_nova",
+                         "fonte_url": "https://exemplo.com/a", "verificado_em": "2026-11-17"}]
+    erros = c.conferir(d, MUNICIPIOS, HOJE)
+    assert any("fluxos.csv, linha 2: porto_lat/porto_lon" in e for e in erros)
+    assert any("planilha 'planilha_nova' não existe" in e for e in erros)
+    d["fluxos"][0]["porto_lon"] = "-46.33"
+    d["indicadores"][0]["tabela"] = "perda_processamento;numeros"
+    assert c.conferir(d, MUNICIPIOS, HOJE) == []
