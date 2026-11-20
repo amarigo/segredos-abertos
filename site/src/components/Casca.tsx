@@ -1,4 +1,4 @@
-/* Casca do site (topo, menu, abas da seção, rodapé), com os componentes padrão do Mantine, sem tema próprio.
+/* Casca do site (topo, menu, abas da seção, rodapé), com os componentes padrão do Mantine (no Minas Nossa, com o tema do Eleição 2026: tema.ts).
    Menos é mais: o topo tem só a marca, o ano e cinco seções; as páginas de cada seção aparecem como abas quando a
    pessoa entra nela. Regra dos menus (vale para todos os sites): todas as abas sempre à vista. Se não couberem numa
    linha, quebram para a de baixo; nunca rolam de lado nem ficam cortadas (conferido por e2e/menu.ts). */
