@@ -394,7 +394,12 @@ def test_pagina_do_ano_anterior_nao_fica_guardada_para_sempre():
     assert recursos._cache_vale(2024, 2026, agora - 400 * dia, agora)  # dois anos atrás: vale
     assert recursos._cache_vale(2025, 2026, agora - 2 * dia, agora)  # ano anterior, cópia recente: vale
     assert not recursos._cache_vale(2025, 2026, agora - 30 * dia, agora)  # ano anterior, cópia velha: baixa de novo
-    assert not recursos._cache_vale(2026, 2026, agora, agora)  # ano corrente: sempre baixa
+    # Ano corrente: a coleta das 2h (Brasília) lê de novo; as novas tentativas do mesmo dia reaproveitam
+    import datetime as dt
+    br = dt.timezone(dt.timedelta(hours=-3))
+    t = lambda h, d=20: dt.datetime(2026, 11, d, h, 0, tzinfo=br).timestamp()  # noqa: E731
+    assert recursos._cache_vale(2026, 2026, t(2), t(10))  # lida às 2h, nova tentativa às 10h: vale
+    assert not recursos._cache_vale(2026, 2026, t(22, 19), t(2))  # lida às 22h de ontem, coleta das 2h: baixa
 
 
 def test_legislaturas_na_virada():

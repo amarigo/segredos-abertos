@@ -35,6 +35,7 @@ def coletar(anos: list[int], cache: Path, max_empresas: int, com_recursos: bool 
         # Sem a lista de parlamentares não há site: melhor falhar e manter no ar a versão anterior
         raise RuntimeError(f"Lista de parlamentares vazia (Câmara: {len(deps)}, Senado: {len(sens)})")
     politicos = deps + sens
+    arquivos_da_camara_antes(cache)
     ids_c = {p["id"] for p in deps}
     ids_s = {p["id"] for p in sens}
 
@@ -899,6 +900,24 @@ def regravar_avisos(saida: Path) -> None:
         meta["avisos"], meta["avisos_tentar"] = list(util.AVISOS), util.avisos_para_tentar()
         meta["motivos_falha"] = dict(util.MOTIVOS_FALHA)
         write_json(f, meta)
+
+
+def arquivos_da_camara_antes(cache: Path) -> None:
+    """Baixa no começo da coleta os arquivos da Câmara que só são usados no fim (deputados, para o patrimônio e a
+    campanha; funcionários, para os gabinetes). De 19 a 20/11/2026 a Câmara parou de aceitar conexão no meio de cada
+    coleta, depois da leitura das páginas dos deputados, e esses arquivos ficaram nas cópias de 11/11 e 18/11. A cópia
+    baixada aqui vale para o resto da coleta (com_copia). Uma falha aqui não para nada: a etapa de cada arquivo
+    tenta de novo e, se não der, usa a última cópia e avisa."""
+    for nome, buscar in (("Arquivo de deputados da Câmara", lambda: patrimonio.nascimentos_camara(cache)),
+                         ("Secretários parlamentares (Câmara)", lambda: gabinetes.arquivo_secretarios(cache))):
+        antes = len(util.AVISOS)
+        try:
+            buscar()
+        except Exception as e:  # noqa: BLE001
+            log.warning("%s: não deu para baixar no começo da coleta (%s); a etapa tenta de novo", nome, e)
+        # O aviso de cópia antiga, se houver, sai da etapa que usa o arquivo (não repete aqui)
+        del util.AVISOS[antes:]
+        util.MOTIVOS_FALHA.pop(nome, None)
 
 
 def coletar_representantes(saida: Path, cache: Path) -> None:

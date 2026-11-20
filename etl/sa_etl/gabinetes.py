@@ -174,6 +174,16 @@ def resumir(politicos: list[dict], anos: list[int], pop: dict[str, float], rend:
 
 # ---------------------------------------------------------------- coleta
 
+def arquivo_secretarios(cache: Path) -> dict:
+    """Secretários parlamentares do arquivo de funcionários da Câmara, guardado por 20 horas. build.coletar() chama
+    no começo da coleta, enquanto a Câmara ainda responde (veja util.PAUSA_POR_SITE); aqui a cópia do dia é reaproveitada."""
+    return com_copia(cache / "gabinetes" / "funcionarios.json",
+                     lambda: {"dados": [{"grupo": f.get("grupo"), "uriLotacao": f.get("uriLotacao")}
+                                        for f in get_json(URL_FUNC, timeout=300).get("dados") or []
+                                        if f.get("grupo") == "Secretário Parlamentar"]},
+                     "Secretários parlamentares (Câmara)", max_horas=20)
+
+
 def coletar(saida: Path, cache: Path, anos: list[int]) -> dict | None:
     """Lê politicos.json (já gravado por montar()), busca IBGE e Câmara e grava gabinetes.json."""
     pasta = cache / "gabinetes"
@@ -192,11 +202,7 @@ def coletar(saida: Path, cache: Path, anos: list[int]) -> dict | None:
         log.warning("Gabinetes: rendimento do IBGE indisponível (%s)", e)
         tri_rend, rend = "", {}
     try:
-        func = com_copia(pasta / "funcionarios.json",
-                         lambda: {"dados": [{"grupo": f.get("grupo"), "uriLotacao": f.get("uriLotacao")}
-                                            for f in get_json(URL_FUNC, timeout=300).get("dados") or []
-                                            if f.get("grupo") == "Secretário Parlamentar"]},
-                         "Secretários parlamentares (Câmara)", max_horas=20)
+        func = arquivo_secretarios(cache)
         secretarios = secretarios_por_deputado(func.get("dados"))
     except Exception as e:  # noqa: BLE001
         log.warning("Gabinetes: arquivo de funcionários da Câmara indisponível (%s)", e)
