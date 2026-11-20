@@ -89,7 +89,7 @@ if SITE:
                 'text-transform:uppercase;letter-spacing:.06em}nav.projetos .wrap{display:flex;flex-wrap:wrap;gap:.2rem .9rem;'
                 'align-items:center;padding-block:.45rem}nav.projetos a{color:#e3e9f4;text-decoration:none}'
                 'nav.projetos a:hover{color:#fff;text-decoration:underline}nav.projetos a[aria-current="page"]{color:#FFCD07;'
-                'font-weight:700}</style>'
+                'text-decoration:underline;text-underline-offset:3px}</style>'
                 '<nav class="projetos" aria-label="Projetos do Segredos Abertos"><div class="wrap"><span>Projetos:</span>'
                 '<a href="../">Brasil</a><a href="../mg/">Minas Nossa</a><a href="../eleicao2026/">Eleição 2026</a>'
                 '<a href="./" aria-current="page">Terras Raras MG</a></div></nav>')
