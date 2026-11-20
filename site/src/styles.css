@@ -71,8 +71,8 @@ a:hover { text-decoration-thickness: 2px; }
 /* na faixa azul do topo e no rodapé o amarelo aparece bem */
 .person:focus-visible { outline-offset: -3px; }
 h1, h2, h3 { font-family: var(--mantine-font-family-headings); line-height: 1.2; text-wrap: balance; margin: 0; }
-h1 { font-size: var(--mantine-h1-font-size); font-weight: 700; }
-h2 { font-size: var(--mantine-h2-font-size); font-weight: 700; }
+h1 { font-size: var(--mantine-h1-font-size); font-weight: 900; }
+h2 { font-size: var(--mantine-h2-font-size); font-weight: 800; }
 h3 { font-size: var(--mantine-h4-font-size); font-weight: 600; }
 p { margin: 0; max-width: 68ch; }
 strong, b { font-weight: 700; }
@@ -148,7 +148,7 @@ tbody tr:hover td { background: var(--tint); }
 td.r, th.r { text-align: right; }
 tr:last-child td { border-bottom: 0; }
 
-.explain { background: var(--tint); border-left: 5px solid var(--hot); padding: 14px 18px; border-radius: 0 var(--raio) var(--raio) 0; color: var(--ink-2); font-size: .97rem; }
+.explain { background: var(--mantine-primary-color-light); border-left: 5px solid var(--mantine-primary-color-filled); padding: 14px 18px; border-radius: 0 var(--raio) var(--raio) 0; color: var(--ink-2); font-size: .97rem; }  /* como o aviso "números oficiais" da Eleição 2026 */
 .alert { background: var(--alert-bg); color: var(--alert-ink); padding: 12px 16px; border-radius: var(--raio); font-size: .95rem; display: flex; gap: 8px; border: 1.5px solid color-mix(in srgb, var(--flag-y) 45%, transparent); }
 .alert ul { margin: 6px 0; padding-left: 20px; }
 .alert-nota { margin: 0; font-size: .85rem; }
@@ -1157,3 +1157,18 @@ tr.nota-aberta > td { background: var(--tint); }
 .rep-diferenca p { margin: 6px 0; }
 
 @media print { .voltar-menu { display: none; } }
+
+/* ===== Visual da Eleição 2026 (o mesmo nos três sites): só o que o tema do Mantine (tema.ts) não alcança ===== */
+/* Raleway desenha os números "de texto" por padrão; aqui todos os números ficam alinhados, como na Eleição 2026 */
+*, ::before, ::after { font-feature-settings: "lnum" 1 !important; }  /* !important: o atalho "font:" de várias regras zera essa propriedade */
+/* topo: barra dos projetos e faixa azul-escura com fio amarelo e verde embaixo */
+.projetos-faixa { background: var(--sa-faixa-2); }
+.top .faixa { background: var(--sa-faixa); box-shadow: inset 0 -3px 0 var(--sa-amarelo), inset 0 -6px 0 var(--sa-verde); padding-bottom: 6px; }
+.top .faixa :focus-visible, .projetos-faixa :focus-visible { outline-color: var(--sa-amarelo); }
+/* seção aberta do menu: pílula azul-escura (azul-claro no escuro), como o menu da Eleição 2026 */
+.top .nav .active, .top .nav .active:hover { background: var(--sa-ativo); color: var(--sa-ativo-texto); }
+/* título da página com o fio verde e amarelo em cima */
+main h1::before { content: ""; display: block; width: 2.2rem; height: .25rem; border-radius: 3px; margin-bottom: .6rem;
+  background: linear-gradient(90deg, var(--sa-verde) 0 62%, var(--sa-amarelo) 62% 100%); }
+h1, h2 { letter-spacing: -.01em; }
+::selection { background: var(--sa-amarelo); color: #071D41; }

@@ -1,39 +1,43 @@
 <title>Terras Raras em Minas</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@400..900&display=swap">
 <style>/*__LEAFLET_CSS__*/</style>
 <style>
 /* Layout: terminal de dados + reportagem. Faixa escura de indicadores no topo (como um painel de mercado),
-   história em capítulos na abertura, ferramentas (mapa, dinheiro, dados) com filtros ao lado. Cor de destaque:
-   o violeta dos sais de neodímio, o elemento dos ímãs; a argila (ocre) marca o que vai para fora. */
+   história em capítulos na abertura, ferramentas (mapa, dinheiro, dados) com filtros ao lado. Cores e letra da
+   Eleição 2026 (o mesmo visual nos sites do Segredos Abertos): faixa azul-escura com fio verde e amarelo, azul gov.br
+   nos links e botões, letra Raleway; a argila (ocre) marca o que vai para fora. */
 :root{
-  --bg:#f5f4f7; --surface:#ffffff; --surface-2:#efedf3; --ink:#1c1a24; --muted:#5e5a6b; --line:#dcd8e4; --hover:#f0eef5;
-  --accent:#5b3f9e; --accent-soft:#ebe5f7; --on-accent:#ffffff;
+  --bg:#F8F8F8; --surface:#ffffff; --surface-2:#EEF1F5; --ink:#1B2533; --muted:#4F5B6B; --line:#DCDFE5; --hover:#EDF5FF;
+  --accent:#1351B4; --accent-soft:#EDF5FF; --on-accent:#ffffff;
+  --faixa:#071D41; --faixa-2:#04132E; --verde:#168821; --amarelo:#FFCD07;
   --clay:#a4581c; --clay-soft:#f7eadf;
   --bad:#b42318; --bad-soft:#fdecea; --warn:#8a5a00; --warn-soft:#fff3d6; --good:#17703c; --good-soft:#e4f3e9;
-  --band:#211d2c; --band-ink:#efecf6; --band-muted:#aaa4bd; --band-line:#3a3548;
-  --s1:#3d6fd6; --s2:#c45a1f; --s3:#188a64; --sn:#8f8b99; --sx:#55515e;
-  --mapbg:#e9e7ee; --muni:#ffffff; --sea:#e6e9f1; --land:#d6d2de;
-  --f-display:"Archivo", "Arial Narrow", system-ui, sans-serif;
-  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --band:#071D41; --band-ink:#FFFFFF; --band-muted:#B7C3D9; --band-line:#1B3A6B;
+  --s1:#3d6fd6; --s2:#c45a1f; --s3:#188a64; --sn:#8b93a1; --sx:#4F5B6B;
+  --mapbg:#E9EDF2; --muni:#ffffff; --sea:#E6ECF3; --land:#D3DAE3;
+  --f-display:"Raleway", "Rawline", system-ui, sans-serif;
+  --f-body:"Raleway", "Rawline", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"Raleway", "Rawline", system-ui, sans-serif; /* números alinhados (lnum, tabular-nums), como na Eleição 2026 */
   --shadow:0 1px 2px rgba(28,26,36,.06),0 1px 3px rgba(28,26,36,.08);
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#121118; --surface:#1b1a23; --surface-2:#23212d; --ink:#ece9f3; --muted:#a7a2b6; --line:#34313f; --hover:#262431;
-  --accent:#b9a4ee; --accent-soft:#2a2440; --on-accent:#17131f; --clay:#e39a5f; --clay-soft:#3a2a1d;
+  --bg:#0B1220; --surface:#111B2E; --surface-2:#16233B; --ink:#EEF2F8; --muted:#A9B4C6; --line:#26324A; --hover:#1F2B40;
+  --accent:#7FB0FF; --accent-soft:#16233B; --on-accent:#0B1220;
+  --faixa:#13284F; --faixa-2:#04112A; --verde:#36C35A; --amarelo:#FFCD07; --clay:#e39a5f; --clay-soft:#3a2a1d;
   --bad:#f19a92; --bad-soft:#3b1f1d; --warn:#f1c06b; --warn-soft:#3a2f18; --good:#8fd3a6; --good-soft:#1b3325;
-  --band:#0c0b10; --band-ink:#ece9f3; --band-muted:#9c97ad; --band-line:#2a2733;
-  --s1:#6b9af0; --s2:#e57f45; --s3:#3cbf8f; --sn:#77738a; --sx:#b3aec2;
-  --mapbg:#17161d; --muni:#24222c; --sea:#15161d; --land:#2e2b38; --shadow:0 1px 3px rgba(0,0,0,.5); color-scheme:dark}}
+  --band:#13284F; --band-ink:#FFFFFF; --band-muted:#B7C3D9; --band-line:#26406E;
+  --s1:#6b9af0; --s2:#e57f45; --s3:#3cbf8f; --sn:#6B7890; --sx:#A9B4C6;
+  --mapbg:#0E1729; --muni:#1A253A; --sea:#0D1526; --land:#26324A; --shadow:0 1px 3px rgba(0,0,0,.5); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#121118; --surface:#1b1a23; --surface-2:#23212d; --ink:#ece9f3; --muted:#a7a2b6; --line:#34313f; --hover:#262431;
-  --accent:#b9a4ee; --accent-soft:#2a2440; --on-accent:#17131f; --clay:#e39a5f; --clay-soft:#3a2a1d;
+  --bg:#0B1220; --surface:#111B2E; --surface-2:#16233B; --ink:#EEF2F8; --muted:#A9B4C6; --line:#26324A; --hover:#1F2B40;
+  --accent:#7FB0FF; --accent-soft:#16233B; --on-accent:#0B1220;
+  --faixa:#13284F; --faixa-2:#04112A; --verde:#36C35A; --amarelo:#FFCD07; --clay:#e39a5f; --clay-soft:#3a2a1d;
   --bad:#f19a92; --bad-soft:#3b1f1d; --warn:#f1c06b; --warn-soft:#3a2f18; --good:#8fd3a6; --good-soft:#1b3325;
-  --band:#0c0b10; --band-ink:#ece9f3; --band-muted:#9c97ad; --band-line:#2a2733;
-  --s1:#6b9af0; --s2:#e57f45; --s3:#3cbf8f; --sn:#77738a; --sx:#b3aec2;
-  --mapbg:#17161d; --muni:#24222c; --sea:#15161d; --land:#2e2b38; --shadow:0 1px 3px rgba(0,0,0,.5); color-scheme:dark}
+  --band:#13284F; --band-ink:#FFFFFF; --band-muted:#B7C3D9; --band-line:#26406E;
+  --s1:#6b9af0; --s2:#e57f45; --s3:#3cbf8f; --sn:#6B7890; --sx:#A9B4C6;
+  --mapbg:#0E1729; --muni:#1A253A; --sea:#0D1526; --land:#26324A; --shadow:0 1px 3px rgba(0,0,0,.5); color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--f-body)}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:1001;background:var(--surface)}
@@ -266,6 +270,25 @@ form.envio{display:grid;gap:14px;max-width:720px;padding:20px}
 .msg.err{background:var(--bad-soft);color:var(--bad)}
 footer{color:var(--muted);font-size:13px;padding-block:22px 40px;border-top:1px solid var(--line);background:var(--surface)}
 footer .wrap{display:grid;gap:8px}
+/* ===== Visual da Eleição 2026: topo azul-escuro com fio verde e amarelo, menu em pílula, título com o fio ===== */
+*{font-feature-settings:"lnum" 1!important} /* números alinhados em toda a página: o atalho "font:" das regras acima zera essa propriedade */
+header.bar{background:var(--faixa);border-bottom:0}
+header.bar .brand{color:#fff;font-weight:900;font-size:19px}
+header.bar .el{border-color:var(--amarelo);color:var(--amarelo)}
+header.bar nav.menu{gap:4px;margin-inline:-4px;padding-bottom:10px}
+header.bar nav.menu a{color:#D3DCEB;border-radius:999px;padding:7px 14px;font-weight:600}
+header.bar nav.menu a:hover{background:rgba(255,255,255,.1);color:#fff}
+header.bar nav.menu a.on{background:#fff;color:#071D41;box-shadow:none;border-radius:999px}
+header.bar nav.menu a.cta{background:var(--amarelo);color:#071D41}
+header.bar :focus-visible{outline-color:var(--amarelo)}
+.band{box-shadow:inset 0 -3px 0 var(--amarelo),inset 0 -6px 0 var(--verde);padding-bottom:6px}
+.band :focus-visible{outline-color:var(--amarelo)}
+h1::before{content:"";display:block;width:2.2rem;height:.25rem;border-radius:3px;margin-bottom:.6rem;background:linear-gradient(90deg,var(--verde) 0 62%,var(--amarelo) 62% 100%)}
+h1,h2{font-weight:800}
+h1{font-weight:900}
+.btn,.seg{border-radius:999px}
+.btn{font-weight:600}
+::selection{background:var(--amarelo);color:#071D41}
 </style>
 
 <!--__PROJETOS__-->

@@ -1,4 +1,5 @@
-/* Casca do site (topo, menu, abas da seção, rodapé), com os componentes padrão do Mantine, sem tema próprio.
+/* Casca do site (topo, menu, abas da seção, rodapé), com os componentes do Mantine e o visual da Eleição 2026
+   (tema.ts): faixa azul-escura no topo com fio verde e amarelo, seções em pílula logo abaixo.
    Menos é mais: o topo tem só a marca, o ano e cinco seções; as páginas de cada seção aparecem como abas quando a
    pessoa entra nela. Regra dos menus (vale para todos os sites): todas as abas sempre à vista. Se não couberem numa
    linha, quebram para a de baixo; nunca rolam de lado nem ficam cortadas (conferido por e2e/menu.ts). */
@@ -32,7 +33,7 @@ function Linguas() {
   return (
     <Group gap={0} wrap="nowrap" className="linguas" translate="no" role="group" aria-label={atual === "en" ? "Language" : "Idioma"}>
       {LINGUAS.map((l) => (
-        <Button key={l.id} component="a" size="compact-xs" variant={l.id === atual ? "light" : "subtle"} color="gray"
+        <Button key={l.id} component="a" size="compact-xs" variant={l.id === atual ? "white" : "subtle"} color={l.id === atual ? "gov.8" : "gray.0"}
           href={i18n ? i18n.endereco(l.id) : "#"} lang={l.lang} hrefLang={l.lang} title={l.nome}
           aria-current={l.id === atual ? "true" : undefined}
           onClick={(e: React.MouseEvent) => { if (i18n) { e.preventDefault(); i18n.trocar(l.id); } }}>{l.sigla}</Button>
@@ -44,12 +45,17 @@ function Linguas() {
 function Projetos() {
   const atual = MG ? "mg" : "brasil";
   return (
-    <Group component="nav" className="projetos" aria-label="Projetos do Segredos Abertos" gap="sm" wrap="wrap" pt={6}>
-      {PROJETOS.map((p) => (
-        <Anchor key={p.id} href={p.href} size="xs" c={p.id === atual ? undefined : "dimmed"} fw={p.id === atual ? 600 : 400}
-          aria-current={p.id === atual ? "page" : undefined}>{p.nome}</Anchor>
-      ))}
-    </Group>
+    <Box className="projetos-faixa">
+      <Container size="lg">
+        <Group component="nav" className="projetos" aria-label="Projetos do Segredos Abertos" gap={0} style={{ columnGap: 16 }} wrap="wrap">
+          <Text span size="xs" tt="uppercase" fw={600} lts="0.06em" c="#B7C3D9">Projetos:</Text>
+          {PROJETOS.map((p) => (
+            <Anchor key={p.id} href={p.href} size="xs" tt="uppercase" fw={p.id === atual ? 700 : 600} lts="0.06em" py={8}
+              c={p.id === atual ? "var(--sa-amarelo)" : "#E3E9F4"} aria-current={p.id === atual ? "page" : undefined}>{p.nome}</Anchor>
+          ))}
+        </Group>
+      </Container>
+    </Box>
   );
 }
 
@@ -72,25 +78,29 @@ export function Topo() {
   const aqui = paginaDe(pathname);
   return (
     <Box component="header" className="top">
-      <Container size="lg">
-        <Projetos />
-        <Group justify="space-between" gap="sm" py="sm" wrap="nowrap">
-          <Anchor component={Link} to="/" className="brand" underline="never" c="inherit">
-            <Group gap={8} wrap="nowrap">
-              <img src="./icon.svg" alt="" width={28} height={28} />
-              <Text fw={700} fz={{ base: "md", sm: "xl" }} component="span">{SITE.titulo}</Text>
+      <Projetos />
+      <Box className="faixa" c="white">
+        <Container size="lg">
+          <Group justify="space-between" gap="sm" py="md" wrap="nowrap">
+            <Anchor component={Link} to="/" className="brand" underline="never" c="inherit">
+              <Group gap={10} wrap="nowrap">
+                <img src="./icon.svg" alt="" width={32} height={32} />
+                <Text fw={900} fz={{ base: "lg", sm: 28 }} lh={1.1} component="span">{SITE.titulo}</Text>
+              </Group>
+            </Anchor>
+            <Group gap="xs" wrap="nowrap">
+              <AnoSeletor />
+              <Linguas />
             </Group>
-          </Anchor>
-          <Group gap="xs" wrap="nowrap">
-            <AnoSeletor />
-            <Linguas />
           </Group>
-        </Group>
-        <Group component="nav" className="nav" aria-label="Principal" gap={4} wrap="wrap" pb="sm">
+        </Container>
+      </Box>
+      <Container size="lg">
+        <Group component="nav" className="nav" aria-label="Principal" gap={6} wrap="wrap" py="sm">
           {SECOES.map((s) => {
             const ativa = aqui?.secao.id === s.id;
             return (
-              <Button key={s.id} component={NavLink} to={s.paginas[0].rota} variant={ativa ? "light" : "subtle"}
+              <Button key={s.id} component={NavLink} to={s.paginas[0].rota} variant="subtle" color="gray" c={ativa ? undefined : "dimmed"}
                 className={ativa ? "active" : undefined} aria-current={ativa ? "page" : undefined}>{s.nome}</Button>
             );
           })}
