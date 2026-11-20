@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import sys
+import threading
 import time
 import unicodedata
 import zipfile
@@ -33,6 +34,27 @@ FORA_DO_AR: set[str] = set()
 # As etapas seguintes que usam a mesma fonte fazem um pedido de teste antes de desistir, em vez de repetir minutos
 # de esperas. Se o pedido de teste funcionar, a fonte sai daqui e a leitura segue normal.
 PARADAS: set[str] = set()
+# Pausa mínima, em segundos, entre dois pedidos ao mesmo site (somando todas as linhas de execução). Desde 19/11/2026
+# a Câmara para de aceitar conexão do GitHub Actions por mais de 1 hora (www.camara.leg.br e dadosabertos.camara.leg.br
+# juntos) logo depois da leitura das páginas dos deputados (recursos.py: perto de 2.000 páginas em 3 minutos, 6 de cada
+# vez). No começo de cada coleta a Câmara responde, e no mesmo horário responde normal de outro endereço: o bloqueio é
+# pela pressa. Com a pausa, no máximo 4 pedidos por segundo a cada site da Câmara.
+PAUSA_POR_SITE: dict[str, float] = {"www.camara.leg.br": 0.25, "dadosabertos.camara.leg.br": 0.25}
+_ultimo_pedido: dict[str, float] = {}
+_trava_pausa = threading.Lock()
+
+
+def esperar_vez(site: str) -> None:
+    """Espera a pausa mínima do site desde o último pedido a ele (PAUSA_POR_SITE)."""
+    pausa = PAUSA_POR_SITE.get(site)
+    if not pausa:
+        return
+    with _trava_pausa:
+        agora = time.monotonic()
+        vez = max(agora, _ultimo_pedido.get(site, 0.0) + pausa)
+        _ultimo_pedido[site] = vez
+    if vez > agora:
+        time.sleep(vez - agora)
 
 
 class SiteForaDoAr(requests.ConnectionError):
@@ -53,6 +75,7 @@ class _Sessao(requests.Session):
         t = kw.get("timeout")
         if isinstance(t, (int, float)):
             kw["timeout"] = (min(ESPERA_CONEXAO, t), t)  # (para conectar, para receber os dados)
+        esperar_vez(site)
         try:
             r = super().request(method, url, *args, **kw)
         except requests.ConnectTimeout:

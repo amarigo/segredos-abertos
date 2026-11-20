@@ -322,3 +322,33 @@ def test_uma_espera_isolada_nao_derruba_o_site(coleta):
     saida = coleta.rodar()
     assert "legis.senado.leg.br" not in util.FORA_DO_AR
     assert coleta.validar(saida).erros == []
+
+
+def test_pausa_entre_pedidos_a_camara(monkeypatch):
+    """Desde 19/11/2026 a Câmara recusa conexão por mais de 1 hora depois de muitos pedidos seguidos: cada site da
+    Câmara recebe no máximo um pedido a cada PAUSA_POR_SITE segundos, somando todas as linhas de execução."""
+    import time
+    relogio = {"t": 1000.0}
+    esperas: list[float] = []
+    monkeypatch.setattr(time, "monotonic", lambda: relogio["t"])
+    monkeypatch.setattr(time, "sleep", lambda s: esperas.append(s))
+    monkeypatch.setattr(util, "_ultimo_pedido", {})
+    pausa = util.PAUSA_POR_SITE["www.camara.leg.br"]
+    for _ in range(3):
+        util.esperar_vez("www.camara.leg.br")
+    assert esperas == [pytest.approx(pausa), pytest.approx(2 * pausa)]
+    util.esperar_vez("legis.senado.leg.br")  # outros sites não esperam
+    assert len(esperas) == 2
+
+
+def test_arquivos_da_camara_baixados_antes_das_paginas(coleta):
+    """De 19 a 20/11/2026 a Câmara parou de responder no meio da coleta, e os arquivos de deputados e de funcionários,
+    lidos só no fim, ficaram em cópias de 11/11 e 18/11. Agora são baixados logo depois da lista de parlamentares."""
+    gov = coleta.usar(FakeGov())
+    coleta.rodar()
+    deps = [i for i, c in enumerate(gov.chamadas) if "arquivos/deputados/json/deputados.json" in c]
+    func = [i for i, c in enumerate(gov.chamadas) if "arquivos/funcionarios/json/funcionarios.json" in c]
+    tramit = [i for i, c in enumerate(gov.chamadas) if "/api/v2/eventos" in c or "/proposicoes" in c]
+    assert deps and func, "a coleta deveria pedir os dois arquivos"
+    if tramit:
+        assert deps[0] < tramit[0] and func[0] < tramit[0]

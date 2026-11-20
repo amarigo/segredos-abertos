@@ -262,19 +262,27 @@ def senado_ano(cod: str, ano: int) -> dict | None:
 # ---------------------------------------------------------------- todos
 
 DIAS_CACHE_ANO_ANTERIOR = 7
+# A página do ano corrente é lida de novo a cada dia (de Brasília), mas não nas novas tentativas do mesmo dia
+# (tentar-de-novo.yml): em 20/11/2026 foram 3 coletas, cada uma relendo as ~2.000 páginas, e cada leitura fazia a
+# Câmara recusar conexão por mais de 1 hora (veja util.PAUSA_POR_SITE).
+BRASILIA = dt.timezone(dt.timedelta(hours=-3))  # sem horário de verão desde 2019
 
 
 def _cache_vale(ano: int, atual: int, mtime: float, agora: float | None = None) -> bool:
-    """A página de um ano já acabado pode ser guardada, mas a do ano anterior só por uma semana.
+    """A página de um ano já acabado pode ser guardada, mas a do ano anterior só por uma semana, e a do ano corrente
+    só no mesmo dia de Brasília (a coleta das 2h lê de novo; as novas tentativas do dia reaproveitam).
 
     A Câmara continua lançando notas (e devoluções de passagens) de novembro e dezembro até março do ano seguinte, e a
     página oficial do deputado muda junto. Guardada para sempre desde janeiro, a página ficava com o total antigo e a
     verificação acusava "notas maiores que a página" nesses meses (diferença em revisão)."""
+    agora = agora if agora is not None else time.time()
+    idade = agora - mtime
     if ano >= atual:
-        return False
+        dia = lambda t: dt.datetime.fromtimestamp(t, BRASILIA).date()  # noqa: E731
+        return 0 <= idade and dia(mtime) == dia(agora)
     if ano < atual - 1:
         return True
-    return ((agora if agora is not None else time.time()) - mtime) < DIAS_CACHE_ANO_ANTERIOR * 86400
+    return idade < DIAS_CACHE_ANO_ANTERIOR * 86400
 
 
 def coletar(politicos: list[dict], anos: list[int], cache: Path, workers: int = 6) -> dict[str, dict[int, dict]]:
