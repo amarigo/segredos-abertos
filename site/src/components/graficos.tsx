@@ -359,7 +359,7 @@ export function MapaAnos({ porAno, titulo, formato = curto, anoInicial, explica,
               {[[a, setA, b], [b, setB, a]].map(([x, set, outro], i) => (
                 <div key={i}>
                   <label className="graf-ano"><span className="muted small">{i ? "Comparar com" : "Ano"}</span>
-                    <select value={x as string} onChange={(e) => (set as (v: string) => void)(e.target.value)}>{anos.map((y) => <option key={y}>{y}</option>)}</select>
+                    <select aria-label={i ? "Ano para comparar com o primeiro" : "Ano do primeiro mapa"} value={x as string} onChange={(e) => (set as (v: string) => void)(e.target.value)}>{anos.map((y) => <option key={y}>{y}</option>)}</select>
                   </label>
                   <div className="mapa-lado-total"><span className="num">{formato(soma(x as string) / Math.max(1, Object.keys(porAno[x as string] || {}).length))}</span> <span className="muted small">média dos estados</span>
                     {i === 1 && <> <Variacao de={soma(a)} para={soma(b)} rotulo={a} /></>}</div>
@@ -392,8 +392,8 @@ export function MapaAnos({ porAno, titulo, formato = curto, anoInicial, explica,
       {modo === "mudou" && (
         <>
           <div className="row graf-controles">
-            <label className="graf-ano"><span className="muted small">De</span><select value={a} onChange={(e) => setA(e.target.value)}>{anos.map((y) => <option key={y}>{y}</option>)}</select></label>
-            <label className="graf-ano"><span className="muted small">para</span><select value={b} onChange={(e) => setB(e.target.value)}>{anos.map((y) => <option key={y}>{y}</option>)}</select></label>
+            <label className="graf-ano"><span className="muted small">De</span><select aria-label="Ano inicial da comparação" value={a} onChange={(e) => setA(e.target.value)}>{anos.map((y) => <option key={y}>{y}</option>)}</select></label>
+            <label className="graf-ano"><span className="muted small">para</span><select aria-label="Ano final da comparação" value={b} onChange={(e) => setB(e.target.value)}>{anos.map((y) => <option key={y}>{y}</option>)}</select></label>
           </div>
           <div className="mapa-com-lista">
             <div>
@@ -502,8 +502,8 @@ export function CompararAnos({ porAno, titulo, formato = curto, limite = 10, ano
         </div>
         {modo === "dois" && (
           <>
-            <label className="graf-ano"><span className="muted small">De</span><select value={a} onChange={(e) => setA(e.target.value)}>{anos.map((y) => <option key={y}>{y}</option>)}</select></label>
-            <label className="graf-ano"><span className="muted small">para</span><select value={b} onChange={(e) => setB(e.target.value)}>{anos.map((y) => <option key={y}>{y}</option>)}</select></label>
+            <label className="graf-ano"><span className="muted small">De</span><select aria-label="Ano inicial da comparação" value={a} onChange={(e) => setA(e.target.value)}>{anos.map((y) => <option key={y}>{y}</option>)}</select></label>
+            <label className="graf-ano"><span className="muted small">para</span><select aria-label="Ano final da comparação" value={b} onChange={(e) => setB(e.target.value)}>{anos.map((y) => <option key={y}>{y}</option>)}</select></label>
           </>
         )}
       </div>

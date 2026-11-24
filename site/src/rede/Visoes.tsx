@@ -242,7 +242,7 @@ export function EmComum({ base, fotos, onAbrir, onFocar }: { base: Base; fotos: 
           const left = p[x.a].x + (p[x.b].x - p[x.a].x) * t, top = p[x.a].y + (p[x.b].y - p[x.a].y) * t;
           return (
             <button key={x.a + x.b + it.id} className={`parada${par && par !== x.a + x.b ? " apagada" : ""}`} style={{ left: `${left}%`, top: `${top}%`, background: corTipo(it.tipo) }}
-              onClick={() => onAbrir(it.id)} onMouseEnter={() => setPar(x.a + x.b)} onMouseLeave={() => setPar(null)}
+              onClick={() => onAbrir(it.id)} onMouseEnter={() => setPar(x.a + x.b)} onMouseLeave={() => setPar(null)} onFocus={() => setPar(x.a + x.b)} onBlur={() => setPar(null)}
               title={`${it.nome} (${nomeTipo(it.tipo)})`} aria-label={`${it.nome}, ligado a ${base.seguidos[x.a]?.atual.nome} e ${base.seguidos[x.b]?.atual.nome}`} />
           );
         }))}
