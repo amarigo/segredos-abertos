@@ -210,6 +210,16 @@
 "fim_mandato": "2027-01-31"
 },
 {
+"id": "5016",
+"nome": "Wellington Dias",
+"nome_civil": "José Wellington Barroso de Araujo Dias",
+"uf": "PI",
+"partido": "PT",
+"nascimento": "1962-03-05",
+"participacao": "Titular",
+"fim_mandato": "2031-01-31"
+},
+{
 "id": "5070",
 "nome": "Wilder Morais",
 "nome_civil": "Wilder Pedro de Morais",
@@ -756,16 +766,6 @@
 "uf": "MA",
 "partido": "PSB",
 "nascimento": "1984-05-11",
-"participacao": "1º Suplente",
-"fim_mandato": "2031-01-31"
-},
-{
-"id": "6369",
-"nome": "Jussara Lima",
-"nome_civil": "Antônia Jussara Gomes Alves Sousa Lima",
-"uf": "PI",
-"partido": "PSD",
-"nascimento": "1960-12-05",
 "participacao": "1º Suplente",
 "fim_mandato": "2031-01-31"
 },

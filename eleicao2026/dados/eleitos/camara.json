@@ -119,11 +119,10 @@
 "id": "122195",
 "nome": "Leonardo Gadelha",
 "uf": "PB",
-"partido": "PODE",
+"partido": "PSC",
 "leg": [
 57
 ],
-"em_exercicio": true,
 "nome_civil": "LEONARDO DE MELO GADELHA",
 "nascimento": "1975-05-12"
 },
@@ -407,6 +406,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "JOSÉ NOBRE GUIMARÃES",
 "nascimento": "1957-02-13"
 },
@@ -1010,10 +1010,11 @@
 "id": "160629",
 "nome": "Romero Rodrigues",
 "uf": "PB",
-"partido": "PSC",
+"partido": "PODE",
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ROMERO RODRIGUES VEIGA",
 "nascimento": "1966-01-09"
 },
@@ -1898,7 +1899,7 @@
 57
 ],
 "em_exercicio": true,
-"nome_civil": "MOSES HAENDEL MELO RODRIGUES",
+"nome_civil": "MOSES HAENDEL MELO SPÍNDOLA RODRIGUES",
 "nascimento": "1978-06-06"
 },
 {
@@ -3290,7 +3291,6 @@
 "leg": [
 57
 ],
-"em_exercicio": true,
 "nome_civil": "JOSÉ MARCELO DO NASCIMENTO NILO",
 "nascimento": "1955-04-26"
 },
@@ -3374,6 +3374,7 @@
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "ALEX MARCO SANTANA SOUSA",
 "nascimento": "1972-06-22"
 },
@@ -4710,7 +4711,7 @@
 57
 ],
 "em_exercicio": true,
-"nome_civil": "EVANDRO GONÇALVES DA SILVA JÚNIOR",
+"nome_civil": "Evandro Gonçalves da Silva Júnior",
 "nascimento": "1984-02-27"
 },
 {
@@ -4975,7 +4976,7 @@
 },
 {
 "id": "220644",
-"nome": "Rosângela Moro",
+"nome": "Rosangela Moro",
 "uf": "SP",
 "partido": "PL",
 "leg": [
@@ -5953,7 +5954,6 @@
 "leg": [
 57
 ],
-"em_exercicio": true,
 "nome_civil": "ITAMAR PAIM PRUCH",
 "nascimento": "1977-04-05"
 },
@@ -7186,7 +7186,6 @@
 "leg": [
 57
 ],
-"em_exercicio": true,
 "nome_civil": "INÁCIO FRANCISCO DE ASSIS NUNES ARRUDA",
 "nascimento": "1957-05-05"
 },
@@ -7265,10 +7264,11 @@
 "id": "74383",
 "nome": "Giacobo",
 "uf": "PR",
-"partido": "PL",
+"partido": "PSD",
 "leg": [
 57
 ],
+"em_exercicio": true,
 "nome_civil": "FERNANDO LÚCIO GIACOBO",
 "nascimento": "1970-12-17"
 },
@@ -7500,7 +7500,7 @@
 },
 {
 "id": "80815",
-"nome": "Léo Prates",
+"nome": "Leo Prates",
 "uf": "BA",
 "partido": "REPUBLICANOS",
 "leg": [

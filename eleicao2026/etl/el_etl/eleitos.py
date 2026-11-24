@@ -69,9 +69,10 @@ S.headers['User-Agent'] = 'segredos-abertos/1.0 (portal de transparencia; github
 # ------------------------------------------------------------------ baixar (só no GitHub Actions: precisa do TSE)
 
 def _get(url, ok404=False, tentativas=5, **kw):
+    timeout = kw.pop('timeout', 60)  # fora do laço: todas as tentativas usam o tempo pedido por quem chamou
     for i in range(tentativas):
         try:
-            r = S.get(url, timeout=kw.pop('timeout', 60), **kw)
+            r = S.get(url, timeout=timeout, **kw)
             if ok404 and r.status_code == 404:
                 return None
             r.raise_for_status()
