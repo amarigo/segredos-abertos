@@ -347,7 +347,7 @@ const app = ["", ...outros].flatMap((d) => LINGUAS.map((l) => `<url><loc>${base}
 writeFileSync(join(dist, "sitemap-paginas.xml"), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${app}
-${MG ? "" : ["terras-raras/", "analises/", "status/"].map((d) => `<url><loc>${base}${d}</loc><lastmod>${lastmod}</lastmod><changefreq>${d === "terras-raras/" ? "weekly" : "daily"}</changefreq></url>`).join("\n")}
+${MG ? "" : ["terras-raras/", "analises/"].map((d) => `<url><loc>${base}${d}</loc><lastmod>${lastmod}</lastmod><changefreq>${d === "terras-raras/" ? "weekly" : "daily"}</changefreq></url>`).join("\n")}
 ${paginas.map(entrada).join("\n")}
 </urlset>
 `);
