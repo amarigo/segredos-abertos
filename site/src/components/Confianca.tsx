@@ -1,6 +1,7 @@
 /* Confiança em cada número: média da Casa ao lado, o que falta e o link para avisar um erro (regras em ../confianca.ts) */
 import { useLocation } from "react-router-dom";
 import { dataBR, linkSeguro, type Politico } from "../data";
+import { tituloDaPagina } from "../menu";
 import { ESTADO_COBERTURA, linkAvisarErro, oQueFalta, type Referencia } from "../confianca";
 
 /** A média da Casa embaixo de um número: rótulo curto, valor, comparação e, menor, de quem é a média */
@@ -47,7 +48,7 @@ export function AvisarErro({ assunto, resposta = false }: { assunto?: string; re
   const { pathname, search } = useLocation();
   // O site usa HashRouter: o endereço completo da página é o endereço do site + "#" + a rota
   const pagina = typeof window === "undefined" ? pathname : `${window.location.origin}${window.location.pathname}#${pathname}${search}`;
-  const titulo = assunto || (typeof document !== "undefined" ? document.title : "") || pathname;
+  const titulo = assunto || tituloDaPagina(pathname) || pathname;
   return (
     <div className="avisar-erro" data-testid="avisar-erro">
       <strong>Achou um número errado?</strong>{" "}

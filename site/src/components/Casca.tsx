@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Affix, Anchor, Box, Button, Container, Divider, Group, NativeSelect, Stack, Tabs, Text } from "@mantine/core";
 import { MG, SITE } from "../recorte";
-import { SECOES, paginaDe } from "../menu";
+import { SECOES, paginaDe, tituloDaPagina } from "../menu";
 import { useAno } from "./ui";
 
 /* Os projetos do Segredos Abertos, publicados lado a lado no mesmo site (/, /mg/, /eleicao2026/ e /terras-raras/).
@@ -73,16 +73,19 @@ export function AnoSeletor() {
   );
 }
 
-/** Título da aba do navegador: "<Página> | <Site>". Vale para marcadores, histórico, compartilhamento e para o
- *  formulário de aviso de erro, que usa o título da página como assunto. Na página inicial fica o título do index.html. */
+/** Título da aba do navegador. Vale para marcadores, histórico e compartilhamento. O tradutor do site (`SA_I18N.t`,
+ *  quando a página não está em português) traduz o nome da página e o do site pelo mesmo dicionário. */
 export function useTituloDaPagina() {
   const { pathname } = useLocation();
   const nome = paginaDe(pathname)?.pagina.nome;
   useEffect(() => {
     const padrao = document.title;
-    if (nome) document.title = `${nome} | ${SITE.titulo}`;
+    if (nome) {
+      const t = (window as unknown as { SA_I18N?: { t?: (s: string) => string } }).SA_I18N?.t;
+      document.title = t ? `${t(nome)} | ${t(SITE.titulo)}` : tituloDaPagina(pathname);
+    }
     return () => { document.title = padrao; };
-  }, [nome]);
+  }, [nome, pathname]);
 }
 
 export function Topo() {

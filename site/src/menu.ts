@@ -3,7 +3,7 @@
    uma com uma pergunta clara, e as páginas de cada seção aparecem como abas só quando a pessoa entra nela
    (divulgação progressiva). Nenhuma página saiu do site: só mudou de lugar.
    Seção com uma página só não mostra abas. */
-import { MG } from "./recorte";
+import { MG, SITE } from "./recorte";
 
 export interface Pagina { rota: string; nome: string; /** a rota vale também para os endereços que começam com estes */ prefixos?: string[]; exata?: boolean }
 export interface Secao { id: string; nome: string; pergunta: string; paginas: Pagina[] }
@@ -106,4 +106,10 @@ export function paginaDe(pathname: string): { secao: Secao; pagina: Pagina } | n
     }
   }
   return achou && { secao: achou.secao, pagina: achou.pagina };
+}
+
+/** Título da página pela rota, em português: "<Página> | <Site>". Vazio se a rota não está no menu (página inicial). */
+export function tituloDaPagina(pathname: string): string {
+  const nome = paginaDe(pathname)?.pagina.nome;
+  return nome ? `${nome} | ${SITE.titulo}` : "";
 }
