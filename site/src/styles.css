@@ -122,7 +122,7 @@ a.card { transition: border-color .15s, transform .16s cubic-bezier(.23, 1, .32,
 .list { display: grid; }
 
 /* Pílulas (chips) e status */
-.chip { display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink-2); white-space: nowrap; text-transform: uppercase; letter-spacing: .04em; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink-2); white-space: nowrap; text-transform: uppercase; letter-spacing: .04em; max-width: 100%; }
 /* Chip com texto longo (link para a proposta) quebra a linha em vez de passar da tela no celular */
 a.chip { white-space: normal; border-radius: 14px; }
 .chip.ok { color: var(--sim-ink); border-color: currentColor; }
@@ -515,7 +515,8 @@ details.recolhe[open] > summary { margin-bottom: 4px; }
 .table-wrap, .fluxo { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 
 /* Toque: áreas de pelo menos 40px nos links pequenos */
-button.chip { min-height: 44px; padding: 6px 14px; cursor: pointer; }
+button.chip { min-height: 36px; padding: 6px 14px; cursor: pointer; }
+@media (pointer: coarse) { button.chip { min-height: 44px; } }
 .chip.cat-nota { white-space: normal; text-transform: none; letter-spacing: 0; text-align: left; font-size: .8rem; margin-bottom: 4px; }
 details > summary { padding-block: 10px; }
 
