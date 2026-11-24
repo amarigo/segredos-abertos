@@ -352,3 +352,30 @@ def test_arquivos_da_camara_baixados_antes_das_paginas(coleta):
     assert deps and func, "a coleta deveria pedir os dois arquivos"
     if tramit:
         assert deps[0] < tramit[0] and func[0] < tramit[0]
+
+
+def test_get_json_nao_multiplica_pedidos_quando_o_json_vem_invalido(monkeypatch):
+    """Antes, cada volta do laço de JSON chamava `get` com todas as tentativas de rede (até 16 pedidos por URL).
+    Agora só o primeiro pedido usa as tentativas de rede; as outras voltas fazem um pedido cada."""
+    pedidos = []
+
+    class Resp:
+        status_code = 200
+        content = b"<html>erro</html>"
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            raise ValueError("não é JSON")
+
+    class Sessao:
+        def get(self, url, **kw):
+            pedidos.append(url)
+            return Resp()
+
+    monkeypatch.setattr(util, "_session", Sessao())
+    monkeypatch.setattr(util.time, "sleep", lambda s: None)
+    with pytest.raises(RuntimeError):
+        util.get_json("https://exemplo.gov.br/x", tries=4)
+    assert len(pedidos) == 4

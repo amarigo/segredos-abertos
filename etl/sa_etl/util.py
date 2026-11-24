@@ -125,7 +125,9 @@ def get_json(url: str, *, tries: int = 4, **kw) -> Any:
     """GET de um JSON. Resposta cortada ou página de erro no lugar do JSON também ganha nova tentativa."""
     last: Exception | None = None
     for attempt in range(tries):
-        r = get(url, tries=tries, **kw)
+        # Só o primeiro pedido usa as tentativas de rede de `get`; depois de um JSON inválido, o laço de fora é que
+        # tenta de novo (uma tentativa por volta). Assim uma URL nunca passa de `tries` pedidos por rodada.
+        r = get(url, tries=tries if attempt == 0 else 1, **kw)
         try:
             return r.json()
         except ValueError as e:  # JSON cortado no meio, HTML de erro, corpo vazio
