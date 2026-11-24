@@ -132,7 +132,7 @@ export function Colunas({ itens, partes, rotulo, fmt = (v: number) => reais(v, t
           let base = 0;
           const texto = `${it.label}: ${fmt(total(it.valores))}${partes.length > 1 ? ` (${partes.map((p, k) => `${p.nome.toLowerCase()} ${fmt(it.valores[k] || 0)}`).join(", ")})` : ""}`;
           return (
-            <g key={it.label} onMouseMove={(e) => tip.show(e, texto)} onMouseLeave={tip.hide}
+            <g key={it.label} onMouseMove={(e) => tip.show(e, texto)} onMouseLeave={tip.hide} onFocus={(e) => tip.show(e, texto)} onBlur={tip.hide}
               className={onEscolher ? "col-escolher" : undefined} opacity={ativo && ativo !== it.label ? 0.45 : 1}
               {...(onEscolher ? { role: "button", tabIndex: 0, "aria-label": `Escolher ${it.label}`, "aria-pressed": ativo === it.label,
                 onClick: () => onEscolher(it.label), onKeyDown: (e: { key: string; preventDefault: () => void }) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onEscolher(it.label); } } } : {})}>
@@ -168,7 +168,11 @@ export function Colunas({ itens, partes, rotulo, fmt = (v: number) => reais(v, t
 export function useTip() {
   const [tip, setTip] = useState<{ x: number; y: number; text: string } | null>(null);
   const el = tip ? <div className="tip" style={{ left: tip.x + 12, top: tip.y + 12 }}>{tip.text}</div> : null;
-  return { el, show: (e: React.MouseEvent, text: string) => setTip({ x: e.clientX, y: e.clientY, text }), hide: () => setTip(null) };
+  return { el, show: (e: React.MouseEvent | React.FocusEvent, text: string) => {
+      if ("clientX" in e) return setTip({ x: e.clientX, y: e.clientY, text });
+      const r = e.currentTarget.getBoundingClientRect();  // foco pelo teclado: a dica nasce no canto do elemento
+      setTip({ x: r.left + r.width / 2, y: r.top, text });
+    }, hide: () => setTip(null) };
 }
 
 export const COR_GRUPO: Record<Grupo, string> = { pessoal: "var(--s1)", escritorio: "var(--s2)", servicos: "var(--s3)" };
