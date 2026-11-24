@@ -1,5 +1,5 @@
 {
- "coletado_em": "2026-11-04 14:20",
+ "coletado_em": "2026-11-24 15:38",
  "fontes": {
   "resultados": {
    "url": "https://resultados.tse.jus.br/oficial/app/index.html",
@@ -8,13 +8,13 @@
   "candidatos": {
    "url": "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2026.zip",
    "pagina": "https://dadosabertos.tse.jus.br/dataset/candidatos-2026",
-   "publicado": "Wed, 04 Nov 2026 16:10:40 GMT",
+   "publicado": "Tue, 24 Nov 2026 15:36:03 GMT",
    "linhas": 20063
   },
   "vagas": {
    "url": "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_vagas/consulta_vagas_2026.zip",
    "pagina": "https://dadosabertos.tse.jus.br/dataset/candidatos-2026",
-   "publicado": "Wed, 04 Nov 2026 16:10:34 GMT",
+   "publicado": "Tue, 24 Nov 2026 15:33:39 GMT",
    "linhas": 108
   },
   "camara": {
