@@ -73,9 +73,22 @@ export function AnoSeletor() {
   );
 }
 
+/** Título da aba do navegador: "<Página> | <Site>". Vale para marcadores, histórico, compartilhamento e para o
+ *  formulário de aviso de erro, que usa o título da página como assunto. Na página inicial fica o título do index.html. */
+export function useTituloDaPagina() {
+  const { pathname } = useLocation();
+  const nome = paginaDe(pathname)?.pagina.nome;
+  useEffect(() => {
+    const padrao = document.title;
+    if (nome) document.title = `${nome} | ${SITE.titulo}`;
+    return () => { document.title = padrao; };
+  }, [nome]);
+}
+
 export function Topo() {
   const { pathname } = useLocation();
   const aqui = paginaDe(pathname);
+  useTituloDaPagina();
   return (
     <Box component="header" className="top">
       <Projetos />
