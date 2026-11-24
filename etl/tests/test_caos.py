@@ -379,3 +379,32 @@ def test_get_json_nao_multiplica_pedidos_quando_o_json_vem_invalido(monkeypatch)
     with pytest.raises(RuntimeError):
         util.get_json("https://exemplo.gov.br/x", tries=4)
     assert len(pedidos) == 4
+
+
+def test_get_json_sobrevive_a_429_depois_de_json_invalido(monkeypatch):
+    """JSON inválido, depois 429, depois JSON bom: a chamada tem de dar certo, sem passar do orçamento de pedidos."""
+    pedidos = []
+
+    class Resp:
+        def __init__(self, status, corpo):
+            self.status_code, self._corpo, self.content = status, corpo, b"x"
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            if self._corpo is None:
+                raise ValueError("não é JSON")
+            return self._corpo
+
+    respostas = [Resp(200, None), Resp(429, {}), Resp(200, {"ok": 1})]
+
+    class Sessao:
+        def get(self, url, **kw):
+            pedidos.append(url)
+            return respostas[len(pedidos) - 1]
+
+    monkeypatch.setattr(util, "_session", Sessao())
+    monkeypatch.setattr(util.time, "sleep", lambda s: None)
+    assert util.get_json("https://exemplo.gov.br/y", tries=4) == {"ok": 1}
+    assert len(pedidos) == 3

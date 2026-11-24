@@ -122,12 +122,22 @@ def get(url: str, *, params: dict | None = None, tries: int = 4, timeout: int = 
 
 
 def get_json(url: str, *, tries: int = 4, **kw) -> Any:
-    """GET de um JSON. Resposta cortada ou página de erro no lugar do JSON também ganha nova tentativa."""
+    """GET de um JSON. Resposta cortada ou página de erro no lugar do JSON também ganha nova tentativa.
+
+    O orçamento de pedidos é um só: o primeiro usa as tentativas de rede de `get`; nas voltas seguintes, cada volta
+    faz um pedido. Erro de rede (429, 5xx, tempo esgotado) numa volta seguinte não derruba a chamada: vai para a
+    próxima volta. Assim uma URL não passa de cerca de `tries` pedidos extras, e falha passageira não aborta."""
     last: Exception | None = None
     for attempt in range(tries):
-        # Só o primeiro pedido usa as tentativas de rede de `get`; depois de um JSON inválido, o laço de fora é que
-        # tenta de novo (uma tentativa por volta). Assim uma URL nunca passa de `tries` pedidos por rodada.
-        r = get(url, tries=tries if attempt == 0 else 1, **kw)
+        try:
+            r = get(url, tries=tries if attempt == 0 else 1, **kw)
+        except RuntimeError as e:
+            if attempt == 0:
+                raise  # `get` já usou todas as tentativas de rede
+            last = e
+            log.warning("Falha em %s (%s); nova tentativa", url, str(e)[:80])
+            time.sleep(2 ** (attempt + 1))
+            continue
         try:
             return r.json()
         except ValueError as e:  # JSON cortado no meio, HTML de erro, corpo vazio
